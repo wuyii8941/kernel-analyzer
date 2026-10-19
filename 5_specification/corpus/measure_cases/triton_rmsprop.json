@@ -1,0 +1,24 @@
+{
+  "call": "../calls/triton_rmsprop.py:call",
+  "inputs": {
+    "theta": {"sampler": {"normal": [0, 1]}, "shape": [4096], "dtype": "float32"},
+    "gradient": {"sampler": {"normal": [0, 1]}, "shape": [4096], "dtype": "float32"},
+    "v": {"sampler": {"uniform": [1, 2]}, "shape": [4096], "dtype": "float32"},
+    "gave": {"sampler": {"uniform": [-0.25, 0.25]}, "shape": [4096], "dtype": "float32"},
+    "b": {"sampler": {"normal": [0, 1]}, "shape": [4096], "dtype": "float32"},
+    "t": {"sampler": {"randint": [4, 5]}, "shape": [], "dtype": "int64"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["theta", "v", "gave", "b", "t"],
+    "binding_plan": "../call_bindings/triton_rmsprop.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

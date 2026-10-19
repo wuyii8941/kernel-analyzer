@@ -1,0 +1,54 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.mse_loss_mean.f32.r32.c128.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.nn.functional.mse_loss))",
+    "runtime_package": {"distribution": "torch", "version": "2.10.0+cu128"},
+    "boundary": "all generated Triton launches return the scalar mean-MSE loss and complete input/target VJP for float32[32,128]",
+    "measure_call": "../calls/inductor_mse_loss.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_mean_mse_forward",
+      "contract": "MSE",
+      "profile": "torch210_mean_f32_same_shape",
+      "task_statement": "Compute public PyTorch 2.10 unweighted same-shape mean squared error for complete finite float32 input and target tensors.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.mse_loss", "basis": "the public callable is torch.nn.functional.mse_loss"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/target/before", "conversion": "tensor_record"},
+        {"target": "/kwargs/reduction", "source": "/scalars/reduction"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/loss", "conversion": "tensor_record", "measure_output": "loss"}
+      ]
+    },
+    {
+      "id": "public_mean_mse_input_target_vjp",
+      "contract": "MSE",
+      "profile": "torch210_mean_f32_same_shape",
+      "task_statement": "Compute the complete ordered VJP of public PyTorch 2.10 unweighted mean squared error with respect to both input and target.",
+      "input_map": [
+        {"target": "/op", "literal": "vjp.aten.mse_loss", "basis": "MSE.C2 differentiates the selected public mean-MSE task"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/tensor_arguments/target/before", "conversion": "tensor_record"},
+        {"target": "/kwargs/reduction", "source": "/scalars/reduction"}
+      ],
+      "output_map": [
+        {"target": "/out/0", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"},
+        {"target": "/out/1", "source": "/returns/dtarget", "conversion": "tensor_record", "measure_output": "dtarget"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "target", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

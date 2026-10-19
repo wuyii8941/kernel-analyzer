@@ -1,0 +1,339 @@
+schema_version: '1.2'
+id: SSU
+role: SSM_STATE_UPDATE
+title: mamba-ssm 2.3.2.post1 selective state update, complete value and state
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite physical float32 tensors for one selective_state_update call; complete y and state post-state
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- The value and complete state transition of mamba-ssm 2.3.2.post1 selective_state_update
+profiles:
+  mamba232_real:
+    meaning: >-
+      Add the supplied dt_bias, optionally apply torch softplus with threshold 20, update state with
+      exp(dt*A)*state + dt*B*x, then return the C projection plus D*x and an optional SiLU(z) gate.
+      B and C groups are assigned to contiguous head groups. The complete state after the call is part of the result.
+    task_choice_required: false
+    basis: [SS.TASK, SS.DELTA, SS.STATE, SS.GROUPS]
+outputs:
+  out:
+    shape: '{y: input batch/head/channel shape, state: complete state-pool shape}'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: >-
+    Every tensor value is the exact physical float32 value received. D and dt_bias are present tensors. Optional z
+    and state_batch_indices are explicit nulls when absent; dt_softplus and dtype are explicit.
+  complete_output: The complete y tensor and every state-pool coordinate after the call are required.
+  quality: Exponential, softplus and sigmoid use rigorous enclosures; rational operations are exact. No tolerance.
+  test_evidence: >-
+    Independent 768-bit Arb element loops, public PyTorch formulas, six installed mamba-ssm 2.3.2.post1 Triton versus
+    reference calls, complete-output checks and rejected state-slot collisions.
+  error_handling: >-
+    Missing fields, malformed shapes, nonphysical float32 values and out-of-range indices are invalid_input.
+    Special values, other dtypes, or absent D/dt_bias are unsupported. Duplicate active state slots are
+    not_established because the Triton programs have no declared serial order.
+decisions:
+- id: SS.TASK
+  status: reviewed
+  statement: >-
+    The selected task is the complete state transition and y value of the installed mamba-ssm 2.3.2.post1
+    selective_state_update function. It is the library formula dA=exp(dt*A), dB=dt*B. The paper's full ZOH B-bar
+    formula is a different task and remains only in the archived draft. The reviewed executable range requires D and
+    dt_bias: although the function signature declares them optional, this version's wrapper raises before launch when
+    either is absent.
+  basis: [MAMBA232_SSU.FORMULA, MAMBA_PAPER.REC, MAMBA_PAPER.ZOH]
+- id: SS.DELTA
+  status: reviewed
+  statement: >-
+    dt_bias is added before softplus. With dt_softplus=true, torch's beta=1 threshold=20 rule uses
+    log(1+exp(dt)) at dt <= 20 and the exact linear value at dt > 20.
+  basis: [MAMBA232_SSU.FORMULA, T_SOFTPLUS_F.DEF, T_SOFTPLUS_F.THRESH]
+- id: SS.STATE
+  status: reviewed
+  statement: >-
+    State is a public in-place post-state and is never omitted from the specification result. A negative mapped slot
+    is padding and leaves all state unchanged; distinct nonnegative mappings update their selected pre-state slots.
+    Duplicate active slots are not assigned an invented row order.
+  basis: [MAMBA232_SSU.STATE]
+- id: SS.GROUPS
+  status: reviewed
+  statement: >-
+    B and C group g serves the contiguous heads g*(H/G) through (g+1)*(H/G)-1. H must be divisible by G.
+  basis: [MAMBA232_SSU.GROUPS, MAMBA232_SSU.SHAPES]
+- id: SS.DTYPE
+  status: reviewed
+  statement: >-
+    This profile accepts only finite physical float32 inputs. Float32 device rounding, exponential approximation,
+    reduction order and stores are execution effects measured separately from the exact-real task formula.
+  basis: [MAMBA232_SSU.DTYPES]
+clauses:
+- {id: SS.C1, basis: [SS.TASK], statement: 'state_next = exp(dt*A)*state + dt*B*x at every selected state coordinate.', observes: [out], evidence_kind: definition}
+- {id: SS.C2, basis: [SS.TASK], statement: 'y uses the updated state: sum_n C_n*state_next_n plus D*x, followed by optional SiLU(z) multiplication.', observes: [out], evidence_kind: definition}
+- {id: SS.C3, basis: [SS.DELTA], statement: 'dt_bias precedes the strict-threshold torch softplus transformation.', observes: [out], evidence_kind: definition}
+- {id: SS.C4, basis: [SS.GROUPS], statement: 'Each head uses its contiguous B/C group and H is divisible by G.', observes: [out], evidence_kind: definition}
+- {id: SS.C5, basis: [SS.STATE], statement: 'The complete state pool after the call is returned; padding and mapped slots preserve the declared effects.', observes: [out], evidence_kind: definition}
+- {id: SS.C6, basis: [SS.STATE], statement: 'Duplicate active state slots return not_established instead of a serial result.', observes: [out], evidence_kind: derived}
+- {id: SS.C7, basis: [SS.DTYPE, MAMBA232_SSU.SHAPES, MAMBA232_SSU.WRAPPER], statement: 'Inputs have the complete reviewed logical shapes and physical float32 values; D and dt_bias are present and every field is explicit.', observes: [out], evidence_kind: definition}
+examples:
+- id: SS.E1
+  profile: mamba232_real
+  clauses: [SS.C1, SS.C2, SS.C3, SS.C5]
+  input: &full
+    state: [[[[2]]]]
+    x: [[[3]]]
+    dt: [[['3/2']]]
+    A: [[[-1]]]
+    B: [[[4]]]
+    C: [[[5]]]
+    D: [[1]]
+    z: null
+    dt_bias: [['1/2']]
+    dt_softplus: false
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[[123 + 10*exp(-2)]]], state: [[[[24 + 2*exp(-2)]]]]}}}
+- id: SS.E2
+  profile: mamba232_real
+  clauses: [SS.C3]
+  input:
+    state: [[[[1]]]]
+    x: [[[1]]]
+    dt: [[[0]]]
+    A: [[[0]]]
+    B: [[[1]]]
+    C: [[[1]]]
+    D: [[0]]
+    z: null
+    dt_bias: [[0]]
+    dt_softplus: true
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[[1 + log(2)]]], state: [[[[1 + log(2)]]]]}}}
+- id: SS.E3
+  profile: mamba232_real
+  clauses: [SS.C3]
+  input:
+    state: [[[[0]]]]
+    x: [[[1]]]
+    dt: [[[21]]]
+    A: [[[0]]]
+    B: [[[1]]]
+    C: [[[1]]]
+    D: [[0]]
+    z: null
+    dt_bias: [[0]]
+    dt_softplus: true
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[[21]]], state: [[[[21]]]]}}}
+- id: SS.E4
+  profile: mamba232_real
+  clauses: [SS.C2]
+  input:
+    state: [[[[0]]]]
+    x: [[[2]]]
+    dt: [[[1]]]
+    A: [[[0]]]
+    B: [[[1]]]
+    C: [[[1]]]
+    D: [[1]]
+    z: [[[1]]]
+    dt_bias: [[0]]
+    dt_softplus: false
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[[4/(1 + exp(-1))]]], state: [[[[2]]]]}}}
+- id: SS.E5
+  profile: mamba232_real
+  clauses: [SS.C4]
+  input:
+    state: [[[[0]], [[0]], [[0]], [[0]]]]
+    x: [[[1], [1], [1], [1]]]
+    dt: [[[1], [1], [1], [1]]]
+    A: [[[0]], [[0]], [[0]], [[0]]]
+    B: [[[1], [2]]]
+    C: [[[1], [1]]]
+    D: [[0], [0], [0], [0]]
+    z: null
+    dt_bias: [[0], [0], [0], [0]]
+    dt_softplus: false
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[[1], [1], [2], [2]]], state: [[[[1]], [[1]], [[2]], [[2]]]]}}}
+- id: SS.E6
+  profile: mamba232_real
+  clauses: [SS.C4, SS.C7]
+  input:
+    state: [[[[0]], [[0]], [[0]]]]
+    x: [[[1], [1], [1]]]
+    dt: [[[1], [1], [1]]]
+    A: [[[0]], [[0]], [[0]]]
+    B: [[[1], [2]]]
+    C: [[[1], [1]]]
+    D: [[0], [0], [0]]
+    z: null
+    dt_bias: [[0], [0], [0]]
+    dt_softplus: false
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: invalid_input}
+- id: SS.E7
+  profile: mamba232_real
+  clauses: [SS.C5]
+  input:
+    state: [[[[5]]], [[[7]]]]
+    x: [[[1]], [[1]]]
+    dt: [[[1]], [[1]]]
+    A: [[[0]]]
+    B: [[[1]], [[1]]]
+    C: [[[1]], [[1]]]
+    D: [[0]]
+    z: null
+    dt_bias: [[0]]
+    dt_softplus: false
+    state_batch_indices: [1, -1]
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[[8]], [[0]]], state: [[[[5]]], [[[8]]]]}}}
+- id: SS.E8
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input:
+    state: [[[1]]]
+    x: [[2]]
+    dt: [[1]]
+    A: [[0]]
+    B: [[3]]
+    C: [[1]]
+    D: [1]
+    z: null
+    dt_bias: [0]
+    dt_softplus: false
+    state_batch_indices: null
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[9]], state: [[[7]]]}}}
+- id: SS.E9
+  profile: mamba232_real
+  clauses: [SS.C6]
+  input:
+    state: [[[10]], [[20]]]
+    x: [[1], [2]]
+    dt: [[1], [1]]
+    A: [[0]]
+    B: [[1], [1]]
+    C: [[1], [1]]
+    D: [0]
+    z: null
+    dt_bias: [0]
+    dt_softplus: false
+    state_batch_indices: [0, 0]
+    dtype: f32
+  expected: {outcome: not_established}
+- id: SS.E10
+  profile: mamba232_real
+  clauses: [SS.C5]
+  input:
+    state: [[[10]], [[20]]]
+    x: [[1], [2]]
+    dt: [[1], [1]]
+    A: [[0]]
+    B: [[1], [1]]
+    C: [[1], [1]]
+    D: [0]
+    z: null
+    dt_bias: [0]
+    dt_softplus: false
+    state_batch_indices: [1, 0]
+    dtype: f32
+  expected: {outcome: value, fields: {out: {y: [[21], [12]], state: [[[12]], [[21]]]}}}
+- id: SS.E11
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, dtype: f64}
+  expected: {outcome: unsupported}
+- id: SS.E12
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, x: [[['1/3']]]}
+  expected: {outcome: invalid_input}
+- id: SS.E13
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, x: [[['inf']]]}
+  expected: {outcome: unsupported}
+- id: SS.E14
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, dt_softplus: 1}
+  expected: {outcome: invalid_input}
+- id: SS.E15
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, state_batch_indices: [1]}
+  expected: {outcome: invalid_input}
+- id: SS.E16
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, q: [[[1]]]}
+  expected: {outcome: invalid_input}
+- id: SS.E17
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, D: null}
+  expected: {outcome: unsupported}
+- id: SS.E18
+  profile: mamba232_real
+  clauses: [SS.C7]
+  input: {<<: *full, dt_bias: null}
+  expected: {outcome: unsupported}
+signature:
+  inputs:
+  - 'state: physical f32 [slots,H,D,N] or [slots,D,N]; x and dt: [B,H,D] or [B,D]'
+  - 'A: [H,D,N] or [D,N]; B and C: [B,G,N] or [B,N]; required D and dt_bias plus optional z with corresponding shapes'
+  - 'explicit dt_softplus, state_batch_indices null or [B], and dtype=f32'
+  pre_state: [complete state pool and every other tensor]
+  post_state: [complete y, complete updated state pool, every other tensor unchanged]
+  observation_unit: Every y and state coordinate together with shape and dtype
+domain:
+  valid:
+  - Finite physical float32 tensors with positive dimensions and the documented shapes
+  - D and dt_bias are present tensors; z may be null
+  - H divisible by G; absent state mapping requires slots=B
+  - Distinct nonnegative mapped state slots; any negative value is a padding row
+  invalid_input: [missing or extra fields, malformed shapes, nonphysical values, nonboolean dt_softplus, out-of-range indices]
+  unsupported: [absent D or dt_bias, other dtypes, special values, gradients, layout and alias effects]
+  not_established: [two or more active rows mapped to the same state slot]
+mutation_requirements:
+- {id: SS.M1, misreading: omit dt_bias, witnesses: [SS.E1]}
+- {id: SS.M2, misreading: omit D*x, witnesses: [SS.E1]}
+- {id: SS.M3, misreading: form y from the state before its update, witnesses: [SS.E1]}
+- {id: SS.M4, misreading: use exp(A) instead of exp(dt*A), witnesses: [SS.E1]}
+- {id: SS.M5, misreading: use B*x instead of dt*B*x, witnesses: [SS.E1]}
+- {id: SS.M6, misreading: ignore dt_softplus, witnesses: [SS.E2]}
+- {id: SS.M7, misreading: gate with z instead of SiLU(z), witnesses: [SS.E4]}
+- {id: SS.M8, misreading: apply the z gate before adding D*x, witnesses: [SS.E4]}
+- {id: SS.M9, misreading: map heads to B/C groups by h modulo G, witnesses: [SS.E5]}
+- {id: SS.M10, misreading: process a negative padding row through state slot zero, witnesses: [SS.E7]}
+- {id: SS.M11, misreading: omit the complete state writeback, witnesses: [SS.E1]}
+nonclaims:
+- The profile is the installed mamba-ssm operator's dB=dt*B task. It does not claim the paper's full ZOH discretisation.
+- The installed 2.3.2.post1 signature describes D and dt_bias as optional, but its wrapper does not launch when either
+  is absent. Those calls are refused rather than assigning the reference helper's intended result to a failed call.
+- Duplicate active state slots, other dtypes, mixed-dtype accumulation, layout, aliasing, gradients and sequence scans are outside this profile.
+- Float32 execution and stores remain measurable K-G effects; the task formula itself is exact real arithmetic.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the combined unverified-main/library and paper-ZOH draft with one installed mamba-ssm 2.3.2.post1 task;
+    require physical float32 inputs, executable D/dt_bias arguments and complete y/state output checks, and preserve
+    the former contract under draft.
+  trigger: >-
+    The old contract mixed two different discretisations and had no contract-specific complete-output checker, so it
+    could not certify that a kernel returned every promised state coordinate.

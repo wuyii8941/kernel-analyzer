@@ -1,0 +1,9 @@
+# BatchNorm evaluation implementation review — 2026-10-19
+
+The active BN contract covers complete evaluation-mode forward values for PyTorch 2.10 functional BatchNorm on positive rank-2, rank-3 or rank-4 physical finite f16, bf16, f32 or f64 tensors. Running mean and nonnegative running variance are explicit same-dtype vectors. Weight and bias are optional same-dtype vectors, and eps is positive.
+
+The retained PyTorch 2.10 functional page and BatchNorm2d page define the public call, per-channel affine formula and use of running statistics during evaluation. The retained decomposition implements evaluation as `(input-running_mean)/sqrt(running_var+eps)`, followed by optional weight and bias. The retained native schema file separates the one-output functional task from native three-output, out and backward forms. These sources support the selected task without using a tested Triton result.
+
+The adapter validates the exact call form, physical dtype, rank, positive dimensions, finite values, exact representability, channel-vector shapes, common dtype, evaluation flag, finite momentum, positive eps and nonnegative running variance before constructing every output coordinate. It refuses training, missing statistics, native multi-output calls, backward, special values, signed-zero distinctions, integer or complex data and unselected ranks or overloads.
+
+Validation comprises 18 contract examples, six mutated formulas and complete dtype/shape/value checks. Twelve generated cases cover all four admitted dtypes and ranks 2, 3 and 4; an independent coordinate implementation and PyTorch 2.10 agree on every value. A separate 100-digit calculation checks that non-square reciprocal roots lie inside every returned strict interval. The previous training/evaluation/state/VJP draft remains in `contracts/draft/BN_extended_20261019.yaml`; it is not an admitted ground truth.

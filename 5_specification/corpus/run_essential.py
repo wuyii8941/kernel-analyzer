@@ -3,10 +3,10 @@
 (pre-reorg-20261009:scripts/essential, extracted to .cache/spec_v3/tag_scripts/essential) and evaluate f through the
 single entry kernel_spec.registry.query (draft contracts allowed, labelled); record the outcome of every output.
 
-    python 5_specification/corpus/run_essential.py --family matmul_linear reductions gather_layout
+    python 5_specification/corpus/run_essential.py --out-dir NEW --family matmul_linear reductions gather_layout
 
-Writes corpus/results/essential_<family>.jsonl (one line per condition and seed) and prints a summary. V3 accepts the
-outcomes value, domain_undefined and invalid_input; anything else is a gap.
+Writes essential_<family>.jsonl in a new directory. Query outcomes, draft labels and
+unestablished kernel binding remain separate; query completion is not certified coverage.
 """
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ sys.path.insert(0, str(SPEC))
 sys.path.insert(0, str(TAG))
 
 from kernel_spec import registry  # noqa: E402
+from kernel_spec.num import OUTCOMES  # noqa: E402
 
 ACCEPTED = {"value", "domain_undefined", "invalid_input"}
 PLAN = REPO / "1_experiments/essential_bugs_round/results/phase2b/coverage_plan.json"
@@ -44,7 +45,13 @@ def ints(a):
 
 def q(cid, op, args, kwargs=None, profile="real"):
     r = registry.query(cid, profile, {"op": op, "args": args, "kwargs": kwargs or {}}, allow_draft=True)
-    return r.outcome, r.note
+    return r.outcome, r.note, r.labels
+
+
+def qgraph(graph):
+    """Compose within the reference evaluator; never round an intermediate to feed the next query."""
+    result = registry.query("GRAPH", "eager", {"graph": graph}, allow_draft=True)
+    return result.outcome, result.note, result.labels
 
 
 def load_basic():
@@ -78,7 +85,10 @@ def fam_matmul(c, t):
         out["out"] = q("MATMUL", "aten.matmul", [ten(a), ten(b)])
         out["grads"] = q("MATMUL", "vjp.aten.matmul", [ten(g), ten(a), ten(b)])
         if bias is not None:
-            out["bias_add"] = q("ARITH", "aten.add", [ten(np.matmul(a, b)), ten(bias)])
+            out["bias_add"] = qgraph({"inputs": {"a": ten(a), "b": ten(b), "bias": ten(bias)},
+                                      "nodes": [{"name": "mm", "op": "aten.matmul", "args": [{"ref": "a"}, {"ref": "b"}]},
+                                                {"name": "y", "op": "aten.add", "args": [{"ref": "mm"}, {"ref": "bias"}]}],
+                                      "outputs": ["y"]})
             out["dbias"] = q("REDUCE", "aten.sum", [ten(g), list(range(np.ndim(g) - 1))])
     return out
 
@@ -98,11 +108,13 @@ def fam_reductions(c, t):
             out["dx"] = q("REDUCE", "vjp.aten.cumsum", [ten(gg), ten(xx), -1])
         else:
             aten = "aten._softmax" if op == "softmax" else "aten._log_softmax"
-            out["out"] = q("SOFTMAX", aten, [ten(xx), -1, False])
-            if out["out"][0] == "value":
-                y = _value_of(q_value("SOFTMAX", aten, [ten(xx), -1, False]))
-                bwd = "aten._softmax_backward_data" if op == "softmax" else "aten._log_softmax_backward_data"
-                out["dx"] = q("SOFTMAX", bwd, [ten(gg), y, -1, "f32"])
+            bwd = "aten._softmax_backward_data" if op == "softmax" else "aten._log_softmax_backward_data"
+            status = qgraph({"inputs": {"x": ten(xx), "g": ten(gg)},
+                             "nodes": [{"name": "y", "op": aten, "args": [{"ref": "x"}, -1, False]},
+                                       {"name": "dx", "op": bwd,
+                                        "args": [{"ref": "g"}, {"ref": "y"}, -1, "f32"]}],
+                             "outputs": ["y", "dx"]})
+            out["out"], out["dx"] = status, status
         return out
     kw_dims = dims if dims is not None else list(range(x.ndim))
     if op in ("sum", "mean", "prod", "amax", "amin", "logsumexp"):
@@ -137,14 +149,14 @@ def fam_gather(c, t):
         out["dx"] = q("INDEX", "vjp.aten.gather", [ten(g), ten(x), 1, ints(idx)])
     elif op == "index_select":
         sel = q_value("INDEX", "aten.index_select", [ten(x), 1, ints(idx[0])])
-        out["out"] = (sel.outcome, sel.note)
+        out["out"] = (sel.outcome, sel.note, sel.labels)
         if sel.outcome == "value":
             out["slice"] = q("LAYOUT", "aten.slice", [{"t": "f32", "v": sel.fields["out"]}, 1, 0, 5])
         out["dx"] = q("INDEX", "vjp.aten.index_select", [ten(np.pad(g, ((0, 0), (0, max(0, len(idx[0]) - 5))))[:, :len(idx[0])]),
                                                          ten(x), 1, ints(idx[0])])
     elif op == "cat_split":
         parts = q_value("LAYOUT", "aten.split_with_sizes", [ten(x), [2, 3, 4], 1])
-        out["split"] = (parts.outcome, parts.note)
+        out["split"] = (parts.outcome, parts.note, parts.labels)
         if parts.outcome == "value":
             out["cat"] = q("LAYOUT", "aten.cat", [[{"t": "f32", "v": p} for p in parts.fields["out"]], 1])
         out["dx"] = q("LAYOUT", "aten.constant_pad_nd", [ten(g), [0, 4]])
@@ -159,58 +171,60 @@ def q_value(cid, op, args, kwargs=None, profile="real"):
     return registry.query(cid, profile, {"op": op, "args": args, "kwargs": kwargs or {}}, allow_draft=True)
 
 
-def _value_of(r):
-    return {"t": "f32", "v": _floatish(r.fields["out"])}
-
-
-def _floatish(v):
-    """Values handed on to the next query: exact rationals stay exact; enclosures are passed as their midpoint
-    rationals only for the backward formula's inputs (documented in the result as 'chained')."""
-    from fractions import Fraction
-    from kernel_spec.num import IV, ends
-    if isinstance(v, list):
-        return [_floatish(x) for x in v]
-    if isinstance(v, IV):
-        a, b = ends(v)
-        m = (a + b) / 2
-        return f"{m.numerator}/{m.denominator}"
-    if isinstance(v, Fraction):
-        return f"{v.numerator}/{v.denominator}"
-    return v
-
-
 FAMILIES = {"matmul_linear": ("Matmul", fam_matmul), "reductions": ("Reductions", fam_reductions),
             "gather_layout": ("Gather", fam_gather)}
 
 
+def run_family(fam, generator, fn, seeds, path):
+    """Preserve every condition, including exceptions, without replacing existing evidence."""
+    counts = collections.Counter()
+    with Path(path).open("x") as fh:
+        for condition in generator.conditions():
+            for seed in seeds:
+                try:
+                    tensors = generator.inputs(condition, seed, "base")
+                    results = fn(condition, tensors)
+                    if not isinstance(results, dict) or not results:
+                        raise ValueError("condition returned no output results")
+                    for value in results.values():
+                        if (not isinstance(value, tuple) or len(value) != 3 or value[0] not in OUTCOMES
+                                or not isinstance(value[1], str) or not isinstance(value[2], dict)):
+                            raise ValueError("output result must retain outcome, note and labels")
+                except Exception as error:
+                    results = {"query": ("implementation_error", f"{type(error).__name__}: {error}", {})}
+                outcomes = {name: value[0] for name, value in results.items()}
+                worst = next(state for state in ("implementation_error", "unsupported", "not_established",
+                                                 "invalid_input", "domain_undefined", "value")
+                             if state in outcomes.values())
+                counts[worst] += 1
+                row = {"family": fam, "condition": condition["id"], "seed": seed, "outcome": worst,
+                       "outputs": outcomes, "notes": {k: v[1][:200] for k, v in results.items() if v[1]},
+                       "reference_labels": {k: v[2] for k, v in results.items()},
+                       "input_evidence": "regenerated", "binding_status": "not_established",
+                       "semantic_verdict": "not_established"}
+                fh.write(json.dumps(row) + "\n")
+                fh.flush()
+    if not counts:
+        raise ValueError(f"{fam}: no query records were generated")
+    return counts
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--family", nargs="+", default=list(FAMILIES))
+    ap.add_argument("--family", nargs="+", choices=list(FAMILIES), default=list(FAMILIES))
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    ap.add_argument("--out-dir", type=Path, required=True, help="new directory; existing records are never overwritten")
     a = ap.parse_args()
+    a.out_dir.mkdir(parents=True, exist_ok=False)
     basic = load_basic()
-    (HERE / "results").mkdir(exist_ok=True)
     gaps = 0
     for fam in a.family:
         cls, fn = FAMILIES[fam]
         F = getattr(basic, cls)()
-        conds = F.conditions()
-        counts = collections.Counter()
-        with open(HERE / f"results/essential_{fam}.jsonl", "w") as fh:
-            for c in conds:
-                for seed in a.seeds:
-                    t = F.inputs(c, seed, "base")
-                    res = fn(c, t)
-                    outcomes = {k: v[0] for k, v in res.items()}
-                    worst = "value" if all(o == "value" for o in outcomes.values()) else \
-                        next((o for o in outcomes.values() if o not in ACCEPTED), None) or \
-                        ("domain_undefined" if "domain_undefined" in outcomes.values() else "invalid_input")
-                    counts[worst] += 1
-                    fh.write(json.dumps({"family": fam, "condition": c["id"], "seed": seed, "outcome": worst,
-                                         "outputs": outcomes, "notes": {k: v[1][:160] for k, v in res.items() if v[1]}}) + "\n")
+        counts = run_family(fam, F, fn, a.seeds, a.out_dir / f"essential_{fam}.jsonl")
         bad = sum(v for k, v in counts.items() if k not in ACCEPTED)
         gaps += bad
-        print(f"{fam}: {len(conds)} conditions x {len(a.seeds)} seeds -> {dict(counts)}; gaps {bad}")
+        print(f"{fam}: {sum(counts.values())} queries -> {dict(counts)}; gaps {bad}")
     return 1 if gaps else 0
 
 

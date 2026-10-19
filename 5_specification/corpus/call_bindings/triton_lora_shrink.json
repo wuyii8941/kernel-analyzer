@@ -1,0 +1,41 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.lora_shrink.f16.t64.l4.r8.k32.s2.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float16 LoRA A projection into a float32 output buffer",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with one program per token, rank coordinate and slice; every output coordinate is overwritten",
+    "measure_call": "../calls/triton_lora_shrink.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "complete_lora_shrink",
+      "contract": "LORA",
+      "profile": "vllm016_shrink_f32out_real",
+      "task_statement": "Compute the complete two-slice LoRA A projection for 64 tokens, four LoRAs, rank 8 and hidden size 32 from finite contiguous float16 x and weights, scaling 0.5, an explicit token mapping containing -1 and valid ids, and a float32 output pre-state that the active call completely overwrites.",
+      "input_map": [
+        {"target": "/x", "source": "/tensor_arguments/x/before", "conversion": "tensor_values"},
+        {"target": "/weights", "source": "/tensor_arguments/weights/before", "conversion": "tensor_values"},
+        {"target": "/mapping", "source": "/tensor_arguments/mapping/before", "conversion": "tensor_values"},
+        {"target": "/scaling", "literal": 0.5, "basis": "the kernel multiplies every active A projection by the exact binary value 0.5"},
+        {"target": "/out_before", "source": "/tensor_arguments/out_before/before", "conversion": "tensor_values"},
+        {"target": "/input_dtype", "literal": "f16", "basis": "the wrapper requires float16 x and weights"},
+        {"target": "/output_dtype", "literal": "f32", "basis": "the wrapper requires a float32 output pre-state and post-state"}
+      ],
+      "output_map": [
+        {"target": "/y", "source": "/tensor_arguments/out_before/after", "conversion": "tensor_record", "measure_output": "y"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "weights", "effect": "unchanged"},
+    {"argument": "mapping", "effect": "unchanged"},
+    {"argument": "out_before", "effect": "output", "task": "complete_lora_shrink", "target": "/y"}
+  ]
+}

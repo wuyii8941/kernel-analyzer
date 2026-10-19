@@ -1,242 +1,132 @@
 schema_version: '1.2'
 id: INDEXREDUCE
 role: INDEXREDUCE
-title: index_add, index_reduce and scatter_reduce - values, extremum (tie) sets and the VJP with respect to self and src
+title: Exact finite out-of-place index-add forward values
 review:
-  status: drafted
-  author: Claude (spec v3 author, group E2_program), 2026-10-17
-  date: '2026-10-17'
-  scope: Real-number semantics of the documented operations plus the reviewed phase-1 decisions; awaiting a review by
-    someone who did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 default functional index_add forward values on physical finite floating tensors and int64 indices
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
-covers: [torch.Tensor.index_add_, torch.index_add, torch.Tensor.index_reduce_, torch.index_reduce,
-  torch.Tensor.scatter_reduce_, torch.scatter_reduce, aten.index_add, aten.index_reduce, aten.scatter_reduce.two]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.index_add, torch.index_add]
 profiles:
-  real:
-    meaning: Exact real values (rationals, +-inf where the reduction has that value); sum, prod and mean exact; amax /
-      amin give the exact extremum, the set of participants attaining it and the uniquely determined VJP part.
+  finite_index_add_values:
+    meaning: >-
+      Complete out-of-place index_add forward values on positive rank-1 through rank-4 physical finite f16, bf16,
+      f32 or f64 tensors. The index is a nonempty int64 vector, source has the required shape, and alpha is finite and
+      exactly representable in the tensor dtype. Repeated indices contribute repeatedly to the same output slice.
     task_choice_required: false
+    basis: [IR2.SCHEMA, IR2.PHYSICAL, IR2.FORMULA]
 outputs:
   out:
-    shape: shape of self
+    shape: the complete self shape
     guarantee: exact
-  grad_self:
-    shape: shape of self; VJP part with respect to self (IR.C7)
-    guarantee: exact
-  grad_src:
-    shape: shape of src; VJP part with respect to src (IR.C7)
-    guarantee: exact
-  ties:
-    shape: amax / amin - per position of self the allowed set of participants attaining the extremum ((-1) = the old
-      self value, otherwise src coordinates; empty where nothing is reduced); other reductions - the empty list
-    kind: discrete
-    guarantee: allowed_set
-readings:
-  even_split:
-    meaning: 'A tied extremum routes upstream/|S| to each participant of the tie set (the rule torch.amax documents for
-      itself); grad then holds the full gradient. Diagnostic only - IR.A4 keeps the whole allowed set.'
-    basis: [T_AMAX.GRAD]
 comparison:
-  input_binding: Tensor values and index values are the exact values received.
-  quality: No tolerance; exact comparison; allowed sets compare as exact sets.
-  test_evidence: Exact rational equality and exact set equality.
-  error_handling: Out-of-range indices and documented shape violations are invalid_input; NaN inputs are
-    domain_undefined (IR.NAN).
+  input_binding: >-
+    Self and source records contain the exact physical values received in their common declared dtype. The index
+    record contains literal int64 values. Dimension and alpha are explicit call arguments.
+  complete_output: The complete returned tensor is observed with dtype, explicit shape and every value.
+  quality: Exact finite-real task value, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent coordinate construction and PyTorch 2.10 comparisons over all selected floating dtypes.
+  error_handling: Malformed calls, dimensions, shapes or ranges are invalid_input; mutation, other reductions, special
+    values, unselected dtypes or ranks and unrepresentable alpha receive no reference answer.
 decisions:
-- id: IR.A1
-  status: drafted
-  statement: 'Reviewed decision IDX-A1, reused: reduce="mean" with include_self=False averages the contributions only
-    (mean has no identity element, so "treated as if filled with the reduction identities" cannot be taken
-    literally); the old self value has no influence and receives zero gradient at touched positions.'
-  basis: [PH1_AMBIGUITIES.IDX_A1, T_INDEX_REDUCE.INCLUDE_SELF]
-- id: IR.A2
-  status: drafted
-  statement: 'Reviewed decision IDX-A2, reused: reduce="mean" with include_self=True is (self + sum of k contributions)
-    / (1 + k), the arithmetic mean of the participating values. (self + sum)/k is not a mean (constants are not
-    preserved) and is an error variant (mutation IR.M3), not a reading.'
-  basis: [PH1_AMBIGUITIES.IDX_A2, T_SCATTER_REDUCE.INCLUDE_SELF]
-- id: IR.A4
-  status: drafted
-  statement: 'Reviewed decision IDX-A4, reused: the VJP of a tied amax / amin is any upstream*alpha with alpha >= 0
-    supported on the tie set of participants and summing to 1. Alternatives: even split (documented by torch.amax for
-    torch.amax only), first participant, last participant; the scatter_reduce / index_reduce pages say nothing more
-    specific, so the allowed set is kept and even split is the diagnostic reading even_split. Only participants
-    count: with include_self=False the old self value is not in the set even when it equals the extremum.'
-  basis: [PH1_DECISIONS.IDX_A4, T_AMAX.GRAD, T_SCATTER_REDUCE.INCLUDE_SELF, T_INDEX_REDUCE.INCLUDE_SELF]
-- id: IR.A6
-  status: drafted
-  statement: 'Reviewed decision IDX-A6, reused: index holds positions of self to accumulate into (the body text, the
-    formulas self[index[i]] op= src[i] and the examples), although the 2.10 parameter text of index_reduce_ and
-    index_add_ says "indices of source to select from". Alternative (index selects source rows) contradicts the
-    formulas and the examples of the same pages.'
-  basis: [PH1_AMBIGUITIES.IDX_A6, T_INDEX_REDUCE.INDEX_PARAM, T_INDEX_REDUCE.DEF, T_INDEX_ADD.DEF]
-- id: IR.GRAD
-  status: drafted
-  statement: 'The VJP is the derivative of the documented value: each participant of a sum receives the upstream of
-    its position, of a prod the upstream times the product of the other participants (defined at zeros, no
-    division), of a mean upstream/(number of participants); index_add scales the src part by alpha; untouched
-    positions pass the upstream to self; with include_self=False the old self of a touched position does not take
-    part and receives 0. Alternative (excluded self also receives gradient) contradicts the value, on which it has no
-    influence.'
-  basis: [T_AUTOGRAD_NOTES.RULES, T_INDEX_REDUCE.INCLUDE_SELF, T_SCATTER_REDUCE.DEF, T_INDEX_ADD.DEF]
-- id: IR.NAN
-  status: drafted
-  statement: 'NaN behaviour is undocumented; IDX-A3 made R_prop a project diagnostic profile. No tested condition has a
-    NaN input, so this contract carries only the real profile: a NaN input is domain_undefined (no requirement).
-    Infinite inputs follow real arithmetic (inf - inf and 0 * inf undefined).'
-  basis: [PH1_DECISIONS.IDX_A3]
-- id: IR.SHAPE
-  status: drafted
-  statement: 'scatter_reduce: the contract takes index.shape == src.shape, the only case with a documented backward;
-    an index smaller than src (documented for the forward) is outside the profile (unsupported; untested). Index
-    values must lie in [0, self.size(dim)).'
-  basis: [T_SCATTER_REDUCE.BACKWARD, T_SCATTER_REDUCE.SHAPE]
+- id: IR2.SCHEMA
+  status: reviewed
+  statement: >-
+    Select only the default out-of-place functional index_add schema returning one tensor. The out overload, in-place
+    index_add_, index_reduce, scatter_reduce and backward are different tasks and are outside this profile.
+  basis: [TS_NATIVE_FUNCTIONS.INDEX_REDUCE_SCHEMAS]
+- id: IR2.PHYSICAL
+  status: reviewed
+  statement: >-
+    Self and source are positive rank-1 through rank-4 finite f16, bf16, f32 or f64 physical tensors with a common
+    dtype and exactly representable listed values. Index is a nonempty one-dimensional int64 tensor. Alpha is finite
+    and exactly representable in the common floating dtype. Special values, signed-zero distinctions, empty tensors,
+    integer or complex data and other index dtypes are outside the reviewed profile.
+  basis: [T_INDEX_ADD.DEF, TS_NATIVE_FUNCTIONS.INDEX_REDUCE_SCHEMAS]
+- id: IR2.FORMULA
+  status: reviewed
+  statement: >-
+    Start from every self value. For source slice i along dim, add alpha times that complete source slice to output
+    slice index[i]. The source length along dim equals the index length and all other source dimensions equal self.
+    Repeated indices add every listed contribution; negative dim is normalized by the tensor rank.
+  basis: [T_INDEX_ADD.DEF, TS_NATIVE_FUNCTIONS.INDEX_REDUCE_SCHEMAS]
 clauses:
-- {id: IR.C1, basis: [T_INDEX_ADD.DEF, IR.A6], statement: 'index_add: out = self; out[index[i]] += alpha * source[i] along
-    dim; duplicates accumulate', observes: [out], evidence_kind: definition}
-- {id: IR.C2, basis: [T_INDEX_REDUCE.DEF, T_INDEX_REDUCE.REDUCES, IR.A6], statement: 'index_reduce: each position j of self
-    along dim reduces self[j] (if include_self) with every source slice i with index[i] = j by prod / mean / amax /
-    amin', observes: [out], evidence_kind: definition}
-- {id: IR.C3, basis: [T_SCATTER_REDUCE.DEF, T_SCATTER_REDUCE_F.DEF], statement: 'scatter_reduce: src[q] is reduced into
-    the self position equal to q except index[q] along dim, by sum / prod / mean / amax / amin', observes: [out],
-  evidence_kind: definition}
-- {id: IR.C4, basis: [T_INDEX_REDUCE.INCLUDE_SELF, T_SCATTER_REDUCE.INCLUDE_SELF, IR.A1], statement: 'include_self=False:
-    a touched position reduces the contributions only; positions that receive nothing keep self', observes: [out,
-    grad_self], evidence_kind: definition}
-- {id: IR.C5, basis: [IR.A2, IR.A1], statement: 'mean = sum of participants / number of participants', observes: [out,
-    grad_self, grad_src], evidence_kind: definition}
-- {id: IR.C6, basis: [IR.A4], statement: 'amax / amin: ties is the set of participants attaining the extremum', observes: [
-    out, ties], evidence_kind: definition}
-- {id: IR.C7, basis: [IR.GRAD, IR.A4], statement: 'grad_self / grad_src: derivative of sum, prod (product of the others),
-    mean; amax / amin route the upstream to the single member of a one-element tie set; larger tie sets route it by a
-    convex combination over the set (not part of grad_self / grad_src)', observes: [grad_self, grad_src], evidence_kind: derived}
-- {id: IR.C8, basis: [T_INDEX_REDUCE.SHAPE, T_SCATTER_REDUCE.SHAPE, IR.SHAPE], statement: 'invalid input: index out of
-    range, source length along dim different from len(index), other dimensions different, a reduce outside the
-    documented list, upstream not of self''s shape', observes: [out], evidence_kind: definition}
-- {id: IR.C9, basis: [IR.NAN], statement: NaN input is domain_undefined, observes: [out], evidence_kind: definition}
+- id: IR2.C1
+  basis: [IR2.SCHEMA, IR2.PHYSICAL]
+  statement: Every selected call has same-dtype physical finite self and source tensors, one int64 index vector, one integer dimension and one exactly representable finite alpha; all inputs are unchanged.
+  observes: [out]
+  evidence_kind: definition
+- id: IR2.C2
+  basis: [T_INDEX_ADD.DEF, IR2.FORMULA]
+  statement: Every source slice i contributes alpha times its values to output slice index[i], starting from self; duplicate indices retain all contributions.
+  observes: [out]
+  evidence_kind: definition
+- id: IR2.C3
+  basis: [T_INDEX_ADD.DEF, IR2.FORMULA]
+  statement: Source matches self outside dim and has index length along dim; index values are nonnegative and smaller than self size along dim.
+  observes: [out]
+  evidence_kind: definition
+- id: IR2.C4
+  basis: [IR2.SCHEMA, IR2.PHYSICAL]
+  statement: In-place, out, index_reduce, scatter_reduce, backward, special values, signed-zero distinctions, unselected ranks or dtypes and unrepresentable alpha receive no reference answer.
+  observes: [out]
+  evidence_kind: definition
 examples:
-- id: IR.E1
-  profile: real
-  clauses: [IR.C2, IR.C7]
-  note: documentation example of index_reduce_ (prod, include_self=True), upstream all ones
-  input: {op: index_reduce, self: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]], dim: 0, index: [0, 4, 2, 0],
-    src: [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], reduce: prod, include_self: true, upstream: [[1, 1, 1], [1, 1, 1],
-      [1, 1, 1], [1, 1, 1], [1, 1, 1]]}
-  expected: {outcome: value, fields: {out: [[20, 44, 72], [2, 2, 2], [14, 16, 18], [2, 2, 2], [8, 10, 12]], grad_self: [[10,
-          22, 36], [1, 1, 1], [7, 8, 9], [1, 1, 1], [4, 5, 6]], grad_src: [[20, 22, 24], [2, 2, 2], [2, 2, 2], [2, 4, 6]],
-      ties: []}}
-- id: IR.E2
-  profile: real
-  clauses: [IR.C2, IR.C4, IR.C7]
-  note: documentation example, include_self=False
-  input: {op: index_reduce, self: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]], dim: 0, index: [0, 4, 2, 0],
-    src: [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]], reduce: prod, include_self: false, upstream: [[1, 1, 1], [1, 1,
-        1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]}
-  expected: {outcome: value, fields: {out: [[10, 22, 36], [2, 2, 2], [7, 8, 9], [2, 2, 2], [4, 5, 6]], grad_self: [[0, 0,
-          0], [1, 1, 1], [0, 0, 0], [1, 1, 1], [0, 0, 0]], grad_src: [[10, 11, 12], [1, 1, 1], [1, 1, 1], [1, 2, 3]], ties: []}}
-- {id: IR.E3, profile: real, clauses: [IR.C3, IR.C7], note: documentation example of scatter_reduce_ (sum), input: {
-    op: scatter_reduce, self: [1, 2, 3, 4], dim: 0, index: [0, 1, 0, 1, 2, 1], src: [1, 2, 3, 4, 5, 6], reduce: sum,
-    include_self: true, upstream: [1, 2, 3, 4]}, expected: {outcome: value, fields: {out: [5, 14, 8, 4], grad_self: [1, 2,
-        3, 4], grad_src: [1, 2, 1, 2, 3, 2], ties: []}}}
-- {id: IR.E4, profile: real, clauses: [IR.C3, IR.C4, IR.C7], input: {op: scatter_reduce, self: [1, 2, 3, 4], dim: 0, index: [
-      0, 1, 0, 1, 2, 1], src: [1, 2, 3, 4, 5, 6], reduce: sum, include_self: false, upstream: [1, 2, 3, 4]}, expected: {
-    outcome: value, fields: {out: [4, 12, 5, 4], grad_self: [0, 0, 0, 4], grad_src: [1, 2, 1, 2, 3, 2], ties: []}}}
-- {id: IR.E5, profile: real, clauses: [IR.C3, IR.C6, IR.C7], input: {op: scatter_reduce, self: [5, 4, 3, 2], dim: 0, index: [
-      0, 1, 0, 1, 2, 1], src: [1, 2, 3, 4, 5, 6], reduce: amax, include_self: true, upstream: [1, 2, 3, 4]}, expected: {
-    outcome: value, fields: {out: [5, 6, 5, 2], grad_self: [1, 0, 0, 4], grad_src: [0, 0, 0, 0, 3, 2], ties: [{set: [[-1]]},
-        {set: [[5]]}, {set: [[4]]}, {set: []}]}}}
-- {id: IR.E6, profile: real, clauses: [IR.C3, IR.C4, IR.C6, IR.C7], input: {op: scatter_reduce, self: [5, 4, 3, 2], dim: 0,
-    index: [0, 1, 0, 1, 2, 1], src: [1, 2, 3, 4, 5, 6], reduce: amax, include_self: false, upstream: [1, 2, 3, 4]},
-  expected: {outcome: value, fields: {out: [3, 6, 5, 2], grad_self: [0, 0, 0, 4], grad_src: [0, 0, 1, 0, 3, 2], ties: [{
-          set: [[2]]}, {set: [[5]]}, {set: [[4]]}, {set: []}]}}}
-- {id: IR.E7, profile: real, clauses: [IR.C1, IR.C7], input: {op: index_add, self: [1, 1, 1], dim: 0, index: [0, 2, 0], src: [
-      1, 2, 3], alpha: 2, upstream: [1, 2, 3]}, expected: {outcome: value, fields: {out: [9, 1, 5], grad_self: [1, 2, 3],
-      grad_src: [2, 6, 2], ties: []}}}
-- {id: IR.E8, profile: real, clauses: [IR.C5, IR.C7], input: {op: scatter_reduce, self: [2], dim: 0, index: [0, 0], src: [4,
-      6], reduce: mean, include_self: true, upstream: [3]}, expected: {outcome: value, fields: {out: [4], grad_self: [1],
-      grad_src: [1, 1], ties: []}}}
-- {id: IR.E9, profile: real, clauses: [IR.C4, IR.C5, IR.C7], input: {op: scatter_reduce, self: [2], dim: 0, index: [0, 0],
-    src: [4, 6], reduce: mean, include_self: false, upstream: [2]}, expected: {outcome: value, fields: {out: [5], grad_self: [
-        0], grad_src: [1, 1], ties: []}}}
-- {id: IR.E10, profile: real, clauses: [IR.C3, IR.C7], note: product gradient at a zero factor, input: {op: scatter_reduce,
-    self: [3], dim: 0, index: [0, 0], src: [0, 5], reduce: prod, include_self: true, upstream: [1]}, expected: {outcome: value,
-    fields: {out: [0], grad_self: [0], grad_src: [15, 0], ties: []}}}
-- id: IR.E11
-  profile: real
-  clauses: [IR.C6, IR.C7]
-  input: {op: scatter_reduce, self: [1], dim: 0, index: [0, 0], src: [2, 2], reduce: amax, include_self: true, upstream: [1]}
-  expected: {outcome: value, fields: {out: [2], grad_self: [0], grad_src: [0, 0], ties: [{set: [[0], [1]]}]}}
-  readings:
-    even_split: {outcome: value, fields: {out: [2], grad_self: [0], grad_src: ['1/2', '1/2'], ties: [{set: [[0], [1]]}]}}
-- id: IR.E12
-  profile: real
-  clauses: [IR.C4, IR.C6, IR.C7]
-  note: B020 minimal example - the excluded self equals the extremum but does not take part
-  input: {op: index_reduce, self: [3], dim: 0, index: [0], src: [3], reduce: amax, include_self: false, upstream: [1]}
-  expected: {outcome: value, fields: {out: [3], grad_self: [0], grad_src: [1], ties: [{set: [[0]]}]}}
-  readings:
-    even_split: {outcome: value, fields: {out: [3], grad_self: [0], grad_src: [1], ties: [{set: [[0]]}]}}
-- id: IR.E13
-  profile: real
-  clauses: [IR.C6, IR.C7]
-  input: {op: scatter_reduce, self: [4], dim: 0, index: [0], src: [4], reduce: amax, include_self: true, upstream: [1]}
-  expected: {outcome: value, fields: {out: [4], grad_self: [0], grad_src: [0], ties: [{set: [[-1], [0]]}]}}
-  readings:
-    even_split: {outcome: value, fields: {out: [4], grad_self: ['1/2'], grad_src: ['1/2'], ties: [{set: [[-1], [0]]}]}}
-- {id: IR.E14, profile: real, clauses: [IR.C2, IR.C6, IR.C7], input: {op: index_reduce, self: [[5, 1], [2, 7]], dim: 1, index: [
-      1, 1], src: [[3, 0], [4, 9]], reduce: amin, include_self: true, upstream: [[1, 1], [1, 1]]}, expected: {outcome: value,
-    fields: {out: [[5, 0], [2, 4]], grad_self: [[1, 0], [1, 0]], grad_src: [[0, 1], [1, 0]], ties: [[{set: []}, {set: [[0, 1]]}],
-        [{set: []}, {set: [[1, 0]]}]]}}}
-- {id: IR.E15, profile: real, clauses: [IR.C1, IR.C7], note: B016 shape - five contributions into a one-element target,
-  input: {op: index_add, self: [0], dim: 0, index: [0, 0, 0, 0, 0], src: [1, 1, 1, 1, 1], upstream: [1]}, expected: {outcome: value,
-    fields: {out: [5], grad_self: [1], grad_src: [1, 1, 1, 1, 1], ties: []}}}
-- {id: IR.E16, profile: real, clauses: [IR.C3, IR.C4, IR.C5, IR.C7], note: 'one-segment scatter mean (general-round case
-    sc1_mean_pool_one_graph): column means', input: {op: scatter_reduce, self: [[0, 0]], dim: 0, index: [[0, 0], [0, 0], [0,
-        0]], src: [[1, 2], [3, 4], [5, 9]], reduce: mean, include_self: false, upstream: [[1, 1]]}, expected: {outcome: value,
-    fields: {out: [[3, 5]], grad_self: [[0, 0]], grad_src: [['1/3', '1/3'], ['1/3', '1/3'], ['1/3', '1/3']], ties: []}}}
-- {id: IR.N1, profile: real, clauses: [IR.C8], input: {op: scatter_reduce, self: [1, 2], dim: 0, index: [0, 2], src: [1, 1],
-    reduce: sum, include_self: true, upstream: [1, 1]}, expected: {outcome: invalid_input}}
-- {id: IR.N2, profile: real, clauses: [IR.C8], input: {op: index_add, self: [1, 1], dim: 0, index: [0, 1], src: [1, 2, 3],
-    upstream: [1, 1]}, expected: {outcome: invalid_input}}
-- {id: IR.N3, profile: real, clauses: [IR.C9], input: {op: index_reduce, self: [1, 'nan'], dim: 0, index: [0], src: [2],
-    reduce: amax, include_self: true, upstream: [1, 1]}, expected: {outcome: domain_undefined}}
-- {id: IR.N4, profile: real, clauses: [IR.C8], input: {op: index_reduce, self: [1, 1], dim: 0, index: [0], src: [2], reduce: sum,
-    include_self: true, upstream: [1, 1]}, expected: {outcome: invalid_input}}
+- {id: IR2.E1, profile: finite_index_add_values, clauses: [IR2.C1, IR2.C2], input: {op: aten.index_add, args: [{t: f32, v: [1, 1, 1]}, 0, {t: i64, v: [0, 2, 0]}, {t: f32, v: [1, 2, 3]}], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [9, 1, 5]}}}
+- id: IR2.E2
+  profile: finite_index_add_values
+  clauses: [IR2.C2, IR2.C3]
+  input: {op: torch.index_add, args: [{t: f64, v: [[1, 2], [3, 4], [5, 6]]}, 0, {t: i64, v: [2, 0]}, {t: f64, v: [[10, 20], [1, 2]]}], kwargs: {alpha: '1/2'}}
+  expected: {outcome: value, fields: {out: [['3/2', 3], [3, 4], [10, 16]]}}
+- {id: IR2.E3, profile: finite_index_add_values, clauses: [IR2.C2, IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [[1, 2], [3, 4]]}, 1, {t: i64, v: [1, 0]}, {t: f32, v: [[10, 20], [30, 40]]}], kwargs: {alpha: -1}}, expected: {outcome: value, fields: {out: [[-19, -8], [-37, -26]]}}}
+- {id: IR2.E4, profile: finite_index_add_values, clauses: [IR2.C2], input: {op: torch.index_add, args: [{t: bf16, v: [2, 4]}, 0, {t: i64, v: [1, 1]}, {t: bf16, v: [6, -2]}]}, expected: {outcome: value, fields: {out: [2, 8]}}}
+- {id: IR2.E5, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f16, v: [[1, 2, 3], [4, 5, 6]]}, -1, {t: i64, v: [1, 0]}, {t: f16, v: [[10, 20], [30, 40]]}]}, expected: {outcome: value, fields: {out: [[21, 12, 3], [44, 35, 6]]}}}
+- {id: IR2.E6, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0, 1]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E7, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [[0]]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E8, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [-1]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E9, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [2]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E10, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 1, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E11, profile: finite_index_add_values, clauses: [IR2.C1], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, true, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E12, profile: finite_index_add_values, clauses: [IR2.C1], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}], kwargs: {alpha: true}}, expected: {outcome: invalid_input}}
+- {id: IR2.E13, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: i64, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: i64, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E14, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i32, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E15, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, inf]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E16, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [-0.0, 1]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E17, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: ['1/3', 1]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E18, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}], kwargs: {alpha: inf}}, expected: {outcome: unsupported}}
+- {id: IR2.E19, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}], kwargs: {alpha: '1/3'}}, expected: {outcome: unsupported}}
+- {id: IR2.E20, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_reduce, args: [{t: f32, v: [1]}, 0, {t: i64, v: [0]}, {t: f32, v: [2]}, prod]}, expected: {outcome: unsupported}}
 signature:
-  inputs: ['op: index_add | index_reduce | scatter_reduce', 'self, src: nested lists; index: vector (index_*) or tensor of
-      src''s shape (scatter_reduce)', 'dim, reduce, include_self, alpha', 'upstream: cotangent with self''s shape']
-  pre_state: []
-  post_state: []
-  observation_unit: one out-of-place call (value, tie sets, VJP)
+  inputs: [selected functional index_add operation, same-dtype physical finite self and source tensors, one int64 index vector, integer dimension and exactly representable finite alpha]
+  pre_state: [self, source and index are unchanged]
+  post_state: [one complete newly returned tensor]
+  observation_unit: every returned coordinate together with dtype and shape
 domain:
-  valid: ['rational or infinite values; index values in [0, self.size(dim)); documented shapes']
-  domain_undefined: [NaN inputs; inf - inf or 0 * inf inside a reduction]
-  invalid_input: [index out of range, shape mismatches listed in IR.C8, reduce outside the documented list, upstream
-      shape different from self]
-  unsupported: [scatter_reduce with index smaller than src, integer dtypes (IDX-A5), the R_prop NaN profile]
+  valid: [positive rank-1 through rank-4 physical finite f16/bf16/f32/f64 self and source, nonempty int64 index vector, valid dimension and shapes, finite representable alpha]
+  invalid_input: [malformed record, noninteger or out-of-range dimension, wrong source or index shape, out-of-range index, unrepresentable physical tensor value, nonnumeric alpha]
+  unsupported: [in-place or out overload, index_reduce, scatter_reduce, backward, special values, signed-zero distinctions, empty tensors, other ranks or dtypes, unrepresentable alpha]
 mutation_requirements:
-- {id: IR.M1, misreading: index_add ignores alpha, witnesses: [IR.E7]}
-- {id: IR.M2, misreading: include_self=False ignored (self always included), witnesses: [IR.E9, IR.E4]}
-- {id: IR.M3, misreading: 'mean with include_self divides by the contribution count only, (self + sum)/k (IDX-A2 error
-    variant)', witnesses: [IR.E8]}
-- {id: IR.M4, misreading: 'prod gradient computed as prod / factor with 0 at a zero factor', witnesses: [IR.E10]}
-- {id: IR.M5, misreading: tied amax routes the whole upstream to the first participant, witnesses: [IR.E11]}
-- {id: IR.M6, misreading: 'amax / amin with include_self=False counts the excluded self in the tie set and splits evenly
-    (B020)', witnesses: [IR.E12]}
-- {id: IR.M7, misreading: 'include_self=False fills every position, not only the touched ones, with the reduction identity',
-  witnesses: [IR.E6, IR.E4]}
-- {id: IR.M8, misreading: 'a one-element target counts its contributions in blocks of 8 lanes (B016 lost mask)', witnesses: [
-    IR.E15]}
-- {id: IR.M9, misreading: dim ignored (always reduces along dim 0), witnesses: [IR.E14]}
-- {id: IR.M10, misreading: 'index read as positions of source to select from (the parameter wording, IDX-A6)', witnesses: [
-    IR.E7]}
-- {id: IR.M11, misreading: mean gradient not divided by the number of participants, witnesses: [IR.E8, IR.E16]}
+- {id: IR2.M1, misreading: ignore alpha, witnesses: [IR2.E1]}
+- {id: IR2.M2, misreading: replace the target slice instead of adding to self, witnesses: [IR2.E1]}
+- {id: IR2.M3, misreading: use index to select source values and update target slices in order, witnesses: [IR2.E1]}
+- {id: IR2.M4, misreading: always use dimension zero, witnesses: [IR2.E3]}
+- {id: IR2.M5, misreading: keep only the last contribution for a repeated index, witnesses: [IR2.E1]}
+- {id: IR2.M6, misreading: add one to every target index with wraparound, witnesses: [IR2.E1]}
 nonclaims:
-- Floating-point rounding and accumulation order of a device kernel are the numerical question (K - G).
-- The R_prop NaN profile of IDX-A3 is not carried (no tested condition has a NaN input).
-- Nondeterministic ordering on CUDA (documented) does not change the exact real value of these reductions.
-changes: []
+- No result is certified for mutation, out tensors, gradients, index_reduce, scatter_reduce, special values, empty tensors, integer data, other index dtypes, layouts, aliasing or device placement.
+- Exact real addition does not claim a device accumulation order for duplicate indices; floating execution remains part of K−Gπ.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the broad value, VJP and tie-set draft for index_add, index_reduce and scatter_reduce with one reviewed
+    out-of-place index_add forward-values profile. Preserve the former contract and adapter under contracts/draft.
+  trigger: >-
+    The broad draft mixed mutation, several reduction identities, tied-extremum gradient choices and allowed sets.
+    Ordinary index_add values have a direct documented formula and can be bound without those unresolved choices.

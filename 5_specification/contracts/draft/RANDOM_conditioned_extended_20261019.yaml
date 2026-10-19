@@ -1,0 +1,99 @@
+schema_version: '1.2'
+id: RANDOM
+role: RANDOM
+title: Random operations conditioned on the kernel's own random numbers (Inductor seeds and random tensors, dropout)
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: The value of a random operation given its random numbers; the distribution of those numbers is a separate
+    statistical question. Awaiting a review by someone who did not write it.
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [prims.inductor_lookup_seed, prims.inductor_random, aten.native_dropout, aten.dropout, aten.native_dropout_backward,
+  keep_from_uniform]
+profiles:
+  conditioned:
+    meaning: The random numbers (Inductor's random tensor, or dropout's keep mask) are inputs supplied from the kernel's
+      own run; the contract states what the operation computes from them. Whether they follow the intended distribution
+      is checked statistically and reported separately (PLAN_v3 section 1, v2.5 plan section 4).
+    task_choice_required: false
+outputs:
+  out:
+    shape: per operation; native_dropout returns (output, keep mask)
+    kind: discrete
+    guarantee: exact
+comparison:
+  input_binding: The conditioning values are the kernel's own; other values are the exact values received.
+  quality: Exact equality.
+  test_evidence: Exact equality.
+  error_handling: Missing conditioning values are unsupported (no value can be given without them); malformed ones are
+    invalid_input.
+decisions:
+- id: RN.CONDITION
+  status: drafted
+  statement: The random stream of a device (Philox counters, offsets) is implementation-defined and is not part of any
+    task definition, so f takes the kernel's random numbers as given. The statistical test of those numbers (keep
+    fraction against Binomial(n, 1 - p), uniformity of 'rand') is a separate result and is never folded into f.
+  basis: [T_DROPOUT.DEF, TS_INDUCTOR_PRIMS.RANDOM]
+- id: RN.MASK_RULE
+  status: drafted
+  statement: When the kernel exposes uniform numbers rather than a mask, the keep mask is uniform > p (the torch 2.10
+    decomposition of native_dropout). A kernel that keeps where uniform < 1 - p has the same distribution but a
+    different mask; such a difference is reported as a difference of the random stream, not as a semantic error.
+  basis: [TS_DECOMP.DROPOUT]
+clauses:
+- {id: RN.C1, basis: [TS_INDUCTOR_PRIMS.SEED], statement: 'inductor_lookup_seed(seeds, i) = seeds[i]', observes: [out],
+  evidence_kind: definition}
+- {id: RN.C2, basis: [TS_INDUCTOR_PRIMS.RANDOM, RN.CONDITION], statement: 'inductor_random(size, seed, mode) = the kernel''s
+    own random tensor of that size (''rand'' values in [0, 1))', observes: [out], evidence_kind: definition}
+- {id: RN.C3, basis: [T_DROPOUT.DEF, T_DROPOUT_F.DEF, TS_DECOMP.DROPOUT, RN.CONDITION], statement: 'native_dropout / dropout
+    given the keep mask: x * keep / (1 - p) in training; p = 1 gives zeros; evaluation or p = 0 gives x', observes: [out],
+  evidence_kind: definition}
+- {id: RN.C4, basis: [TS_DECOMP.DROPOUT_BWD], statement: 'native_dropout_backward(g, mask, scale) = g * mask * scale',
+  observes: [out], evidence_kind: definition}
+- {id: RN.C5, basis: [TS_DECOMP.DROPOUT, RN.MASK_RULE], statement: keep mask from uniforms = uniform > p, observes: [out],
+  evidence_kind: definition}
+examples:
+- {id: RN.E1, profile: conditioned, clauses: [RN.C1], input: {op: prims.inductor_lookup_seed, args: [{t: i64, v: [11, 22, 33]},
+      1]}, expected: {outcome: value, fields: {out: 22}}}
+- {id: RN.E2, profile: conditioned, clauses: [RN.C2], input: {op: prims.inductor_random, args: [[2], 7, rand], kwargs: {values: {
+          t: f32, v: ['1/4', '3/4']}}}, expected: {outcome: value, fields: {out: ['1/4', '3/4']}}}
+- {id: RN.E3, profile: conditioned, clauses: [RN.C2], input: {op: prims.inductor_random, args: [[2], 7, rand], kwargs: {values: {
+          t: f32, v: ['1/4', 1]}}}, expected: {outcome: invalid_input}}
+- {id: RN.E4, profile: conditioned, clauses: [RN.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4, 6]}, '1/4', true],
+    kwargs: {keep: {t: b8, v: [true, false, true]}}}, expected: {outcome: value, fields: {out: [['8/3', 0, 8], [true, false, true]]}}}
+- {id: RN.E5, profile: conditioned, clauses: [RN.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, 1, true]},
+  expected: {outcome: value, fields: {out: [[0, 0], [false, false]]}}}
+- {id: RN.E6, profile: conditioned, clauses: [RN.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', false]},
+  expected: {outcome: value, fields: {out: [[2, 4], [true, true]]}}}
+- {id: RN.E7, profile: conditioned, clauses: [RN.C3], input: {op: aten.dropout, args: [{t: f32, v: [3, 3]}, '1/10', true], kwargs: {
+      keep: {t: b8, v: [false, true]}}}, expected: {outcome: value, fields: {out: [0, '10/3']}}}
+- {id: RN.E8, profile: conditioned, clauses: [RN.C3], input: {op: aten.dropout, args: [{t: f32, v: [3, 3]}, '1/10', true]},
+  expected: {outcome: unsupported}, note: Without the kernel's mask there is no value to compare (conditioning missing).}
+- {id: RN.E9, profile: conditioned, clauses: [RN.C4], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2, 3]}, {
+        t: b8, v: [true, false, true]}, '4/3']}, expected: {outcome: value, fields: {out: ['4/3', 0, 4]}}}
+- {id: RN.E10, profile: conditioned, clauses: [RN.C5], input: {op: keep_from_uniform, args: [{t: f32, v: ['1/20', '1/10', '1/2']},
+      '1/10']}, expected: {outcome: value, fields: {out: [false, false, true]}}}
+signature:
+  inputs: ['op: one of the covered names', 'conditioning: values (random tensor) or keep (boolean mask) from the kernel']
+  pre_state: []
+  post_state: []
+  observation_unit: the value of one random operation given its random numbers
+domain:
+  valid: ['p in [0, 1]; conditioning values of the right shape and range']
+  invalid_input: ['p outside [0, 1]', 'conditioning values of the wrong shape, dtype or range']
+  unsupported: [a training-mode random operation without its conditioning values]
+mutation_requirements:
+- {id: RN.M1, misreading: dropout scales by (1 - p) instead of dividing by it (trident bug class), witnesses: [RN.E4]}
+- {id: RN.M2, misreading: dropout keeps the scale in evaluation mode, witnesses: [RN.E6]}
+- {id: RN.M3, misreading: dropout backward without the scale, witnesses: [RN.E9]}
+- {id: RN.M4, misreading: keep mask taken as uniform >= p, witnesses: [RN.E10]}
+- {id: RN.M5, misreading: p = 1 divides by zero instead of returning zeros, witnesses: [RN.E5]}
+nonclaims:
+- The distribution of the random numbers is a statistical question reported separately; f never certifies it.
+- The unsupported outcome in RN.E8 is the absence of conditioning data for a query, not a missing definition of dropout.
+changes: []

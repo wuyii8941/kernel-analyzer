@@ -1,0 +1,20 @@
+{
+  "call": "../calls/torchao_optim_state4bit_copy.py:call",
+  "inputs": {
+    "x": {"sampler": {"uniform": [-8, 8]}, "shape": [4096], "dtype": "float32"},
+    "qmap": {"state": "../calls/torchao_optim_state4bit_copy.py:make_signed_qmap", "shape": [16], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["codes", "scale"],
+    "binding_plan": "../call_bindings/torchao_optim_state4bit_copy.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

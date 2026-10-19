@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from fractions import Fraction
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -22,7 +23,7 @@ import check_contracts  # noqa: E402
 import run_checks  # noqa: E402
 from kernel_spec import compare as C  # noqa: E402
 from kernel_spec import expr, registry, schema  # noqa: E402
-from kernel_spec.num import Result, to_iv  # noqa: E402
+from kernel_spec.num import Result, to_iv, hull  # noqa: E402
 
 sys.path.insert(0, str(ROOT))
 SOURCES = json.loads((ROOT / "SOURCES.json").read_text())
@@ -79,6 +80,16 @@ class Injections(unittest.TestCase):
     def test_control_passes(self):
         self.assertEqual(self.s.check(), 0, self.s.output)
 
+    def test_duplicate_contract_fields_rejected_by_checker_and_runtime(self):
+        p = self.s.dir / "contracts" / "CE.yaml"
+        original = p.read_text()
+        for extra in ("\nid: CE\n", "\nextra: {guarantee: exact, guarantee: rigorous_enclosure}\n"):
+            with self.subTest(extra=extra):
+                p.write_text(original + extra)
+                self.assertEqual(self.s.check(), 1, self.s.output)
+                with self.assertRaises(yaml.YAMLError):
+                    registry.load("CE", self.s.dir / "contracts", self.s.dir / "adapters")
+
     def test_A_wrong_expected_value(self):
         self.s.edit_yaml("CE", lambda d: d["examples"][0]["expected"]["fields"].__setitem__("loss", "999"))
         self.assertEqual(self.s.check(), 1)
@@ -96,8 +107,8 @@ class Injections(unittest.TestCase):
         self.assertIn("inverted", self.s.output)
 
     def test_E_missing_output_field(self):
-        self.s.edit_text("adapters/CE.py", 'return Result("value", {"loss": v24.tree(z["loss"]), "gradient": grad})\n\n\n#',
-                         'return Result("value", {"loss": v24.tree(z["loss"])})\n\n\n#')
+        self.s.edit_text("adapters/CE.py", 'return Result("value", {"loss": v24.tree(z["loss"]), "gradient": grad})',
+                         'return Result("value", {"loss": v24.tree(z["loss"])})')
         self.assertEqual(self.s.check(), 1)
 
     def test_E_missing_state_field(self):
@@ -105,9 +116,9 @@ class Injections(unittest.TestCase):
         self.assertEqual(self.s.check(), 1)
 
     def test_E_missing_output_row(self):
-        self.s.edit_text("adapters/CE.py", 'return Result("value", {"loss": v24.tree(z["loss"]), "gradient": grad})\n\n\n#',
+        self.s.edit_text("adapters/CE.py", 'return Result("value", {"loss": v24.tree(z["loss"]), "gradient": grad})',
                          'return Result("value", {"loss": v24.tree(z["loss"]), "gradient": grad[:-1] if len(grad) > 1 '
-                         'else grad})\n\n\n#')
+                         'else grad})')
         self.assertEqual(self.s.check(), 1)
 
     def _with_reading(self, expected_loss):
@@ -153,6 +164,16 @@ class Injections(unittest.TestCase):
             rejected, _ = check_contracts.killed(Result(outcome), {"outcome": "invalid_input"}, {})
             self.assertFalse(rejected, outcome)
 
+    def test_invalid_reference_guarantee_is_not_a_mutation_witness(self):
+        outputs = {"x": {"guarantee": "exact"}}
+        expected = {"outcome": "value", "fields": {"x": 0}}
+        for value in (hull(0, 1), 1.0):
+            result = Result("value", {"x": value})
+            self.assertEqual(C.compare_result(result, expected, outputs)[0], C.STRUCTURE)
+            self.assertFalse(check_contracts.killed(result, expected, outputs)[0])
+        self.assertTrue(check_contracts.killed(Result("value", {"x": Fraction(1)}), expected, outputs)[0])
+        self.assertTrue(check_contracts.killed(Result("value", {"x": to_iv(1)}), expected, outputs)[0])
+
     def test_missing_mutant_implementation(self):
         self.s.edit_text("adapters/RANKMEAN.py", '"RM.M5": m5}', '}')
         self.assertEqual(self.s.check(), 1)
@@ -167,15 +188,34 @@ class Injections(unittest.TestCase):
             p.unlink()
         self.assertEqual(self.s.check(), 1)
 
-    def test_lock_written_only_for_passing_contracts(self):
+    def test_requested_contracts_must_all_exist_before_writing_results(self):
+        for selected in (("CE", "DOES_NOT_EXIST"), ("DOES_NOT_EXIST",)):
+            with self.subTest(selected=selected):
+                report = self.s.dir / "report.json"
+                self.assertEqual(self.s.check("--only", *selected, "--record-checks", "--json", str(report)), 1)
+                self.assertIn("DOES_NOT_EXIST", self.s.output)
+                self.assertFalse(report.exists())
+                self.assertFalse((self.s.dir / "contracts" / "DEVELOPMENT_CHECKS.json").exists())
+
+    def test_explicit_empty_selection_is_not_all_contracts(self):
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
+            self.s.check("--only")
+        self.assertNotEqual(raised.exception.code, 0)
+
+    def test_development_record_contains_counts_only_for_passing_contracts(self):
         self.s.edit_yaml("CE", lambda d: d["examples"][0]["expected"]["fields"].__setitem__("loss", "999"))
-        self.s.check("--lock")
-        lock = json.loads((self.s.dir / "contracts/LOCK.json").read_text())
-        self.assertNotIn("CE", lock)
-        self.assertIn("RANKMEAN", lock)
+        self.s.check("--record-checks")
+        records = json.loads((self.s.dir / "contracts/DEVELOPMENT_CHECKS.json").read_text())
+        self.assertNotIn("CE", records)
+        self.assertIn("RANKMEAN", records)
+        self.assertEqual(set(records["RANKMEAN"]), {"checked", "examples", "readings", "mutations", "verdict"})
 
 
 class RunnerC(unittest.TestCase):
+    def test_zero_tests_are_not_a_success(self):
+        for text in ("Ran 0 tests in 0.0s\n\nOK", "0/0 checks passed"):
+            self.assertFalse(run_checks.counted()(0, text, None)[0])
+
     def test_C_child_exit_9_fails_the_run(self):
         with tempfile.TemporaryDirectory() as t, contextlib.redirect_stdout(io.StringIO()):
             ok = run_checks.Check("x", "passes", ["-c", "pass"], Path(t))
@@ -191,39 +231,63 @@ class RunnerC(unittest.TestCase):
         self.assertFalse(acc(0, "Ran 2 tests in 0.1s\n\nOK", None)[0])
         self.assertTrue(acc(0, "Ran 3 tests in 0.1s\n\nOK", None)[0])
 
+    def test_C_custom_acceptance_cannot_override_child_failure(self):
+        with tempfile.TemporaryDirectory() as t, contextlib.redirect_stdout(io.StringIO()):
+            check = run_checks.Check("x", "false success", ["-c", "import sys; sys.exit(9)"], Path(t),
+                                     accept=lambda rc, out, tmp: (True, "report looks consistent"))
+            rows, failed = run_checks.execute([check], Path(t))
+        self.assertTrue(failed)
+        self.assertEqual(rows[0][2], "失败")
+        self.assertIn("exit 9", rows[0][4])
+
 
 class ActivationG(unittest.TestCase):
-    def test_G_nothing_activates_without_lock_and_snapshots(self):
-        for cid in ("CE", "ADAMW", "RANKMEAN"):
-            ok, reasons, _ = registry.activation(registry.load(cid), next(iter(registry.load(cid).data["profiles"])),
-                                                 lock={})
-            self.assertFalse(ok)
-            self.assertTrue(any("LOCK" in r for r in reasons))
-
-    def test_G_stale_hash_refused(self):
-        c = registry.load("RANKMEAN")
-        lock = {"RANKMEAN": {"contract_sha256": "0" * 64, "adapter_sha256": c.adapter_sha256}}
-        ok, reasons, _ = registry.activation(c, "base", {"base": "selected"}, lock=lock)
+    def test_G_unreviewed_implementations_do_not_activate(self):
+        c = registry.load("CE")
+        with tempfile.TemporaryDirectory() as t, patch.object(registry, "VALIDATED", Path(t)):
+            ok, reasons, _ = registry.activation(c, "index_unsmoothed")
         self.assertFalse(ok)
-        self.assertTrue(any("stale" in r for r in reasons))
+        self.assertTrue(any("implementation review file" in r for r in reasons))
+
+    def test_G_retained_reviewed_implementations_activate(self):
+        for cid in ("CE", "SOFTMAX", "NORM", "ACT", "ADAMW", "RANKMEAN", "MATMUL"):
+            c = registry.load(cid)
+            for profile in c.data["profiles"]:
+                task_bindings = {profile: "use the selected task profile"}
+                ok, reasons, _ = registry.activation(c, profile, task_bindings)
+                self.assertTrue(ok, reasons)
+
+    def test_G_current_files_must_equal_reviewed_files(self):
+        c = registry.load("RANKMEAN")
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            (root / "contracts").mkdir()
+            (root / "adapters").mkdir()
+            (root / "contracts/RANKMEAN.yaml").write_bytes(c.path.read_bytes())
+            (root / "adapters/RANKMEAN.py").write_text("reviewed adapter that is no longer current\n")
+            with patch.object(registry, "VALIDATED", root):
+                ok, reasons, _ = registry.activation(c, "base", {"base": "selected"})
+        self.assertFalse(ok)
+        self.assertTrue(any("current adapter differs" in r for r in reasons))
 
     def test_G_task_choice_needs_binding(self):
         c = registry.load("RANKMEAN")
-        lock = {"RANKMEAN": {"contract_sha256": c.contract_sha256, "adapter_sha256": c.adapter_sha256}}
-        _, reasons, _ = registry.activation(c, "base", None, lock=lock)
-        self.assertTrue(any("task binding" in r for r in reasons))
-        _, reasons, _ = registry.activation(c, "base", {"base": "selected"}, lock=lock)
-        self.assertFalse(any("task binding" in r for r in reasons))
+        with patch.object(registry, "_validated_file_reasons", return_value=[]):
+            _, reasons, _ = registry.activation(c, "base", None)
+            self.assertTrue(any("task binding" in r for r in reasons))
+            _, reasons, _ = registry.activation(c, "base", {"base": "selected"})
+            self.assertFalse(any("task binding" in r for r in reasons))
 
     def test_G_drafted_needs_explicit_permission(self):
         c = registry.load("CE")
         c.data = copy.deepcopy(c.data)
         c.data["review"]["status"] = "drafted"
-        _, reasons, labels = registry.activation(c, "index_unsmoothed", lock={})
-        self.assertTrue(any("drafted" in r for r in reasons))
-        _, reasons, labels = registry.activation(c, "index_unsmoothed", allow_draft=True, lock={})
-        self.assertFalse(any("drafted" in r for r in reasons))
-        self.assertTrue(labels["draft_contract"])
+        with patch.object(registry, "_validated_file_reasons", return_value=[]):
+            _, reasons, labels = registry.activation(c, "index_unsmoothed")
+            self.assertTrue(any("drafted" in r for r in reasons))
+            _, reasons, labels = registry.activation(c, "index_unsmoothed", allow_draft=True)
+            self.assertFalse(any("drafted" in r for r in reasons))
+            self.assertTrue(labels["draft_contract"])
 
     def test_G_draft_folder_is_not_loadable(self):
         with self.assertRaises(FileNotFoundError):
@@ -235,8 +299,13 @@ class ActivationG(unittest.TestCase):
         self.assertEqual(r.outcome, "not_established")
         self.assertIn("task binding", r.note)
         r = registry.query("CE", "index_smoothing_R_A", e["input"], task_bindings={"index_smoothing_R_A": "test"})
-        v, _ = C.compare_result(r, e["expected"], CE["outputs"])
-        self.assertEqual(v, C.CONSISTENT)
+        self.assertNotIn("task binding", r.note)
+        # Task choice does not supply implementation-review evidence.
+        if r.outcome == "not_established":
+            self.assertIn("implementation review file", r.note)
+        else:
+            v, _ = C.compare_result(r, e["expected"], CE["outputs"])
+            self.assertEqual(v, C.CONSISTENT)
         self.assertEqual(r.labels["contract"], "CE")
 
 

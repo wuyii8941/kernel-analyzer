@@ -1,0 +1,215 @@
+schema_version: '1.2'
+id: SSU
+role: SSM_STATE_UPDATE
+title: Mamba selective state update (one recurrence step, mamba_ssm selective_state_update), real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D2_special), 2026-10-17
+  date: '2026-10-17'
+  scope: Output y and the updated state of one selective_state_update call; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers:
+- mamba_ssm.ops.triton.selective_state_update.selective_state_update (state with or without a head dimension; D, z,
+  dt_bias, dt_softplus, ngroups, state_batch_indices)
+- the selective SSM step of Gu and Dao (arXiv 2312.00752), Eqs. 2 and 4
+profiles:
+  mamba_ref:
+    meaning: The library's own reference function selective_state_update_ref - A_bar = exp(dt A), input term dt B x (the
+      simplified discretisation of B used by the mamba_ssm code), y = C . state' + D x, times silu(z).
+    task_choice_required: false
+  paper_zoh:
+    meaning: The paper's zero-order hold for both terms - A_bar = exp(dt A), B_bar = (dt A)^-1 (exp(dt A) - 1) dt B (diagonal
+      A, element-wise); D, z, dt_bias, softplus and groups as in mamba_ref. A task that means the ZOH-discretised SSM binds it.
+    task_choice_required: true
+outputs:
+  out:
+    shape: '{y: (batch, nheads, dim), state: the state tensor after the call} (without the head dimension for the 3-D form)'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: state, x, dt, A, B, C, D, z and dt_bias are the exact values received (a binary float is its exact value).
+  quality: No tolerance; exp, softplus and sigmoid give rigorous enclosures, everything else is exact.
+  test_evidence: Exact rational equality or containment of the expected formula's enclosure.
+  error_handling: Shape violations asserted by the entry point are invalid_input; paper_zoh with dt A = 0 is domain_undefined.
+decisions:
+- id: SS.VERSION
+  status: drafted
+  statement: The case records mamba_ssm only as 'main'; the contract cites state-spaces/mamba at e9594ce, the last main commit
+    before the case was added (2026-10-05). The kernel and selective_state_update_ref are read in that snapshot.
+  basis: [MAMBA_SSU.REF, MAMBA_SSU.SHAPES]
+- id: SS.DISCRETIZE
+  status: drafted
+  statement: 'The paper defines the ZOH rule B_bar = (Delta A)^-1 (exp(Delta A) - I) Delta B (Eq. 4) and notes that other rules
+    can be used; the mamba_ssm kernel and its reference function use dB = dt * B with dA = exp(dt A). These are different
+    functions (B_bar = (1 - e^-1) B against B for dt = 1, A = -1). Neither is chosen silently: mamba_ref is the operator''s
+    own reference program (and the f of the tested case mamba_ssu_plain); paper_zoh is the paper''s rule, bound only by a
+    task that asks for it. Mutant SS.M11 shows the two are told apart.'
+  basis: [MAMBA_PAPER.ZOH, MAMBA_PAPER.REC, MAMBA_SSU.REF]
+- id: SS.ZOH_ZERO
+  status: drafted
+  statement: Under paper_zoh, (dt A)^-1 does not exist when dt A = 0. The continuous extension (B_bar -> dt B) is one possible
+    reading, the literal formula has no value; the contract does not pick one and reports domain_undefined (no requirement
+    on a device for such entries).
+  basis: [MAMBA_PAPER.ZOH]
+- id: SS.SOFTPLUS
+  status: drafted
+  statement: dt_softplus applies softplus with the torch threshold 20 (selective_state_update_ref uses F.softplus; the kernel
+    uses softplus for dt <= 20 and dt above it, the same function). dt_bias is added before the softplus (the paper's learnable
+    bias inside tau_Delta).
+  basis: [MAMBA_SSU.REF, MAMBA_SSU.SOFTPLUS, T_SOFTPLUS_F.DEF, T_SOFTPLUS_F.THRESH, MAMBA_PAPER.SOFTPLUS]
+- id: SS.PAD
+  status: drafted
+  statement: state_batch_indices maps each input row to a state slot; a negative index marks a padding row whose output is 0
+    and whose state is untouched. Only the kernel code states this (the reference function has no such option), so the clause
+    claims agreement with that program.
+  basis: [MAMBA_SSU.PAD]
+- id: SS.COLLISION
+  status: drafted
+  statement: 'The retained kernel uses separate program_id(axis=1) instances for input rows, loads the selected state,
+    and writes it without an atomic operation or an ordering protocol. Repeated nonnegative state_batch_indices can
+    therefore address the same state concurrently. The public wrapper checks only index shape, not uniqueness;
+    this contract does not invent a serial row order or classify the call as an API-invalid input. Its concurrent
+    output set is not established. Negative indices do not access state and may repeat.'
+  basis: [MAMBA_SSU.STATE_ACCESS, MAMBA_SSU.PAD]
+clauses:
+- {id: SS.C1, basis: [MAMBA_SSU.REF, MAMBA_PAPER.REC, SS.DISCRETIZE], statement: 'mamba_ref: state'' = exp(dt A) state +
+    dt B x element-wise over (head, channel, state index), dt = dt + dt_bias', observes: [out], evidence_kind: definition}
+- {id: SS.C2, basis: [MAMBA_SSU.REF, MAMBA_PAPER.REC], statement: 'y = sum_n C_n state''_n + D x (the output reads the updated
+    state); the updated state is returned (in place)', observes: [out], evidence_kind: definition}
+- {id: SS.C3, basis: [SS.SOFTPLUS, MAMBA_SSU.SOFTPLUS], statement: 'dt_softplus: dt = softplus(dt + dt_bias)', observes: [out],
+  evidence_kind: definition}
+- {id: SS.C4, basis: [MAMBA_SSU.REF, T_SILU.DEF], statement: 'z given: y = (C . state'' + D x) * silu(z)', observes: [out],
+  evidence_kind: definition}
+- {id: SS.C5, basis: [MAMBA_SSU.GROUPS, MAMBA_SSU.SHAPES], statement: 'head h reads B and C of group h // (nheads / ngroups);
+    nheads must be divisible by ngroups', observes: [out], evidence_kind: definition}
+- {id: SS.C6, basis: [SS.PAD], statement: 'state_batch_indices: row b updates slot idx[b]; negative idx gives y = 0 and no state
+    change', observes: [out], evidence_kind: definition}
+- {id: SS.C11, basis: [SS.COLLISION], statement: 'Independent row evaluation requires distinct nonnegative state indices;
+    repeated active slots return not_established, rather than a sequentially updated state', observes: [out], evidence_kind: derived}
+- {id: SS.C7, basis: [MAMBA_SSU.SHAPES], statement: the 3-D form (no head dimension) is the one-head case, observes: [out],
+  evidence_kind: definition}
+- {id: SS.C8, basis: [MAMBA_PAPER.ZOH, SS.DISCRETIZE], statement: 'paper_zoh: input term (exp(dt A) - 1) / (dt A) * dt B x',
+  observes: [out], evidence_kind: definition}
+- {id: SS.C9, basis: [SS.ZOH_ZERO], statement: 'paper_zoh with dt A = 0 is domain_undefined', observes: [out], evidence_kind: definition}
+- {id: SS.C10, basis: [MAMBA_SSU.SHAPES], statement: shapes that violate the entry point's asserts are invalid_input, observes: [
+    out], evidence_kind: definition}
+examples:
+- id: SS.E1
+  profile: mamba_ref
+  clauses: [SS.C1, SS.C2]
+  input: {state: [[[[2]]]], x: [[[3]]], dt: [[['3/2']]], A: [[[-1]]], B: [[[4]]], C: [[[5]]], D: [[1]], dt_bias: [['1/2']]}
+  expected: {outcome: value, fields: {out: {y: [[[123 + 10*exp(-2)]]], state: [[[[24 + 2*exp(-2)]]]]}}}
+  note: 'dt = 2: state'' = 2 e^-2 + 2*4*3; y = 5 state'' + 3*1 (the tested configuration: D, dt_bias, no z, no softplus)'
+- id: SS.E2
+  profile: mamba_ref
+  clauses: [SS.C3]
+  input: {state: [[[[1]]]], x: [[[1]]], dt: [[[0]]], A: [[[0]]], B: [[[1]]], C: [[[1]]], D: [[0]], dt_bias: [[0]], dt_softplus: true}
+  expected: {outcome: value, fields: {out: {y: [[[1 + log(2)]]], state: [[[[1 + log(2)]]]]}}}
+  note: dt = softplus(0) = log 2, A = 0
+- id: SS.E3
+  profile: mamba_ref
+  clauses: [SS.C4]
+  input: {state: [[[[0]]]], x: [[[2]]], dt: [[[1]]], A: [[[0]]], B: [[[1]]], C: [[[1]]], D: [[1]], dt_bias: [[0]], z: [[[1]]]}
+  expected: {outcome: value, fields: {out: {y: [[[4/(1 + exp(-1))]]], state: [[[[2]]]]}}}
+  note: (2 + 2) * silu(1), silu(1) = 1 / (1 + e^-1)
+- id: SS.E4
+  profile: mamba_ref
+  clauses: [SS.C5]
+  input: {state: [[[[0]], [[0]], [[0]], [[0]]]], x: [[[1], [1], [1], [1]]], dt: [[[1], [1], [1], [1]]], A: [[[0]], [[0]], [[0]],
+      [[0]]], B: [[[1], [2]]], C: [[[1], [1]]], D: [[0], [0], [0], [0]], dt_bias: [[0], [0], [0], [0]]}
+  expected: {outcome: value, fields: {out: {y: [[[1], [1], [2], [2]]], state: [[[[1]], [[1]], [[2]], [[2]]]]}}}
+  note: 4 heads, 2 groups; heads 0, 1 read group 0, heads 2, 3 group 1
+- id: SS.E5
+  profile: mamba_ref
+  clauses: [SS.C5, SS.C10]
+  input: {state: [[[[0]], [[0]], [[0]]]], x: [[[1], [1], [1]]], dt: [[[1], [1], [1]]], A: [[[0]], [[0]], [[0]]], B: [[[1], [2]]],
+    C: [[[1], [1]]]}
+  expected: {outcome: invalid_input}
+  note: 3 heads, 2 groups
+- id: SS.E6
+  profile: mamba_ref
+  clauses: [SS.C6]
+  input: {state: [[[[5]]], [[[7]]]], x: [[[1]], [[1]]], dt: [[[1]], [[1]]], A: [[[0]]], B: [[[1]], [[1]]], C: [[[1]], [[1]]], D: [
+      [0]], dt_bias: [[0]], state_batch_indices: [1, -1]}
+  expected: {outcome: value, fields: {out: {y: [[[8]], [[0]]], state: [[[[5]]], [[[8]]]]}}}
+  note: row 0 updates slot 1 (7 + 1); row 1 is padding
+- id: SS.E7
+  profile: mamba_ref
+  clauses: [SS.C7]
+  input: {state: [[[1]]], x: [[2]], dt: [[1]], A: [[0]], B: [[3]], C: [[1]], D: [1], dt_bias: [0]}
+  expected: {outcome: value, fields: {out: {y: [[9]], state: [[[7]]]}}}
+  note: state' = 1 + 1*3*2, y = 7 + 2
+- id: SS.E8
+  profile: paper_zoh
+  clauses: [SS.C8]
+  input: {state: [[[[0]]]], x: [[[1]]], dt: [[[1]]], A: [[[-1]]], B: [[[1]]], C: [[[1]]], D: [[0]], dt_bias: [[0]]}
+  expected: {outcome: value, fields: {out: {y: [[[1 - exp(-1)]]], state: [[[[1 - exp(-1)]]]]}}}
+  note: B_bar = (e^-1 - 1) / (-1) * 1
+- id: SS.E9
+  profile: mamba_ref
+  clauses: [SS.C1]
+  input: {state: [[[[0]]]], x: [[[1]]], dt: [[[1]]], A: [[[-1]]], B: [[[1]]], C: [[[1]]], D: [[0]], dt_bias: [[0]]}
+  expected: {outcome: value, fields: {out: {y: [[[1]]], state: [[[[1]]]]}}}
+  note: the same input as SS.E8 under the library's rule dt B = 1
+- id: SS.E10
+  profile: paper_zoh
+  clauses: [SS.C9]
+  input: {state: [[[[0]]]], x: [[[1]]], dt: [[[1]]], A: [[[0]]], B: [[[1]]], C: [[[1]]]}
+  expected: {outcome: domain_undefined}
+- id: SS.E11
+  profile: mamba_ref
+  clauses: [SS.C10]
+  input: {state: [[[[0]]]], x: [[[1, 2]]], dt: [[[1]]], A: [[[0]]], B: [[[1]]], C: [[[1]]]}
+  expected: {outcome: invalid_input}
+- id: SS.E12
+  profile: mamba_ref
+  clauses: [SS.C11]
+  input: {state: [[[10]], [[20]]], x: [[1], [2]], dt: [[1], [1]], A: [[0]],
+    B: [[1], [1]], C: [[1], [1]], state_batch_indices: [0, 0]}
+  expected: {outcome: not_established}
+  note: Two live rows address the same state; the Python loop order is not an admissible default execution order.
+- id: SS.E13
+  profile: mamba_ref
+  clauses: [SS.C6, SS.C11]
+  input: {state: [[[10]], [[20]]], x: [[1], [2]], dt: [[1], [1]], A: [[0]],
+    B: [[1], [1]], C: [[1], [1]], state_batch_indices: [1, 0]}
+  expected: {outcome: value, fields: {out: {y: [[21], [12]], state: [[[12]], [[21]]]}}}
+signature:
+  inputs:
+  - 'state (batch, nheads, dim, dstate) or (batch, dim, dstate); x, dt, z (batch, nheads, dim); A (nheads, dim, dstate)'
+  - 'B, C (batch, ngroups, dstate); D, dt_bias (nheads, dim); dt_softplus (bool); state_batch_indices (batch)'
+  pre_state: [state]
+  post_state: [state]
+  observation_unit: y and the state after one call
+domain:
+  valid: [rational inputs with the documented shapes, nheads divisible by ngroups, distinct nonnegative state_batch_indices for independent row updates]
+  domain_undefined: ['paper_zoh: dt A = 0']
+  invalid_input: [shape mismatches, nheads not divisible by ngroups, state_batch_indices out of range]
+  unsupported: []
+  not_established: [concurrent rows mapped to the same nonnegative state slot]
+mutation_requirements:
+- {id: SS.M1, misreading: dt_bias not added, witnesses: [SS.E1]}
+- {id: SS.M2, misreading: skip term D x omitted, witnesses: [SS.E1]}
+- {id: SS.M3, misreading: output read from the state before the update, witnesses: [SS.E1]}
+- {id: SS.M4, misreading: decay exp(A) without dt, witnesses: [SS.E1]}
+- {id: SS.M5, misreading: input term B x without dt, witnesses: [SS.E1]}
+- {id: SS.M6, misreading: dt_softplus ignored, witnesses: [SS.E2]}
+- {id: SS.M7, misreading: 'gate y * z instead of y * silu(z)', witnesses: [SS.E3]}
+- {id: SS.M8, misreading: gate applied before adding D x, witnesses: [SS.E3]}
+- {id: SS.M9, misreading: group map h % ngroups instead of h // (nheads / ngroups), witnesses: [SS.E4]}
+- {id: SS.M10, misreading: padding rows (negative state index) processed with slot 0, witnesses: [SS.E6]}
+- {id: SS.M11, misreading: paper ZOH input term replaced by dt B (the two discretisations conflated), witnesses: [SS.E8]}
+- {id: SS.M12, misreading: updated state not written back, witnesses: [SS.E1]}
+nonclaims:
+- mamba_ref is agreement with the mamba_ssm reference program; the paper's ZOH rule is a separate profile.
+- At e9594ce the Triton entry point passes a single stride for a missing D or dt_bias (the case notes a crash, mamba issue
+  1028); the contract defines f for those options from the reference function and does not judge the crash.
+- Rounding inside the kernel (float32 state, exp) is the numerical question (K - G).
+changes:
+- date: '2026-10-18'
+  reason: Re-read retained MAMBA_SSU kernel and wrapper; different row programs can load/store the same state without a declared update order.
+  change: Reject duplicate active state slots as not_established instead of returning a serially updated reference; repeated negative padding indices remain supported.
+  evidence: tests/test_ssu_state_mapping.py

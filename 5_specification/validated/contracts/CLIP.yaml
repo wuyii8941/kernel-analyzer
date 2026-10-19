@@ -1,0 +1,130 @@
+schema_version: '1.2'
+id: CLIP
+role: CLIP
+title: Exact finite value clipping for one gradient buffer
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 clip_grad_value_ post-state for one physical finite floating gradient tensor
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.utils.clip_grad_value_]
+profiles:
+  finite_value_single_gradient:
+    meaning: >-
+      Complete post-call values of one participating non-null gradient buffer in clip_grad_value_. The gradient is a
+      positive rank-1 through rank-4 physical finite f16, bf16, f32 or f64 tensor. clip_value is positive, finite and
+      exactly representable in that dtype. foreach may be false, true or null because it selects an implementation of
+      the same elementwise task.
+    task_choice_required: false
+    basis: [CLV.SCHEMA, CLV.PHYSICAL, CLV.FORMULA]
+outputs:
+  out:
+    shape: the complete post-call gradient shape
+    guarantee: exact
+comparison:
+  input_binding: >-
+    The gradient record contains the exact physical pre-state with its dtype and shape. clip_value and foreach are
+    explicit call choices. The output is the same gradient storage after the in-place update, not the Python return.
+  complete_output: The complete gradient post-state is observed with dtype, explicit shape and every value.
+  quality: Exact finite-real post-state, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent coordinate clamping and PyTorch 2.10 comparisons over all selected floating dtypes.
+  error_handling: Malformed calls are invalid_input; other clipping tasks, special values, signed-zero distinctions,
+    nonpositive or unrepresentable clip values, empty tensors and unselected ranks or dtypes receive no answer.
+decisions:
+- id: CLV.SCHEMA
+  status: reviewed
+  statement: >-
+    Select only the complete post-state of one participating non-null gradient buffer in
+    torch.nn.utils.clip_grad_value_. The public function mutates gradients and returns None; this profile observes the
+    promised state effect. Norm clipping, total-norm calculation, missing gradients, backward and a call with
+    unaccounted additional gradient buffers are different tasks and remain outside this profile.
+  basis: [T_CLIP_VALUE.DEF, TS_CLIP_GRAD.VALUE]
+- id: CLV.PHYSICAL
+  status: reviewed
+  statement: >-
+    The selected gradient is a positive rank-1 through rank-4 finite f16, bf16, f32 or f64 physical tensor. Its listed
+    values and the positive finite clip_value are exactly representable in that dtype. Special values, signed-zero
+    distinctions, clip_value zero or negative, empty tensors and other ranks or dtypes are outside the reviewed range.
+  basis: [T_CLIP_VALUE.DEF, TS_CLIP_GRAD.VALUE]
+- id: CLV.FORMULA
+  status: reviewed
+  statement: >-
+    Every gradient coordinate smaller than -clip_value becomes -clip_value, every coordinate larger than clip_value
+    becomes clip_value, and every coordinate inside the closed interval is unchanged. PyTorch 2.10 implements this as
+    in-place clamp_min(-clip_value) followed by clamp_max(clip_value). foreach selects the loop or foreach
+    implementation and does not change this target.
+  basis: [T_CLIP_VALUE.DEF, TS_CLIP_GRAD.VALUE]
+clauses:
+- id: CLV.C1
+  basis: [CLV.SCHEMA, CLV.PHYSICAL]
+  statement: The task observes one complete physical finite floating gradient before and after one in-place value-clipping update.
+  observes: [out]
+  evidence_kind: definition
+- id: CLV.C2
+  basis: [T_CLIP_VALUE.DEF, CLV.FORMULA]
+  statement: Every output coordinate equals min(max(gradient, -clip_value), clip_value), including unchanged boundary coordinates.
+  observes: [out]
+  evidence_kind: definition
+- id: CLV.C3
+  basis: [T_CLIP_VALUE.DEF, CLV.FORMULA]
+  statement: foreach false, true and null select implementations of the same complete post-state.
+  observes: [out]
+  evidence_kind: definition
+- id: CLV.C4
+  basis: [CLV.SCHEMA, CLV.PHYSICAL]
+  statement: Norm clipping, malformed calls and values outside the selected physical range do not receive a reference answer.
+  observes: [out]
+  evidence_kind: definition
+examples:
+- {id: CLV.E1, profile: finite_value_single_gradient, clauses: [CLV.C1, CLV.C2], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [-2, '-1/2', '1/2', 2]}, '3/4'], kwargs: {foreach: false}}, expected: {outcome: value, fields: {out: ['-3/4', '-1/2', '1/2', '3/4']}}}
+- {id: CLV.E2, profile: finite_value_single_gradient, clauses: [CLV.C2], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f64, v: [['-3/4', '-1/4'], ['1/4', '3/4']]}, '3/4']}, expected: {outcome: value, fields: {out: [['-3/4', '-1/4'], ['1/4', '3/4']]}}}
+- {id: CLV.E3, profile: finite_value_single_gradient, clauses: [CLV.C1, CLV.C2], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f16, v: [[[-4, 0], [1, 4]]]}, 2]}, expected: {outcome: value, fields: {out: [[[-2, 0], [1, 2]]]}}}
+- {id: CLV.E4, profile: finite_value_single_gradient, clauses: [CLV.C1, CLV.C2], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: bf16, v: [[[[-8, -1], [1, 8]]]]}, 4]}, expected: {outcome: value, fields: {out: [[[[-4, -1], [1, 4]]]]}}}
+- {id: CLV.E5, profile: finite_value_single_gradient, clauses: [CLV.C3], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [-2, 0, 2]}, 1], kwargs: {foreach: true}}, expected: {outcome: value, fields: {out: [-1, 0, 1]}}}
+- {id: CLV.E6, profile: finite_value_single_gradient, clauses: [CLV.C3], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [-2, 0, 2]}, 1], kwargs: {foreach: null}}, expected: {outcome: value, fields: {out: [-1, 0, 1]}}}
+- {id: CLV.E7, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1]}, true]}, expected: {outcome: invalid_input}}
+- {id: CLV.E8, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1]}, -1]}, expected: {outcome: unsupported}}
+- {id: CLV.E9, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1]}, 0]}, expected: {outcome: unsupported}}
+- {id: CLV.E10, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1]}, inf]}, expected: {outcome: unsupported}}
+- {id: CLV.E11, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1]}, '1/3']}, expected: {outcome: unsupported}}
+- {id: CLV.E12, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: i64, v: [1, 2]}, 1]}, expected: {outcome: unsupported}}
+- {id: CLV.E13, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1, inf]}, 1]}, expected: {outcome: unsupported}}
+- {id: CLV.E14, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [-0.0, 1]}, 1]}, expected: {outcome: unsupported}}
+- {id: CLV.E15, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: ['1/3', 1]}, 1]}, expected: {outcome: invalid_input}}
+- {id: CLV.E16, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: 2}, 1]}, expected: {outcome: unsupported}}
+- {id: CLV.E17, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [], shape: [0]}, 1]}, expected: {outcome: unsupported}}
+- {id: CLV.E18, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_norm_, args: [{t: f32, v: [1]}, 1]}, expected: {outcome: unsupported}}
+- {id: CLV.E19, profile: finite_value_single_gradient, clauses: [CLV.C4], input: {op: torch.nn.utils.clip_grad_value_, args: [{t: f32, v: [1]}, 1], kwargs: {foreach: 1}}, expected: {outcome: invalid_input}}
+signature:
+  inputs: [selected clip_grad_value_ task, one complete physical finite gradient pre-state, positive exactly representable clip_value, foreach choice]
+  pre_state: [one participating gradient buffer]
+  post_state: [the same complete gradient buffer after the in-place clamp]
+  observation_unit: every post-state coordinate together with dtype and shape
+domain:
+  valid: [positive rank-1 through rank-4 physical finite f16/bf16/f32/f64 gradient, positive finite exactly representable clip_value, foreach false/true/null]
+  invalid_input: [malformed call, Boolean or nonnumeric clip_value, invalid foreach value, unrepresentable physical tensor value]
+  unsupported: [norm clipping and other operations, multiple unaccounted gradient buffers, absent gradients, special values, signed-zero distinctions, nonpositive or unrepresentable clip_value, empty tensors, other ranks or dtypes]
+mutation_requirements:
+- {id: CLV.M1, misreading: clamp only the upper side, witnesses: [CLV.E1]}
+- {id: CLV.M2, misreading: clamp only the lower side, witnesses: [CLV.E1]}
+- {id: CLV.M3, misreading: replace values below the lower bound by the positive bound, witnesses: [CLV.E1]}
+- {id: CLV.M4, misreading: use half of clip_value as the bound, witnesses: [CLV.E1]}
+- {id: CLV.M5, misreading: use twice clip_value as the bound, witnesses: [CLV.E1]}
+- {id: CLV.M6, misreading: leave the final coordinate unchanged, witnesses: [CLV.E1]}
+nonclaims:
+- No result is certified for norm clipping, total-norm calculation, missing gradients, multiple unaccounted gradient buffers, backward, special values, signed-zero distinctions, clip_value zero or negative, layouts, devices or other dtypes and ranks.
+- The profile specifies the exact real post-state selected by the documented value clamp. Device rounding and execution remain part of K−Gπ.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the broad norm, non-finite and value-clipping draft with one reviewed finite clip_grad_value_ post-state
+    profile. Preserve the former contract and adapter under contracts/draft.
+  trigger: >-
+    The broad draft combined reductions, epsilon scaling, state mutation, non-finite policy and several public calls.
+    The selected value clamp has a direct official definition and complete observable state effect.

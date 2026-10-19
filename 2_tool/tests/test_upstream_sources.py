@@ -27,13 +27,14 @@ def _plus_one(x_ptr, y_ptr, n, BLOCK: tl.constexpr):
 N = 512
 
 
-def _capture(fn, inp):
+def _capture(fn, inp, include_non_floating=False):
     rec = TritonLaunchRecorder()
     with rec:
         out = fn()
         torch.cuda.synchronize()
     seq = evaluate_sequence(rec.launches, masked_fill_zero=True)
-    return out, check.torch_intermediates(rec.launches, seq, inp)
+    return out, check.torch_intermediates(
+        rec.launches, seq, inp, include_non_floating=include_non_floating)
 
 
 def test_output_with_identical_stale_bytes_still_depends_on_the_aten_intermediate():
@@ -62,6 +63,41 @@ def test_output_reading_only_case_inputs_has_no_upstream_intermediate():
         return y
     out, deps = _capture(run, inp)
     assert not deps.get(out.untyped_storage().data_ptr())
+    assert check.contract_binding_context({"y": out}, deps) == {"unaccounted_sources_by_output": {}}
+
+
+def test_contract_binding_context_reports_a_hidden_tensor_read_by_the_kernel():
+    """A tensor closed over by the call is part of the task input even when it is absent from the input mapping."""
+    x = torch.randn(N, device="cuda")
+    hidden_weight = torch.randn(N, device="cuda")
+    inp = {"x": x}
+    y = torch.empty(N, device="cuda")
+
+    def run():
+        _plus_one[(N // 128,)](hidden_weight, y, N, BLOCK=128)
+        return y
+
+    out, deps = _capture(run, inp)
+    context = check.contract_binding_context({"y": out}, deps)
+    assert context["unaccounted_sources_by_output"].get("y")
+
+
+def test_contract_binding_context_reports_a_hidden_integer_tensor():
+    """An undeclared index or mask changes the task even though it carries no floating-point roundoff."""
+    x = torch.randn(N, device="cuda")
+    hidden_indices = torch.arange(N, dtype=torch.int32, device="cuda")
+    inp = {"x": x}
+    y = torch.empty(N, device="cuda")
+
+    def run():
+        _plus_one[(N // 128,)](hidden_indices, y, N, BLOCK=128)
+        return y
+
+    out, numerical_deps = _capture(run, inp)
+    assert not numerical_deps.get(out.untyped_storage().data_ptr())
+    out, contract_deps = _capture(run, inp, include_non_floating=True)
+    context = check.contract_binding_context({"y": out}, contract_deps)
+    assert context["unaccounted_sources_by_output"].get("y")
 
 
 def test_kernel_reference_records_the_storages_it_stored():

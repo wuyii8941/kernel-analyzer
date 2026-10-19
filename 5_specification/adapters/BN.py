@@ -1,163 +1,217 @@
-"""Adapter for contracts/BN.yaml: one BatchNorm call (training or evaluation) with the running-statistics update and
-the VJP.
-
-Input: {x (N, C, *), weight, bias (null or [C]), training (bool), momentum (rational, or null for the cumulative
-average), eps, state (null = track_running_stats False, or {running_mean, running_var[, num_batches_tracked]}),
-upstream (shape of x)}. Outputs: y, state (post-state, {} when untracked), saved (mean, rstd used to normalise), grad.
-
-The reference is kernel_spec.c_norm.batch_norm; the mutants are an independent implementation (below).
-"""
+"""Adapter for reviewed evaluation-mode BatchNorm values in contracts/BN.yaml."""
 from __future__ import annotations
 
 from fractions import Fraction
+import math
 
-from kernel_spec import c_norm as CN
+import numpy as np
+import yaml
+
+from kernel_spec import aten as A
+from kernel_spec import ieee
 from kernel_spec import real as rl
-from kernel_spec.num import Invalid, Result, Unsupported, integer, rational
+from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
+from kernel_spec.num import Invalid, Undefined, Unsupported
 from kernel_spec.real import R
+from kernel_spec.registry import CONTRACTS
 
-KEYS = {"x", "weight", "bias", "training", "momentum", "eps", "state", "upstream"}
-
-
-def _check(profile, inp):
-    if profile != "torch":
-        raise Unsupported(f"profile {profile!r}")
-    if set(inp) != KEYS:
-        raise Invalid(f"BN takes exactly {sorted(KEYS)}, got {sorted(inp)}")
+COVERS = yaml.safe_load((CONTRACTS / "BN.yaml").read_text())["covers"]
+PROFILE = ("finite_eval_values",)
+FLOAT_DTYPES = {"f16", "bf16", "f32", "f64"}
+TENSOR_ARGUMENTS = {"input", "weight", "bias", "running_mean", "running_var"}
 
 
-def reference(profile, inp):
-    _check(profile, inp)
-    out = CN.batch_norm(inp["x"], inp["weight"], inp["bias"], inp["training"], inp["momentum"], inp["eps"],
-                        inp["state"], inp["upstream"])
-    return Result("value", out)
+def _raw_dtype(value):
+    if not isinstance(value, dict) or "t" not in value:
+        return None
+    try:
+        return A.dt(value["t"])
+    except Invalid:
+        if "complex" in str(value["t"]).lower():
+            raise Unsupported("complex tensors are outside the reviewed BN profile")
+        raise
 
 
-# ------------------------------------------------------------------ independent implementation for the mutants
-def _flat(x):
-    return [v for e in x for v in _flat(e)] if isinstance(x, list) else [x]
-
-
-def _shape(x):
-    return (len(x),) + _shape(x[0]) if isinstance(x, list) else ()
-
-
-def _nest(f, shape):
-    if not shape:
-        return f[0]
-    k = len(f) // shape[0]
-    return [_nest(f[i * k:(i + 1) * k], shape[1:]) for i in range(shape[0])]
-
-
-def _v(r):
-    return r.v if isinstance(r, R) else r
-
-
-def _independent(profile, inp, mis=None):
-    _check(profile, inp)
-    x = [rational(v) for v in _flat(inp["x"])]
-    shp = _shape(inp["x"])
-    N, C = shp[0], shp[1]
-    HW = len(x) // (N * C)
-    g = [rational(v) for v in _flat(inp["upstream"])]
-    w = None if inp["weight"] is None else [rational(v) for v in inp["weight"]]
-    b = None if inp["bias"] is None else [rational(v) for v in inp["bias"]]
-    eps = rational(inp["eps"])
-    tr = inp["training"]
-    st = inp["state"]
-    if eps <= 0 or (tr and N * HW == 1):
-        raise Invalid("eps <= 0 or one value per channel in training")
-    rm = rv = nbt = None
-    if st is not None:
-        rm = [rational(v) for v in st["running_mean"]]
-        rv = [rational(v) for v in st["running_var"]]
-        nbt = integer(st["num_batches_tracked"]) if "num_batches_tracked" in st else None
-    use_batch = tr or st is None or mis == "eval_batch_stats"
-    new_nbt = nbt
-    if tr and st is not None and nbt is not None and mis != "nbt_not_incremented":
-        new_nbt = nbt + 1
-    y, dx = [None] * len(x), [None] * len(x)
-    dw = None if w is None else [R(0)] * C
-    db = None if b is None else [R(0)] * C
-    new_rm, new_rv = (list(rm), list(rv)) if st is not None else (None, None)
-    means, rstds = [], []
-    count = nbt or 0
-    for c in range(C):
-        if mis == "per_position":
-            groups = [[(k * C + c) * HW + s for k in range(N)] for s in range(HW)]
+def _raw_leaves(value):
+    stack = [value]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, list):
+            stack.extend(item)
         else:
-            groups = [[(k * C + c) * HW + s for k in range(N) for s in range(HW)]]
-        if tr and st is not None and mis == "counter_per_channel":
-            count += 1
-        if (tr or mis == "eval_updates") and st is not None and mis != "no_update":
-            allv = [x[(k * C + c) * HW + s] for k in range(N) for s in range(HW)]
-            na = len(allv)
-            f = rational(inp["momentum"]) if inp["momentum"] is not None else Fraction(
-                1, count if mis == "counter_per_channel" else new_nbt)
-            bm = sum(allv, Fraction(0)) / na
-            bss = sum(((v - bm) ** 2 for v in allv), Fraction(0))
-            unb = bss / na if mis == "biased_running" else bss / (na - 1)
-            if mis == "momentum_reversed":
-                new_rm[c], new_rv[c] = f * rm[c] + (1 - f) * bm, f * rv[c] + (1 - f) * unb
-            else:
-                new_rm[c], new_rv[c] = (1 - f) * rm[c] + f * bm, (1 - f) * rv[c] + f * unb
-        for S in groups:
-            n = len(S)
-            vals = [x[i] for i in S]
-            if use_batch:
-                mu = sum(vals, Fraction(0)) / n
-                ss = sum(((v - mu) ** 2 for v in vals), Fraction(0))
-                var = ss / (n - 1) if mis == "unbiased_normalisation" else ss / n
-            else:
-                mu, var = rm[c], rv[c]
-            r = R(1) / rl.sqrt(R(var + eps))
-            xh = [R(v - mu) * r for v in vals]
-            wc = w[c] if w is not None else 1
-            h = [R(g[i]) * wc for i in S]
-            if use_batch and mis != "train_dx_as_eval":
-                mh = sum(h, R(0)) / n
-                mhx = sum((a * q for a, q in zip(h, xh)), R(0)) / n
-                for k, i in enumerate(S):
-                    dx[i] = r * (h[k] - mh - xh[k] * mhx)
-            else:
-                for k, i in enumerate(S):
-                    dx[i] = r * h[k]
-            for k, i in enumerate(S):
-                yi = xh[k] * wc
-                y[i] = yi + b[c] if b is not None else yi
-                if dw is not None:
-                    dw[c] = dw[c] + xh[k] * g[i]
-                if db is not None:
-                    db[c] = db[c] + g[i]
-            means.append(mu), rstds.append(_v(r))
-    state = {}
-    if st is not None:
-        state = {"running_mean": new_rm, "running_var": new_rv}
-        if nbt is not None:
-            state["num_batches_tracked"] = new_nbt
-    grad = {"x": _nest([_v(v) for v in dx], shp)}
-    if dw is not None:
-        grad["weight"] = [_v(v) for v in dw]
-    if db is not None:
-        grad["bias"] = [_v(v) for v in db]
-    return Result("value", {"y": _nest([_v(v) for v in y], shp), "state": state,
-                            "saved": {"mean": means, "rstd": rstds}, "grad": grad})
+            yield item
 
 
-def _m(kind):
-    return lambda profile, inp: _independent(profile, inp, kind)
+def _source_tensor(value, name):
+    dtype = _raw_dtype(value)
+    if dtype is not None and dtype not in FLOAT_DTYPES:
+        raise Unsupported(f"{name} dtype {dtype!r} is outside the finite floating BN profile")
+    if isinstance(value, dict) and "v" in value:
+        for raw in _raw_leaves(value["v"]):
+            if isinstance(raw, (bool, np.bool_)):
+                raise Invalid(f"{name} floating values cannot be Boolean literals")
+            if isinstance(raw, str):
+                spelling = raw.strip().lower()
+                if spelling in {"nan", "inf", "+inf", "-inf"}:
+                    raise Unsupported(f"{name} contains a special value outside the reviewed profile")
+                try:
+                    if spelling.startswith("-") and Fraction(spelling) == 0:
+                        raise Unsupported("signed-zero distinctions are outside the reviewed BN profile")
+                except ValueError:
+                    pass
+            if isinstance(raw, (float, np.floating)):
+                if not math.isfinite(float(raw)):
+                    raise Unsupported(f"{name} contains a special value outside the reviewed profile")
+                if raw == 0 and math.copysign(1.0, float(raw)) < 0:
+                    raise Unsupported("signed-zero distinctions are outside the reviewed BN profile")
+    tensor = decode(value)
+    if not isinstance(tensor, A.Ten):
+        raise Invalid(f"{name} must be a tensor")
+    if tensor.dtype not in FLOAT_DTYPES:
+        raise Unsupported(f"{name} must use f16, bf16, f32 or f64")
+    if any(size == 0 for size in tensor.shape):
+        raise Unsupported(f"{name} must have positive dimensions")
+    for item in tensor.a.flat:
+        if not isinstance(item, R) or not item.exact:
+            raise Invalid(f"{name} values must be exact real numbers")
+        if not item.finite:
+            raise Unsupported(f"{name} contains a special value outside the reviewed profile")
+        stored = ieee.round_to(item, tensor.dtype)
+        if not stored.exact or stored.v != item.v:
+            raise Invalid(f"{item!r} is not exactly representable as {tensor.dtype}")
+    return tensor
+
+
+def _decode_argument(op, name, value, arguments):
+    if name in TENSOR_ARGUMENTS and value is not None:
+        return _source_tensor(value, name)
+    return decode(value)
+
+
+def _flag(value, name):
+    if not isinstance(value, (bool, np.bool_)):
+        raise Invalid(f"{name} must be boolean")
+    return bool(value)
+
+
+def _finite_scalar(value, name):
+    if isinstance(value, (bool, np.bool_)):
+        raise Invalid(f"{name} must be a real scalar")
+    if isinstance(value, str) and value.strip().lower() in {"nan", "inf", "+inf", "-inf"}:
+        raise Unsupported(f"nonfinite {name} is outside the reviewed BN profile")
+    try:
+        result = R(value)
+    except Undefined:
+        raise Unsupported(f"nonfinite {name} is outside the reviewed BN profile")
+    except (TypeError, ValueError):
+        raise Invalid(f"{name} must be a real scalar")
+    if not result.exact:
+        raise Invalid(f"{name} must be an exact scalar")
+    if not result.finite:
+        raise Unsupported(f"nonfinite {name} is outside the reviewed BN profile")
+    return result
+
+
+def _vector(value, name, source, channels, optional=False):
+    if value is None:
+        if optional:
+            return None
+        raise Unsupported(f"{name} is required in evaluation mode")
+    if not isinstance(value, A.Ten):
+        raise Invalid(f"{name} must be a tensor")
+    if value.shape != (channels,):
+        raise Invalid(f"{name} must have shape [{channels}]")
+    if value.dtype != source.dtype:
+        raise Unsupported("input, running statistics and affine tensors must use the same dtype")
+    return value
+
+
+def _batch_norm_values(input, running_mean, running_var, weight=None, bias=None,
+                       training=False, momentum=0.1, eps=1e-5, *, mode="correct"):
+    if not isinstance(input, A.Ten):
+        raise Invalid("input must be a tensor")
+    if input.a.ndim not in (2, 3, 4):
+        raise Unsupported("BN requires a rank-2, rank-3 or rank-4 input")
+    if _flag(training, "training"):
+        raise Unsupported("training mode is outside the reviewed BN profile")
+    _finite_scalar(momentum, "momentum")
+    epsilon = _finite_scalar(eps, "eps")
+    if epsilon.sign() <= 0:
+        raise Unsupported("eps must be positive in the reviewed BN profile")
+
+    channels = input.shape[1]
+    running_mean = _vector(running_mean, "running_mean", input, channels)
+    running_var = _vector(running_var, "running_var", input, channels)
+    weight = _vector(weight, "weight", input, channels, optional=True)
+    bias = _vector(bias, "bias", input, channels, optional=True)
+    for value in running_var.a:
+        if value.sign() < 0:
+            raise Unsupported("running variance must be nonnegative")
+
+    batch_mean = batch_var = None
+    if mode == "batch_stats":
+        batch_mean, batch_var = [], []
+        for channel in range(channels):
+            values = [input.a[index] for index in np.ndindex(input.shape) if index[1] == channel]
+            mean = sum(values, R(0)) / len(values)
+            variance = sum(((value - mean) * (value - mean) for value in values), R(0)) / len(values)
+            batch_mean.append(mean)
+            batch_var.append(variance)
+
+    out = np.empty(input.shape, dtype=object)
+    for index in np.ndindex(input.shape):
+        channel = 0 if mode == "channel_zero" else index[1]
+        mean = batch_mean[index[1]] if mode == "batch_stats" else running_mean.a[channel]
+        variance = batch_var[index[1]] if mode == "batch_stats" else running_var.a[channel]
+        if mode == "omit_eps":
+            denominator = rl.sqrt(variance)
+        elif mode == "eps_outside":
+            denominator = rl.sqrt(variance) + epsilon
+        else:
+            denominator = rl.sqrt(variance + epsilon)
+        value = (input.a[index] - mean) / denominator
+        if weight is not None and mode != "omit_weight":
+            value = value * weight.a[channel]
+        if bias is not None and mode != "omit_bias":
+            value = value + bias.a[channel]
+        out[index] = value
+    return A.Ten(out, input.dtype)
+
+
+def _functional_batch_norm(input, running_mean, running_var, weight=None, bias=None,
+                           training=False, momentum=0.1, eps=1e-5):
+    return _batch_norm_values(input, running_mean, running_var, weight, bias, training, momentum, eps)
+
+
+def _aten_batch_norm(input, weight, bias, running_mean, running_var, training,
+                     momentum, eps, cudnn_enabled):
+    _flag(cudnn_enabled, "cudnn_enabled")
+    return _batch_norm_values(input, running_mean, running_var, weight, bias, training, momentum, eps)
+
+
+OPS = {
+    "torch.nn.functional.batch_norm": _functional_batch_norm,
+    "aten.batch_norm": _aten_batch_norm,
+}
+reference = make_reference(COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
+check_output = make_output_checker(COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
+
+
+def _mutant_functional(mode):
+    def operation(input, running_mean, running_var, weight=None, bias=None,
+                  training=False, momentum=0.1, eps=1e-5):
+        return _batch_norm_values(input, running_mean, running_var, weight, bias,
+                                  training, momentum, eps, mode=mode)
+    return make_reference(COVERS, extra={**OPS, "torch.nn.functional.batch_norm": operation},
+                          profiles=PROFILE, argument_decoder=_decode_argument)
 
 
 MUTANTS = {
-    "BN.M1": _m("biased_running"),
-    "BN.M2": _m("momentum_reversed"),
-    "BN.M3": _m("eval_batch_stats"),
-    "BN.M4": _m("counter_per_channel"),
-    "BN.M5": _m("unbiased_normalisation"),
-    "BN.M6": _m("train_dx_as_eval"),
-    "BN.M7": _m("no_update"),
-    "BN.M8": _m("nbt_not_incremented"),
-    "BN.M9": _m("per_position"),
-    "BN.M10": _m("eval_updates"),
+    "BN2.M1": _mutant_functional("batch_stats"),
+    "BN2.M2": _mutant_functional("omit_eps"),
+    "BN2.M3": _mutant_functional("eps_outside"),
+    "BN2.M4": _mutant_functional("omit_weight"),
+    "BN2.M5": _mutant_functional("omit_bias"),
+    "BN2.M6": _mutant_functional("channel_zero"),
 }
 READINGS = {}

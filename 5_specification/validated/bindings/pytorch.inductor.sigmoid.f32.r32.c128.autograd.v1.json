@@ -1,0 +1,48 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.sigmoid.f32.r32.c128.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.sigmoid))",
+    "runtime_package": {"distribution": "torch", "version": "2.10.0+cu128"},
+    "boundary": "generated Triton launch returns the complete float32[32,128] sigmoid forward and input VJP",
+    "measure_call": "../calls/inductor_sigmoid.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_sigmoid_forward",
+      "contract": "MATHFN",
+      "profile": "real",
+      "task_statement": "Compute public PyTorch 2.10 sigmoid on every exact finite float32 input value with absolute value at most 100.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.sigmoid", "basis": "torch.sigmoid is the documented alias of torch.special.expit"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/y", "conversion": "tensor_record", "measure_output": "y"}
+      ]
+    },
+    {
+      "id": "public_sigmoid_input_vjp",
+      "contract": "ACT",
+      "profile": "torch",
+      "task_statement": "Compute the complete input VJP of public PyTorch 2.10 sigmoid from the received original input and upstream tensor.",
+      "input_map": [
+        {"target": "/op", "literal": "vjp.aten.sigmoid", "basis": "ACT.C14 differentiates the sourced public sigmoid formula from x"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

@@ -327,6 +327,18 @@ def elementary_bounds(name: str, lo: np.ndarray, hi: np.ndarray):
     raise KeyError(name)
 
 
+def erf_plus_one_bounds(lo: np.ndarray, hi: np.ndarray):
+    """Rigorous bounds for ``1 + erf(x)`` without cancellation near the negative tail.
+
+    The identity ``1 + erf(x) = erfc(-x)`` is evaluated directly.  Float64 endpoints cannot retain the small
+    positive tail when an enclosure close to -1 is first rounded and then added to 1.
+    """
+
+    lo = np.asarray(lo, dtype=np.float64)
+    hi = np.asarray(hi, dtype=np.float64)
+    return elementary_bounds("erfc", -hi, -lo)
+
+
 def _cosh_interval(a: float, b: float) -> ExactInterval:
     from gmpy2 import mpq
 

@@ -1,0 +1,81 @@
+{
+  "task": "PyTorch public GroupNorm forward and complete x/weight/bias VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_per_fused_add_expand_mul_native_group_norm_neg_ones_like_sub_sum_unsqueeze_view_1",
+    "triton_per_fused_expand_mul_ones_like_sum_view_0",
+    "triton_poi_fused_mul_native_group_norm_sub_sum_unsqueeze_view_2",
+    "triton_poi_fused_native_group_norm_3"
+  ],
+  "generated_triton_kernel_count": 4,
+  "generated_precision_lines": [
+    "#   y => add, rsqrt, squeeze, squeeze_1, var_mean, view",
+    "#   %add : Tensor \"f32[4, 4, 1, 1][4, 1, 1, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%getitem, 1e-05), kwargs = {})",
+    "#   %rsqrt : Tensor \"f32[4, 4, 1, 1][4, 1, 1, 1]cuda:0\"[num_users=2] = call_function[target=torch.ops.aten.rsqrt.default](args = (%add,), kwargs = {})",
+    "#   %squeeze_1 : Tensor \"f32[4, 4][4, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.squeeze.dims](args = (%rsqrt, [2, 3]), kwargs = {})",
+    "tmp47 = 1e-05",
+    "tmp49 = libdevice.rsqrt(tmp48)",
+    "#   y => add, rsqrt, squeeze, squeeze_1, var_mean, view",
+    "#   %add : Tensor \"f32[4, 4, 1, 1][4, 1, 1, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%getitem, 1e-05), kwargs = {})",
+    "#   %rsqrt : Tensor \"f32[4, 4, 1, 1][4, 1, 1, 1]cuda:0\"[num_users=2] = call_function[target=torch.ops.aten.rsqrt.default](args = (%add,), kwargs = {})",
+    "#   %squeeze_1 : Tensor \"f32[4, 4][4, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.squeeze.dims](args = (%rsqrt, [2, 3]), kwargs = {})",
+    "tmp8 = 1e-05",
+    "tmp10 = libdevice.rsqrt(tmp9)",
+    "tmp20 = libdevice.rsqrt(tmp19)",
+    "tmp31 = libdevice.rsqrt(tmp30)",
+    "tmp42 = libdevice.rsqrt(tmp41)",
+    "#   y => add, add_1, mul, mul_1, rsqrt, sub, unsqueeze, unsqueeze_1, unsqueeze_2, unsqueeze_3, unsqueeze_4, unsqueeze_5, var_mean, view, view_1",
+    "#   %add : Tensor \"f32[4, 4, 1, 1][4, 1, 1, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%getitem, 1e-05), kwargs = {})",
+    "#   %rsqrt : Tensor \"f32[4, 4, 1, 1][4, 1, 1, 1]cuda:0\"[num_users=2] = call_function[target=torch.ops.aten.rsqrt.default](args = (%add,), kwargs = {})",
+    "#   %mul : Tensor \"f32[4, 4, 4, 64][1024, 256, 64, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%sub, %rsqrt), kwargs = {})",
+    "tmp6 = 1e-05",
+    "tmp8 = libdevice.rsqrt(tmp7)"
+  ],
+  "rows": [
+    {
+      "name": "y",
+      "shape": [
+        4,
+        16,
+        8,
+        8
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 7.152557373046875e-07
+    },
+    {
+      "name": "dx",
+      "shape": [
+        4,
+        16,
+        8,
+        8
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 7.152557373046875e-07
+    },
+    {
+      "name": "dweight",
+      "shape": [
+        16
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 3.814697265625e-06
+    },
+    {
+      "name": "dbias",
+      "shape": [
+        16
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 2.86102294921875e-06
+    }
+  ],
+  "inputs_unchanged": true,
+  "inspection_passed": true
+}

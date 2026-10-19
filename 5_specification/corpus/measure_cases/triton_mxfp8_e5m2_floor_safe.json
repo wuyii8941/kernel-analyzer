@@ -1,0 +1,19 @@
+{
+  "call": "../calls/triton_mxfp8_e5m2_floor.py:call",
+  "inputs": {
+    "x": {"state": "../calls/triton_mxfp8_e5m2_floor.py:make_safe_input", "shape": [4, 64], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["elements", "scale_codes"],
+    "binding_plan": "../call_bindings/triton_mxfp8_e5m2_floor.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

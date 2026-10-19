@@ -1,258 +1,167 @@
-"""Adapter for contracts/DIVERG.yaml: KL divergence (torch.nn.KLDivLoss, and Liger's eps-clamped variant), Liger's
-generalised Jensen-Shannon divergence and Liger's total variation distance, each with the VJP w.r.t. the first
-argument against an explicit upstream.
-
-Inputs: {op: kl_div, input, target, reduction, log_target, upstream[, eps (profile liger_kl)]};
-{op: jsd, input (log Q), target (log P), beta, labels, ignore_index, upstream};
-{op: tvd, input (p), target (q), reduction, labels, ignore_index, upstream}. Outputs: loss, grad (shape of input).
-
-The reference uses kernel_spec.real (exact rationals, enclosures); the mutants are an independent mpmath-interval
-implementation with one misreading switched on each.
-"""
+"""Reviewed PyTorch 2.10 probability-target KL batchmean task and complete input VJP."""
 from __future__ import annotations
 
-from fractions import Fraction
+import math
 
-from mpmath import iv
+import numpy as np
 
-from kernel_spec import c_ce as T
+from kernel_spec import d1_attention as A
+from kernel_spec import ieee
 from kernel_spec import real as rl
-from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer, rational, to_iv
+from kernel_spec.compare import check_enclosed_output
+from kernel_spec.num import Invalid, Result, Unsupported, rational, require_fields
 from kernel_spec.real import R
 
-OPS = {"torch_kl": "kl_div", "liger_kl": "kl_div", "liger_jsd": "jsd", "liger_tvd": "tvd", "tvd_min_norm": "tvd"}
-KEYS = {"kl_div": {"op", "input", "target", "reduction", "log_target", "upstream"},
-        "jsd": {"op", "input", "target", "beta", "labels", "ignore_index", "upstream"},
-        "tvd": {"op", "input", "target", "reduction", "labels", "ignore_index", "upstream"}}
-REDS = {"kl_div": ("none", "sum", "mean", "batchmean"), "tvd": ("none", "sum", "mean", "batchmean")}
+
+PROFILE = "torch210_probability_batchmean_f32"
+REQUIRED = {"input", "target", "input_dtype", "target_dtype", "reduction", "log_target", "upstream"}
 
 
-def _v(x):
-    return x.v if isinstance(x, R) else x
-
-
-def _inputs(profile, inp):
-    if profile not in OPS:
-        raise Unsupported(f"profile {profile!r}")
-    op = inp.get("op")
-    if op != OPS[profile]:
-        raise Unsupported(f"op {op!r} is not in profile {profile}") if op in KEYS else Invalid(f"unknown op {op!r}")
-    want = KEYS[op] | ({"eps"} if profile == "liger_kl" else set())
-    if set(inp) != want:
-        raise Invalid(f"{op} in {profile} takes exactly {sorted(want)}, got {sorted(inp)}")
-    shape, x = T.tensor(inp["input"], "input")
-    tshape, t = T.tensor(inp["target"], "target")
-    if tshape != shape or not shape:
-        raise Invalid(f"input / target shapes {shape} / {tshape}")
-    if profile != "torch_kl" and len(shape) != 2:
-        raise Invalid("Liger's operations take (BT, V) inputs")
-    a = dict(op=op, shape=shape, x=x, t=t)
-    if op in REDS:
-        if inp["reduction"] not in REDS[op]:
-            raise Invalid(f"reduction {inp['reduction']!r}")
-        a["red"] = inp["reduction"]
-    if op == "kl_div":
-        if not isinstance(inp["log_target"], bool):
-            raise Invalid("log_target must be a boolean")
-        a["log_target"] = inp["log_target"]
-        if profile == "liger_kl":
-            a["eps"] = rational(inp["eps"], "eps")
-            if a["eps"] <= 0:
-                raise Invalid("eps must be positive")
-    if op == "jsd":
-        a["beta"] = rational(inp["beta"], "beta")
-        if not 0 <= a["beta"] <= 1:
-            raise Invalid("beta outside [0, 1]")
-    if op in ("jsd", "tvd"):
-        BT = shape[0]
-        ii = integer(inp["ignore_index"], "ignore_index")
-        lab = inp["labels"]
-        if lab is None:
-            keep = [True] * BT
-        else:
-            if not isinstance(lab, list) or len(lab) != BT:
-                raise Invalid("labels must be a list of length BT")
-            keep = [integer(v, "label") != ii for v in lab]
-        a["keep"] = keep
-    u = inp["upstream"]
-    if a.get("red") == "none":
-        us, uf = T.tensor(u, "upstream")
-        if us != shape:
-            raise Invalid("upstream must have the input's shape for reduction none")
-        a["u"] = uf
+def _walk(value):
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _walk(item)
     else:
-        if isinstance(u, (list, tuple)):
-            raise Invalid("upstream must be a scalar")
-        a["u"] = rational(u, "upstream")
-    return a
+        yield value
 
 
-def _reduce(a, pw, gr, divisor):
-    """pw / gr: flat pointwise losses and d(pointwise)/d(input) (R values); divisor for sum-type reductions."""
-    if a.get("red") == "none":
-        return T.nest([_v(v) for v in pw], a["shape"]), T.nest([_v(g * u) for g, u in zip(gr, a["u"])], a["shape"])
-    if divisor == 0:
-        raise Undefined("the normalising count is zero")
-    tot = R(0)
-    for v in pw:
-        tot = tot + v
-    return _v(tot / divisor), T.nest([_v(g * a["u"] / divisor) for g in gr], a["shape"])
+def _reject_specials(value, name):
+    for item in _walk(value):
+        if isinstance(item, (bool, np.bool_)):
+            raise Invalid(f"{name}: Boolean is not a floating value")
+        if isinstance(item, (float, np.floating)) and not math.isfinite(float(item)):
+            raise Unsupported(f"{name}: special values are outside the reviewed KL profile")
+        if isinstance(item, str) and item.strip().lower() in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
+            raise Unsupported(f"{name}: special values are outside the reviewed KL profile")
+
+
+def _physical_scalar(value, name):
+    _reject_specials(value, name)
+    if isinstance(value, (list, tuple, dict)):
+        raise Invalid(f"{name} must be a scalar")
+    value = rational(value, name)
+    rounded = ieee.round_to(R(value), "f32")
+    if not rounded.exact or rounded.v != value:
+        raise Invalid(f"{name}: value {value!r} is not exactly representable as float32")
+    return value
+
+
+def _physical_matrix(value, name):
+    _reject_specials(value, name)
+    tensor, shape = A.tensor(value, 2, name)
+    if min(shape) <= 0:
+        raise Invalid(f"{name} must have positive rank-2 shape")
+    for item in _walk(tensor):
+        rounded = ieee.round_to(R(item), "f32")
+        if not rounded.exact or rounded.v != item:
+            raise Invalid(f"{name}: value {item!r} is not exactly representable as float32")
+    return tensor, shape
+
+
+def _parse(profile, inp):
+    if profile != PROFILE:
+        raise Unsupported(f"profile {profile!r}")
+    require_fields(inp, REQUIRED, "DIVERG")
+    extra = set(inp) - REQUIRED
+    if extra:
+        raise Unsupported(f"fields outside the selected PyTorch KL task: {sorted(extra)}")
+    if inp["input_dtype"] != "f32" or inp["target_dtype"] != "f32":
+        raise Unsupported("the reviewed KL profile requires float32 input and target")
+    if inp["reduction"] != "batchmean":
+        raise Unsupported("the reviewed KL profile fixes reduction=batchmean")
+    if type(inp["log_target"]) is not bool:
+        raise Invalid("log_target must be a Boolean")
+    if inp["log_target"]:
+        raise Unsupported("log_target=true is outside the selected probability-target task")
+    values, shape = _physical_matrix(inp["input"], "input")
+    target, target_shape = _physical_matrix(inp["target"], "target")
+    if target_shape != shape:
+        raise Invalid(f"input and target shapes differ: {shape} versus {target_shape}")
+    if any(item <= 0 for item in _walk(target)):
+        raise Unsupported("zero or negative target is outside the reviewed positive-target profile")
+    upstream = _physical_scalar(inp["upstream"], "upstream")
+    return {"input": values, "target": target, "shape": shape, "upstream": upstream}
+
+
+def _plain(value):
+    return value.v if isinstance(value, R) else value
+
+
+def _evaluate(profile, inp, mode=None):
+    parsed = _parse(profile, inp)
+    batch, support = parsed["shape"]
+    targets = parsed["target"]
+    if mode == "renormalise_target":
+        targets = [[item / sum(row) for item in row] for row in targets]
+    divisor = batch * support if mode == "mean" else batch
+    loss = R(0)
+    grad = []
+    for input_row, target_row in zip(parsed["input"], targets):
+        grad_row = []
+        for value, target in zip(input_row, target_row):
+            if mode == "log_target_true":
+                weight = rl.exp(R(target))
+                loss = loss + weight * R(target - value)
+                derivative = -weight
+            else:
+                term = -R(target * value) if mode == "omit_target_log" else R(target) * (rl.log(R(target)) - R(value))
+                loss = loss + term
+                derivative = R(target) if mode == "grad_sign" else R(-target)
+            grad_divisor = batch * support if mode in {"mean", "grad_mean"} else batch
+            grad_row.append(_plain(derivative * R(parsed["upstream"]) / grad_divisor))
+        grad.append(grad_row)
+    return Result("value", {"loss": _plain(loss / divisor), "grad": grad})
 
 
 def reference(profile, inp):
-    a = _inputs(profile, inp)
-    x, t = [R(v) for v in a["x"]], [R(v) for v in a["t"]]
-    if a["op"] == "kl_div":
-        pw, gr = [], []
-        for xv, tv in zip(x, t):
-            if a["log_target"]:
-                et = rl.exp(tv)
-                pw.append(et * (tv - xv)), gr.append(-et)
-            elif profile == "liger_kl":
-                pw.append(tv * (rl.log(rl.max_(tv, R(a["eps"]))) - xv)), gr.append(-tv)
-            else:
-                s = tv.sign()
-                if s < 0:
-                    raise Undefined("log of a negative target (log_target=False)")
-                pw.append(R(0) if s == 0 else tv * (rl.log(tv) - xv)), gr.append(-tv)
-        n = len(x)
-        div = {"sum": 1, "mean": n, "batchmean": a["shape"][0]}.get(a.get("red"), 1)
-        loss, grad = _reduce(a, pw, gr, div)
-        return Result("value", {"loss": loss, "grad": grad})
-    BT, V = a["shape"]
-    keep = a["keep"]
-    nk = sum(keep)
-    pw, gr = [], []
-    for i, (xv, tv) in enumerate(zip(x, t)):
-        if not keep[i // V]:
-            pw.append(R(0)), gr.append(R(0))
-            continue
-        if a["op"] == "jsd":
-            b = R(a["beta"])
-            P, Q = rl.exp(tv), rl.exp(xv)
-            if a["beta"] == 0:
-                pw.append(P * (tv - xv)), gr.append(-P)
-            elif a["beta"] == 1:
-                pw.append(Q * (xv - tv)), gr.append(Q * (xv - tv) + Q)
-            else:
-                M = b * P + (1 - b) * Q
-                lm = rl.log(M)
-                pw.append(b * P * tv + (1 - b) * Q * xv - M * lm), gr.append((1 - b) * Q * (xv - lm))
-        else:
-            d = xv - tv
-            s = d.sign()
-            pw.append(rl.abs_(d) / 2)
-            gr.append(R(Fraction(1, 2)) if s > 0 else (R(0) if s == 0 and profile == "tvd_min_norm" else R(Fraction(-1, 2))))
-    if a["op"] == "jsd":
-        div = nk
-        a = dict(a, red="sum")
-    else:
-        div = {"sum": 1, "mean": nk * V, "batchmean": nk}.get(a["red"], 1)
-    loss, grad = _reduce(a, pw, gr, div)
-    return Result("value", {"loss": loss, "grad": grad})
+    return _evaluate(profile, inp)
 
 
-# ------------------------------------------------------------------ independent implementation for the mutants
-def _independent(profile, inp, mis=None):
-    a = _inputs(profile, inp)
-    shape = a["shape"]
-    x, t = [to_iv(v) for v in a["x"]], [Fraction(v) for v in a["t"]]
-    n = len(x)
-    if a["op"] == "kl_div":
-        pw, gr = [], []
-        for xv, tv in zip(x, t):
-            lt = a["log_target"] and mis != "log_target_ignored"
-            if mis == "args_swapped":
-                q = iv.exp(xv)
-                pw.append(q * (xv - (to_iv(tv) if lt else iv.log(to_iv(tv))))), gr.append(q * (xv - (to_iv(tv) if lt else iv.log(to_iv(tv)))) + q)
-                continue
-            if lt:
-                e = iv.exp(to_iv(tv))
-                pw.append(e * (to_iv(tv) - xv)), gr.append(-e)
-            else:
-                if profile == "liger_kl" and mis != "liger_no_clamp":
-                    m = tv if tv > a["eps"] else a["eps"]
-                    pw.append(to_iv(tv) * (iv.log(to_iv(m)) - xv))
-                else:
-                    if tv < 0 or (tv == 0 and mis == "zero_target_undefined"):
-                        raise Undefined("log of a non-positive target")
-                    pw.append(to_iv(0) if tv == 0 else to_iv(tv) * (iv.log(to_iv(tv)) - xv))
-                gr.append(to_iv(tv) if mis == "grad_sign" else -to_iv(tv))
-        red = a["red"]
-        div = {"sum": 1, "mean": n, "batchmean": n if mis == "batchmean_as_mean" else shape[0]}.get(red, 1)
-    else:
-        BT, V = shape
-        keep = a["keep"]
-        nk = sum(keep)
-        pw, gr = [], []
-        for i, (xv, tv) in enumerate(zip(x, t)):
-            if not keep[i // V]:
-                pw.append(to_iv(0)), gr.append(to_iv(0))
-                continue
-            if a["op"] == "jsd":
-                b = a["beta"]
-                P, Q = iv.exp(to_iv(tv)), iv.exp(xv)
-                if b == 0 and mis != "beta0_general":
-                    pw.append(P * (to_iv(tv) - xv)), gr.append(-P)
-                elif b == 1 and mis != "beta0_general":
-                    pw.append(Q * (xv - to_iv(tv))), gr.append(Q * (xv - to_iv(tv)) + Q)
-                else:
-                    if mis == "beta_swapped":          # beta weights Q, 1 - beta weights P
-                        M = to_iv(1 - b) * P + to_iv(b) * Q
-                        lm = iv.log(M)
-                        pw.append(to_iv(1 - b) * P * to_iv(tv) + to_iv(b) * Q * xv - M * lm)
-                        gr.append(to_iv(b) * Q * (xv - lm))
-                        continue
-                    M = to_iv(b) * P + to_iv(1 - b) * Q
-                    lm = to_iv(b) * to_iv(tv) + to_iv(1 - b) * xv if mis == "geometric_mixture" else iv.log(M)
-                    pw.append(to_iv(b) * P * to_iv(tv) + to_iv(1 - b) * Q * xv - M * lm)
-                    gr.append(to_iv(1 - b) * Q * (xv - lm))
-            else:
-                d = a["x"][i] - tv
-                half = Fraction(1) if mis == "tvd_no_half" else Fraction(1, 2)
-                pw.append(to_iv(abs(d) * half))
-                if d > 0:
-                    gr.append(to_iv(half))
-                elif d < 0:
-                    gr.append(to_iv(-half))
-                else:
-                    tie = Fraction(0) if profile == "tvd_min_norm" else Fraction(-1, 2)
-                    if mis == "tie_swapped":
-                        tie = Fraction(-1, 2) if profile == "tvd_min_norm" else Fraction(0)
-                    gr.append(to_iv(tie))
-        if a["op"] == "jsd":
-            red = "sum"
-            div = BT if mis == "jsd_by_rows" else nk
-        else:
-            red = a["red"]
-            div = {"sum": 1, "mean": nk * V, "batchmean": nk * V if mis == "tvd_batchmean_elements" else nk}.get(red, 1)
-    if red == "none":
-        return Result("value", {"loss": T.nest(pw, shape), "grad": T.nest([g * to_iv(u) for g, u in zip(gr, a["u"])],
-                                                                           shape)})
-    if div == 0:
-        raise Undefined("zero count")
-    tot = sum(pw[1:], pw[0])
-    return Result("value", {"loss": tot / to_iv(div), "grad": T.nest([g * to_iv(a["u"]) / to_iv(div) for g in gr],
-                                                                     shape)})
+def _observed_scalar(value, name):
+    if isinstance(value, dict):
+        if set(value) != {"t", "v", "shape"} or value.get("t") != "f32" or value.get("shape") != []:
+            raise Invalid(f"observed {name} tensor record has the wrong dtype or shape")
+        value = value["v"]
+    if isinstance(value, (list, tuple, dict)):
+        raise Invalid(f"observed {name} must be scalar")
+    return rational(value, f"observed {name}")
 
 
-def _m(kind):
-    return lambda profile, inp: _independent(profile, inp, kind)
+def _observed_matrix(value, shape, name):
+    if isinstance(value, dict):
+        if set(value) != {"t", "v", "shape"} or value.get("t") != "f32" or value.get("shape") != list(shape):
+            raise Invalid(f"observed {name} tensor record has the wrong dtype or shape")
+        value = value["v"]
+    tensor, actual = A.tensor(value, 2, f"observed {name}")
+    if actual != shape:
+        raise Invalid(f"observed {name} shape {actual}, expected {shape}")
+    return tensor
+
+
+def check_output(profile, inp, observed):
+    try:
+        parsed = _parse(profile, inp)
+        if not isinstance(observed, dict) or set(observed) != {"loss", "grad"}:
+            return False
+        candidate = {
+            "loss": _observed_scalar(observed["loss"], "loss"),
+            "grad": _observed_matrix(observed["grad"], parsed["shape"], "grad"),
+        }
+    except Invalid:
+        return False
+    return check_enclosed_output(reference(profile, inp).fields, candidate)
+
+
+def _mutant(mode):
+    return lambda profile, inp: _evaluate(profile, inp, mode)
 
 
 MUTANTS = {
-    "DV.M1": _m("batchmean_as_mean"),
-    "DV.M2": _m("log_target_ignored"),
-    "DV.M3": _m("args_swapped"),
-    "DV.M4": _m("grad_sign"),
-    "DV.M5": _m("beta_swapped"),
-    "DV.M6": _m("geometric_mixture"),
-    "DV.M7": _m("jsd_by_rows"),
-    "DV.M8": _m("tvd_no_half"),
-    "DV.M9": _m("tvd_batchmean_elements"),
-    "DV.M10": _m("zero_target_undefined"),
-    "DV.M11": _m("liger_no_clamp"),
-    "DV.M12": _m("tie_swapped"),
-    "DV.M13": _m("beta0_general"),
+    "DV.M1": _mutant("mean"),
+    "DV.M2": _mutant("omit_target_log"),
+    "DV.M3": _mutant("grad_sign"),
+    "DV.M4": _mutant("grad_mean"),
+    "DV.M5": _mutant("renormalise_target"),
+    "DV.M6": _mutant("log_target_true"),
 }
 READINGS = {}

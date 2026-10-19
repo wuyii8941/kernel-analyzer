@@ -1,0 +1,301 @@
+{
+ "inputs": {},
+ "nodes": [
+  {
+   "name": "slice_1",
+   "op": "aten.slice",
+   "args": [
+    {
+     "ref": "constant_pad_nd"
+    },
+    1,
+    1,
+    9223372036854775807
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "view_3",
+   "op": "aten.reshape",
+   "args": [
+    {
+     "ref": "slice_1"
+    },
+    [
+     -1
+    ]
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "ne",
+   "op": "aten.ne",
+   "args": [
+    {
+     "ref": "view_3"
+    },
+    -100
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "sum_2",
+   "op": "aten.sum",
+   "args": [
+    {
+     "ref": "ne"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "convert_element_type_3",
+   "op": "prims.convert_element_type",
+   "args": [
+    {
+     "ref": "sum_2"
+    },
+    "torch.float32"
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "full_default_1",
+   "op": "aten.full",
+   "args": [
+    [],
+    0.0
+   ],
+   "kwargs": {
+    "dtype": "torch.float32"
+   }
+  },
+  {
+   "name": "view_1",
+   "op": "aten.reshape",
+   "args": [
+    {
+     "ref": "mm"
+    },
+    [
+     1,
+     128,
+     50272
+    ]
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "convert_element_type_2",
+   "op": "prims.convert_element_type",
+   "args": [
+    {
+     "ref": "view_1"
+    },
+    "torch.float32"
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "view_2",
+   "op": "aten.reshape",
+   "args": [
+    {
+     "ref": "convert_element_type_2"
+    },
+    [
+     -1,
+     50272
+    ]
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "prepare_softmax_online_default",
+   "op": "prims.prepare_softmax_online",
+   "args": [
+    {
+     "ref": "view_2"
+    },
+    1
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "getitem_1",
+   "op": "operator.getitem",
+   "args": [
+    {
+     "ref": "prepare_softmax_online_default"
+    },
+    1
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "log",
+   "op": "aten.log",
+   "args": [
+    {
+     "ref": "getitem_1"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "getitem",
+   "op": "operator.getitem",
+   "args": [
+    {
+     "ref": "prepare_softmax_online_default"
+    },
+    0
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "sub_tensor",
+   "op": "aten.sub",
+   "args": [
+    {
+     "ref": "view_2"
+    },
+    {
+     "ref": "getitem"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "sub_1",
+   "op": "aten.sub",
+   "args": [
+    {
+     "ref": "sub_tensor"
+    },
+    {
+     "ref": "log"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "full_default",
+   "op": "aten.full",
+   "args": [
+    [],
+    0
+   ],
+   "kwargs": {
+    "dtype": "torch.int64"
+   }
+  },
+  {
+   "name": "where",
+   "op": "aten.where",
+   "args": [
+    {
+     "ref": "ne"
+    },
+    {
+     "ref": "view_3"
+    },
+    {
+     "ref": "full_default"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "unsqueeze",
+   "op": "aten.unsqueeze",
+   "args": [
+    {
+     "ref": "where"
+    },
+    1
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "gather",
+   "op": "aten.gather",
+   "args": [
+    {
+     "ref": "sub_1"
+    },
+    1,
+    {
+     "ref": "unsqueeze"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "squeeze",
+   "op": "aten.squeeze",
+   "args": [
+    {
+     "ref": "gather"
+    },
+    1
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "neg",
+   "op": "aten.neg",
+   "args": [
+    {
+     "ref": "squeeze"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "where_1",
+   "op": "aten.where",
+   "args": [
+    {
+     "ref": "ne"
+    },
+    {
+     "ref": "neg"
+    },
+    {
+     "ref": "full_default_1"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "sum_3",
+   "op": "aten.sum",
+   "args": [
+    {
+     "ref": "where_1"
+    }
+   ],
+   "kwargs": {}
+  },
+  {
+   "name": "div",
+   "op": "aten.div",
+   "args": [
+    {
+     "ref": "sum_3"
+    },
+    {
+     "ref": "convert_element_type_3"
+    }
+   ],
+   "kwargs": {}
+  }
+ ],
+ "outputs": [
+  "div",
+  "getitem",
+  "log",
+  "convert_element_type_3"
+ ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "torchao.optim_state4bit.copy.f32.signed.4096x128.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "torchao",
+    "version": "0.16.0 with PyTorch 2.10.0+cu128 and Triton 3.6.0",
+    "callable": "canonical OptimState4bit([4096], signed=True, block_size=128).copy_(float32 source) under torch.compile",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "three generated Triton launches compute all32 block scales, all4096 unpacked codes and all2048 packed bytes; the call returns the complete packed codes and scales",
+    "measure_call": "../calls/torchao_optim_state4bit_copy.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "program_reference": {
+    "mode": "rounding_check",
+    "basis": "The selected task is the released physical float32 scale, qmap rounding and nibble packing operation."
+  },
+  "tasks": [
+    {
+      "id": "complete_signed_state_copy",
+      "contract": "OPT4BIT",
+      "profile": "torchao016_state_copy_f32",
+      "task_statement": "Copy the complete contiguous float32[4096] source into a canonical signed torchao 0.16 OptimState4bit with block size128 and return every packed code byte and block scale.",
+      "input_map": [
+        {"target": "/src", "source": "/tensor_arguments/x/before", "conversion": "tensor_values"},
+        {"target": "/input_dtype", "literal": "f32", "basis": "the wrapper requires a physical float32 source"},
+        {"target": "/signed", "literal": true, "basis": "the wrapper creates the first-moment signed state"},
+        {"target": "/block_size", "literal": 128, "basis": "the wrapper uses the released AdamW4bit default block size"},
+        {"target": "/qmap", "source": "/tensor_arguments/qmap/before", "conversion": "tensor_values"}
+      ],
+      "output_map": [
+        {"target": "/codes", "source": "/returns/codes", "conversion": "tensor_record", "measure_output": "codes"},
+        {"target": "/scale", "source": "/returns/scale", "conversion": "tensor_record", "measure_output": "scale"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "qmap", "effect": "unchanged"}
+  ]
+}

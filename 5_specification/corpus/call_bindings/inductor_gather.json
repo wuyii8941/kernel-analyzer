@@ -1,0 +1,40 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.gather.f32.r32.c64.k24.dim1.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.gather)",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "generated Triton launch returns every value of the complete float32[32,24] functional gather output",
+    "measure_call": "../calls/inductor_gather.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_gather_forward",
+      "contract": "INDEX",
+      "profile": "real",
+      "task_statement": "Gather the received int64 column index at every output coordinate from dimension one of the received finite float32 matrix, with sparse_grad=False.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.gather", "basis": "the public callable is torch.gather"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/scalars/dim"},
+        {"target": "/args/2", "source": "/tensor_arguments/index/before", "conversion": "tensor_record"},
+        {"target": "/kwargs/sparse_grad", "source": "/scalars/sparse_grad"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "index", "effect": "unchanged"}
+  ]
+}

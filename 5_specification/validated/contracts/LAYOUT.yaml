@@ -1,0 +1,350 @@
+schema_version: '1.2'
+id: LAYOUT
+role: ATEN_LAYOUT
+title: Common finite floating layout operations and selected PyTorch 2.10 layout autograd tasks
+review:
+  status: reviewed_for_implementation
+  author: Claude (original broad draft) and Codex (finite common-operation revision), 2026-10-18
+  date: '2026-10-18'
+  reviewer: Codex source, schema, domain and complete-output review with separate NumPy and PyTorch checks
+  scope: Logical values and shapes for selected finite floating functional operations; constant pad and cat additionally have complete public-call forward and VJP profiles
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/layout_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.view, aten.reshape, aten._unsafe_view, aten.permute, aten.transpose, aten.t, aten.expand,
+  aten.unsqueeze, aten.squeeze, aten.select, aten.slice, aten.narrow, aten.cat, aten.stack, aten.split,
+  aten.split_with_sizes, aten.constant_pad_nd, aten.select_scatter, aten.slice_scatter, aten.clone,
+  aten.lift_fresh_copy, aten.lift_fresh, aten.alias, aten.triu, aten.tril, torch.nn.functional.pad,
+  torch.cat]
+profiles:
+  real:
+    meaning: >-
+      Complete logical values and shapes for selected default functional operations on dense finite f16, bf16, f32
+      or f64 tensors. Every recorded value and scalar fill must be exactly representable in the declared dtype.
+      Multi-tensor calls require one dtype. The task does not promise strides, aliasing or storage identity.
+    task_choice_required: false
+    outputs: [out]
+  torch210_functional_constant_pad_autograd:
+    meaning: >-
+      PyTorch 2.10 public torch.nn.functional.pad with mode='constant', a finite exactly representable scalar or the
+      documented default zero, a positive-rank physical finite floating input and a complete same-dtype upstream.
+      Negative padding crops before positive padding is added. Return the complete public output and input VJP;
+      cropped input coordinates and padded output coordinates contribute zero gradient.
+    task_choice_required: false
+    basis: [LY.PAD_TASK, LY.PAD_VJP]
+    outputs: [out, grad]
+  torch210_cat_autograd:
+    meaning: >-
+      PyTorch 2.10 public functional torch.cat Tensor-list overload on a nonempty sequence of complete physical
+      finite floating tensors with one dtype, an explicit integer dimension and a complete same-dtype upstream.
+      Return the complete public output and the ordered complete VJP for every input tensor. Documented one-dimensional
+      empty inputs contribute no output coordinates and receive an empty gradient of their original shape.
+    task_choice_required: false
+    basis: [LY.CAT_TASK, LY.CAT_VJP]
+    outputs: [out, grads]
+outputs:
+  out: {shape: 'complete result tensor; split operations return the complete ordered list', guarantee: exact}
+  grad: {shape: 'complete constant-pad input shape', guarantee: exact}
+  grads: {shape: 'complete ordered list with one tensor in each cat input shape', guarantee: exact}
+comparison:
+  input_binding: >-
+    Tensor records are physical source values rather than arbitrary reals carrying a dtype label. All tensors are
+    dense, finite and floating; multi-tensor calls use one dtype. The pad VJP profile requires complete input and
+    upstream records and every public option.
+  complete_output: >-
+    check_output requires exactly the profile's declared fields as complete tensor records with t, v and shape.
+    Split results require every tensor in order. Dtype, shape, list length and every coordinate are checked,
+    including empty tensors. The cat-autograd list contains exactly one complete gradient record per input, in order.
+  equality: Exact logical value and shape equality with no tolerance.
+  test_evidence: Separate NumPy indexing and shape construction, plus PyTorch 2.10 dtype/shape/value cross-checks.
+  error_handling: Malformed shapes, dimensions, indices, slices and source shapes are invalid_input; unreviewed types and variants are unsupported.
+decisions:
+- id: LY.SCHEMA
+  status: reviewed
+  statement: >-
+    The selected interfaces are the PyTorch 2.10 default functional integer-dimension overloads. expand accepts only
+    implicit=false; clone accepts only its default memory format. Named dimensions, out/in-place forms, view dtype,
+    tensor-valued narrow start and other overloads are outside this profile.
+  basis: [TS_NATIVE_FUNCTIONS.LAYOUT_SCHEMAS]
+- id: LY.PHYSICAL
+  status: reviewed
+  statement: >-
+    Inputs are dense finite f16/bf16/f32/f64 tensors whose values are exactly representable in their declared dtype.
+    Multi-tensor calls require the same dtype, and scalar padding values must be exactly representable in it.
+  basis: [T_TENSOR_ATTR.PROMOTION, TS_NATIVE_FUNCTIONS.LAYOUT_SCHEMAS]
+- id: LY.ORDER
+  status: reviewed
+  statement: >-
+    view, reshape and _unsafe_view preserve logical row-major element order. Permute reorders axes, transpose swaps
+    two axes, and t transposes rank two while leaving rank zero and one unchanged.
+  basis: [T_VIEW.DEF, T_RESHAPE.DEF, T_PERMUTE.DEF, T_TRANSPOSE.DEF, T_T.DEF]
+- id: LY.RANGES
+  status: reviewed
+  statement: >-
+    select removes one coordinate; slice uses Python-style positive-step bounds with negative indices and clamping;
+    narrow requires a contained range. Split preserves every element and the declared result order.
+  basis: [T_SELECT.DEF, T_TENSOR_INDEXING.SLICE, T_NARROW.DEF, T_SPLIT.DEF]
+- id: LY.JOIN
+  status: reviewed
+  statement: >-
+    cat joins along an existing dimension, allowing documented one-dimensional empty inputs; stack joins equal shapes
+    along a new dimension. Expand repeats only singleton dimensions and may prepend new dimensions.
+  basis: [T_CAT.DEF, T_STACK.DEF, T_EXPAND.DEF]
+- id: LY.PLACEMENT
+  status: reviewed
+  statement: >-
+    Constant padding proceeds from the last dimension backwards and negative pads crop. select_scatter and
+    slice_scatter return the base logical value with the complete source placed in the selected region.
+  basis: [T_PAD.DEF, TS_REFS.CONSTANT_PAD, T_SELECT_SCATTER.DEF, T_SLICE_SCATTER.DEF, TS_DECOMP.SLICE_SCATTER]
+- id: LY.PAD_TASK
+  status: reviewed
+  statement: >-
+    Select PyTorch 2.10 public torch.nn.functional.pad with mode='constant'. Pad is an even integer sequence naming
+    left/right pairs from the last input dimension backwards; its length cannot exceed twice the input rank. The
+    documented default value is zero. The official reference first narrows every negative side, rejects a crop beyond
+    an input dimension even if a positive opposite side would later enlarge the output, and then fills and copies the
+    retained input into the positive-padding region. Other modes are different tasks.
+  basis: [T_PAD.DEF, TS_REFS.CONSTANT_PAD, TS_NATIVE_FUNCTIONS.LAYOUT_SCHEMAS]
+- id: LY.PAD_VJP
+  status: reviewed
+  statement: >-
+    The selected forward copies each retained input coordinate to exactly one output coordinate. Its input VJP copies
+    the corresponding upstream coordinate back; an input coordinate removed by a negative pad has zero gradient,
+    and positive-padding output coordinates do not contribute. This is the coordinate-wise transpose of LY.PAD_TASK.
+  basis: [LY.PAD_TASK]
+- id: LY.CAT_TASK
+  status: reviewed
+  statement: >-
+    Select the PyTorch 2.10 public torch.cat Tensor-list overload without out. The input sequence is nonempty and
+    scalar tensors are invalid. Nonempty tensors have one rank and equal sizes outside the canonical concatenation
+    dimension; a one-dimensional empty tensor of shape (0,) is accepted and contributes no coordinates. This profile
+    deliberately requires one finite floating dtype even though other public dtype combinations are separate tasks.
+  basis: [T_CAT.DEF, TS_NATIVE_FUNCTIONS.LAYOUT_SCHEMAS]
+- id: LY.CAT_VJP
+  status: reviewed
+  statement: >-
+    Concatenation copies each nonempty input coordinate to one consecutive output interval along dim. The ordered
+    VJP is the matching slice of the complete upstream tensor for each input; a documented shape-(0,) input receives
+    an empty gradient in its original position. This coordinate transpose agrees with PyTorch 2.10's packaged
+    cat_tensors_backward rule, which takes the upstream, every input size and dtype, and dim.
+  basis: [LY.CAT_TASK, TS_AUTOGRAD_DERIVATIVES.CAT]
+- id: LY.VALUE_ONLY
+  status: reviewed
+  statement: >-
+    clone, lift_fresh_copy, lift_fresh and alias preserve complete logical values. triu and tril retain their declared
+    matrix triangle and replace other coordinates by zero. Storage, strides, aliasing and memory format are not judged.
+  basis: [T_CLONE.DEF, TS_DECOMP.LIFT, T_TRIU.DEF, T_TRIL.DEF]
+clauses:
+- {id: LY.C1, basis: [LY.ORDER], statement: 'view, reshape and _unsafe_view preserve row-major element order and infer at most one -1 size', observes: [out], evidence_kind: definition}
+- {id: LY.C2, basis: [LY.ORDER], statement: 'permute reorders axes, transpose swaps two axes, and t follows its rank-zero-to-two rule', observes: [out], evidence_kind: definition}
+- {id: LY.C3, basis: [T_EXPAND.DEF, T_UNSQUEEZE.DEF, T_SQUEEZE.DEF, LY.JOIN], statement: 'expand repeats singleton dimensions; unsqueeze inserts and squeeze removes selected size-one dimensions', observes: [out], evidence_kind: definition}
+- {id: LY.C4, basis: [LY.RANGES], statement: 'select, positive-step slice and narrow return the complete documented range', observes: [out], evidence_kind: definition}
+- {id: LY.C5, basis: [LY.JOIN, LY.RANGES], statement: 'cat and stack preserve tensor order; split and split_with_sizes return every ordered piece', observes: [out], evidence_kind: definition}
+- {id: LY.C6, basis: [LY.PLACEMENT], statement: 'constant_pad_nd pads or crops the declared axes with the declared scalar value', observes: [out], evidence_kind: definition}
+- {id: LY.C7, basis: [LY.PLACEMENT], statement: 'select_scatter and slice_scatter return the complete base with src placed exactly once in the selected region', observes: [out], evidence_kind: definition}
+- {id: LY.C8, basis: [LY.VALUE_ONLY], statement: 'clone, lift_fresh_copy, lift_fresh and alias preserve complete logical values', observes: [out], evidence_kind: definition}
+- {id: LY.C9, basis: [LY.VALUE_ONLY], statement: 'triu keeps j-i >= diagonal and tril keeps j-i <= diagonal, replacing other values by zero', observes: [out], evidence_kind: definition}
+- {id: LY.C10, basis: [LY.SCHEMA, LY.PHYSICAL], statement: 'only the selected finite same-dtype functional calls and complete logical outputs are admitted', observes: [out], evidence_kind: definition}
+- {id: LY.C11, basis: [LY.PAD_TASK], statement: 'public constant pad crops each negative side before adding positive filled coordinates and returns every output coordinate while leaving input and upstream unchanged', observes: [out, grad], evidence_kind: definition}
+- {id: LY.C12, basis: [LY.PAD_VJP], statement: 'the complete input VJP reads upstream at the one output coordinate copied from each retained input coordinate and is zero at every cropped input coordinate', observes: [out, grad], evidence_kind: derived}
+- {id: LY.C13, basis: [LY.CAT_TASK], statement: 'public cat preserves input order, copies every coordinate into the consecutive interval selected by dim and leaves every input and upstream unchanged', observes: [out, grads], evidence_kind: definition}
+- {id: LY.C14, basis: [LY.CAT_VJP], statement: 'the complete ordered input VJPs partition upstream by the original cat-axis sizes, preserving one-dimensional empty inputs as empty gradients', observes: [out, grads], evidence_kind: derived}
+examples:
+- {id: LY.E1, profile: real, clauses: [LY.C1], input: {op: aten.view, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [3, 2]]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5, 6]]}}}
+- {id: LY.E2, profile: real, clauses: [LY.C1], input: {op: aten.reshape, args: [{t: f16, v: [[1, 2, 3], [4, 5, 6]]}, [2, -1, 1]]}, expected: {outcome: value, fields: {out: [[[1], [2], [3]], [[4], [5], [6]]]}}}
+- {id: LY.E3, profile: real, clauses: [LY.C1], input: {op: aten._unsafe_view, args: [{t: bf16, v: [1, 2, 3, 4]}, [2, 2]]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4]]}}}
+- {id: LY.E4, profile: real, clauses: [LY.C1], input: {op: aten.view, args: [{t: f32, v: [1, 2, 3]}, [2, 2]]}, expected: {outcome: invalid_input}}
+- {id: LY.E5, profile: real, clauses: [LY.C2], input: {op: aten.permute, args: [{t: f32, v: [[[1, 2, 3]], [[4, 5, 6]]]}, [2, 0, 1]]}, expected: {outcome: value, fields: {out: [[[1], [4]], [[2], [5]], [[3], [6]]]}}}
+- {id: LY.E6, profile: real, clauses: [LY.C2], input: {op: aten.transpose, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 0, 1]}, expected: {outcome: value, fields: {out: [[1, 4], [2, 5], [3, 6]]}}}
+- {id: LY.E7, profile: real, clauses: [LY.C2], input: {op: aten.t, args: [{t: f64, v: [1, 2]}]}, expected: {outcome: value, fields: {out: [1, 2]}}}
+- {id: LY.E8, profile: real, clauses: [LY.C3], input: {op: aten.expand, args: [{t: f32, v: [[1], [2]]}, [2, 3]]}, expected: {outcome: value, fields: {out: [[1, 1, 1], [2, 2, 2]]}}}
+- {id: LY.E9, profile: real, clauses: [LY.C3], input: {op: aten.expand, args: [{t: f32, v: [1, 2]}, [2, -1]]}, expected: {outcome: value, fields: {out: [[1, 2], [1, 2]]}}}
+- {id: LY.E10, profile: real, clauses: [LY.C3], input: {op: aten.unsqueeze, args: [{t: f32, v: [1, 2]}, -1]}, expected: {outcome: value, fields: {out: [[1], [2]]}}}
+- {id: LY.E11, profile: real, clauses: [LY.C3], input: {op: aten.squeeze, args: [{t: f32, v: [[[1], [2]]]}, [0]]}, expected: {outcome: value, fields: {out: [[1], [2]]}}}
+- {id: LY.E12, profile: real, clauses: [LY.C4], input: {op: aten.select, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 1, -1]}, expected: {outcome: value, fields: {out: [3, 6]}}}
+- {id: LY.E13, profile: real, clauses: [LY.C4], input: {op: aten.slice, args: [{t: f32, v: [[1, 2, 3, 4], [5, 6, 7, 8]]}, 1, -3, 100, 2]}, expected: {outcome: value, fields: {out: [[2, 4], [6, 8]]}}}
+- {id: LY.E14, profile: real, clauses: [LY.C4], input: {op: aten.narrow, args: [{t: f32, v: [1, 2, 3, 4]}, 0, -3, 2]}, expected: {outcome: value, fields: {out: [2, 3]}}}
+- {id: LY.E15, profile: real, clauses: [LY.C4], input: {op: aten.select, args: [{t: f32, v: [1, 2]}, 0, 2]}, expected: {outcome: invalid_input}}
+- {id: LY.E16, profile: real, clauses: [LY.C5], input: {op: aten.cat, args: [[{t: f32, v: [[1, 2]]}, {t: f32, v: [[3, 4], [5, 6]]}], 0]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5, 6]]}}}
+- {id: LY.E17, profile: real, clauses: [LY.C5], input: {op: aten.cat, args: [[{t: f16, v: []}, {t: f16, v: [1, 2]}]]}, expected: {outcome: value, fields: {out: [1, 2]}}}
+- {id: LY.E18, profile: real, clauses: [LY.C5], input: {op: aten.stack, args: [[{t: bf16, v: [1, 2]}, {t: bf16, v: [3, 4]}], 1]}, expected: {outcome: value, fields: {out: [[1, 3], [2, 4]]}}}
+- {id: LY.E19, profile: real, clauses: [LY.C5], input: {op: aten.split, args: [{t: f32, v: [1, 2, 3, 4, 5]}, 2]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5]]}}}
+- {id: LY.E20, profile: real, clauses: [LY.C5], input: {op: aten.split_with_sizes, args: [{t: f32, v: [1, 2, 3]}, [1, 0, 2]]}, expected: {outcome: value, fields: {out: [[1], [], [2, 3]]}}}
+- {id: LY.E21, profile: real, clauses: [LY.C6], input: {op: aten.constant_pad_nd, args: [{t: f32, v: [[1, 2]]}, [1, 0, 0, 1], '1/2']}, expected: {outcome: value, fields: {out: [['1/2', 1, 2], ['1/2', '1/2', '1/2']]}}}
+- {id: LY.E22, profile: real, clauses: [LY.C7], input: {op: aten.select_scatter, args: [{t: f32, v: [[0, 0], [0, 0]]}, {t: f32, v: [5, 6]}, 0, 1]}, expected: {outcome: value, fields: {out: [[0, 0], [5, 6]]}}}
+- {id: LY.E23, profile: real, clauses: [LY.C7], input: {op: aten.slice_scatter, args: [{t: f32, v: [0, 0, 0, 0]}, {t: f32, v: [7, 8]}, 0, 1, 4, 2]}, expected: {outcome: value, fields: {out: [0, 7, 0, 8]}}}
+- {id: LY.E24, profile: real, clauses: [LY.C8], input: {op: aten.clone, args: [{t: f32, v: ['1/2', -2]}]}, expected: {outcome: value, fields: {out: ['1/2', -2]}}}
+- {id: LY.E25, profile: real, clauses: [LY.C8], input: {op: aten.alias, args: [{t: f64, v: [[1, 2]]}]}, expected: {outcome: value, fields: {out: [[1, 2]]}}}
+- {id: LY.E26, profile: real, clauses: [LY.C9], input: {op: aten.triu, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]}, 1]}, expected: {outcome: value, fields: {out: [[0, 2, 3], [0, 0, 6], [0, 0, 0]]}}}
+- {id: LY.E27, profile: real, clauses: [LY.C9], input: {op: aten.tril, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]}, -1]}, expected: {outcome: value, fields: {out: [[0, 0, 0], [4, 0, 0], [7, 8, 0]]}}}
+- {id: LY.E28, profile: real, clauses: [LY.C10], input: {op: aten.clone, args: [{t: f16, v: ['1/3']}]}, expected: {outcome: invalid_input}}
+- {id: LY.E29, profile: real, clauses: [LY.C10], input: {op: aten.cat, args: [[{t: f16, v: [1]}, {t: f32, v: [2]}]]}, expected: {outcome: unsupported}}
+- {id: LY.E30, profile: real, clauses: [LY.C10], input: {op: aten.clone, args: [{t: f32, v: [inf]}]}, expected: {outcome: unsupported}}
+- {id: LY.E31, profile: real, clauses: [LY.C10], input: {op: aten.copy, args: [{t: f32, v: [0]}, {t: f32, v: [1]}]}, expected: {outcome: unsupported}}
+- {id: LY.E32, profile: real, clauses: [LY.C10], input: {op: aten.clone, args: [{t: f32, v: [1]}], kwargs: {memory_format: contiguous_format}}, expected: {outcome: unsupported}}
+- {id: LY.E33, profile: real, clauses: [LY.C10], input: {op: aten.triu, args: [{t: f32, v: [1, 2]}]}, expected: {outcome: invalid_input}}
+- id: LY.E34
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11, LY.C12]
+  input:
+    op: torch.nn.functional.pad
+    input: {t: f32, shape: [2, 3], v: [[1, 2, 3], [4, 5, 6]]}
+    pad: [1, -1, -1, 1]
+    mode: constant
+    value: '1/2'
+    upstream: {t: f32, shape: [2, 3], v: [[1, 2, 3], [4, 5, 6]]}
+  expected: {outcome: value, fields: {out: [['1/2', 4, 5], ['1/2', '1/2', '1/2']], grad: [[0, 0, 0], [2, 3, 0]]}}
+- id: LY.E35
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11, LY.C12]
+  input:
+    op: torch.nn.functional.pad
+    input: {t: f64, shape: [3], v: [1, 2, 3]}
+    pad: [2, 1]
+    mode: constant
+    value: null
+    upstream: {t: f64, shape: [6], v: [1, 2, 3, 4, 5, 6]}
+  expected: {outcome: value, fields: {out: [0, 0, 1, 2, 3, 0], grad: [3, 4, 5]}}
+- id: LY.E36
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11, LY.C12]
+  input:
+    op: torch.nn.functional.pad
+    input: {t: bf16, shape: [3], v: [1, 2, 3]}
+    pad: [-1, -2]
+    mode: constant
+    value: 0
+    upstream: {t: bf16, shape: [0], v: []}
+  expected: {outcome: value, fields: {out: [], grad: [0, 0, 0]}}
+- id: LY.E37
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11]
+  input: {op: torch.nn.functional.pad, input: {t: f32, shape: [3], v: [1, 2, 3]}, pad: [-4, 5], mode: constant, value: 0, upstream: {t: f32, shape: [4], v: [1, 1, 1, 1]}}
+  expected: {outcome: invalid_input}
+- id: LY.E38
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11]
+  input: {op: torch.nn.functional.pad, input: {t: f32, shape: [3], v: [1, 2, 3]}, pad: [1, 1], mode: reflect, value: null, upstream: {t: f32, shape: [5], v: [1, 1, 1, 1, 1]}}
+  expected: {outcome: unsupported}
+- id: LY.E39
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11]
+  input: {op: torch.nn.functional.pad, input: {t: f32, shape: [3], v: [1, 2, 3]}, pad: [1, 1], mode: constant, value: 0, upstream: {t: f32, shape: [4], v: [1, 1, 1, 1]}}
+  expected: {outcome: invalid_input}
+- id: LY.E40
+  profile: torch210_cat_autograd
+  clauses: [LY.C13, LY.C14]
+  input:
+    op: torch.cat
+    tensors:
+    - {t: f32, shape: [2, 1], v: [[1], [2]]}
+    - {t: f32, shape: [2, 2], v: [[3, 4], [5, 6]]}
+    - {t: f32, shape: [2, 1], v: [[7], [8]]}
+    dim: -1
+    upstream: {t: f32, shape: [2, 4], v: [[10, 11, 12, 13], [14, 15, 16, 17]]}
+  expected:
+    outcome: value
+    fields:
+      out: [[1, 3, 4, 7], [2, 5, 6, 8]]
+      grads: [[[10], [14]], [[11, 12], [15, 16]], [[13], [17]]]
+- id: LY.E41
+  profile: torch210_cat_autograd
+  clauses: [LY.C13, LY.C14]
+  input:
+    op: torch.cat
+    tensors:
+    - {t: bf16, shape: [0], v: []}
+    - {t: bf16, shape: [2, 2], v: [[1, 2], [3, 4]]}
+    - {t: bf16, shape: [2, 0], v: [[], []]}
+    dim: 1
+    upstream: {t: bf16, shape: [2, 2], v: [[5, 6], [7, 8]]}
+  expected:
+    outcome: value
+    fields:
+      out: [[1, 2], [3, 4]]
+      grads: [[], [[5, 6], [7, 8]], [[], []]]
+- id: LY.E42
+  profile: torch210_cat_autograd
+  clauses: [LY.C13, LY.C14]
+  input:
+    op: torch.cat
+    tensors:
+    - {t: f64, shape: [0], v: []}
+    - {t: f64, shape: [0], v: []}
+    dim: 5
+    upstream: {t: f64, shape: [0], v: []}
+  expected: {outcome: value, fields: {out: [], grads: [[], []]}}
+- id: LY.E43
+  profile: torch210_cat_autograd
+  clauses: [LY.C13]
+  input:
+    op: torch.cat
+    tensors: [{t: f32, shape: [2, 1], v: [[1], [2]]}, {t: f32, shape: [3, 1], v: [[3], [4], [5]]}]
+    dim: 1
+    upstream: {t: f32, shape: [2, 2], v: [[1, 1], [1, 1]]}
+  expected: {outcome: invalid_input}
+- id: LY.E44
+  profile: torch210_cat_autograd
+  clauses: [LY.C13]
+  input:
+    op: torch.cat
+    tensors: [{t: f32, shape: [1], v: [1]}, {t: f32, shape: [2], v: [2, 3]}]
+    dim: 0
+    upstream: {t: f32, shape: [2], v: [1, 1]}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['real: one selected functional layout call', 'pad autograd: public op, complete input, even integer pad, constant mode, scalar/default value and complete upstream', 'cat autograd: public op, nonempty ordered complete tensor list, integer dim and complete upstream']
+  pre_state: [all inputs are unchanged]
+  post_state: [the complete logical output tensor or ordered list; pad returns its complete input VJP; cat returns every ordered input VJP]
+  observation_unit: every declared output coordinate together with dtype, shape and ordered result position
+domain:
+  valid: [exactly representable finite f16/bf16/f32/f64 values; same dtype for multi-tensor calls; documented shapes, dimensions and ranges]
+  invalid_input: [NaN; negative zero; unrepresentable value or scalar; malformed call; incompatible shape, dimension, index, slice, split or scatter source]
+  unsupported: [integer, boolean, float8, complex or infinite data; mixed dtypes; creation operations; copy or fill; dtype views; named dimensions; implicit expand; nondefault memory format; out or in-place variants; storage, stride, aliasing or device effects]
+mutation_requirements:
+- {id: LY.M1, misreading: view reads elements in column-major order, witnesses: [LY.E1]}
+- {id: LY.M2, misreading: permute applies the inverse permutation, witnesses: [LY.E5]}
+- {id: LY.M3, misreading: transpose leaves axes unchanged, witnesses: [LY.E6]}
+- {id: LY.M4, misreading: expand leaves singleton dimensions unchanged, witnesses: [LY.E8]}
+- {id: LY.M5, misreading: squeeze with dim removes every singleton dimension, witnesses: [LY.E11]}
+- {id: LY.M6, misreading: slice ignores the step, witnesses: [LY.E13]}
+- {id: LY.M7, misreading: cat reverses tensor order, witnesses: [LY.E16]}
+- {id: LY.M8, misreading: split drops the smaller final chunk, witnesses: [LY.E19]}
+- {id: LY.M9, misreading: padding pairs apply from the first dimension forwards, witnesses: [LY.E21]}
+- {id: LY.M10, misreading: scatter operations return the unchanged base, witnesses: [LY.E22, LY.E23]}
+- {id: LY.M11, misreading: triu uses the opposite diagonal sign, witnesses: [LY.E26]}
+- {id: LY.M12, misreading: negative pad values are ignored instead of cropping, witnesses: [LY.E34]}
+- {id: LY.M13, misreading: the input VJP reads upstream without the positive-pad and crop coordinate shift, witnesses: [LY.E34, LY.E35]}
+- {id: LY.M14, misreading: cropped input coordinates receive a gradient, witnesses: [LY.E34, LY.E36]}
+- {id: LY.M15, misreading: the complete input gradient may be omitted, witnesses: [LY.E34]}
+- {id: LY.M16, misreading: cat may reverse the ordered input sequence, witnesses: [LY.E40]}
+- {id: LY.M17, misreading: every cat input gradient starts from upstream offset zero, witnesses: [LY.E40]}
+- {id: LY.M18, misreading: the final cat input gradient may be omitted, witnesses: [LY.E40]}
+nonclaims:
+- Storage identity, aliasing, strides, memory format, device placement and signed zero are not certified.
+- Creation, dtype conversion, copy/fill state effects, integer/boolean data, gradients other than the selected constant-pad and cat VJPs and unselected overloads are not certified.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Add a PyTorch 2.10 public Tensor-list cat profile with complete forward and one ordered VJP per input, including
+    the documented one-dimensional empty input and zero-width-axis cases.
+  trigger: >-
+    The retained FlagGems 5.0.2 cat implementation exposed that the existing LAYOUT.real profile could judge only
+    logical forward values and could not decide a complete public training task.
+- date: '2026-10-19'
+  change: >-
+    Add a PyTorch 2.10 public constant-pad profile with complete forward and input VJP, including mixed positive and
+    negative padding, fully cropped outputs and the crop-before-fill validation order.
+  trigger: >-
+    A real common-operator audit found that the existing logical-value profile covered only aten.constant_pad_nd
+    forward and could not judge a public training call.
+- date: '2026-10-18'
+  change: >-
+    Replace the active broad layout-and-creation draft with a finite floating logical-value profile for common
+    functional layout, slicing, joining, padding, placement and triangular operations. Preserve the former contract under contracts/draft.
+  trigger: >-
+    The former profile admitted arbitrary mathematical values under floating dtype labels, mixed creation rounding
+    and copy/fill state effects with pure layouts, labelled numeric results discrete and had no complete output checker.

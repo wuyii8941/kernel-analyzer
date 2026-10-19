@@ -7,12 +7,13 @@ import yaml
 
 from kernel_spec import aten as A
 from kernel_spec import real as rl
-from kernel_spec.aten_adapter import make_reference
+from kernel_spec.aten_adapter import make_reference, make_output_checker
 from kernel_spec.real import NEG, R
 from kernel_spec.registry import CONTRACTS
 
 COVERS = yaml.safe_load((CONTRACTS / "SOFTMAX.yaml").read_text())["covers"]
-reference = make_reference(COVERS)
+reference = make_reference(COVERS, profiles=("real",))
+check_output = make_output_checker(COVERS, profiles=("real",))
 
 
 def _rows_last(a, fn):
@@ -65,11 +66,26 @@ def _safe_undefined(a, dim):
     return A.softmax(a, dim)
 
 
+def _public_vjp_logits_as_probabilities(grad, a, dim):
+    return A.softmax_backward_data(grad, a, dim, A.as_ten(a).dtype)
+
+
+def _public_vjp_no_sum(grad, a, dim):
+    return A.mul(grad, A.softmax(a, dim))
+
+
+def _public_vjp_last_axis(grad, a, dim):
+    return A.vjp_softmax(grad, a, -1)
+
+
 def _m(**ops):
-    return make_reference(COVERS, extra=ops)
+    return make_reference(COVERS, extra=ops, profiles=("real",))
 
 
 MUTANTS = {
+    "SM.M8": _m(**{"vjp.aten.softmax": _public_vjp_logits_as_probabilities}),
+    "SM.M9": _m(**{"vjp.aten.softmax": _public_vjp_no_sum}),
+    "SM.M10": _m(**{"vjp.aten.softmax": _public_vjp_last_axis}),
     "SM.M1": _m(**{"aten._softmax": _softmax_last}),
     "SM.M2": _m(**{"aten._softmax": _softmax_uniform_masked}),
     "SM.M3": _m(**{"aten._softmax": _softmax_inf_as_zero}),

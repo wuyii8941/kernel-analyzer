@@ -1,0 +1,29 @@
+{
+  "task": "Finite float32 PyTorch 2.10 functional max_pool2d with return_indices=true and complete input VJP, restricted to calls whose every effective window has a unique maximum",
+  "reference": "Cross-check the versioned native PyTorch 2.10 public call against POOL.torch210_unique_max2d_autograd, whose values and VJP come from independent window coordinates and whose h*W+w indices are an explicit PyTorch 2.10 task choice",
+  "limits": "This is held-out parameter and input validation for one common operator family. Tied maxima, special values, empty windows, other framework versions and an implementation-independent index encoding remain unknown. Preserve every refusal, execution error and numerical difference.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "dimensions": [1, 2, 7, 9],
+    "seeds": [20261401, 20261402],
+    "cases": [
+      {"id": "max_unique_overlap", "kind": "max", "unique": true, "options": {"kernel_size": 3, "stride": 1}},
+      {"id": "max_unique_padded_ceil", "kind": "max", "unique": true, "options": {"kernel_size": 3, "stride": 2, "padding": 1, "ceil_mode": true}},
+      {"id": "max_unique_dilated", "kind": "max", "unique": true, "options": {"kernel_size": [2, 3], "stride": [1, 2], "padding": [1, 1], "dilation": [2, 1]}},
+      {"id": "max_unique_default_stride_unbatched", "kind": "max", "unique": true, "unbatched": true, "options": {"kernel_size": 2}}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "dimensions": [2, 3, 8, 10],
+    "seeds": [20261403, 20261404],
+    "cases": [
+      {"id": "max_unique_rectangular_ceil", "kind": "max", "unique": true, "options": {"kernel_size": [3, 2], "stride": [2, 1], "padding": [1, 0], "ceil_mode": true}},
+      {"id": "max_unique_large_window", "kind": "max", "unique": true, "options": {"kernel_size": 5, "stride": 2, "padding": 2}},
+      {"id": "max_unique_noncontiguous", "kind": "max", "unique": true, "noncontiguous": true, "options": {"kernel_size": [2, 4], "stride": [2, 3], "padding": [1, 2]}},
+      {"id": "max_unique_dilated_ceil", "kind": "max", "unique": true, "options": {"kernel_size": [3, 2], "stride": [2, 1], "padding": [1, 1], "dilation": [1, 2], "ceil_mode": true}}
+    ]
+  },
+  "selection_note": "Both splits, implementations, dimensions, seeds and cases were fixed before either GPU split ran. Development results cannot change acceptance inputs. This checks transfer across implementations and unseen parameter combinations within max_pool2d, not unseen operator-family generalization."
+}

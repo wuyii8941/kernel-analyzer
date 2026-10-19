@@ -1,0 +1,15 @@
+{
+  "task": "Finite float32 causal square scaled dot-product attention with complete q/k/v VJP",
+  "reference": "Unchanged ATTN.torch210_sdpa_defined_real_vjp and PyTorch 2.10 math backend",
+  "frozen_before_gpu_execution": true,
+  "limits": "Post-failure supplementary check, not held-out acceptance. The original frozen tutorial batch failed at head dimensions 16 and 32. This selection uses the tutorial's own tested causal dimensions 64 and 128 with new seeds; the failed batch remains in the denominator and is not replaced.",
+  "development": {"implementation": "triton_tutorial_3_6", "seeds": [], "cases": []},
+  "acceptance": {
+    "implementation": "triton_tutorial_3_6",
+    "seeds": [20261315, 20261316],
+    "cases": [
+      {"id": "tutorial_tested_causal_d64", "shape": [1, 1, 1, 128, 128, 64], "is_causal": true, "scale": 0.25},
+      {"id": "tutorial_tested_causal_d128", "shape": [1, 1, 1, 128, 128, 128], "is_causal": true}
+    ]
+  }
+}

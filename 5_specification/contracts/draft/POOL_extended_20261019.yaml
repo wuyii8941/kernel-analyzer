@@ -1,0 +1,332 @@
+schema_version: '1.2'
+id: POOL
+role: POOL
+title: Average, max and adaptive-max pooling (1d/2d/3d), forward values, maximiser sets and VJP against an explicit upstream
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E2_program), 2026-10-17
+  date: '2026-10-17'
+  scope: Real-number semantics of the documented pooling operations plus the reviewed phase-1 decisions; awaiting a
+    review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.functional.avg_pool1d, torch.nn.functional.avg_pool2d, torch.nn.functional.avg_pool3d,
+  torch.nn.functional.max_pool1d, torch.nn.functional.max_pool2d, torch.nn.functional.max_pool3d,
+  torch.nn.functional.adaptive_max_pool1d, torch.nn.AvgPool1d, torch.nn.AvgPool2d, torch.nn.AvgPool3d,
+  torch.nn.MaxPool1d, torch.nn.MaxPool2d, torch.nn.MaxPool3d, torch.nn.AdaptiveMaxPool1d, aten.avg_pool2d,
+  aten.avg_pool3d, aten.max_pool2d_with_indices, aten.max_pool3d_with_indices, aten.avg_pool2d_backward,
+  aten.avg_pool3d_backward, aten.max_pool2d_with_indices_backward, aten.max_pool3d_with_indices_backward,
+  aten.adaptive_max_pool2d]
+profiles:
+  real:
+    meaning: Exact real inputs (rationals and +-inf). Average pooling divides by the R2 divisor (POOL.A1); max pooling
+      gives the exact maximum, the set of tied maximisers, and the uniquely determined part of the VJP. A NaN in the
+      input makes the real-number target undefined.
+    task_choice_required: false
+  nan_prop:
+    meaning: Project diagnostic NaN profile R_prop for max and adaptive-max pooling (reviewed decision POOL-A3); a
+      window in which a NaN takes part has value NaN (written as the empty allowed set, see comparison), windows
+      without a participating NaN are as in profile real. Average pooling with NaN stays undefined.
+    task_choice_required: true
+outputs:
+  out:
+    shape: input planes x output spatial shape
+    guarantee: exact
+  grad:
+    shape: shape of x; the part of the VJP determined uniquely (POOL.C7)
+    guarantee: exact
+  argmax:
+    shape: max pooling - per output element the allowed set of maximiser coordinates within the plane; average
+      pooling - the empty list (no index output)
+    kind: discrete
+    guarantee: allowed_set
+readings:
+  R1_kernel_divisor:
+    meaning: 'Tail reading of POOL-A1: count_include_pad=True divides by the kernel volume even for a window that runs
+      past the padded domain (the AvgPool3d divisor_override text). Diagnostic, not the task definition.'
+    basis: [PH1_DECISIONS.POOL_A1, T_AVGPOOL3D.DIVISOR]
+  R_ignore:
+    meaning: Auxiliary NaN reading of POOL-A3 - NaN values are skipped in the max; a window whose real values are all
+      NaN is not established. Diagnostic only.
+    basis: [PH1_DECISIONS.POOL_A3]
+  shape_literal_1d:
+    meaning: The MaxPool1d page's written ceil_mode formula ceil((L + 2p - d(k-1) - 1 + (s-1))/s) + 1 (decision
+      POOL.CEIL_FORMULA). Diagnostic only.
+    basis: [T_MAXPOOL1D.SHAPE_CEIL]
+  min_norm:
+    meaning: Autograd rule 2 read literally for the convex max - the minimum-norm subgradient splits a tied window's
+      upstream evenly; grad then holds the full gradient (POOL.A2 keeps the whole allowed set instead). Diagnostic only.
+    basis: [T_AUTOGRAD_NOTES.RULES]
+comparison:
+  input_binding: Tensor values are the exact values received (a binary float is its exact rational value); 'inf',
+    '-inf' are the extended reals, 'nan' is admitted as an input marker only.
+  quality: 'No tolerance; exact comparison. Allowed sets compare as exact sets. In profile nan_prop an output element
+    at which NaN is required is written as the empty allowed set {set: []} (no real value is admissible there).'
+  test_evidence: Exact rational equality and exact set equality.
+  error_handling: Documented parameter violations are invalid_input; a NaN input under profile real (and for average
+    pooling) is domain_undefined.
+decisions:
+- id: POOL.A1
+  status: drafted
+  statement: 'Reviewed phase-1 decision POOL-A1, reused: with count_include_pad=True the default divisor is |W ∩ P|,
+    the number of window positions inside the padded domain P = [-p, L + p) per dimension (R2, "size of the pooling
+    region"); count_include_pad=False counts the real positions |W ∩ I|; divisor_override takes precedence.
+    Alternative R1 (kernel volume, the AvgPool3d divisor_override wording "otherwise kernel_size") is kept as the
+    diagnostic reading R1_kernel_divisor. The two coincide whenever the window lies inside P. A difference caused only
+    by the overhang divisor is a difference under a declared interpretation, not by itself a confirmed bug.'
+  basis: [PH1_DECISIONS.POOL_A1, PH1_AMBIGUITIES.POOL_A0, T_AVGPOOL2D.DIVISOR, T_F_AVG_POOL2D.DIVISOR, T_AVGPOOL3D.DIVISOR]
+- id: POOL.A2
+  status: drafted
+  statement: 'Reviewed decision POOL-A2, reused: at tied maxima the returned index may be any member of the tie set
+    (first or last is not imposed) and the input gradient routes the window upstream v as v*alpha with alpha >= 0
+    supported on the tie set and summing to 1. Alternatives: first index (torch.max along a dim documents first-index
+    indices), even split (torch.amax documents it; autograd rule 2 gives the minimum-norm subgradient), last index.
+    None of them is documented for max pooling, so the allowed set is kept; even split is the diagnostic reading
+    min_norm. Representation: grad holds the uniquely determined part, argmax holds every tie set.'
+  basis: [PH1_DECISIONS.POOL_A2, T_AUTOGRAD_NOTES.RULES, T_AMAX.GRAD, T_MAX.DIM, T_MAXPOOL2D.RETURN_INDICES]
+- id: POOL.A3
+  status: drafted
+  statement: 'Reviewed decision POOL-A3, reused: NaN behaviour of pooling is undocumented. Profile real: a NaN input
+    makes the real-number target undefined (domain_undefined, no requirement on the device output). Profile nan_prop
+    (R_prop, task-selected diagnostic): only NaNs that take part in a window propagate to that window; its maximiser
+    set is the set of participating NaN positions; the gradient such a window routes is arbitrary (autograd rule 5)
+    and is not part of grad. R_ignore is a diagnostic reading. Average pooling with NaN is undefined in both profiles.'
+  basis: [PH1_DECISIONS.POOL_A3, T_AUTOGRAD_NOTES.RULES]
+- id: POOL.A5
+  status: drafted
+  statement: 'Reviewed decision POOL-A5, reused: a window that samples no real input (only -inf padding) has value
+    -inf and an empty maximiser set; it routes no gradient to any input; the returned index is not constrained.'
+  basis: [PH1_DECISIONS.POOL_A5, T_MAXPOOL1D.NEG_INF_PAD]
+- id: POOL.INF
+  status: drafted
+  statement: 'New (not covered by POOL-A2, which speaks of finite windows): a window whose maximum is +inf or -inf
+    attained by real inputs has that value; its maximiser set is the set of real positions holding it (padding has no
+    position); routing follows POOL.A2 over that set. For -inf tied with -inf padding this follows autograd rule 4
+    (gradient by continuity: for any finite perturbation of a real -inf input it becomes the unique maximiser).
+    Alternatives: (a) routing allowed to vanish into the padding - rejected, padding is not an input and continuity
+    never routes there; (b) gradient undefined at infinite maxima - rejected, the maximum is a selection whose
+    derivative is the routing and declaring the whole VJP undefined would also discard the finite windows.'
+  basis: [T_AUTOGRAD_NOTES.RULES, T_MAXPOOL1D.NEG_INF_PAD, PH1_DECISIONS.POOL_A2]
+- id: POOL.CEIL_FORMULA
+  status: drafted
+  statement: 'The MaxPool1d page writes the ceil_mode length as ceil((L + 2p - d(k-1) - 1 + (s - 1))/s) + 1, which
+    counts one more window than "ceil instead of floor" when L + 2p - d(k-1) - 1 is a multiple of s (s >= 2) and the
+    start-in-right-padding correction does not remove it. Adopted: ceil((L + 2p - d(k-1) - 1)/s) + 1 with the
+    correction, as stated by the ceil_mode parameter text of the same page, by every other pooling page and by the
+    purpose given there (every element covered; the extra window covers nothing new). The literal formula is the
+    diagnostic reading shape_literal_1d.'
+  basis: [T_MAXPOOL1D.SHAPE_CEIL, T_MAXPOOL1D.CEIL_PARAM, T_AVGPOOL1D.SHAPE, T_F_MAX_POOL2D.CEIL_PARAM, T_MAXPOOL2D.PARAMS]
+- id: POOL.PARAM_FORMS
+  status: drafted
+  statement: 'A one-element tuple is read as the single int for every dimension (documented for AvgPool1d, AvgPool2d
+    and functional avg_pool2d; the other pages list a single int only). Padding must not exceed half of the effective
+    kernel size d(k-1)+1 (functional pages); MaxPool1d writes kernel_size / 2, which is the same bound for d = 1 and
+    is not violated by any tested condition. Alternative (one-element tuple invalid for 3d / max pooling) rejected:
+    the pages that state the rule do not restrict it and no page forbids it.'
+  basis: [T_AVGPOOL1D.PARAMS, T_AVGPOOL2D.PARAMS, T_F_AVG_POOL1D.PARAMS, T_MAXPOOL1D.PARAMS, T_AVGPOOL1D.PAD_BOUND]
+- id: POOL.ADAPTIVE
+  status: drafted
+  statement: 'The AdaptiveMaxPool1d page fixes only the output size; it gives no window formula. The windows are those
+    of the torch 2.10 Inductor lowering (reference program): [floor(i L/n), floor(((i+1) L + n - 1)/n)). Claims for
+    adaptive pooling are therefore "consistent with the reference program". Alternative windows (e.g. floor for both
+    ends) have no source.'
+  basis: [T_ADAPTIVE_MAXPOOL1D.SHAPE, TS_INDUCTOR_LOWERING.ADAPTIVE_BINS]
+clauses:
+- {id: POOL.C1, basis: [T_AVGPOOL1D.PARAMS, T_AVGPOOL2D.PARAMS, T_MAXPOOL2D.PARAMS, POOL.PARAM_FORMS], statement: 'kernel,
+    stride, padding, dilation: an int or a one-element tuple applies to every spatial dimension; stride defaults to
+    kernel; average pooling has no dilation', observes: [out, grad], evidence_kind: definition}
+- {id: POOL.C2, basis: [T_AVGPOOL1D.SHAPE, T_AVGPOOL1D.CEIL, T_MAXPOOL1D.SHAPE, T_MAXPOOL1D.CEIL, POOL.CEIL_FORMULA],
+  statement: 'L_out = floor((L + 2p - d(k-1) - 1)/s) + 1, or ceil instead of floor in ceil_mode; in ceil_mode the
+    last window is dropped when (L_out - 1) s >= L + p (it would start in the right padding)', observes: [out],
+  evidence_kind: definition}
+- {id: POOL.C3, basis: [T_AVGPOOL1D.DEF, T_AVGPOOL2D.DEF, T_AVGPOOL3D.DEF, T_AVGPOOL1D.ZERO_PAD], statement: 'average
+    pooling: sum of the zero-padded input over the window positions s*o - p + m, divided by the divisor of POOL.C4',
+  observes: [out], evidence_kind: definition}
+- {id: POOL.C4, basis: [POOL.A1, T_AVGPOOL1D.CIP, T_AVGPOOL2D.DIVISOR], statement: 'divisor: divisor_override if given;
+    else |W ∩ I| when count_include_pad is False; else |W ∩ P| (R2)', observes: [out, grad], evidence_kind: definition}
+- {id: POOL.C5, basis: [T_AUTOGRAD_NOTES.RULES, POOL.A1], statement: 'average pooling is linear; its VJP adds
+    upstream/divisor to every real position of each window (the adjoint)', observes: [grad], evidence_kind: derived}
+- {id: POOL.C6, basis: [T_MAXPOOL1D.DEF, T_MAXPOOL2D.DEF, T_MAXPOOL3D.DEF, T_MAXPOOL1D.NEG_INF_PAD, T_MAXPOOL1D.DILATION,
+    PH1_AMBIGUITIES.POOL_A4], statement: 'max pooling: maximum over the positions s*o - p + d*m with -inf padding;
+    dilation spaces the positions', observes: [out], evidence_kind: definition}
+- {id: POOL.C7, basis: [POOL.A2, T_MAXPOOL2D.RETURN_INDICES], statement: 'argmax is the set of real positions holding the
+    window maximum; the returned index must lie in it; grad = sum over windows with a one-element set of upstream at
+    that position; a window with a larger set routes its upstream by a convex combination over the set', observes: [
+    argmax, grad], evidence_kind: definition}
+- {id: POOL.C8, basis: [POOL.A5], statement: 'a window with no real position: value -inf, empty set, no routing',
+  observes: [out, argmax, grad], evidence_kind: definition}
+- {id: POOL.C9, basis: [POOL.INF], statement: 'an infinite maximum attained by real inputs: that value; its set is the
+    real positions holding it; routing as POOL.C7', observes: [out, argmax, grad], evidence_kind: definition}
+- {id: POOL.C10, basis: [POOL.A3], statement: 'NaN: profile real domain_undefined; profile nan_prop - a window with a
+    participating NaN is NaN with the NaN positions as its set and routes nothing determined', observes: [out, argmax,
+    grad], evidence_kind: definition}
+- {id: POOL.C11, basis: [POOL.ADAPTIVE], statement: 'adaptive max pooling: window i is [floor(i L/n), floor(((i+1) L +
+    n - 1)/n)); value, set and routing as for max pooling', observes: [out, argmax, grad], evidence_kind: definition}
+- {id: POOL.C12, basis: [T_AVGPOOL1D.PAD_BOUND, T_MAXPOOL1D.PARAMS, T_F_AVG_POOL1D.PARAMS], statement: 'invalid input:
+    padding above half of the effective kernel, non-positive kernel / stride / dilation, empty output, divisor_override
+    for avg_pool1d, an upstream whose shape is not the output shape', observes: [out], evidence_kind: definition}
+examples:
+- {id: POOL.E1, profile: real, clauses: [POOL.C2, POOL.C3, POOL.C5], note: documentation example of AvgPool1d,
+  input: {op: avg_pool1d, x: [[1, 2, 3, 4, 5, 6, 7]], kernel: 3, stride: 2, upstream: [[1, 1, 1]]},
+  expected: {outcome: value, fields: {out: [[2, 4, 6]], grad: [['1/3', '1/3', '2/3', '1/3', '2/3', '1/3', '1/3']],
+        argmax: []}}}
+- id: POOL.E2
+  profile: real
+  clauses: [POOL.C2, POOL.C4, POOL.C5]
+  note: POOL-A1 distinguishing example; the second window covers 2, 3, 4 and 4 is neither input nor padding.
+  input: {op: avg_pool1d, x: [[1, 2, 3, 4]], kernel: 3, stride: 2, padding: 0, ceil_mode: true, count_include_pad: true,
+    upstream: [[1, 1]]}
+  expected: {outcome: value, fields: {out: [[2, '7/2']], grad: [['1/3', '1/3', '5/6', '1/2']], argmax: []}}
+  readings:
+    R1_kernel_divisor: {outcome: value, fields: {out: [[2, '7/3']], grad: [['1/3', '1/3', '2/3', '1/3']], argmax: []}}
+- {id: POOL.E3, profile: real, clauses: [POOL.C3, POOL.C4, POOL.C5], input: {op: avg_pool1d, x: [[1, 2, 3, 4]], kernel: 2,
+    stride: 2, padding: 1, count_include_pad: false, upstream: [[1, 1, 1]]}, expected: {outcome: value, fields: {out: [[
+          1, '5/2', 4]], grad: [[1, '1/2', '1/2', 1]], argmax: []}}}
+- {id: POOL.E4, profile: real, clauses: [POOL.C3, POOL.C4, POOL.C5], input: {op: avg_pool1d, x: [[1, 2, 3, 4]], kernel: 2,
+    stride: 2, padding: 1, count_include_pad: true, upstream: [[1, 1, 1]]}, expected: {outcome: value, fields: {out: [[
+          '1/2', '5/2', 2]], grad: [['1/2', '1/2', '1/2', '1/2']], argmax: []}}}
+- {id: POOL.E5, profile: real, clauses: [POOL.C1, POOL.C4, POOL.C5], input: {op: avg_pool2d, x: [[[1, 2], [3, 4]]], kernel: 2,
+    divisor_override: 3, upstream: [[[1]]]}, expected: {outcome: value, fields: {out: [[['10/3']]], grad: [[['1/3', '1/3'],
+          ['1/3', '1/3']]], argmax: []}}}
+- id: POOL.E6
+  profile: real
+  clauses: [POOL.C2, POOL.C4]
+  note: ceil gives 4 windows; the fourth would start at 5 = L (right padding) and is dropped.
+  input: {op: avg_pool1d, x: [[1, 2, 3, 4, 5]], kernel: 2, stride: 2, padding: 1, ceil_mode: true, count_include_pad: true,
+    upstream: [[1, 1, 1]]}
+  expected: {outcome: value, fields: {out: [['1/2', '5/2', '9/2']], grad: [['1/2', '1/2', '1/2', '1/2', '1/2']], argmax: []}}
+- id: POOL.E7
+  profile: real
+  clauses: [POOL.C2, POOL.C4, POOL.C5]
+  note: ceil adds a third window {4, 5} that starts inside the input; position 5 is outside P = [0, 5), so R2 divides by 1.
+  input: {op: avg_pool1d, x: [[1, 2, 3, 4, 5]], kernel: 2, stride: 2, padding: 0, ceil_mode: true, count_include_pad: true,
+    upstream: [[1, 1, 1]]}
+  expected: {outcome: value, fields: {out: [['3/2', '7/2', 5]], grad: [['1/2', '1/2', '1/2', '1/2', 1]], argmax: []}}
+  readings:
+    R1_kernel_divisor: {outcome: value, fields: {out: [['3/2', '7/2', '5/2']], grad: [['1/2', '1/2', '1/2', '1/2', '1/2']],
+        argmax: []}}
+- {id: POOL.E8, profile: real, clauses: [POOL.C3, POOL.C4, POOL.C5], input: {op: avg_pool3d, x: [[[[1, 2], [3, 4]], [[5,
+            6], [7, 8]]]], kernel: 2, divisor_override: 7, upstream: [[[[1]]]]}, expected: {outcome: value, fields: {out: [[[[
+              '36/7']]]], grad: [[[['1/7', '1/7'], ['1/7', '1/7']], [['1/7', '1/7'], ['1/7', '1/7']]]], argmax: []}}}
+- id: POOL.E9
+  profile: real
+  clauses: [POOL.C2, POOL.C4, POOL.C5]
+  note: 3d overhang (B015 shape); the second window along W covers 2 and 3, and 3 lies outside P.
+  input: {op: avg_pool3d, x: [[[[1, 2, 3]]]], kernel: [1, 1, 2], stride: [1, 1, 2], ceil_mode: true, upstream: [[[[1, 1]]]]}
+  expected: {outcome: value, fields: {out: [[[['3/2', 3]]]], grad: [[[['1/2', '1/2', 1]]]], argmax: []}}
+  readings:
+    R1_kernel_divisor: {outcome: value, fields: {out: [[[['3/2', '3/2']]]], grad: [[[['1/2', '1/2', '1/2']]]], argmax: []}}
+- id: POOL.E10
+  profile: real
+  clauses: [POOL.C6, POOL.C7]
+  input: {op: max_pool1d, x: [[1, 3, 3, 2]], kernel: 2, stride: 1, upstream: [[1, 1, 1]]}
+  expected: {outcome: value, fields: {out: [[3, 3, 3]], grad: [[0, 1, 1, 0]], argmax: [[{set: [[1]]}, {set: [[1], [2]]},
+          {set: [[2]]}]]}}
+  readings:
+    min_norm: {outcome: value, fields: {out: [[3, 3, 3]], grad: [[0, '3/2', '3/2', 0]], argmax: [[{set: [[1]]}, {set: [[
+                1], [2]]}, {set: [[2]]}]]}}
+- {id: POOL.E11, profile: real, clauses: [POOL.C6, POOL.C7], input: {op: max_pool1d, x: [[-3, -1]], kernel: 2, stride: 1,
+    padding: 1, upstream: [[1, 2, 3]]}, expected: {outcome: value, fields: {out: [[-3, -1, -1]], grad: [[1, 5]], argmax: [[
+          {set: [[0]]}, {set: [[1]]}, {set: [[1]]}]]}}}
+- {id: POOL.E12, profile: real, clauses: [POOL.C6, POOL.C7], input: {op: max_pool1d, x: [[5, 1, 2, 7, 3]], kernel: 2,
+    stride: 1, dilation: 2, upstream: [[1, 1, 1]]}, expected: {outcome: value, fields: {out: [[5, 7, 3]], grad: [[1, 0, 0,
+          1, 1]], argmax: [[{set: [[0]]}, {set: [[3]]}, {set: [[4]]}]]}}}
+- id: POOL.E13
+  profile: real
+  clauses: [POOL.C2, POOL.C8]
+  note: the tested geometric empty window (size 1, k 2, p 1, d 2), two planes
+  input: {op: max_pool1d, x: [[4], [6]], kernel: 2, stride: 1, padding: 1, dilation: 2, upstream: [[5], [7]]}
+  expected: {outcome: value, fields: {out: [['-inf'], ['-inf']], grad: [[0], [0]], argmax: [[{set: []}], [{set: []}]]}}
+- {id: POOL.E14, profile: real, clauses: [POOL.C9, POOL.C7], input: {op: max_pool1d, x: [['-inf', 2]], kernel: 2, stride: 1,
+    padding: 1, upstream: [[1, 1, 1]]}, expected: {outcome: value, fields: {out: [['-inf', 2, 2]], grad: [[1, 2]], argmax: [
+        [{set: [[0]]}, {set: [[1]]}, {set: [[1]]}]]}}}
+- {id: POOL.E15, profile: real, clauses: [POOL.C9, POOL.C7], input: {op: max_pool1d, x: [['inf', 1, 'inf']], kernel: 3,
+    upstream: [[1]]}, expected: {outcome: value, fields: {out: [['inf']], grad: [[0, 0, 0]], argmax: [[{set: [[0], [2]]}]]}}}
+- {id: POOL.E16, profile: real, clauses: [POOL.C10], input: {op: max_pool1d, x: [[1, 'nan', 2]], kernel: 2, upstream: [[1]]},
+  expected: {outcome: domain_undefined}}
+- id: POOL.E17
+  profile: nan_prop
+  clauses: [POOL.C10, POOL.C7]
+  input: {op: max_pool1d, x: [[1, 'nan', 2, 3]], kernel: 2, stride: 2, upstream: [[1, 1]]}
+  expected: {outcome: value, fields: {out: [[{set: []}, 3]], grad: [[0, 0, 0, 1]], argmax: [[{set: [[1]]}, {set: [[3]]}]]}}
+  readings:
+    R_ignore: {outcome: value, fields: {out: [[1, 3]], grad: [[1, 0, 0, 1]], argmax: [[{set: [[0]]}, {set: [[3]]}]]}}
+- {id: POOL.E18, profile: real, clauses: [POOL.C11], note: B017 called adaptive_max_pool1d(x, 3), input: {op: adaptive_max_pool1d,
+    x: [[1, 5, 2, 4, 3]], output_size: 3, upstream: [[1, 1, 1]]}, expected: {outcome: value, fields: {out: [[5, 5, 4]],
+      grad: [[0, 2, 0, 1, 0]], argmax: [[{set: [[1]]}, {set: [[1]]}, {set: [[3]]}]]}}}
+- {id: POOL.E19, profile: real, clauses: [POOL.C1, POOL.C3], note: one-element tuple kernel for 2d (B014 argument form),
+  input: {op: avg_pool2d, x: [[[1, 2], [3, 4]]], kernel: [2], upstream: [[[1]]]}, expected: {outcome: value, fields: {out: [
+        [['5/2']]], grad: [[['1/4', '1/4'], ['1/4', '1/4']]], argmax: []}}}
+- id: POOL.E20
+  profile: real
+  clauses: [POOL.C2, POOL.C6, POOL.C7]
+  note: L + 2p - d(k-1) - 1 = 4 is a multiple of s = 2; the literal MaxPool1d formula gives 4 windows, so the supplied
+    3-element upstream does not fit under that reading.
+  input: {op: max_pool1d, x: [[1, 2, 3, 4, 5, 6, 7]], kernel: 3, stride: 2, ceil_mode: true, upstream: [[1, 1, 1]]}
+  expected: {outcome: value, fields: {out: [[3, 5, 7]], grad: [[0, 0, 1, 0, 1, 0, 1]], argmax: [[{set: [[2]]}, {set: [[
+                4]]}, {set: [[6]]}]]}}
+  readings:
+    shape_literal_1d: {outcome: invalid_input}
+- id: POOL.E21
+  profile: real
+  clauses: [POOL.C6, POOL.C7]
+  input: {op: max_pool2d, x: [[[1, 2], [2, 0]]], kernel: 2, upstream: [[[3]]]}
+  expected: {outcome: value, fields: {out: [[[2]]], grad: [[[0, 0], [0, 0]]], argmax: [[[{set: [[0, 1], [1, 0]]}]]]}}
+  readings:
+    min_norm: {outcome: value, fields: {out: [[[2]]], grad: [[[0, '3/2'], ['3/2', 0]]], argmax: [[[{set: [[0, 1], [1, 0]]}]]]}}
+- {id: POOL.E22, profile: real, clauses: [POOL.C6, POOL.C7], input: {op: max_pool3d, x: [[[[1, 4]], [[3, 2]]]], kernel: [2,
+      1, 2], upstream: [[[[1]]]]}, expected: {outcome: value, fields: {out: [[[[4]]]], grad: [[[[0, 1]], [[0, 0]]]], argmax: [
+        [[[{set: [[0, 0, 1]]}]]]]}}}
+- {id: POOL.N1, profile: real, clauses: [POOL.C12], input: {op: avg_pool1d, x: [[1, 2, 3]], kernel: 2, padding: 2, upstream: [
+        [1]]}, expected: {outcome: invalid_input}}
+- {id: POOL.N2, profile: real, clauses: [POOL.C12], input: {op: avg_pool1d, x: [[1, 2, 3, 4]], kernel: 2, upstream: [[1, 1,
+        1]]}, expected: {outcome: invalid_input}}
+- {id: POOL.N3, profile: real, clauses: [POOL.C12], input: {op: avg_pool1d, x: [[1, 2, 3, 4]], kernel: 2, divisor_override: 3,
+    upstream: [[1, 1]]}, expected: {outcome: invalid_input}}
+signature:
+  inputs: ['op: avg_pool{1,2,3}d | max_pool{1,2,3}d | adaptive_max_pool1d', 'x: nested list (planes..., spatial...)',
+    'kernel, stride, padding, dilation, ceil_mode, count_include_pad, divisor_override, output_size as documented',
+    'upstream: cotangent with the output shape']
+  pre_state: []
+  post_state: []
+  observation_unit: one pooling call (forward value, maximiser sets, VJP)
+domain:
+  valid: [rational or infinite inputs; kernel, stride, dilation >= 1; 0 <= padding <= half of the effective kernel; output
+      size >= 1]
+  domain_undefined: [NaN input under profile real; NaN input to average pooling; inf - inf inside an average window]
+  invalid_input: [padding above half of the effective kernel, empty output, divisor_override for avg_pool1d, upstream
+      shape different from the output shape, malformed parameters]
+  unsupported: [return-index conventions (flat offsets) - the contract states coordinates; LPPool, fractional and
+      adaptive average pooling; integer dtypes]
+mutation_requirements:
+- {id: POOL.M1, misreading: 'backward divides an overhanging window by the kernel volume while the forward uses R2 (B010,
+    B015)', witnesses: [POOL.E2, POOL.E9]}
+- {id: POOL.M2, misreading: default divisor is always the kernel volume (R1 imposed), witnesses: [POOL.E2, POOL.E7]}
+- {id: POOL.M3, misreading: count_include_pad=False ignored (padding counted), witnesses: [POOL.E3]}
+- {id: POOL.M4, misreading: divisor_override ignored, witnesses: [POOL.E5, POOL.E8]}
+- {id: POOL.M5, misreading: in ceil_mode a window starting in the right padding is kept, witnesses: [POOL.E6]}
+- {id: POOL.M6, misreading: ceil_mode ignored (floor), witnesses: [POOL.E7]}
+- {id: POOL.M7, misreading: dilation ignored (POOL-A4 omission in the MaxPool2d formula), witnesses: [POOL.E12]}
+- {id: POOL.M8, misreading: max pooling pads with zeros instead of -inf, witnesses: [POOL.E11]}
+- {id: POOL.M9, misreading: 'an empty window routes its upstream to the first element of the next plane (B021 index
+    overflow)', witnesses: [POOL.E13]}
+- {id: POOL.M10, misreading: ties collapsed to the first maximiser (index and gradient), witnesses: [POOL.E10, POOL.E21]}
+- {id: POOL.M11, misreading: NaN skipped under the R_prop profile, witnesses: [POOL.E17]}
+- {id: POOL.M12, misreading: a NaN anywhere in the plane poisons every window of the plane, witnesses: [POOL.E17]}
+- {id: POOL.M13, misreading: 'a -inf maximum tied with -inf padding has an empty set and routes nothing (B022 index -1)',
+  witnesses: [POOL.E14]}
+- {id: POOL.M14, misreading: adaptive window end rounded down, witnesses: [POOL.E18]}
+- {id: POOL.M15, misreading: 'a one-element tuple applies to the first dimension only (B014 argument form)', witnesses: [
+    POOL.E19]}
+- {id: POOL.M16, misreading: average-pooling VJP omits the divisor, witnesses: [POOL.E1]}
+nonclaims:
+- Floating-point rounding of a device kernel is the numerical question (K - G); this contract states the real target.
+- Returned indices are compared as coordinates within a plane; the flat-offset convention of the device output is a
+  binding question of phase 4.
+- 'Adaptive max pooling windows rest on a reference program (POOL.ADAPTIVE): claims there are "consistent with the
+  reference program".'
+- NaN results under nan_prop are a project diagnostic profile (POOL-A3), not documented PyTorch behaviour.
+changes: []

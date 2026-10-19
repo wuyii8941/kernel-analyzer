@@ -1,0 +1,17 @@
+{
+  "task": "Public linear, addmm and bmm forward with all operand VJPs; float32 physical values, complete outputs, input values unchanged. An absent linear bias has an explicit null gradient.",
+  "references": "Native PyTorch 2.10.0+cu128 CUDA and existing MATMUL.real exact formulas; no automatic bias certification",
+  "development": {"implementation": "flag_gems", "dimensions": [3, 7, 5], "seeds": [20261203, 20261204]},
+  "acceptance": {"implementation": "inductor", "dimensions": [4, 11, 6], "seeds": [20261205, 20261206]},
+  "cases": [
+    {"id": "linear_bias", "op": "linear", "bias": "vector"},
+    {"id": "linear_scalar_bias", "op": "linear", "bias": "scalar"},
+    {"id": "linear_batched_no_bias", "op": "linear", "bias": "absent", "batched": true},
+    {"id": "addmm_scaled", "op": "addmm", "addend": "vector", "beta": 0.3, "alpha": 0.1},
+    {"id": "addmm_noncontiguous", "op": "addmm", "addend": "matrix", "noncontiguous": true, "beta": 0.5, "alpha": 2.0},
+    {"id": "addmm_beta0_nan", "op": "addmm", "addend": "nan", "beta": 0.0, "alpha": 1.0},
+    {"id": "addmm_beta0_inf", "op": "addmm", "addend": "inf", "beta": 0.0, "alpha": 1.0},
+    {"id": "bmm_noncontiguous", "op": "bmm", "noncontiguous": true}
+  ],
+  "selection_note": "Fixed before the full batch. The beta=0 NaN development witness was already observed; neither development nor the separately selected compiler batch is an independent blind benchmark. Preserve every failure."
+}

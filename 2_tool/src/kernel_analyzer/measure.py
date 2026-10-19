@@ -15,7 +15,8 @@ Declaration::
      "inputs": {"x": {"sampler": {"normal": [0, 1]}, "shape": [64, 64], "dtype": "float32"},
                 "s": {"state": "file.py:make_state", "shape": [...], "dtype": "..."},   # state(seed, shape, dtype)
                 "k": {"const": 16}},
-     "compare": {"mode": "A" | "B", "measure": ["out"], "spec": "file.py:spec"},        # spec only in mode B
+     "compare": {"mode": "A" | "B" | "contract", "measure": ["out"],
+                 "spec": "file.py:spec"},        # spec only in mode B; contract uses a reviewed binding plan
      "budget": {"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 96},
      # optional: "units": {"development": 32, "confirmation": 64, "seed_offset": 0}, "alpha": 0.05,
      #           "resolution": {"ulp_fraction": 0.125}, "magnitude_bound": {"elementwise": M, "basis": "..."},
@@ -75,6 +76,10 @@ class MissingDeclaration(ValueError):
         super().__init__("declaration incomplete: " + "; ".join(self.items))
 
 
+class ReferenceNotAdmitted(ValueError):
+    """Contract mode was requested, but its independently reviewed evidence is incomplete or does not match."""
+
+
 # ------------------------------------------------------------------------------------------------ declaration
 
 def load(decl) -> dict:
@@ -118,12 +123,19 @@ def missing_items(decl: dict) -> list:
     if not isinstance(cmp_, dict):
         out.append("compare (mode and measured outputs)")
     else:
-        if cmp_.get("mode") not in ("A", "B", "black-box"):
-            out.append("compare.mode (A, B or black-box)")
+        if cmp_.get("mode") not in ("A", "B", "black-box", "contract"):
+            out.append("compare.mode (A, B, black-box or contract)")
         if not cmp_.get("measure"):
             out.append("compare.measure (output names)")
         if cmp_.get("mode") in ("B", "black-box") and not cmp_.get("spec"):
             out.append(f"compare.spec (mode {cmp_.get('mode')} needs f)")
+        if cmp_.get("mode") == "contract":
+            if cmp_.get("spec") is not None:
+                out.append("compare.spec (contract mode obtains f only from the admitted contract binding)")
+            if not cmp_.get("binding_plan"):
+                out.append("compare.binding_plan (contract mode needs a reviewed binding plan)")
+            if not cmp_.get("specification_root"):
+                out.append("compare.specification_root (contract mode needs the specification runtime)")
         obs = cmp_.get("observe")
         if obs is not None:
             from .reference_eval.observation import LAYERS
@@ -325,8 +337,12 @@ def query_of(decl: dict, exp: dict) -> dict:
         "comparison_target": {
             "mode": mode,
             "quantity": "e_num = K - G_pi" if mode == "A" else (
-                f"K - f only (black box: f = {cmp_.get('spec')} is the only reference; no G_pi, no decomposition)"
-                if mode == "black-box" else f"e_num = K - G_pi and e_sem = G_pi - f (f: {cmp_.get('spec')})"),
+                "e_num = K - G_pi and e_task = G_pi - f, where f is obtained from the admitted contract and "
+                "reviewed call binding" if mode == "contract" else
+                f"K - supplied reference only (black box: r = {cmp_.get('spec')}; no G_pi, no decomposition)"
+                if mode == "black-box" else
+                f"e_num = K - G_pi and reference_difference = G_pi - r (r: {cmp_.get('spec')}); "
+                "no semantic verdict without admitted contract binding"),
             "K": "the call's outputs on the inputs it actually received",
             "G_pi": "the reference generated from the captured program under the numerical-difference policy pi "
                     "(real arithmetic, rc3 02 1); call-level only when every float buffer read is a declared input, "
@@ -612,6 +628,31 @@ def classify_failure(reason: str) -> str:
     return "semantics missing" if "not_established" in r else "unclassified (tool error or new reason)"
 
 
+def task_special_value_verdict(summary, admitted_contract: bool) -> dict:
+    """Categorical correctness of finite/NaN/+inf/-inf classes for K-f.
+
+    A class mismatch is already a pointwise contradiction when the task
+    specification and binding are admitted.  It must remain visible even
+    though an arithmetic mean involving infinity is undefined.
+    """
+    if not admitted_contract or not isinstance(summary, dict):
+        return {"judgment": "not established", "basis": "no admitted complete task comparison"}
+    mismatches = int(summary.get("k_vs_f_class_mismatch", 0))
+    if mismatches:
+        return {
+            "judgment": "contradiction",
+            "mismatched_coordinates": mismatches,
+            "basis": "candidate and admitted task specification disagree on finite/NaN/+inf/-inf class",
+            "scope": "pointwise semantic correctness; no arithmetic mean of infinite residuals",
+        }
+    return {
+        "judgment": "consistent",
+        "mismatched_coordinates": 0,
+        "basis": "all compared coordinates have the same finite/NaN/+inf/-inf class",
+        "scope": "special-value classes only; numerical equality is reported separately",
+    }
+
+
 # ------------------------------------------------------------------------------------------------ run
 
 class _Timeout(BaseException):
@@ -627,7 +668,7 @@ def _alarm(seconds):
     return old
 
 
-def _semantic(keep_rows, fas, name):
+def _reference_difference(keep_rows, fas, name):
     n_ok = n_sem = 0
     worst = 0.0
     for r in keep_rows:
@@ -641,7 +682,8 @@ def _semantic(keep_rows, fas, name):
         n_sem += int(sem.sum())
         if sem.any():
             worst = max(worst, float((gap / (1 + np.abs(0.5 * (f_lo + f_hi))))[sem].max()))
-    return {"ok_elements": n_ok, "e_sem_certified": n_sem, "max_gap_relative": worst}
+    return {"ok_elements": n_ok, "reference_difference_excludes_zero": n_sem,
+            "max_gap_relative": worst}
 
 
 REFINEMENT_CATEGORIES = {
@@ -714,7 +756,7 @@ def run_level(exp: dict, level: dict) -> dict:
         best = out
         if out.get("mode") == "black-box":
             category = "not applicable"
-            outcome = "not applicable: black-box comparison (K - f only), no reference enclosure to refine"
+            outcome = "not applicable: black-box comparison against a supplied reference, no K_R enclosure to refine"
             break
         evaluated = {n: o for n, o in out["outputs"].items() if o.get("status") == "evaluated"}
         per_output = {n: _output_refinement(o, frac) for n, o in evaluated.items()}
@@ -800,7 +842,12 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
     class Case(check.Case):
         name = f"measure:{exp['call']}:{level}"
         implementation = exp["call"]
-        specification = exp["compare"].get("spec") or "none (mode A)"
+        specification = (f"admitted contract binding: {exp['compare'].get('binding_plan')}"
+                         if exp["compare"]["mode"] == "contract" else
+                         exp["compare"].get("spec") or "none (mode A)")
+        spec_bound = ("strict contract values converted outward to binary64 endpoints"
+                      if exp["compare"]["mode"] == "contract" else check.Case.spec_bound)
+        contract_reference = exp.get("_contract_reference")
 
         def setup(self):
             torch._dynamo.reset()
@@ -816,6 +863,9 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
             except Exception as exc:  # noqa: BLE001  -- the declared call itself refused the inputs
                 raise RuntimeError(f"the call rejected the declared inputs (legal call / input domain): "
                                    f"{type(exc).__name__}: {exc}") from exc
+            if exp["compare"]["mode"] == "contract" and set(outs) != set(measure_names):
+                raise ValueError("contract mode requires compare.measure to name every public call output "
+                                 f"(declared {sorted(measure_names)}, returned {sorted(outs)})")
             sel = {}
             for k in measure_names:
                 if k not in outs:
@@ -836,6 +886,14 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
             f = spec_fn({k: v for k, v in inp.items() if k != "_seed"})
             fas[inp["_seed"]] = {k: tuple(np.asarray(a, np.float64).ravel() for a in f[k]) for k in measure_names}
             return {k: tuple(np.asarray(a, np.float64).reshape(shapes[k]) for a in f[k]) for k in measure_names}
+
+        def bound_spec(self, inp, outs, launches, snapshot, binding_context=None):
+            f, summary = self.contract_reference.evaluate(
+                {k: v for k, v in inp.items() if k != "_seed"}, outs, launches, snapshot,
+                binding_context=binding_context)
+            fas[inp["_seed"]] = {k: tuple(np.asarray(a, np.float64).ravel() for a in f[k]) for k in measure_names}
+            return ({k: tuple(np.asarray(a, np.float64).reshape(shapes[k]) for a in f[k])
+                     for k in measure_names}, summary)
 
     case = Case()
     keep = {}
@@ -890,21 +948,36 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
         # unless its recorded producers are copies of the declared inputs or exact constants
         backfilled = list(o.get("depends_on_non_triton_intermediates") or [])
         recorded = list(o.get("upstream_with_producer_record") or [])
-        quality["reference_scope"] = ("kernel-level: upstream non-Triton values captured (" + ", ".join(backfilled)[:200]
-                                      + ")") if backfilled else (
-            "call-level (upstream copies / exact constants with producer records: " + ", ".join(recorded)[:200] + ")"
-            if recorded else "call-level")
+        if not quality["elements"]:
+            quality["reference_scope"] = "not established: no program-reference coordinates"
+        elif backfilled:
+            quality["reference_scope"] = ("kernel-level: upstream non-Triton values captured ("
+                                          + ", ".join(backfilled)[:200] + ")")
+        elif recorded:
+            quality["reference_scope"] = ("call-level (upstream copies / exact constants with producer records: "
+                                          + ", ".join(recorded)[:200] + ")")
+        else:
+            quality["reference_scope"] = "call-level"
         quality["complete_rate_call_level"] = 0.0 if backfilled else quality["complete_rate"]
         stats = class_statistics(o.get("numerical"), exp["rule_classes"], exp["alpha"],
                                  equivalence_rel=(exp.get("equivalence") or {}).get("rel"))
+        total_stats = class_statistics(o.get("total"), exp["rule_classes"], exp["alpha"],
+                                       equivalence_rel=(exp.get("equivalence") or {}).get("rel")) \
+            if o.get("total") is not None else None
         entry = {"status": "evaluated", "dtype": dtypes.get(name, "float32"), "reference": quality,
                  "statistics": stats, "guarantee": o.get("guarantee"),
+                 "comparison_kind": o.get("comparison_kind"),
+                 "boolean_task_comparison": o.get("boolean_task_comparison"),
+                 "scale": (o.get("numerical") or {}).get("scale"),
                  "proof_status": o.get("proof_status"), "execution": o.get("execution"),
                  "upstream_with_producer_record": recorded,
                  "observation": o.get("observation"),
                  "mixed_non_triton_sources": o.get("depends_on_non_triton_intermediates") or [],
                  "not_established_reasons_seed0": o.get("not_established_reasons_seed0"),
-                 "special_values": o.get("special_values")}
+                 "special_values": o.get("special_values"),
+                 "task_special_values": o.get("task_special_values")}
+        entry["task_special_value_verdict"] = task_special_value_verdict(
+            entry["task_special_values"], rep.get("reference_kind") == "admitted_task_specification")
         reasons = list((o.get("not_established_reasons_seed0") or {}).keys())
         entry["failure_classes"] = []
         if quality["complete_rate"] is not None and quality["complete_rate"] < 1.0:
@@ -922,15 +995,38 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
         if quality.get("set_target_elements"):
             # a set target's width is part of the target, not a numerical enclosure that precision would shrink
             entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"set target width (L_E)"})
-        if any(v["summary"].startswith("cannot judge") for v in stats.values()):
+        statistic_groups = ([stats] if exp["compare"]["mode"] != "contract" or quality["elements"] else []) + \
+            ([total_stats] if total_stats is not None else [])
+        if any(v["summary"].startswith("cannot judge") for group in statistic_groups for v in group.values()):
             entry["failure_classes"] = sorted(set(entry["failure_classes"]) | {"statistics insufficient"})
-        if spec_fn is not None and name in keep:
-            entry["semantic"] = _semantic(keep[name], fas, name)
-            entry["semantic"]["verdict_scope"] = ("mixed: not a semantic verdict" if entry["mixed_non_triton_sources"]
-                                                  else "pure Triton: K_R vs f_r exact comparison")
+        if entry["task_special_value_verdict"]["judgment"] == "contradiction":
+            # The missing finite residuals are explained by a detected
+            # categorical semantic error, not an unknown tool failure.
+            entry["failure_classes"] = [item for item in entry["failure_classes"]
+                                        if item not in ("unclassified", "unclassified (tool error or new reason)")]
+        if (spec_fn is not None and name in keep) or exp["compare"]["mode"] == "contract":
+            if name in keep:
+                sem = _reference_difference(keep[name], fas, name)
+                sem["statistics"] = class_statistics(o.get("semantic"), exp["rule_classes"], exp["alpha"],
+                                                      equivalence_rel=(exp.get("equivalence") or {}).get("rel"))
+                sem["scale"] = (o.get("semantic") or {}).get("scale")
+                sem["verdict_scope"] = (o.get("semantic") or {}).get(
+                    "verdict_scope", "reference_difference; not a semantic verdict")
+                entry["semantic"] = sem
+            if total_stats is not None:
+                entry["total"] = {"statistics": total_stats, "scale": (o.get("total") or {}).get("scale"),
+                                  "verdict_scope": (o.get("total") or {}).get("verdict_scope"),
+                                  "comparison": (o.get("total") or {}).get("comparison"),
+                                  "elements_per_seed": o.get("task_comparison_elements_per_seed"),
+                                  "covers_complete_public_output":
+                                      o.get("task_comparison_covers_complete_public_output")}
         failures.extend(entry["failure_classes"])
         outputs[name] = entry
     return {"level": level, "status": "ok", "precision_level": precision_level,
+            "reference_kind": rep.get("reference_kind"), "semantic_verdict": "not_established",
+            "semantic_reason": rep.get("semantic_reason"),
+            "contract_bindings": rep.get("contract_bindings") or [],
+            "program_reference_mode": rep.get("program_reference_mode"),
             "capture": rep.get("capture"), "precision_environment": rep.get("precision_environment"),
             "analysis_interventions": rep.get("analysis_interventions"),
             "precision_dependent_calls": rep.get("precision_dependent_calls"),
@@ -943,7 +1039,7 @@ def _measure_pass(exp: dict, level: dict, precision_level: int = 1, captures=Non
 
 
 def _black_box_pass(exp, level, rep, case, measure_names, seconds, dev, conf) -> dict:
-    """Outputs of a black-box comparison (K - f only; no reference enclosure, no decomposition)."""
+    """Outputs of a black-box comparison against a supplied reference; no K_R decomposition."""
     outputs, failures = {}, []
     dtypes = getattr(case, "_last_dtypes", {}) or {}
     for name in measure_names:
@@ -954,8 +1050,12 @@ def _black_box_pass(exp, level, rep, case, measure_names, seconds, dev, conf) ->
             continue
         stats = class_statistics(o["total_black_box"], exp["rule_classes"], exp["alpha"],
                                  equivalence_rel=(exp.get("equivalence") or {}).get("rel"))
+        admitted = rep.get("reference_kind") == "admitted_task_specification"
         entry = {"status": "evaluated (black box)", "dtype": dtypes.get(name, "float32"),
-                 "comparison": "K - f (the specification is the only reference; no K_R, no decomposition)",
+                 "comparison": ("K - admitted task specification (no K_R decomposition)" if admitted else
+                                "K - supplied reference (no K_R decomposition)"),
+                 "verdict_scope": ("candidate_minus_admitted_task_specification" if admitted else
+                                   "reference_difference; not a semantic verdict"),
                  "statistics": stats, "scale": o["total_black_box"].get("scale"),
                  "observation": o.get("observation"), "finite_fraction": o.get("finite_fraction"),
                  "special_values": o.get("special_values")}
@@ -964,6 +1064,10 @@ def _black_box_pass(exp, level, rep, case, measure_names, seconds, dev, conf) ->
         failures.extend(entry["failure_classes"])
         outputs[name] = entry
     return {"level": level, "status": "ok", "mode": "black-box", "precision_level": None,
+            "reference_kind": rep.get("reference_kind"), "semantic_verdict": "not_established",
+            "semantic_reason": rep.get("semantic_reason"),
+            "contract_bindings": rep.get("contract_bindings") or [],
+            "program_reference_mode": rep.get("program_reference_mode"),
             "precision_environment": rep.get("precision_environment"),
             "units": {"development": len(dev), "confirmation": len(conf)}, "outputs": outputs,
             "timing_seconds": rep.get("timing_seconds"), "seconds": round(seconds, 1),
@@ -973,6 +1077,15 @@ def _black_box_pass(exp, level, rep, case, measure_names, seconds, dev, conf) ->
 def run(decl, out: Optional[str] = None) -> dict:
     d = load(decl)
     exp = expand(d)
+    if exp["compare"]["mode"] == "contract":
+        from .contract_binding import ContractBindingError, ContractReference
+        try:
+            exp["_contract_reference"] = ContractReference(
+                plan_path=exp["compare"]["binding_plan"],
+                specification_root=exp["compare"]["specification_root"], call_ref=exp["call"],
+                base_dir=exp["_base_dir"], measure_names=exp["compare"]["measure"])
+        except (ContractBindingError, OSError, ValueError) as error:
+            raise ReferenceNotAdmitted(str(error)) from error
     t0 = time.time()
     levels = []
     for level in exp["factor_levels"]:
@@ -985,7 +1098,9 @@ def run(decl, out: Optional[str] = None) -> dict:
     for lv in levels:
         for c in lv.get("failure_classes", []) + ([lv["failure_class"]] if "failure_class" in lv else []):
             counts[c] = counts.get(c, 0) + 1
-    report = {"tool_version": check.TOOL_VERSION, "expanded_declaration": {k: v for k, v in exp.items() if k != "_base_dir"},
+    report = {"tool_version": check.TOOL_VERSION,
+              "expanded_declaration": {k: v for k, v in exp.items()
+                                       if k not in ("_base_dir", "_contract_reference")},
               "levels": levels, "failure_counts": counts, "failure_table": _FAILURE_TABLE,
               "seconds": round(time.time() - t0, 1)}
     if out:

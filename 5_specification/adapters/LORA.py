@@ -1,104 +1,150 @@
-"""Adapter for contracts/LORA.yaml: vLLM multi-LoRA shrink (_lora_shrink), exact rational semantics.
-
-y[s][t][r] = scaling * sum_k A_s[m_t][r][k] x[t][k] for tokens with a LoRA (m_t >= 0), 0 for tokens without one, and the
-buffer content before the call when no token has a LoRA (the entry point returns before zeroing). MUTANTS are
-independent loops with one misreading each.
-"""
+"""vLLM 0.16.0 multi-LoRA shrink task reference."""
 from __future__ import annotations
 
-from fractions import Fraction
+import math
+
+import numpy as np
 
 from kernel_spec import d2_common as U
-from kernel_spec.num import Invalid, Result, Unsupported, integer, rational
+from kernel_spec import ieee
+from kernel_spec.compare import check_enclosed_output
+from kernel_spec.num import Invalid, Result, Unsupported
+from kernel_spec.real import R
 
-KEYS = {"x", "weights", "mapping", "scaling", "out_before"}
+
+PROFILE = "vllm016_shrink_f32out_real"
+KEYS = {"x", "weights", "mapping", "scaling", "out_before", "input_dtype", "output_dtype"}
 
 
-def _mat(x, rank, what):
-    t, s = U.tensor(x, rank, what)
-    return U.plain(t), s
+def _walk(value):
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _walk(item)
+    else:
+        yield value
+
+
+def _physical(value, rank, name, dtype):
+    for item in _walk(value):
+        if isinstance(item, (bool, np.bool_)):
+            raise Invalid(f"{name}: Boolean is not a floating value")
+        if isinstance(item, (float, np.floating)) and not math.isfinite(float(item)):
+            raise Unsupported(f"{name}: special values are outside the reviewed profile")
+        if isinstance(item, str) and item.strip().lower() in {"inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
+            raise Unsupported(f"{name}: special values are outside the reviewed profile")
+    tensor, shape = U.tensor(value, rank, name)
+    for item in _walk(tensor):
+        rounded = ieee.round_to(item, dtype)
+        if not rounded.exact or rounded.v != item.v:
+            raise Invalid(f"{name}: value {item.v!r} is not exactly representable as {dtype}")
+    return tensor, shape
 
 
 def parse(profile, inp):
-    if profile != "vllm_shrink":
+    if profile != PROFILE:
         raise Unsupported(f"profile {profile!r}")
-    U.check_keys(inp, KEYS)
-    x, (T, K) = _mat(inp["x"], 2, "x")
-    ws = inp["weights"]
-    if not isinstance(ws, list) or not ws:
-        raise Invalid("weights: a non-empty list of per-slice tensors [num_loras][rank][hidden]")
-    W, shapes = [], []
-    for s, w in enumerate(ws):
-        a, sh = _mat(w, 3, f"weights[{s}]")
-        W.append(a)
-        shapes.append(sh)
-    if len(set(shapes)) != 1:
-        raise Invalid("all slice weights must have the same shape (same strides)")
-    L, Rk, K2 = shapes[0]
-    if K2 != K:
-        raise Invalid(f"hidden size of the weights {K2} differs from the input's {K}")
-    m = [integer(v, "mapping") for v in inp["mapping"]]
-    if len(m) != T:
-        raise Invalid("one mapping entry per token")
-    if any(v < -1 or v >= L for v in m):
-        raise Invalid("mapping entries must be -1 or a LoRA index below num_loras")
-    sc = rational(inp["scaling"], "scaling")
-    before = None
-    if inp.get("out_before") is not None:
-        before, bs = _mat(inp["out_before"], 3, "out_before")
-        if bs != (len(W), T, Rk):
-            raise Invalid("out_before must have shape [num_slices][num_tokens][rank]")
-    return dict(x=x, W=W, m=m, sc=sc, T=T, K=K, L=L, R=Rk, S=len(W), before=before)
+    U.check_keys(inp, KEYS, required=KEYS)
+    dtype = inp["input_dtype"]
+    if dtype not in ("f16", "bf16"):
+        raise Unsupported("the installed active LoRA shrink call requires float16 or bfloat16 input and weights")
+    if inp["output_dtype"] != "f32":
+        raise Unsupported("the reviewed profile fixes the common float32 output buffer")
+
+    x, x_shape = _physical(inp["x"], 2, "x", dtype)
+    weights, weight_shape = _physical(inp["weights"], 4, "weights", dtype)
+    before, before_shape = _physical(inp["out_before"], 3, "out_before", "f32")
+    tokens, hidden = x_shape
+    slices, loras, rank, weight_hidden = weight_shape
+    if min(tokens, hidden, slices, loras, rank) <= 0:
+        raise Invalid("token, hidden, slice, LoRA and rank dimensions must be positive")
+    if weight_hidden != hidden:
+        raise Invalid("the input and LoRA A weights must have the same hidden dimension")
+    if before_shape != (slices, tokens, rank):
+        raise Invalid("out_before must have shape [slices,tokens,rank]")
+    mapping, mapping_shape = U.ints(inp["mapping"], 1, "mapping")
+    if mapping_shape != (tokens,) or any(index < -1 or index >= loras for index in mapping):
+        raise Invalid("mapping must contain one value in [-1,num_loras) for every token")
+    scaling = _physical([inp["scaling"]], 1, "scaling", "f32")[0][0]
+    return {
+        "x": x, "weights": weights, "mapping": mapping, "scaling": scaling,
+        "before": before, "tokens": tokens, "hidden": hidden, "slices": slices,
+        "loras": loras, "rank": rank,
+    }
 
 
 def reference(profile, inp):
-    a = parse(profile, inp)
-    if all(v == -1 for v in a["m"]):
-        if a["before"] is None:
-            raise Unsupported("no token has a LoRA: the call leaves the output buffer as it was; its prior content is needed")
-        return Result("value", {"y": a["before"]})
-    y = []
-    for s in range(a["S"]):
-        rows = []
-        for t in range(a["T"]):
-            if a["m"][t] < 0:
-                rows.append([Fraction(0)] * a["R"])
+    parsed = parse(profile, inp)
+    if all(index == -1 for index in parsed["mapping"]):
+        return Result("value", {"y": U.plain(parsed["before"])})
+    output = U.zeros(parsed["slices"], parsed["tokens"], parsed["rank"])
+    for slice_index in range(parsed["slices"]):
+        for token in range(parsed["tokens"]):
+            lora = parsed["mapping"][token]
+            if lora < 0:
                 continue
-            A = a["W"][s][a["m"][t]]
-            rows.append([a["sc"] * sum((A[r][k] * a["x"][t][k] for k in range(a["K"])), Fraction(0))
-                         for r in range(a["R"])])
-        y.append(rows)
-    return Result("value", {"y": y})
+            for rank_index in range(parsed["rank"]):
+                total = R(0)
+                for hidden in range(parsed["hidden"]):
+                    total += parsed["weights"][slice_index][lora][rank_index][hidden] * parsed["x"][token][hidden]
+                output[slice_index][token][rank_index] = parsed["scaling"] * total
+    return Result("value", {"y": U.plain(output)})
 
 
-def _mut(kind):
-    def run(profile, inp):
-        a = parse(profile, inp)
-        if all(v == -1 for v in a["m"]) and kind != "zero_always":
-            if a["before"] is None:
-                raise Unsupported("prior buffer needed")
-            return Result("value", {"y": a["before"]})
-        out = [[[Fraction(0)] * a["R"] for _ in range(a["T"])] for _ in range(a["S"])]
-        for t, lid in enumerate(a["m"]):
-            if lid == -1 and kind != "negative_index_wraps":
+def _observed(value, shape):
+    if isinstance(value, dict):
+        if set(value) != {"t", "v", "shape"} or value.get("t") != "f32" or value.get("shape") != list(shape):
+            raise Invalid("observed y tensor record has the wrong dtype or shape")
+        value = value["v"]
+    tensor, actual = U.tensor(value, 3, "observed y")
+    if actual != tuple(shape):
+        raise Invalid(f"observed y shape {actual}, expected {tuple(shape)}")
+    return tensor
+
+
+def check_output(profile, inp, observed):
+    try:
+        parsed = parse(profile, inp)
+        if not isinstance(observed, dict) or set(observed) != {"y"}:
+            return False
+        candidate = {"y": _observed(observed["y"], (parsed["slices"], parsed["tokens"], parsed["rank"]))}
+    except Invalid:
+        return False
+    return check_enclosed_output(reference(profile, inp).fields, candidate)
+
+
+def _loop(profile, inp, mode):
+    parsed = parse(profile, inp)
+    if all(index == -1 for index in parsed["mapping"]) and mode != "zero_always":
+        return Result("value", {"y": U.plain(parsed["before"])})
+    output = [[[R(0) for _ in range(parsed["rank"])] for _ in range(parsed["tokens"])]
+              for _ in range(parsed["slices"])]
+    for slice_index in range(parsed["slices"]):
+        source_slice = 0 if mode == "first_slice_only" else slice_index
+        for token in range(parsed["tokens"]):
+            lora = parsed["mapping"][token]
+            if lora < 0 and mode != "negative_index_wraps":
                 continue
-            for s in range(a["S"]):
-                A = a["W"][0 if kind == "first_slice_only" else s][lid]
-                for r in range(a["R"]):
-                    acc = Fraction(0)
-                    for k in range(a["K"]):
-                        w = A[k][r] if kind == "transposed" else A[r][k]
-                        acc += w * a["x"][t][k]
-                    out[s][t][r] = acc if kind == "scaling_ignored" else acc * a["sc"]
-        return Result("value", {"y": out})
-    return run
+            for rank_index in range(parsed["rank"]):
+                total = R(0)
+                for hidden in range(parsed["hidden"]):
+                    if mode == "transposed":
+                        weight = parsed["weights"][source_slice][lora][hidden][rank_index]
+                    else:
+                        weight = parsed["weights"][source_slice][lora][rank_index][hidden]
+                    total += weight * parsed["x"][token][hidden]
+                output[slice_index][token][rank_index] = total if mode == "scaling_ignored" else parsed["scaling"] * total
+    return Result("value", {"y": U.plain(output)})
+
+
+def _mutant(mode):
+    return lambda profile, inp: _loop(profile, inp, mode)
 
 
 MUTANTS = {
-    "LR.M1": _mut("scaling_ignored"),
-    "LR.M2": _mut("negative_index_wraps"),
-    "LR.M3": _mut("first_slice_only"),
-    "LR.M4": _mut("transposed"),
-    "LR.M5": _mut("zero_always"),
+    "LR.M1": _mutant("scaling_ignored"),
+    "LR.M2": _mutant("negative_index_wraps"),
+    "LR.M3": _mutant("first_slice_only"),
+    "LR.M4": _mutant("transposed"),
+    "LR.M5": _mutant("zero_always"),
 }
 READINGS = {}

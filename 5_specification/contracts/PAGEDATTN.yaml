@@ -1,153 +1,263 @@
 schema_version: '1.2'
 id: PAGEDATTN
-role: PAGEDATTN
-title: Paged-KV-cache attention (vLLM unified_attention as tested), real-number semantics
+role: PAGED_ATTENTION
+title: vLLM 0.16.0 causal two-dimensional paged attention, complete output
 review:
-  status: drafted
-  author: Claude (spec v3 author, group D1_attention), 2026-10-17
-  date: '2026-10-17'
-  scope: Real-number output of one unified_attention call (forward only); awaiting a review by someone who did not write
-    it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite physical f16, bf16 or f32 unquantized inputs; causal two-dimensional path; complete output
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
-  requires:
-  - source_profile_matched
-  - input_contract_validated
-  - all_required_outputs_bound
-  - reference_semantics_and_guarantees_validated
-  - no_unresolved_contradiction
-  - contract_and_implementation_hashes_bound
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers:
-- vllm.v1.attention.ops.triton_unified_attention.unified_attention (paged KV cache; boolean causal flag, window, softcap;
-  no sinks, ALiBi, qq_bias, prefix ranges, chunking or quantised caches)
+- The complete logical output of installed vLLM 0.16.0 unified_attention on its causal, unquantized, two-dimensional path
 profiles:
-  vllm_unified:
-    meaning: The keys and values of sequence s are the cache slots its block table points to; its query tokens are the last
-      query_len positions of the sequence; softmax attention with the declared causal flag, window (FlashAttention convention)
-      and softcap.
+  vllm016_causal_2d_real:
+    meaning: >-
+      Gather each sequence's K and V in logical order through its block table. Place packed query rows at the final
+      query_len positions, apply bottom-right causal attention with an optional inclusive left window, contiguous GQA,
+      supplied scale and optional positive softcap, and return every output coordinate.
     task_choice_required: false
+    basis: [PA.TASK, PA.PAGING, PA.MASK, PA.ORDER, PA.DTYPE]
 outputs:
-  out:
-    shape: '[num_tokens][Hq][Dv], rows in cu_seqlens_q order'
-    guarantee: rigorous_enclosure
+  out: {shape: '[total_query_tokens,Hq,head_dim]', guarantee: rigorous_enclosure}
 comparison:
-  input_binding: query, cache contents and scale are the exact values received; cache slots that are never read may be null
-    (their content is irrelevant to f).
-  quality: No tolerance; exact values compare exactly, exp / tanh results are rigorous enclosures.
-  test_evidence: Exact rational equality or containment of the expected formula's enclosure.
-  error_handling: Inconsistent lengths, block indices or reads of empty slots are invalid_input; asymmetric bidirectional
-    windows and the options listed under unsupported are outside the profile.
+  input_binding: >-
+    Query and every cache slot read by the logical task are exact physical finite values of the declared common f16,
+    bf16 or f32 dtype. Proven-unread cache slots may be null because their values cannot affect f. Scale and softcap
+    are exact physical finite f32. Sequence arrays and the rectangular block table are signed int32.
+  complete_output: Every output coordinate, its full shape and its dtype are required.
+  quality: Exact rational arithmetic surrounds exp and tanh with rigorous intervals; comparison uses no tolerance.
+  test_evidence: >-
+    Independent high-precision element loops, public dense PyTorch formulas, installed vLLM 0.16.0 GPU calls,
+    complete-output checks, paging permutations and rejected unsupported paths.
+  error_handling: >-
+    Missing fields, malformed shapes, invalid indices and values not physically representable in their declared dtype
+    are invalid_input. Bidirectional attention, a non--1 right window, special values and other dtypes are unsupported.
 decisions:
-- id: PA.TARGET
-  status: drafted
-  statement: 'The task statement of the general-round case defines f as: gather the dense keys/values of each sequence by
-    its block table, then SDPA semantics with the declared window. The paged layout itself (slot j of a sequence lives in
-    block block_table[s][j // block_size] at offset j % block_size) and the query placement (query token i at position seq_len
-    - query_len + i) come only from the vLLM kernel, a reference program; clauses resting on it claim agreement with that
-    program. Alternatives (top-left query placement, a different slot order) contradict the kernel and the decode use the
-    cache exists for, and are mutants.'
-  basis:
-  - VLLM_UA.BLOCK_TABLE
-  - VLLM_UA.POSITIONS
-  - VLLM_UA.SIGNATURE
-- id: PA.WINDOW
-  status: drafted
-  statement: 'window_size = (left, right) is read in the FlashAttention convention around the query position pos: keys with
-    pos - left <= j and, when not causal, j <= pos + right (-1 unbounded); causal attention adds j <= pos. The vLLM kernel
-    passes only SLIDING_WINDOW = 1 + window_size[0] and applies it on both sides when not causal, so the two readings agree
-    for causal windows and for symmetric bidirectional windows (the tested case uses (7, 7)) and differ for asymmetric bidirectional
-    windows, which are therefore unsupported here rather than decided for either side.'
-  basis:
-  - FA_IFACE.WINDOW
-  - VLLM_UA.WINDOW_ARG
-  - VLLM_HELPERS.KV_MASK
-- id: PA.SCOPE
-  status: drafted
-  statement: The kernel's scores are softmax_scale * q.k, softcapped when softcap > 0 (c * tanh(s / c)), masked, then softmax-normalised;
-    query head h reads key/value head h // (Hq / Hkv). Attention sinks, ALiBi slopes, qq_bias, multimodal prefix ranges,
-    chunked attention, per-sequence causal tensors and quantised caches are not part of the tested call and are unsupported.
-  basis:
-  - VLLM_UA.ORDER
-  - VLLM_UA.GQA
-  - VLLM_HELPERS.SOFTCAP
+- id: PA.TASK
+  status: reviewed
+  statement: >-
+    The task is scaled dot-product attention over the logical K/V sequence, followed by softmax and multiplication by V.
+    Dropout is absent. The installed wrapper fixes causal=true; bidirectional behavior from the former main-branch draft
+    is archived and cannot be used as a fallback.
+  basis: [T_SDPA.REFERENCE, VLLM016_UA.CAUSAL, VLLM016_UA.ORDER]
+- id: PA.PAGING
+  status: reviewed
+  statement: >-
+    Logical position j is stored at physical block block_table[s,j//block_size] and offset j%block_size. Packed query
+    row i belongs at absolute position seq_len-query_len+i. These call-specific choices come from the retained installed
+    vLLM release source and must be proven by a binding rather than inferred from a kernel name.
+  basis: [VLLM016_UA.BLOCK_TABLE, VLLM016_UA.POSITIONS, VLLM016_UA.SIGNATURE]
+- id: PA.MASK
+  status: reviewed
+  statement: >-
+    A query at position p reads exactly keys j<=p and, when left>=0, p-j<=left. This is the bottom-right causal and
+    inclusive sliding-window convention. vLLM 0.16 uses only window_size[0], so this profile requires right=-1.
+  basis: [FA_IFACE.CAUSAL_BR, FA_IFACE.WINDOW, VLLM016_UA.MASK, VLLM016_UA.WINDOW]
+- id: PA.ORDER
+  status: reviewed
+  statement: >-
+    Query heads use contiguous groups of KV heads. Scores are scale*(Q dot K); when softcap>0 they become
+    softcap*tanh(score/softcap); masked softmax weights multiply V.
+  basis: [FA_IFACE.GQA, FA_IFACE.SOFTCAP, T_SDPA.GQA, T_SDPA.SCALE, VLLM016_UA.ORDER, VLLM016_UA.SHAPES]
+- id: PA.PATH
+  status: reviewed
+  statement: >-
+    The active range fixes the two-dimensional path by omitting parallel-softmax buffers. Sinks, ALiBi, qq_bias,
+    multimodal prefix ranges, quantized caches, descales and output scaling are absent.
+  basis: [VLLM016_UA.PATH_2D, VLLM016_UA.OPTIONS, VLLM016_UA.DTYPES]
+- id: PA.DTYPE
+  status: reviewed
+  statement: >-
+    Query, K, V and output have one finite physical f16, bf16 or f32 dtype; scale and softcap are physical f32.
+    Device dot products, online-softmax order, exponential approximation and stores are measured execution effects.
+  basis: [VLLM016_UA.DTYPES]
 clauses:
-- {id: PA.C1, basis: [PA.TARGET], statement: 'key/value of position j of sequence s = cache[block_table[s][j // bs]][j % bs];
-      slots and blocks that are not referenced are never read', observes: [out], evidence_kind: definition}
-- {id: PA.C2, basis: [PA.TARGET], statement: query token i of sequence s sits at position seq_len - query_len + i, observes: [
-      out], evidence_kind: definition}
-- {id: PA.C3, basis: [PA.WINDOW, VLLM_HELPERS.KV_MASK], statement: 'allowed keys: j < seq_len; causal j <= pos; window pos
-      - left <= j (and j <= pos + right when not causal)', observes: [out], evidence_kind: definition}
-- {id: PA.C4, basis: [PA.SCOPE, T_SDPA.REFERENCE], statement: 'out = softmax over the allowed keys of the (softcapped) scaled
-      scores, times V, per query head with key/value head h // (Hq / Hkv)', observes: [out], evidence_kind: definition}
-- {id: PA.C5, basis: [PA.WINDOW], statement: asymmetric bidirectional windows are unsupported, observes: [out], evidence_kind: definition}
-- {id: PA.C6, basis: [VLLM_UA.SIGNATURE, VLLM_UA.POSITIONS], statement: sequences are independent; query rows follow cu_seqlens_q,
-    observes: [out], evidence_kind: definition}
-- {id: PA.C7, basis: [VLLM_UA.POSITIONS, VLLM_UA.BLOCK_TABLE], statement: 'a query longer than its sequence, a missing or
-      out-of-range block index, or a read of an empty slot is invalid_input', observes: [out], evidence_kind: definition}
+- {id: PA.C1, basis: [PA.PAGING], statement: 'K/V position j is gathered through the declared physical block and slot.', observes: [out], evidence_kind: definition}
+- {id: PA.C2, basis: [PA.PAGING, PA.MASK], statement: 'Query row i has absolute position seq_len-query_len+i and uses bottom-right causal masking.', observes: [out], evidence_kind: definition}
+- {id: PA.C3, basis: [PA.MASK], statement: 'A finite left window includes both endpoints and right is fixed to -1.', observes: [out], evidence_kind: definition}
+- {id: PA.C4, basis: [PA.ORDER], statement: 'Scores use supplied scale and positive softcap before softmax.', observes: [out], evidence_kind: definition}
+- {id: PA.C5, basis: [PA.ORDER], statement: 'Hq/Hkv consecutive query heads share each KV head.', observes: [out], evidence_kind: definition}
+- {id: PA.C6, basis: [PA.PATH, PA.DTYPE], statement: 'The complete reviewed 2-D unquantized call boundary and every output coordinate are present.', observes: [out], evidence_kind: definition}
 examples:
-- {id: PA.E1, profile: vllm_unified, clauses: [PA.C1, PA.C2, PA.C3, PA.C4], input: {query: [[[0]], [[0]], [[0]], [[0]]], cu_seqlens_q: [
-        0, 4], seq_lens: [4], key_cache: [[[[0]], [[0]]], [[[0]], [[0]]], [null, null]], value_cache: [[[[3]], [[4]]], [[
-            [1]], [[2]]], [null, null]], block_table: [[1, 0]], scale: 1/8, causal: false, window: [1, 1], softcap: 0}, expected: {
-      outcome: value, fields: {out: [[[3/2]], [[2]], [[3]], [[7/2]]]}}, note: 'bidirectional window (1, 1) as ua_bidir_sw8_mha
-      with W = 2; permuted block table; block 2 never read'}
-- {id: PA.E2, profile: vllm_unified, clauses: [PA.C1, PA.C2, PA.C3, PA.C6], input: {query: [[[0]], [[0]], [[0]]], cu_seqlens_q: [
-        0, 1, 3], seq_lens: [3, 2], key_cache: [[[[0]], [[0]]], [[[0]], null], [[[0]], [[0]]]], value_cache: [[[[1]], [[2]]],
-        [[[6]], null], [[[10]], [[20]]]], block_table: [[0, 1], [2, 0]], scale: 1, causal: true, window: [-1, -1], softcap: 0},
-    expected: {outcome: value, fields: {out: [[[3]], [[10]], [[15]]]}}, note: 'sequence 0: one query after two cached tokens;
-      sequence 1: a fresh two-token prompt'}
-- {id: PA.E3, profile: vllm_unified, clauses: [PA.C4], input: {query: [[[2], [4]]], cu_seqlens_q: [0, 1], seq_lens: [2], key_cache: [
-        [[[1]], [[0]]]], value_cache: [[[[1]], [[0]]]], block_table: [[0]], scale: 1/2, causal: true, window: [-1, -1], softcap: 1},
-    expected: {outcome: value, fields: {out: [[[exp(tanh(1))/(1 + exp(tanh(1)))], [exp(tanh(2))/(1 + exp(tanh(2)))]]]}}, note: two
-      query heads share one kv head; softcap 1}
-- {id: PA.E4, profile: vllm_unified, clauses: [PA.C5], input: {query: [[[0]]], cu_seqlens_q: [0, 1], seq_lens: [1], key_cache: [
-        [[[0]]]], value_cache: [[[[1]]]], block_table: [[0]], scale: 1, causal: false, window: [2, 1], softcap: 0}, expected: {
-      outcome: unsupported}}
-- {id: PA.E5, profile: vllm_unified, clauses: [PA.C7], input: {query: [[[0]], [[0]]], cu_seqlens_q: [0, 2], seq_lens: [1],
-      key_cache: [[[[0]]]], value_cache: [[[[1]]]], block_table: [[0]], scale: 1, causal: true, window: [-1, -1], softcap: 0},
-    expected: {outcome: invalid_input}, note: query longer than the sequence}
-- {id: PA.E6, profile: vllm_unified, clauses: [PA.C7], input: {query: [[[0]]], cu_seqlens_q: [0, 1], seq_lens: [2], key_cache: [
-        [[[0]]]], value_cache: [[[[1]]]], block_table: [[0, 5]], scale: 1, causal: true, window: [-1, -1], softcap: 0}, expected: {
-      outcome: invalid_input}, note: block table entry out of range}
+- id: PA.E1
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C1, PA.C2, PA.C3]
+  input: &base
+    query: [[[0]], [[0]]]
+    cu_seqlens_q: [0, 2]
+    seq_lens: [4]
+    key_cache: [[[[0]], [[0]]], [[[0]], [[0]]]]
+    value_cache: [[[[3]], [[4]]], [[[1]], [[2]]]]
+    block_table: [[1, 0]]
+    scale: '1/2'
+    causal: true
+    window: [1, -1]
+    softcap: 0
+    dtype: f16
+  expected: {outcome: value, fields: {out: [[['5/2']], [['7/2']]]}}
+  note: Permuted physical blocks; the two query rows are logical positions 2 and 3 and the left endpoint is included.
+- id: PA.E2
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C2]
+  input:
+    query: [[[0]], [[0]]]
+    cu_seqlens_q: [0, 2]
+    seq_lens: [3]
+    key_cache: [[[[0]], [[0]], [[0]]]]
+    value_cache: [[[[1]], [[2]], [[4]]]]
+    block_table: [[0]]
+    scale: 1
+    causal: true
+    window: [-1, -1]
+    softcap: 0
+    dtype: f16
+  expected: {outcome: value, fields: {out: [[['3/2']], [['7/3']]]}}
+- id: PA.E3
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C5]
+  input:
+    query: [[[0], [0], [0], [0]]]
+    cu_seqlens_q: [0, 1]
+    seq_lens: [1]
+    key_cache: [[[[0], [0]]]]
+    value_cache: [[[[2], [5]]]]
+    block_table: [[0]]
+    scale: 1
+    causal: true
+    window: [-1, -1]
+    softcap: 0
+    dtype: bf16
+  expected: {outcome: value, fields: {out: [[[2], [2], [5], [5]]]}}
+- id: PA.E4
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C4]
+  input:
+    query: [[[2]]]
+    cu_seqlens_q: [0, 1]
+    seq_lens: [2]
+    key_cache: [[[[0]], [[1]]]]
+    value_cache: [[[[0]], [[1]]]]
+    block_table: [[0]]
+    scale: '1/2'
+    causal: true
+    window: [-1, -1]
+    softcap: 1
+    dtype: f32
+  expected: {outcome: value, fields: {out: [[[exp(tanh(1))/(1 + exp(tanh(1)))]]]}}
+- id: PA.E5
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, dtype: bf16}
+  expected: {outcome: value, fields: {out: [[['5/2']], [['7/2']]]}}
+- id: PA.E6
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, dtype: f32}
+  expected: {outcome: value, fields: {out: [[['5/2']], [['7/2']]]}}
+- id: PA.E7
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, causal: false}
+  expected: {outcome: unsupported}
+- id: PA.E8
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C3, PA.C6]
+  input: {<<: *base, window: [1, 0]}
+  expected: {outcome: unsupported}
+- id: PA.E9
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, seq_lens: [1]}
+  expected: {outcome: invalid_input}
+- id: PA.E10
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C1, PA.C6]
+  input: {<<: *base, block_table: [[2, 0]]}
+  expected: {outcome: invalid_input}
+- id: PA.E11
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, dtype: f64}
+  expected: {outcome: unsupported}
+- id: PA.E12
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, query: [[['1/3']], [[0]]]}
+  expected: {outcome: invalid_input}
+- id: PA.E13
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, query: [[['inf']], [[0]]]}
+  expected: {outcome: unsupported}
+- id: PA.E14
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, value_cache: [[[[3, 0]], [[4, 0]]], [[[1, 0]], [[2, 0]]]]}
+  expected: {outcome: invalid_input}
+- id: PA.E15
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C4, PA.C6]
+  input: {<<: *base, softcap: -1}
+  expected: {outcome: invalid_input}
+- id: PA.E16
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input:
+    <<: *base
+    cu_seqlens_q: [0, 0, 2]
+    seq_lens: [1, 4]
+    block_table: [[0, 0], [1, 0]]
+  expected: {outcome: invalid_input}
+- id: PA.E17
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, scale: '1/3'}
+  expected: {outcome: invalid_input}
+- id: PA.E18
+  profile: vllm016_causal_2d_real
+  clauses: [PA.C6]
+  input: {<<: *base, unexpected: 1}
+  expected: {outcome: invalid_input}
 signature:
   inputs:
-  - query [T][Hq][D]
-  - cu_seqlens_q [num_seqs + 1]
-  - seq_lens [num_seqs] (kv lengths)
-  - key_cache [num_blocks][block_size][Hkv][D], value_cache [num_blocks][block_size][Hkv][Dv] (null for slots never read)
-  - block_table [num_seqs][max_blocks]
-  - scale, causal (bool), window [left, right], softcap (0 = off)
-  pre_state: []
-  post_state: []
-  observation_unit: the output tensor of one call
+  - 'query [T,Hq,D], key_cache/value_cache [blocks,block_size,Hkv,D], read values finite and physical in dtype; proven-unread slots may be null'
+  - 'cu_seqlens_q [sequences+1], seq_lens [sequences], block_table [sequences,max_blocks], signed int32'
+  - 'physical f32 scale/softcap; causal=true; window=[left,-1]; dtype in {f16,bf16,f32}'
+  pre_state: [all received tensors]
+  post_state: [complete out with query shape; all inputs unchanged]
+  observation_unit: Every output coordinate together with full shape and dtype
 domain:
   valid:
-  - query_len <= seq_len for every sequence (so every query row has at least its own position as a key)
-  - block indices in range
-  - Hkv divides Hq
-  domain_undefined: []
-  invalid_input:
-  - inconsistent cu_seqlens_q / seq_lens / block_table
-  - a read of an empty slot
-  - non-rational values
-  unsupported:
-  - asymmetric bidirectional windows
-  - sinks
-  - ALiBi
-  - qq_bias
-  - prefix ranges
-  - chunked attention
-  - per-sequence causal tensors
-  - quantised caches
+  - Positive tensor dimensions, strictly positive query length per sequence and query_len <= seq_len
+  - Hkv divides Hq; K/V cache shapes and head dimension equal; rectangular in-range block table
+  - Physical finite f16, bf16 or f32 query and logically read K/V slots; physical finite f32 scale and nonnegative softcap
+  invalid_input: [missing or extra fields, malformed shapes, nonphysical values, invalid lengths or indices]
+  unsupported: [bidirectional attention, right window other than -1, special values, other dtypes, quantized caches,
+    three-dimensional segmented execution, sinks, ALiBi, qq_bias, multimodal prefix ranges, layout or alias effects]
 mutation_requirements:
-- {id: PA.M1, misreading: V rows zeroed by the window of the first query of each query block (bug B013), witnesses: [PA.E1]}
-- {id: PA.M2, misreading: block table ignored (logical block read from the same physical block), witnesses: [PA.E1]}
-- {id: PA.M3, misreading: query tokens placed at the first positions of the sequence (top-left), witnesses: [PA.E2]}
-- {id: PA.M4, misreading: bidirectional window without its right bound (as observed in vLLM prefix_prefill), witnesses: [
-      PA.E1]}
-- {id: PA.M5, misreading: window bounds exclusive (|pos - j| < w), witnesses: [PA.E1]}
-- {id: PA.M6, misreading: softcap ignored, witnesses: [PA.E3]}
+- {id: PA.M1, misreading: ignore the block table and read physical blocks in logical order, witnesses: [PA.E1]}
+- {id: PA.M2, misreading: place query rows at the first positions instead of the final positions, witnesses: [PA.E2]}
+- {id: PA.M3, misreading: omit the left sliding window, witnesses: [PA.E1]}
+- {id: PA.M4, misreading: make the left window endpoint exclusive, witnesses: [PA.E1]}
+- {id: PA.M5, misreading: ignore positive softcap, witnesses: [PA.E4]}
+- {id: PA.M6, misreading: assign GQA heads by head modulo Hkv instead of contiguous groups, witnesses: [PA.E3]}
+- {id: PA.M7, misreading: replace the supplied scale with one, witnesses: [PA.E4]}
+- {id: PA.M8, misreading: omit causal masking, witnesses: [PA.E2]}
 nonclaims:
-- The paged layout and query placement are those of the vLLM reference program (agreement with it, not a published standard).
-- Numerical effects of the kernel (fp16 inputs, TF32 dots, online softmax order) are the numerical question (K - G).
-changes: []
+- This profile is conditional on one installed vLLM release and the stated call subset. It is not a ground truth for every function named paged attention.
+- A runtime binding must prove cache layout, packed-sequence metadata, option values and complete output correspondence.
+- Device reductions, approximation, rounding, layout, aliasing and gradients remain execution questions.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the unverified-main draft with one installed vLLM 0.16.0 causal two-dimensional profile, physical inputs,
+    complete output comparison and explicit refusal of unsupported branches.
+  trigger: >-
+    The former draft accepted bidirectional and shape choices that the installed wrapper does not support and lacked
+    physical dtype and complete-output checks.

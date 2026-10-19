@@ -1,165 +1,237 @@
 schema_version: '1.2'
 id: RADAM
 role: RADAM
-title: torch.optim.RAdam (variance rectification, decoupled_weight_decay, maximize), one step from an explicit
-  pre-state, PyTorch 2.10 algorithm box
+title: Strict-real torch.optim.RAdam transition for one dense parameter tensor
 review:
-  status: drafted
-  author: Claude (spec v3 author, group E1_optim), 2026-10-17
-  date: '2026-10-17'
-  scope: One optimizer step on one parameter tensor (flattened), real arithmetic with the received hyperparameters;
-    awaiting a review by someone who did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 public RAdam, one dense real parameter tensor and one step with complete optimizer state
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers: [torch.optim.RAdam]
 profiles:
-  torch210:
-    meaning: torch.optim.RAdam as its 2.10 algorithm box states; rho_t evaluated exactly from the received beta2 and the
-      new step count; all option values.
+  torch210_dense_real:
+    meaning: >-
+      One public PyTorch 2.10 torch.optim.RAdam step for one dense real parameter tensor. The complete parameter and
+      optimizer pre-state, gradient presence, coupled or explicitly selected decoupled weight decay, and public
+      execution choices are inputs. Capturable or differentiable execution, tensor learning rates, internal
+      functional calls, sparse and complex tensors and multi-parameter orchestration are outside this profile.
     task_choice_required: false
+    basis: [RA.TASK, RA.STATE, RA.ORDER, RA.THRESHOLD]
 outputs:
-  theta:
-    shape: '[d]'
-    guarantee: rigorous_enclosure
-  m:
-    shape: '[d]'
-    guarantee: exact
-  v:
-    shape: '[d]'
-    guarantee: exact
-  t:
-    shape: scalar integer
-    guarantee: exact
+  theta: {shape: '[d] complete parameter post-state', guarantee: rigorous_enclosure}
+  m: {shape: '[d] complete first-moment post-state, or [] when state remains uninitialized', guarantee: exact}
+  v: {shape: '[d] complete second-moment post-state, or [] when state remains uninitialized', guarantee: exact}
+  t: {shape: scalar nonnegative integer or null when state remains uninitialized, guarantee: exact}
 comparison:
-  input_binding: 'All values are the exactly received rationals; in particular beta2 is the received value (a binary64
-    0.999 is its exact binary64 value), never a binary32 rounding of it.'
-  quality: No tolerance; theta is a strict enclosure, m, v, t exact.
-  test_evidence: Exact equality or containment.
-  error_handling: Inputs validated before evaluation.
+  input_binding: >-
+    Arithmetic inputs are the exactly received rational values. state is the complete per-parameter pre-state;
+    m=[], v=[] and t=null means PyTorch has not lazily initialized state for this parameter.
+  complete_output: The complete parameter, first moment, second moment and step are required.
+  quality: Moments and step are exact. Parameter coordinates are exact on the unrectified branch and outward real enclosures on the rectified branch.
+  test_evidence: Independent coordinate checks and direct PyTorch 2.10 comparisons cover cold and warm state, both rectification branches, maximize, both decay choices and foreach choices.
+  error_handling: Malformed calls are invalid_input; legal tasks outside this dense real noncapturable and nondifferentiable profile receive no answer. Exact exponents above the declared reference budget return not_established.
 decisions:
+- id: RA.TASK
+  status: reviewed
+  statement: >-
+    Select one public torch.optim.RAdam step, including its explicit decoupled_weight_decay choice. Closures, internal
+    functional calls, tensor learning rates, sparse or complex gradients, capturable or differentiable execution and
+    multi-parameter orchestration are separate tasks.
+  basis: [T_RADAM_OPT.PAGE, T_RADAM_OPT.DECOUPLED_TEXT, TS_RADAM.PAGE, TS_RADAM.STRATEGIES]
+- id: RA.STATE
+  status: reviewed
+  statement: >-
+    State is initialized only for a parameter with a present gradient and then contains step, exp_avg and exp_avg_sq.
+    A null gradient neither creates nor changes state.
+  basis: [T_RADAM_OPT.INIT, TS_RADAM.LAZY_STATE, TS_RADAM.STATE_KEYS, TS_RADAM.NONE, T_ZERO_GRAD.SKIP]
+- id: RA.ORDER
+  status: reviewed
+  statement: >-
+    The selected order is maximize handling, step increment, coupled gradient decay or decoupled parameter decay,
+    moment updates, first-moment correction and then the branch selected by rho at the incremented step.
+  basis: [T_RADAM_OPT.MAXIMIZE, T_RADAM_OPT.DECAY, T_RADAM_OPT.MOMENTS, TS_RADAM.STEP]
 - id: RA.THRESHOLD
-  status: drafted
-  statement: 'The rectified branch is taken iff rho_t > 5 with rho_t the exact real value for the received beta2 and the
-    new step count t = t_old + 1 (2.10 box and reference program). The RAdam paper uses a different threshold
-    (rho_t > 4); the contract follows the versioned torch documentation, the task being torch.optim.RAdam. An
-    implementation that evaluates rho_t in binary32 (compiled or capturable path, bug B012) can take the other branch
-    near the threshold; under this contract that is a deviation from the task, not an allowed reading.'
-  basis: [T_RADAM_OPT.RHO, T_RADAM_OPT.RECT, TS_RADAM.STEP]
-- id: RA.DOMAIN
-  status: drafted
-  statement: 'In the rectified branch sqrt(v_t) + eps = 0 (eps = 0 and v_t = 0) divides by zero: domain_undefined. The
-    unrectified branch has no denominator and is defined for every pre-state.'
-  basis: [T_RADAM_OPT.RECT, T_RADAM_OPT.UNRECT]
+  status: reviewed
+  statement: >-
+    This versioned PyTorch task takes the rectified branch exactly when rho_t > 5. The profile does not generalize
+    that choice to every algorithm called RAdam and does not use device-rounded rho_t as the strict-real target.
+  basis: [T_RADAM_OPT.RHO, T_RADAM_OPT.RECT, T_RADAM_OPT.UNRECT, TS_RADAM.STEP]
 clauses:
-- {id: RA.C1, basis: [T_RADAM_OPT.MAXIMIZE], statement: g = -grad if maximize else grad (first), observes: [theta, m, v],
-  evidence_kind: definition}
-- {id: RA.C2, basis: [T_RADAM_OPT.DECAY, T_RADAM_OPT.DECOUPLED_TEXT], statement: 'weight_decay != 0: decoupled ->
-    theta_t = theta_old*(1 - lr*weight_decay); otherwise g <- g + weight_decay*theta_old', observes: [theta, m, v],
-  evidence_kind: definition}
-- {id: RA.C3, basis: [T_RADAM_OPT.MOMENTS], statement: 't_new = t_old + 1; m_new, v_new as Adam; m_hat = m_new/(1 -
-    beta1**t_new)', observes: [m, v, t, theta], evidence_kind: definition}
-- {id: RA.C4, basis: [T_RADAM_OPT.INIT, T_RADAM_OPT.RHO, RA.THRESHOLD], statement: 'rho_inf = 2/(1-beta2) - 1; rho_t =
-    rho_inf - 2*t_new*beta2**t_new/(1 - beta2**t_new); rectified iff rho_t > 5', observes: [theta],
-  evidence_kind: definition}
-- {id: RA.C5, basis: [T_RADAM_OPT.RECT, RA.DOMAIN], statement: 'rectified: l = sqrt(1 - beta2**t_new)/(sqrt(v_new) +
-    eps) (uncorrected v_new), r = sqrt((rho_t-4)(rho_t-2)rho_inf/((rho_inf-4)(rho_inf-2)rho_t)), theta_new = theta_t -
-    lr*m_hat*r*l', observes: [theta], evidence_kind: definition}
-- {id: RA.C6, basis: [T_RADAM_OPT.UNRECT], statement: 'not rectified: theta_new = theta_t - lr*m_hat', observes: [theta],
-  evidence_kind: definition}
-- {id: RA.C7, basis: [T_ZERO_GRAD.SKIP], statement: 'gradient None leaves the state unchanged; a zero gradient is a full
-    step', observes: [theta, m, v, t], evidence_kind: definition}
+- {id: RA.C1, basis: [RA.STATE, TS_RADAM.LAZY_STATE], statement: 'With a present gradient, absent state first initializes m_old=v_old=0 and t_old=0; initialized state must contain both complete vectors and a nonnegative step.', observes: [m, v, t], evidence_kind: definition}
+- {id: RA.C2, basis: [T_RADAM_OPT.MAXIMIZE, T_RADAM_OPT.DECAY, RA.ORDER], statement: 'First negate the received gradient when maximize=true. With coupled decay add weight_decay*theta_old to that gradient; with decoupled decay leave the moments free of decay and set the parameter base to theta_old*(1-lr*weight_decay).', observes: [theta, m, v], evidence_kind: definition}
+- {id: RA.C3, basis: [T_RADAM_OPT.MOMENTS, TS_RADAM.STEP], statement: 'For a present gradient t_new=t_old+1, m_new=beta1*m_old+(1-beta1)*g and v_new=beta2*v_old+(1-beta2)*g^2; m_hat=m_new/(1-beta1^t_new).', observes: [m, v, t, theta], evidence_kind: definition}
+- {id: RA.C4, basis: [T_RADAM_OPT.RHO, T_RADAM_OPT.RECT, RA.THRESHOLD], statement: 'rho_inf=2/(1-beta2)-1 and rho_t=rho_inf-2*t_new*beta2^t_new/(1-beta2^t_new), evaluated from the received beta2 and incremented step; rectification is selected iff rho_t>5.', observes: [theta], evidence_kind: definition}
+- {id: RA.C5, basis: [T_RADAM_OPT.RECT, TS_RADAM.STEP], statement: 'On the rectified branch, r=sqrt((rho_t-4)(rho_t-2)rho_inf/((rho_inf-4)(rho_inf-2)rho_t)), l=sqrt(1-beta2^t_new)/(sqrt(v_new)+eps), and theta_new=base-lr*m_hat*r*l.', observes: [theta], evidence_kind: definition}
+- {id: RA.C6, basis: [T_RADAM_OPT.UNRECT, TS_RADAM.STEP], statement: 'On the unrectified branch theta_new=base-lr*m_hat, without a second-moment denominator.', observes: [theta], evidence_kind: definition}
+- {id: RA.C7, basis: [TS_RADAM.NONE, T_ZERO_GRAD.SKIP, RA.STATE], statement: 'gradient=null leaves every field unchanged and does not initialize absent state; a zero gradient performs a full step and advances the step state.', observes: [theta, m, v, t], evidence_kind: definition}
+- {id: RA.C8, basis: [TS_RADAM.VALIDATION, TS_RADAM.STRATEGIES, RA.TASK], statement: 'foreach false/true/null selects an implementation of this transition; capturable and differentiable must be false in this profile. Public scalar hyperparameter validation is enforced before evaluation.', observes: [theta, m, v, t], evidence_kind: definition}
 examples:
 - id: RA.E1
-  profile: torch210
-  clauses: [RA.C3, RA.C4, RA.C6]
-  input: {state: {theta: [1], m: [0], v: [0], t: 0}, gradient: [2], lr: 1/10, beta1: 9/10, beta2: 999/1000,
-    eps: 1/100000000, weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: value, fields: {theta: ['4/5'], m: ['1/5'], v: ['1/250'], t: 1}}
-  note: rho_1 = 1 for every beta2; theta = 1 - (1/10)*2.
+  profile: torch210_dense_real
+  clauses: [RA.C1, RA.C3, RA.C4, RA.C6]
+  input: &cold
+    state: {theta: [1], m: [], v: [], t: null}
+    gradient: [2]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 9/10
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: [4/5], m: [1], v: [2/5], t: 1}}
 - id: RA.E2
-  profile: torch210
-  clauses: [RA.C3, RA.C4, RA.C5]
-  input: {state: {theta: [1], m: [0], v: [1], t: 5}, gradient: [1], lr: 1, beta1: 1/2, beta2: 9/10, eps: 1/10,
-    weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: value, fields: {theta: [1 - 8*sqrt(1405790045870435862235)/3718862618625], m: ['1/2'], v: [1],
-      t: 6}}
-  note: rho_6 = 2525329/468559 > 5; m_hat = 32/63; l = sqrt(1-(9/10)^6)/(1+1/10).
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {<<: *cold, foreach: true, capturable: false, differentiable: false}
+  expected: {outcome: value, fields: {theta: [4/5], m: [1], v: [2/5], t: 1}}
 - id: RA.E3
-  profile: torch210
-  clauses: [RA.C4, RA.C6]
-  input: {state: {theta: [1], m: [0], v: [1], t: 4}, gradient: [1], lr: 1, beta1: 1/2, beta2: 9/10, eps: 0,
-    weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: value, fields: {theta: ['15/31'], m: ['1/2'], v: [1], t: 5}}
-  note: rho_5 = 187579/40951 (about 4.58), between 4 and 5 - not rectified.
-- id: RA.E4
-  profile: torch210
-  clauses: [RA.C4, RA.C6]
-  input: {state: {theta: [1], m: [0], v: [0], t: 4}, gradient: [1], lr: 1, beta1: 1/2, beta2: 99999/100000, eps: 0,
-    weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: value, fields: {theta: ['15/31'], m: ['1/2'], v: ['1/100000'], t: 5}}
-  note: Exact rho_5 = 4.99996 < 5 - not rectified; binary32 evaluation gives 9 (B012 mechanism).
-- id: RA.E5
-  profile: torch210
-  clauses: [RA.C2, RA.C6]
-  input: {state: {theta: [2], m: [0], v: [0], t: 0}, gradient: [1], lr: 1/10, beta1: 1/2, beta2: 9/10, eps: 0,
-    weight_decay: 1/2, decoupled: true, maximize: false}
-  expected: {outcome: value, fields: {theta: ['9/5'], m: ['1/2'], v: ['1/10'], t: 1}}
-- id: RA.E6
-  profile: torch210
-  clauses: [RA.C1, RA.C2, RA.C6]
-  input: {state: {theta: [2], m: [0], v: [0], t: 0}, gradient: [1], lr: 1/10, beta1: 1/2, beta2: 9/10, eps: 0,
-    weight_decay: 1/2, decoupled: false, maximize: true}
+  profile: torch210_dense_real
+  clauses: [RA.C2, RA.C3, RA.C6]
+  input: {state: {theta: [2], m: [0], v: [0], t: 0}, gradient: [1], lr: 1/10, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 1/2, maximize: true, decoupled_weight_decay: false}
   expected: {outcome: value, fields: {theta: [2], m: [0], v: [0], t: 1}}
-  note: g = -1 + (1/2)*2 = 0.
+- id: RA.E4
+  profile: torch210_dense_real
+  clauses: [RA.C2, RA.C3, RA.C6]
+  input: {state: {theta: [2], m: [1], v: [1], t: 1}, gradient: [1], lr: 1/10, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 1/2, maximize: false, decoupled_weight_decay: true}
+  expected: {outcome: value, fields: {theta: [53/30], m: [1], v: [1], t: 2}}
+- id: RA.E5
+  profile: torch210_dense_real
+  clauses: [RA.C2, RA.C3, RA.C6]
+  input: {state: {theta: [2], m: [1], v: [1], t: 1}, gradient: [1], lr: 1/10, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 1/2, maximize: false, decoupled_weight_decay: false}
+  expected: {outcome: value, fields: {theta: [9/5], m: [3/2], v: [13/10], t: 2}}
+- id: RA.E6
+  profile: torch210_dense_real
+  clauses: [RA.C4, RA.C6]
+  input: {state: {theta: [1], m: [0], v: [1], t: 4}, gradient: [1], lr: 1, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 0, maximize: false, decoupled_weight_decay: false}
+  expected: {outcome: value, fields: {theta: [15/31], m: [1/2], v: [1], t: 5}}
+  note: rho_5 lies between 4 and 5, so the versioned PyTorch task remains unrectified.
 - id: RA.E7
-  profile: torch210
-  clauses: [RA.C7]
-  input: {state: {theta: [1], m: [1], v: [1], t: 1}, gradient: null, lr: 1/10, beta1: 1/2, beta2: 9/10, eps: 0,
-    weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: value, fields: {theta: [1], m: [1], v: [1], t: 1}}
+  profile: torch210_dense_real
+  clauses: [RA.C3, RA.C4, RA.C5]
+  input: {state: {theta: [1], m: [0], v: [1], t: 5}, gradient: [1], lr: 1, beta1: 1/2,
+    beta2: 9/10, eps: 1/10, weight_decay: 0, maximize: false, decoupled_weight_decay: false}
+  expected: {outcome: value, fields: {theta: ['1-8*sqrt(1405790045870435862235)/3718862618625'], m: [1/2], v: [1], t: 6}}
 - id: RA.E8
-  profile: torch210
-  clauses: [RA.C5]
-  input: {state: {theta: [1], m: [1], v: [0], t: 5}, gradient: [0], lr: 1, beta1: 1/2, beta2: 9/10, eps: 0,
-    weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: domain_undefined}
+  profile: torch210_dense_real
+  clauses: [RA.C1, RA.C7]
+  input: {<<: *cold, gradient: null}
+  expected: {outcome: value, fields: {theta: [1], m: [], v: [], t: null}}
 - id: RA.E9
-  profile: torch210
-  clauses: [RA.C3, RA.C6, RA.C7]
-  input: {state: {theta: [1], m: [1], v: [1], t: 1}, gradient: [0], lr: 1/10, beta1: 1/2, beta2: 9/10, eps: 0,
-    weight_decay: 0, decoupled: false, maximize: false}
-  expected: {outcome: value, fields: {theta: ['14/15'], m: ['1/2'], v: ['9/10'], t: 2}}
-- id: RA.N1
-  profile: torch210
-  clauses: [RA.C4]
-  input: {state: {theta: [1], m: [0], v: [0], t: 0}, gradient: [1], lr: 1, beta1: 1/2, beta2: 1, eps: 0,
-    weight_decay: 0, decoupled: false, maximize: false}
+  profile: torch210_dense_real
+  clauses: [RA.C7]
+  input: {state: {theta: [1], m: [1], v: [2], t: 3}, gradient: null, lr: 1/10, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 1/2, maximize: true, decoupled_weight_decay: true}
+  expected: {outcome: value, fields: {theta: [1], m: [1], v: [2], t: 3}}
+- id: RA.E10
+  profile: torch210_dense_real
+  clauses: [RA.C3, RA.C7]
+  input: {state: {theta: [1], m: [1], v: [1], t: 1}, gradient: [0], lr: 1/10, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 0, maximize: false, decoupled_weight_decay: false}
+  expected: {outcome: value, fields: {theta: [14/15], m: [1/2], v: [9/10], t: 2}}
+- id: RA.E11
+  profile: torch210_dense_real
+  clauses: [RA.C5]
+  input: {state: {theta: [1], m: [1], v: [0], t: 5}, gradient: [0], lr: 1, beta1: 1/2,
+    beta2: 9/10, eps: 0, weight_decay: 0, maximize: false, decoupled_weight_decay: false}
+  expected: {outcome: domain_undefined}
+- id: RA.E12
+  profile: torch210_dense_real
+  clauses: [RA.C1]
+  input: {<<: *cold, state: {theta: [1], m: [], v: [], t: 0}}
   expected: {outcome: invalid_input}
+- id: RA.E13
+  profile: torch210_dense_real
+  clauses: [RA.C1]
+  input: {<<: *cold, state: {theta: [1, 2], m: [0], v: [0, 0], t: 1}, gradient: [1, 1]}
+  expected: {outcome: invalid_input}
+- id: RA.E14
+  profile: torch210_dense_real
+  clauses: [RA.C1]
+  input: {<<: *cold, state: {theta: [1], m: [0], v: [-1], t: 1}}
+  expected: {outcome: invalid_input}
+- id: RA.E15
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {<<: *cold, beta2: 1}
+  expected: {outcome: invalid_input}
+- id: RA.E16
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {<<: *cold, eps: -1}
+  expected: {outcome: invalid_input}
+- id: RA.E17
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {<<: *cold, capturable: true}
+  expected: {outcome: unsupported}
+- id: RA.E18
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {<<: *cold, differentiable: true}
+  expected: {outcome: unsupported}
+- id: RA.E19
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {<<: *cold, fused: true}
+  expected: {outcome: unsupported}
+- id: RA.E20
+  profile: torch210_dense_real
+  clauses: [RA.C2, RA.C8]
+  input: {<<: *cold, decoupled_weight_decay: 1}
+  expected: {outcome: invalid_input}
+- id: RA.E21
+  profile: torch210_dense_real
+  clauses: [RA.C1, RA.C8]
+  input: {<<: *cold, state: {theta: [], m: [], v: [], t: null}, gradient: []}
+  expected: {outcome: invalid_input}
+- id: RA.E22
+  profile: torch210_dense_real
+  clauses: [RA.C8]
+  input: {state: {theta: [1], m: [0], v: [1], t: 10000}, gradient: [1], lr: 1/10, beta1: 1/2,
+    beta2: 9/10, eps: 1/10, weight_decay: 0, maximize: false, decoupled_weight_decay: false}
+  expected: {outcome: not_established}
 signature:
-  inputs: ['gradient [d] or None', lr, beta1, beta2, eps, weight_decay, 'decoupled, maximize (booleans)']
-  pre_state: ['theta [d]', 'm [d]', 'v [d]', t nonnegative integer]
-  post_state: ['theta [d]', 'm [d]', 'v [d]', t]
-  observation_unit: one parameter tensor (flattened; element-wise update), one optimizer step
+  inputs: ['complete gradient vector or null', lr, beta1, beta2, eps, weight_decay, maximize,
+    decoupled_weight_decay, 'optional foreach/capturable/differentiable']
+  pre_state: ['complete theta vector', 'complete m/v and t, or m=v=[] and t=null for absent state']
+  post_state: ['complete theta, m, v and t including explicit absence']
+  observation_unit: one dense real parameter tensor and all its optimizer state across one public RAdam step
 domain:
-  valid: [d >= 1, finite rationals, v >= 0, '0 <= beta1, beta2 < 1', 'lr, eps, weight_decay >= 0']
-  domain_undefined: ['rectified branch with sqrt(v_new) + eps = 0']
-  invalid_input: [length mismatch, negative v, 'beta outside [0, 1)', NaN or infinite values, non-boolean options]
-  unsupported: [sparse gradients, complex parameters, differentiable=True]
+  valid: [d >= 1, finite exact rational values, initialized complete state or explicit absent state,
+    v/lr/eps/weight_decay >= 0, '0 <= beta1,beta2 < 1', Boolean maximize/decoupled_weight_decay,
+    foreach false/true/null, capturable=false, differentiable=false]
+  domain_undefined: ['rectified branch with sqrt(v_new)+eps=0']
+  invalid_input: [missing fields, incomplete or extra state fields, state length mismatch, negative second moment,
+    nonfinite values, non-Boolean flags, invalid public scalar hyperparameters]
+  unsupported: [undeclared top-level task fields, sparse or complex gradients, tensor learning rate,
+    capturable or differentiable execution, closure and loss result, internal functional call,
+    multiple parameters or parameter groups, device rounding and layouts]
 mutation_requirements:
-- {id: RA.M1, misreading: 'rho_t evaluated in binary32 (B012: compiled / capturable path), threshold flips near rho_t = 5',
-  witnesses: [RA.E4]}
-- {id: RA.M2, misreading: threshold rho_t > 4 (paper) instead of > 5 (torch 2.10), witnesses: [RA.E3]}
-- {id: RA.M3, misreading: adaptive Adam step at every step (no rectification switch), witnesses: [RA.E1, RA.E3]}
-- {id: RA.M4, misreading: 'l computed from the bias-corrected v_hat (1/(sqrt(v_hat)+eps)), eps position changed',
-  witnesses: [RA.E2]}
-- {id: RA.M5, misreading: decoupled_weight_decay flag inverted, witnesses: [RA.E5, RA.E6]}
-- {id: RA.M6, misreading: maximize negates after the L2 term, witnesses: [RA.E6]}
-- {id: RA.M7, misreading: None gradient treated as zero, witnesses: [RA.E7]}
+- {id: RA.M1, misreading: rectify when rho_t is greater than 4 instead of the versioned PyTorch threshold 5, witnesses: [RA.E6]}
+- {id: RA.M2, misreading: use an adaptive second-moment denominator from the first step, witnesses: [RA.E1]}
+- {id: RA.M3, misreading: omit first-moment bias correction, witnesses: [RA.E1]}
+- {id: RA.M4, misreading: omit the sqrt(1-beta2^t) factor on the rectified branch, witnesses: [RA.E7]}
+- {id: RA.M5, misreading: place eps inside the square root, witnesses: [RA.E7]}
+- {id: RA.M6, misreading: invert coupled and decoupled weight decay, witnesses: [RA.E4, RA.E5]}
+- {id: RA.M7, misreading: negate maximize after adding coupled weight decay, witnesses: [RA.E3]}
+- {id: RA.M8, misreading: treat a null gradient as a zero gradient, witnesses: [RA.E8, RA.E9]}
+- {id: RA.M9, misreading: use the old step in rho and bias corrections, witnesses: [RA.E6, RA.E7]}
+- {id: RA.M10, misreading: update theta but leave optimizer state unchanged, witnesses: [RA.E1, RA.E7]}
+- {id: RA.M11, misreading: add coupled decay only after moment statistics are updated, witnesses: [RA.E3, RA.E5]}
 nonclaims:
-- Device rounding is not judged here (K - f). A binary32 evaluation of rho_t (bug B012, tolerance study mechanism B) is
-  measured against this exact target; the size of that deviation is an empirical result, not part of the contract.
-- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+- This profile specifies the versioned public PyTorch task. It does not claim that every algorithm named RAdam uses the same branch threshold or decay convention.
+- Device rounding, including a device-rounded rho value near the branch boundary, is measured separately as K-f and is not built into the strict-real target.
+- Exact exponent evaluation above step 10000 is refused as not_established; that resource limit is not a mathematical claim about RAdam.
+- Rejected mutants witness listed mistakes only and do not prove completeness.
 changes: []

@@ -283,10 +283,14 @@ def sqrt(x):
     x = R(x)
     if x.v == POS:
         return R(POS)
-    s = x.sign()
-    if s < 0:
+    if x.v == NEG:
         raise Undefined("sqrt of a negative number")
-    if s == 0:
+    a, b = x.bounds()
+    if b < 0:
+        raise Undefined("sqrt of a negative number")
+    if a < 0:
+        raise NotEstablished("sqrt enclosure includes both negative and nonnegative values")
+    if b == 0:
         return R(0)
     if isinstance(x.v, Fraction):
         n, d = x.v.numerator, x.v.denominator

@@ -1,0 +1,132 @@
+schema_version: '1.2'
+id: INDEXREDUCE
+role: INDEXREDUCE
+title: Exact finite out-of-place index-add forward values
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 default functional index_add forward values on physical finite floating tensors and int64 indices
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.index_add, torch.index_add]
+profiles:
+  finite_index_add_values:
+    meaning: >-
+      Complete out-of-place index_add forward values on positive rank-1 through rank-4 physical finite f16, bf16,
+      f32 or f64 tensors. The index is a nonempty int64 vector, source has the required shape, and alpha is finite and
+      exactly representable in the tensor dtype. Repeated indices contribute repeatedly to the same output slice.
+    task_choice_required: false
+    basis: [IR2.SCHEMA, IR2.PHYSICAL, IR2.FORMULA]
+outputs:
+  out:
+    shape: the complete self shape
+    guarantee: exact
+comparison:
+  input_binding: >-
+    Self and source records contain the exact physical values received in their common declared dtype. The index
+    record contains literal int64 values. Dimension and alpha are explicit call arguments.
+  complete_output: The complete returned tensor is observed with dtype, explicit shape and every value.
+  quality: Exact finite-real task value, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent coordinate construction and PyTorch 2.10 comparisons over all selected floating dtypes.
+  error_handling: Malformed calls, dimensions, shapes or ranges are invalid_input; mutation, other reductions, special
+    values, unselected dtypes or ranks and unrepresentable alpha receive no reference answer.
+decisions:
+- id: IR2.SCHEMA
+  status: reviewed
+  statement: >-
+    Select only the default out-of-place functional index_add schema returning one tensor. The out overload, in-place
+    index_add_, index_reduce, scatter_reduce and backward are different tasks and are outside this profile.
+  basis: [TS_NATIVE_FUNCTIONS.INDEX_REDUCE_SCHEMAS]
+- id: IR2.PHYSICAL
+  status: reviewed
+  statement: >-
+    Self and source are positive rank-1 through rank-4 finite f16, bf16, f32 or f64 physical tensors with a common
+    dtype and exactly representable listed values. Index is a nonempty one-dimensional int64 tensor. Alpha is finite
+    and exactly representable in the common floating dtype. Special values, signed-zero distinctions, empty tensors,
+    integer or complex data and other index dtypes are outside the reviewed profile.
+  basis: [T_INDEX_ADD.DEF, TS_NATIVE_FUNCTIONS.INDEX_REDUCE_SCHEMAS]
+- id: IR2.FORMULA
+  status: reviewed
+  statement: >-
+    Start from every self value. For source slice i along dim, add alpha times that complete source slice to output
+    slice index[i]. The source length along dim equals the index length and all other source dimensions equal self.
+    Repeated indices add every listed contribution; negative dim is normalized by the tensor rank.
+  basis: [T_INDEX_ADD.DEF, TS_NATIVE_FUNCTIONS.INDEX_REDUCE_SCHEMAS]
+clauses:
+- id: IR2.C1
+  basis: [IR2.SCHEMA, IR2.PHYSICAL]
+  statement: Every selected call has same-dtype physical finite self and source tensors, one int64 index vector, one integer dimension and one exactly representable finite alpha; all inputs are unchanged.
+  observes: [out]
+  evidence_kind: definition
+- id: IR2.C2
+  basis: [T_INDEX_ADD.DEF, IR2.FORMULA]
+  statement: Every source slice i contributes alpha times its values to output slice index[i], starting from self; duplicate indices retain all contributions.
+  observes: [out]
+  evidence_kind: definition
+- id: IR2.C3
+  basis: [T_INDEX_ADD.DEF, IR2.FORMULA]
+  statement: Source matches self outside dim and has index length along dim; index values are nonnegative and smaller than self size along dim.
+  observes: [out]
+  evidence_kind: definition
+- id: IR2.C4
+  basis: [IR2.SCHEMA, IR2.PHYSICAL]
+  statement: In-place, out, index_reduce, scatter_reduce, backward, special values, signed-zero distinctions, unselected ranks or dtypes and unrepresentable alpha receive no reference answer.
+  observes: [out]
+  evidence_kind: definition
+examples:
+- {id: IR2.E1, profile: finite_index_add_values, clauses: [IR2.C1, IR2.C2], input: {op: aten.index_add, args: [{t: f32, v: [1, 1, 1]}, 0, {t: i64, v: [0, 2, 0]}, {t: f32, v: [1, 2, 3]}], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [9, 1, 5]}}}
+- id: IR2.E2
+  profile: finite_index_add_values
+  clauses: [IR2.C2, IR2.C3]
+  input: {op: torch.index_add, args: [{t: f64, v: [[1, 2], [3, 4], [5, 6]]}, 0, {t: i64, v: [2, 0]}, {t: f64, v: [[10, 20], [1, 2]]}], kwargs: {alpha: '1/2'}}
+  expected: {outcome: value, fields: {out: [['3/2', 3], [3, 4], [10, 16]]}}
+- {id: IR2.E3, profile: finite_index_add_values, clauses: [IR2.C2, IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [[1, 2], [3, 4]]}, 1, {t: i64, v: [1, 0]}, {t: f32, v: [[10, 20], [30, 40]]}], kwargs: {alpha: -1}}, expected: {outcome: value, fields: {out: [[-19, -8], [-37, -26]]}}}
+- {id: IR2.E4, profile: finite_index_add_values, clauses: [IR2.C2], input: {op: torch.index_add, args: [{t: bf16, v: [2, 4]}, 0, {t: i64, v: [1, 1]}, {t: bf16, v: [6, -2]}]}, expected: {outcome: value, fields: {out: [2, 8]}}}
+- {id: IR2.E5, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f16, v: [[1, 2, 3], [4, 5, 6]]}, -1, {t: i64, v: [1, 0]}, {t: f16, v: [[10, 20], [30, 40]]}]}, expected: {outcome: value, fields: {out: [[21, 12, 3], [44, 35, 6]]}}}
+- {id: IR2.E6, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0, 1]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E7, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [[0]]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E8, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [-1]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E9, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [2]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E10, profile: finite_index_add_values, clauses: [IR2.C3], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 1, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E11, profile: finite_index_add_values, clauses: [IR2.C1], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, true, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E12, profile: finite_index_add_values, clauses: [IR2.C1], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}], kwargs: {alpha: true}}, expected: {outcome: invalid_input}}
+- {id: IR2.E13, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: i64, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: i64, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E14, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i32, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E15, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, inf]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E16, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [-0.0, 1]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- {id: IR2.E17, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: ['1/3', 1]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}]}, expected: {outcome: invalid_input}}
+- {id: IR2.E18, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}], kwargs: {alpha: inf}}, expected: {outcome: unsupported}}
+- {id: IR2.E19, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_add, args: [{t: f32, v: [1, 2]}, 0, {t: i64, v: [0]}, {t: f32, v: [3]}], kwargs: {alpha: '1/3'}}, expected: {outcome: unsupported}}
+- {id: IR2.E20, profile: finite_index_add_values, clauses: [IR2.C4], input: {op: aten.index_reduce, args: [{t: f32, v: [1]}, 0, {t: i64, v: [0]}, {t: f32, v: [2]}, prod]}, expected: {outcome: unsupported}}
+signature:
+  inputs: [selected functional index_add operation, same-dtype physical finite self and source tensors, one int64 index vector, integer dimension and exactly representable finite alpha]
+  pre_state: [self, source and index are unchanged]
+  post_state: [one complete newly returned tensor]
+  observation_unit: every returned coordinate together with dtype and shape
+domain:
+  valid: [positive rank-1 through rank-4 physical finite f16/bf16/f32/f64 self and source, nonempty int64 index vector, valid dimension and shapes, finite representable alpha]
+  invalid_input: [malformed record, noninteger or out-of-range dimension, wrong source or index shape, out-of-range index, unrepresentable physical tensor value, nonnumeric alpha]
+  unsupported: [in-place or out overload, index_reduce, scatter_reduce, backward, special values, signed-zero distinctions, empty tensors, other ranks or dtypes, unrepresentable alpha]
+mutation_requirements:
+- {id: IR2.M1, misreading: ignore alpha, witnesses: [IR2.E1]}
+- {id: IR2.M2, misreading: replace the target slice instead of adding to self, witnesses: [IR2.E1]}
+- {id: IR2.M3, misreading: use index to select source values and update target slices in order, witnesses: [IR2.E1]}
+- {id: IR2.M4, misreading: always use dimension zero, witnesses: [IR2.E3]}
+- {id: IR2.M5, misreading: keep only the last contribution for a repeated index, witnesses: [IR2.E1]}
+- {id: IR2.M6, misreading: add one to every target index with wraparound, witnesses: [IR2.E1]}
+nonclaims:
+- No result is certified for mutation, out tensors, gradients, index_reduce, scatter_reduce, special values, empty tensors, integer data, other index dtypes, layouts, aliasing or device placement.
+- Exact real addition does not claim a device accumulation order for duplicate indices; floating execution remains part of K−Gπ.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the broad value, VJP and tie-set draft for index_add, index_reduce and scatter_reduce with one reviewed
+    out-of-place index_add forward-values profile. Preserve the former contract and adapter under contracts/draft.
+  trigger: >-
+    The broad draft mixed mutation, several reduction identities, tied-extremum gradient choices and allowed sets.
+    Ordinary index_add values have a direct documented formula and can be bound without those unresolved choices.

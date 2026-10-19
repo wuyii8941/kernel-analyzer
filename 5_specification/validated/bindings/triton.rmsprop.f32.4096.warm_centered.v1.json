@@ -1,0 +1,56 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.rmsprop.f32.4096.warm_centered.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 warm-state centered RMSprop transition",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "two launches: sixteen Triton programs update every parameter and optimizer-vector coordinate, then one Triton program increments the scalar step",
+    "measure_call": "../calls/triton_rmsprop.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "one_parameter_rmsprop_step",
+      "contract": "RMSPROP",
+      "profile": "torch210_dense_real",
+      "task_statement": "Perform one complete public torch.optim.RMSprop transition on one received dense float32 parameter with existing square average, centered gradient average and momentum buffer at step 4, using maximize and coupled decay, and return every post-state at step 5.",
+      "input_map": [
+        {"target": "/state/theta", "source": "/tensor_arguments/theta/before", "conversion": "tensor_values"},
+        {"target": "/state/v", "source": "/tensor_arguments/v/before", "conversion": "tensor_values"},
+        {"target": "/state/gave", "source": "/tensor_arguments/gave/before", "conversion": "tensor_values"},
+        {"target": "/state/b", "source": "/tensor_arguments/b/before", "conversion": "tensor_values"},
+        {"target": "/state/t", "source": "/tensor_arguments/t/before", "conversion": "tensor_values"},
+        {"target": "/gradient", "source": "/tensor_arguments/gradient/before", "conversion": "tensor_values"},
+        {"target": "/lr", "literal": 0.125, "basis": "the kernel uses the exact binary value 0.125"},
+        {"target": "/alpha", "literal": 0.75, "basis": "the kernel uses the exact binary square-average coefficient 0.75"},
+        {"target": "/eps", "literal": 0.25, "basis": "the kernel adds the exact binary value 0.25 after sqrt"},
+        {"target": "/weight_decay", "literal": 0.25, "basis": "the kernel adds the exact binary coupled L2 term 0.25*theta"},
+        {"target": "/momentum", "literal": 0.5, "basis": "the kernel retains half the old momentum buffer"},
+        {"target": "/centered", "literal": true, "basis": "the kernel subtracts the square of the updated gradient average"},
+        {"target": "/maximize", "literal": true, "basis": "the kernel negates the received gradient before coupled decay"},
+        {"target": "/foreach", "literal": false, "basis": "the bound task is one complete parameter transition"},
+        {"target": "/capturable", "literal": false, "basis": "the selected task fixes a noncapturable public transition"},
+        {"target": "/differentiable", "literal": false, "basis": "the selected task is nondifferentiable"}
+      ],
+      "output_map": [
+        {"target": "/theta", "source": "/tensor_arguments/theta/after", "conversion": "tensor_values", "measure_output": "theta"},
+        {"target": "/v", "source": "/tensor_arguments/v/after", "conversion": "tensor_values", "measure_output": "v"},
+        {"target": "/gave", "source": "/tensor_arguments/gave/after", "conversion": "tensor_values", "measure_output": "gave"},
+        {"target": "/b", "source": "/tensor_arguments/b/after", "conversion": "tensor_values", "measure_output": "b"},
+        {"target": "/t", "source": "/tensor_arguments/t/after", "conversion": "tensor_values", "measure_output": "t"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "theta", "effect": "output", "task": "one_parameter_rmsprop_step", "target": "/theta"},
+    {"argument": "gradient", "effect": "unchanged"},
+    {"argument": "v", "effect": "output", "task": "one_parameter_rmsprop_step", "target": "/v"},
+    {"argument": "gave", "effect": "output", "task": "one_parameter_rmsprop_step", "target": "/gave"},
+    {"argument": "b", "effect": "output", "task": "one_parameter_rmsprop_step", "target": "/b"},
+    {"argument": "t", "effect": "output", "task": "one_parameter_rmsprop_step", "target": "/t"}
+  ]
+}

@@ -1,0 +1,178 @@
+schema_version: '1.2'
+id: SOFTMAX
+role: SOFTMAX
+title: Softmax, log-softmax, safe softmax, their backward operations and Inductor's prepare_softmax_online
+review:
+  status: reviewed_for_implementation
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-19'
+  reviewer: Codex independent source, formula, domain and complete-output review
+  scope: Real-number values of the documented operations; device rounding and concrete kernel binding remain separate
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/softmax_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten._softmax, aten._log_softmax, aten._safe_softmax, aten._softmax_backward_data, aten._log_softmax_backward_data, vjp.aten.softmax,
+  prims.prepare_softmax_online]
+profiles:
+  real:
+    meaning: Softmax along dim of exact real inputs (with -inf for masked entries); results are rigorous enclosures,
+      exact where rational (e.g. equal entries give 1/n). The original-input public softmax VJP accepts finite
+      same-dtype logits and an explicit matching finite upstream, with no output dtype conversion.
+    task_choice_required: false
+outputs:
+  out:
+    shape: per operation; prepare_softmax_online returns two tensors with the reduced dim kept
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Tensor values are the exact values received.
+  complete_output: >-
+    check_output requires {out: tensor_record}, or {out: [maximum_record, mass_record]}
+    for prepare_softmax_online. Every tensor record contains t (dtype), v (values),
+    and shape (explicit nonnegative integer extents). Shape and dtype are compared
+    before values, including empty tensors. This is a supplied-task comparison,
+    not evidence that a real kernel has been bound to the task.
+  equality: >-
+    Exact finite values and declared infinities are compared exactly. A candidate
+    inside a nonpoint enclosure is not proven equal. All coordinates participate;
+    an unresolved coordinate does not hide another coordinate's contradiction.
+  quality: No tolerance.
+  test_evidence: Containment of the exact expected values in the reference enclosures.
+  error_handling: A row whose entries are all -inf (or contain +inf) has no softmax; domain_undefined except for
+    _safe_softmax, which documents zeros.
+decisions:
+- id: SM.PUBLIC_VJP
+  status: reviewed
+  statement: >-
+    vjp.aten.softmax(g,x,dim) differentiates the public softmax task from original finite logits x.
+    With p_i=exp(x_i)/sum_j exp(x_j), the Jacobian is J_ij=p_i*(delta_ij-p_j), giving
+    dx_j=p_j*(g_j-sum_i g_i*p_i). The reference independently computes p from x and propagates
+    its rigorous enclosures through the VJP; it never substitutes an observed candidate output.
+    Input and upstream must have identical shape and floating dtype. Special values and public
+    dtype conversion are outside this VJP range. The existing saved-output backward task remains distinct.
+  basis: [T_SOFTMAX.DEF, TS_DECOMP.SOFTMAX_BWD]
+- id: SM.TYPES
+  status: reviewed
+  statement: >-
+    _softmax and _log_softmax require floating inputs. half_to_float is a boolean;
+    it must be explicitly supplied at the ATen entry; true requires f16 input and selects f32 output. The real profile does not round
+    ordinary operation results to their output dtype. _safe_softmax accepts an optional
+    floating dtype and converts the input before evaluating the formula; its all-masked
+    predicate uses the original input. Conversion overflow does not create an originally
+    masked row. Backward operations require gradient and forward output tensors of
+    identical shape and floating dtype, one integer dim, and an explicit floating
+    input_dtype. The returned real derivative carries input_dtype without internal
+    output rounding. An explicit conversion node in the task graph is evaluated
+    separately; this profile is not the bitwise result of a native backward kernel.
+  basis: [TS_DECOMP.SOFTMAX_TYPES, TS_DECOMP.SOFTMAX_BWD, TS_DECOMP.LOG_SOFTMAX_BWD,
+    T_SOFTMAX.DEF, TS_ATTN_CPP.SAFE_SOFTMAX]
+- id: SM.MASKED_ROW
+  status: reviewed
+  statement: 'Softmax and log-softmax of a row whose entries are all -inf are 0/0: domain_undefined (devices return NaN,
+    zeros or garbage; none is demanded). _safe_softmax defines that row as zeros (its decomposition), so there the
+    zeros are the value. A row containing +inf is domain_undefined. Entries equal to -inf in a row with a finite
+    entry get probability 0 (the limit).'
+  basis: [T_SOFTMAX.DEF, TS_ATTN_CPP.SAFE_SOFTMAX]
+- id: SM.PSO_MASKED
+  status: reviewed
+  statement: prepare_softmax_online of an all -inf row computes exp(-inf - (-inf)); the real target is undefined
+    (domain_undefined).
+  basis: [TS_INDUCTOR_PRIMS.PSO]
+clauses:
+- {id: SM.C7, basis: [SM.PUBLIC_VJP], statement: 'The complete original-input VJP is p*(g-sum(g*p,dim)), with p independently computed from x.', observes: [out], evidence_kind: derived}
+- {id: SM.C1, basis: [T_SOFTMAX.DEF, SM.MASKED_ROW], statement: 'softmax = exp(x_i) / sum_j exp(x_j) along dim; -inf
+    entries get 0', observes: [out], evidence_kind: definition}
+- {id: SM.C2, basis: [T_LOG_SOFTMAX.DEF, SM.MASKED_ROW], statement: 'log_softmax = x_i - log sum_j exp(x_j) along dim',
+  observes: [out], evidence_kind: definition}
+- {id: SM.C3, basis: [TS_ATTN_CPP.SAFE_SOFTMAX, SM.MASKED_ROW, SM.TYPES], statement: _safe_softmax = softmax with originally all -inf rows set to 0,
+  observes: [out], evidence_kind: definition}
+- {id: SM.C4, basis: [TS_DECOMP.SOFTMAX_BWD, T_SOFTMAX.DEF], statement: '_softmax_backward_data(g, y) = y*g - y * sum(y*g)
+    along dim (the VJP of softmax)', observes: [out], evidence_kind: definition}
+- {id: SM.C5, basis: [TS_DECOMP.LOG_SOFTMAX_BWD, T_LOG_SOFTMAX.DEF], statement: '_log_softmax_backward_data(g, y) = g -
+    exp(y) * sum(g) along dim', observes: [out], evidence_kind: definition}
+- {id: SM.C6, basis: [TS_INDUCTOR_PRIMS.PSO, SM.PSO_MASKED], statement: 'prepare_softmax_online(x, dim) = (amax(x, dim,
+    keepdim), sum(exp(x - amax), dim, keepdim))', observes: [out], evidence_kind: definition}
+examples:
+- {id: SM.E13, profile: real, clauses: [SM.C7], input: {op: vjp.aten.softmax, args: [{t: f32, v: [[1, 0]]}, {t: f32, v: [[0, 0]]}, 1]}, expected: {outcome: value, fields: {out: [['1/4', '-1/4']]}}}
+- {id: SM.E14, profile: real, clauses: [SM.C7], input: {op: vjp.aten.softmax, args: [{t: f32, v: [[1, 2], [0, 0]]}, {t: f32, v: [[0, 0], [0, 0]]}, 0]}, expected: {outcome: value, fields: {out: [['1/4', '1/2'], ['-1/4', '-1/2']]}}}
+- {id: SM.E15, profile: real, clauses: [SM.C7], input: {op: vjp.aten.softmax, args: [{t: f32, v: [1, 0]}, {t: f32, v: [[0, 0]]}, 1]}, expected: {outcome: invalid_input}}
+- {id: SM.E16, profile: real, clauses: [SM.C7], input: {op: vjp.aten.softmax, args: [{t: f32, v: [[1, 0]]}, {t: f32, v: [[0, -inf]]}, 1]}, expected: {outcome: unsupported}}
+- {id: SM.E1, profile: real, clauses: [SM.C1], input: {op: aten._softmax, args: [{t: f32, v: [[0, 0], [0, 1]]}, 1, false]},
+  expected: {outcome: value, fields: {out: [['1/2', '1/2'], [1/(1+exp(1)), exp(1)/(1+exp(1))]]}}}
+- {id: SM.E2, profile: real, clauses: [SM.C1], input: {op: aten._softmax, args: [{t: f32, v: [[1, -inf, 1]]}, 1, false]}, expected: {
+    outcome: value, fields: {out: [['1/2', 0, '1/2']]}}}
+- {id: SM.E3, profile: real, clauses: [SM.C1], input: {op: aten._softmax, args: [{t: f32, v: [[-inf, -inf]]}, 1, false]}, expected: {
+    outcome: domain_undefined}}
+- {id: SM.E4, profile: real, clauses: [SM.C1], input: {op: aten._softmax, args: [{t: f32, v: [[0, 1], [0, 2]]}, 0, false]}, expected: {
+    outcome: value, fields: {out: [['1/2', 1/(1+exp(1))], ['1/2', exp(1)/(1+exp(1))]]}}}
+- {id: SM.E5, profile: real, clauses: [SM.C2], input: {op: aten._log_softmax, args: [{t: f32, v: [[0, 0, 0], [1, -inf, 1]]}, 1,
+      false]}, expected: {outcome: value, fields: {out: [[-log(3), -log(3), -log(3)], [-log(2), -inf, -log(2)]]}}}
+- {id: SM.E6, profile: real, clauses: [SM.C2], input: {op: aten._log_softmax, args: [{t: f32, v: [[-inf, -inf]]}, 1, false]},
+  expected: {outcome: domain_undefined}}
+- {id: SM.E7, profile: real, clauses: [SM.C3], input: {op: aten._safe_softmax, args: [{t: f32, v: [[-inf, -inf], [0, -inf]]}, 1]},
+  expected: {outcome: value, fields: {out: [[0, 0], [1, 0]]}}}
+- {id: SM.E8, profile: real, clauses: [SM.C4], input: {op: aten._softmax_backward_data, args: [{t: f32, v: [[1, 0]]}, {t: f32,
+        v: [['1/4', '3/4']]}, 1, f32]}, expected: {outcome: value, fields: {out: [['3/16', '-3/16']]}}, note: 'y*g = [1/4, 0],
+    sum 1/4; y*g - y/4 = [1/4 - 1/16, -3/16].'}
+- {id: SM.E9, profile: real, clauses: [SM.C5], input: {op: aten._log_softmax_backward_data, args: [{t: f32, v: [[1, 2]]}, {t: f32,
+        v: [[0, -inf]]}, 1, f32]}, expected: {outcome: value, fields: {out: [[-2, 2]]}}, note: 'exp(y) = [1, 0], sum g = 3; g -
+    exp(y) * 3 = [1 - 3, 2 - 0].'}
+- {id: SM.E10, profile: real, clauses: [SM.C6], input: {op: prims.prepare_softmax_online, args: [{t: f32, v: [[0, 1], [2, 2]]},
+      1]}, expected: {outcome: value, fields: {out: [[[1], [2]], [[1+exp(-1)], [2]]]}}}
+- {id: SM.E11, profile: real, clauses: [SM.C6], input: {op: prims.prepare_softmax_online, args: [{t: f32, v: [[-inf, -inf]]},
+      1]}, expected: {outcome: domain_undefined}}
+- {id: SM.E12, profile: real, clauses: [SM.C1], input: {op: aten._softmax, args: [{t: f32, v: [], shape: [3, 0]}, -1, false]},
+  expected: {outcome: value, fields: {out: [[], [], []]}}, note: Softmax over an empty dimension is the empty tensor.}
+signature:
+  inputs: ['op: one of the covered names', 'args as in ATen: (input, dim, half_to_float) / (grad, output, dim, input_dtype) / (input, dim, optional dtype) for _safe_softmax / (input, dim) for prepare_softmax_online; derived public VJP takes (grad, original_input, dim)']
+  pre_state: []
+  post_state: []
+  observation_unit: the result tensor(s) of one operation
+domain:
+  valid: [exact real values and -inf entries]
+  domain_undefined: [rows that are all -inf (except _safe_softmax), rows containing +inf]
+  invalid_input: [NaN values, dim out of range, noninteger online-softmax dim, backward gradient and output shape or dtype mismatch,
+    missing or nonfloating backward input_dtype, noninteger backward dim]
+  unsupported: [special values or output dtype conversion in the original-input public softmax VJP]
+mutation_requirements:
+- {id: SM.M8, misreading: use original logits as saved probabilities in the public VJP, witnesses: [SM.E13]}
+- {id: SM.M9, misreading: omit the coupling sum in the public VJP, witnesses: [SM.E13]}
+- {id: SM.M10, misreading: take the public VJP along the last axis regardless of dim, witnesses: [SM.E14]}
+- {id: SM.M1, misreading: softmax along the wrong dim (always the last), witnesses: [SM.E4]}
+- {id: SM.M2, misreading: an all -inf row gives a uniform distribution, witnesses: [SM.E3]}
+- {id: SM.M3, misreading: '-inf entries treated as 0 logits', witnesses: [SM.E2]}
+- {id: SM.M4, misreading: softmax backward without the sum term (g * y), witnesses: [SM.E8]}
+- {id: SM.M5, misreading: 'log_softmax backward uses y instead of exp(y)', witnesses: [SM.E9]}
+- {id: SM.M6, misreading: prepare_softmax_online returns sum exp(x) without subtracting the max, witnesses: [SM.E10]}
+- {id: SM.M7, misreading: _safe_softmax leaves masked rows undefined, witnesses: [SM.E7]}
+nonclaims:
+- How a kernel stabilises the computation (max subtraction, online rescaling) is numerical (K - G).
+changes:
+- date: '2026-10-19'
+  change: Added finite original-input public softmax VJP, retaining independent forward enclosures through the derivative.
+  trigger: External attorch public-call trial required an end-to-end gradient, not a saved-output backward conditional on candidate values.
+- date: '2026-10-18'
+  change: >-
+    Added complete-output comparison retaining dtype, explicit shape and both online
+    outputs. Declared infinities are supported without finite substitutes; interval
+    compatibility does not establish equality. Unknown profiles are refused by the
+    development reference as well as the runtime entry.
+  trigger: >-
+    Plain nested lists lose empty tensor dimensions, and the existing finite-output
+    comparator could not handle masked log probabilities. Regressions are in
+    tests/test_softmax_output_membership.py and test_enclosed_output_membership.py.
+- date: '2026-10-18'
+  change: >-
+    Forward and backward dtype arguments are validated and retained; safe-softmax casts
+    inputs before its formula and masks using original inputs. Online preparation accepts
+    one integer axis. Log-softmax subtracts the exact row maximum before enclosure arithmetic
+    to avoid losing precision under a common large translation. NaN input is invalid_input.
+  trigger: >-
+    Re-reading TS_DECOMP and TS_ATTN_CPP exposed ignored arguments; independent Arb binary
+    logistic and dense-Jacobian checks plus malformed-input tests exposed remaining gaps.
+    Evidence: tests/test_softmax_independent.py, test_softmax_domains.py and
+    test_softmax_backward_domains.py. These checks do not establish kernel binding.
+- {date: '2026-10-17', change: 'softmax / log_softmax over an empty dimension give the empty tensor (example SM.E12)', trigger:
+    'replay of the essential-round reductions conditions (V3): empty-extent softmax raised an implementation error'}

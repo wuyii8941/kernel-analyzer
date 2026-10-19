@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 public Tensor-list torch.cat with complete ordered VJPs for every input tensor",
+  "reference": "Cross-check the versioned PyTorch 2.10 public call against LAYOUT.torch210_cat_autograd, whose coordinate copy and upstream partition are evaluated independently with exact rational values",
+  "limits": "The batch excludes out, named dimensions, mixed dtypes, special values, scalar tensors and storage or aliasing claims. Every execution failure, missing input gradient, missing Triton phase and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261911, 20261912],
+    "cases": [
+      {"id": "cat_rows_two", "shapes": [[2, 7], [3, 7]], "dim": 0},
+      {"id": "cat_columns_three", "shapes": [[3, 1], [3, 4], [3, 2]], "dim": 1},
+      {"id": "cat_five_inputs", "shapes": [[2, 1, 5], [2, 2, 5], [2, 3, 5], [2, 1, 5], [2, 2, 5]], "dim": 1},
+      {"id": "cat_documented_empty", "shapes": [[0], [2, 3, 4], [2, 1, 4]], "dim": 1},
+      {"id": "cat_noncontiguous", "shapes": [[2, 3, 5], [2, 3, 2]], "dim": -1, "noncontiguous": [true, true]}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "seeds": [20261913, 20261914],
+    "cases": [
+      {"id": "cat_heldout_rank4", "shapes": [[2, 1, 3, 5], [2, 4, 3, 5], [2, 2, 3, 5]], "dim": -3},
+      {"id": "cat_heldout_six_inputs", "shapes": [[1, 4], [2, 4], [3, 4], [1, 4], [2, 4], [4, 4]], "dim": 0},
+      {"id": "cat_heldout_zero_width", "shapes": [[3, 2, 0], [3, 2, 5], [3, 2, 1]], "dim": 2},
+      {"id": "cat_heldout_empty_rank3", "shapes": [[4, 2, 3], [0], [4, 5, 3]], "dim": 1},
+      {"id": "cat_heldout_noncontiguous", "shapes": [[3, 4, 7], [3, 4, 3], [3, 4, 2]], "dim": -1, "noncontiguous": [true, false, true]}
+    ]
+  },
+  "selection_note": "Both implementations, all cases, tensor counts, shapes, dimensions, empty-input positions, layouts and seeds were fixed before candidate execution. The acceptance split uses another implementation and unseen ranks, dimensions, tensor counts, zero-width positions and noncontiguous combinations."
+}

@@ -1,0 +1,174 @@
+schema_version: '1.2'
+id: OPT4BIT
+role: OPTIMIZER_STATE_QUANTIZATION
+title: torchao 0.16.0 with PyTorch 2.10 OptimState4bit float32 state copy with complete tensor storage
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, source and physical-state review
+  date: '2026-10-19'
+  scope: One-dimensional finite normal-or-zero float32 source copied into a canonical OptimState4bit with even complete blocks
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- torchao 0.16.0 OptimState4bit.zeros(...).copy_(src), including every packed code, block scale and qmap value
+profiles:
+  torchao016_state_copy_f32:
+    meaning: >-
+      Flatten a finite physical float32 source into complete even blocks, compute one float32 absmax scale per block
+      with the released 1e-12 floor, normalize in float32, select the nearest canonical 4-bit qmap entry with
+      upward midpoint ties, and pack the earlier element into the high nibble of each byte.
+    task_choice_required: false
+    basis: [Q4.TASK, Q4.STATE, Q4.ROUND]
+outputs:
+  codes: {shape: '[numel/2] uint8 packed storage', guarantee: exact}
+  scale: {shape: '[numel/block_size] float32 block scales', guarantee: exact}
+comparison:
+  input_binding: >-
+    src and qmap are one-dimensional physical float32 tensors; signed and even block_size are explicit. The complete
+    qmap must equal the canonical table created by OptimState4bit.zeros. Every nonzero source and normalized value
+    must be normal float32.
+  complete_output: >-
+    All bytes and scales are required. The complete canonical qmap, signedness, logical shape and block size are
+    mandatory pre-state binding conditions and must remain unchanged. Comparing only dequantized values is incomplete
+    because state_dict retains the tensor subclass and this physical representation.
+  quality: Exact equality of values, dtypes and shapes; no tolerance.
+  test_evidence: >-
+    Independent rational/IEEE-754 evaluation, fixed packing examples, complete-output and rejection checks, and
+    coordinate-wise comparison with installed torchao 0.16.0 on CPU and CUDA.
+  error_handling: >-
+    Malformed structure and nonphysical float32 values are invalid_input. Other dtypes, replacement qmaps, negative
+    unsigned state, odd block sizes, float32 subnormal source or normalized values and special values are unsupported.
+decisions:
+- id: Q4.TASK
+  status: reviewed
+  statement: >-
+    The correctness target is the versioned OptimState4bit copy operation used to store torchao optimizer moments.
+    This contract does not use full-precision AdamW as its target and does not claim to specify a complete
+    AdamW4bit step.
+  basis: [AO_ADAM.ADAMW4BIT, AO_ADAM.BUFFER, AO_SUBCLASS_4BIT.COPY]
+- id: Q4.STATE
+  status: reviewed
+  statement: >-
+    The observable tensor state contains flattened packed uint8 codes, float32 block scales and a float32 qmap.
+    Signedness, logical shape and block size are fixed binding conditions. __tensor_flatten__ and optimizer state_dict
+    retain the tensor subclass and these fields, so two encodings with the same dequantized values are not treated as
+    the same post-state.
+  basis: [AO_SUBCLASS_4BIT.STATE, AO_SUBCLASS_4BIT.ZEROS, AO_SUBCLASS_4BIT.COPY, AO_SUBCLASS_4BIT.QMAPS]
+- id: Q4.ROUND
+  status: reviewed
+  statement: >-
+    scale_tensor uses per-block absmax clipped at float32(1e-12), division is float32, and quantize_4bit_with_qmap
+    rounds to the adjacent qmap entry with midpoint ties upward. copy_ packs codes[2i] in the high nibble and
+    codes[2i+1] in the low nibble.
+  basis: [AO_QUANT_UTILS.SCALE, AO_QUANT_UTILS.QUANT4, AO_SUBCLASS_4BIT.COPY]
+clauses:
+- {id: Q4.C1, basis: [Q4.ROUND], statement: 'Every returned scale is the per-block float32 max(abs(src)) clipped below by float32(1e-12).', observes: [scale], evidence_kind: definition}
+- {id: Q4.C2, basis: [Q4.ROUND, AO_SUBCLASS_4BIT.QMAPS], statement: 'Every source coordinate is normalized and rounded to one canonical signed or unsigned qmap code using the released float32 comparisons.', observes: [codes], evidence_kind: definition}
+- {id: Q4.C3, basis: [Q4.STATE, Q4.ROUND], statement: 'Two consecutive 4-bit codes are packed in source order, first in the high nibble and second in the low nibble.', observes: [codes], evidence_kind: definition}
+- {id: Q4.C4, basis: [Q4.STATE], statement: 'Every physical code and scale is returned; the complete canonical qmap, signedness, logical shape and block size are checked as unchanged binding conditions.', observes: [codes, scale], evidence_kind: definition}
+examples:
+- id: Q4.E1
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C1, Q4.C2, Q4.C3, Q4.C4]
+  input:
+    src: [1, '1/2', -1, '1/8']
+    input_dtype: f32
+    signed: true
+    block_size: 2
+    qmap: &signed_qmap ['-14889779/16777216', '-5557453/8388608', '-7/16', '-14260633/67108864', '-5200937/67108864', '-8724153/268435456', '-1476395/268435456', 0, '1476395/268435456', '8724153/268435456', '5200937/67108864', '14260633/67108864', '7/16', '5557453/8388608', '14889779/16777216', 1]
+  expected:
+    outcome: value
+    fields:
+      codes: [252, 10]
+      scale: [1, 1]
+- id: Q4.E2
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C1, Q4.C2, Q4.C3, Q4.C4]
+  input:
+    src: [1, '1/2', 0, '3/32']
+    input_dtype: f32
+    signed: false
+    block_size: 2
+    qmap: &unsigned_qmap ['1/16', '1/8', '3/16', '1/4', '5/16', '3/8', '7/16', '1/2', '9/16', '5/8', '11/16', '3/4', '13/16', '7/8', '15/16', 1]
+  expected:
+    outcome: value
+    fields:
+      codes: [247, 15]
+      scale: [1, '3/32']
+- id: Q4.E3
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C2, Q4.C3]
+  input: {src: [1, '13/16'], input_dtype: f32, signed: true, block_size: 2, qmap: *signed_qmap}
+  expected: {outcome: value, fields: {codes: [254], scale: [1]}}
+- id: Q4.E4
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C1, Q4.C2]
+  input: {src: [0, 0], input_dtype: f32, signed: true, block_size: 2, qmap: *signed_qmap}
+  expected: {outcome: value, fields: {codes: [119], scale: ['2305843/2305843009213693952']}}
+- id: Q4.N1
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C1]
+  input: {src: ['1/3', 0], input_dtype: f32, signed: true, block_size: 2, qmap: *signed_qmap}
+  expected: {outcome: invalid_input}
+- id: Q4.N2
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C3]
+  input: {src: [1, 0, 0], input_dtype: f32, signed: true, block_size: 2, qmap: *signed_qmap}
+  expected: {outcome: invalid_input}
+- id: Q4.N3
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C4]
+  input: {src: [1, 0], input_dtype: f16, signed: true, block_size: 2, qmap: *signed_qmap}
+  expected: {outcome: unsupported}
+- id: Q4.N4
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C4]
+  input: {src: [1, 0], input_dtype: f32, signed: true, block_size: 2, qmap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}
+  expected: {outcome: unsupported}
+- id: Q4.N5
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C4]
+  input: {src: [-1, 0], input_dtype: f32, signed: false, block_size: 2, qmap: *unsigned_qmap}
+  expected: {outcome: unsupported}
+- id: Q4.N6
+  profile: torchao016_state_copy_f32
+  clauses: [Q4.C2]
+  input: {src: ['1/713623846352979940529142984724747568191373312', 0], input_dtype: f32, signed: true, block_size: 2, qmap: *signed_qmap}
+  expected: {outcome: unsupported}
+signature:
+  inputs:
+  - 'src: one-dimensional finite physical float32 tensor'
+  - 'qmap: complete canonical one-dimensional float32 table of length16'
+  - 'signed: Boolean; block_size: positive even integer'
+  pre_state:
+  - Canonical OptimState4bit created by torchao 0.16.0 OptimState4bit.zeros with matching shape, signedness and block size
+  post_state:
+  - Complete codes and scale; src and canonical qmap unchanged; signed, shape and block_size unchanged as binding conditions
+  observation_unit: Every physical byte and float32 scale coordinate, with complete fixed qmap as a pre-state condition
+domain:
+  valid:
+  - Nonempty one-dimensional finite physical float32 src, length divisible by an even block_size
+  - Canonical torchao 0.16.0 qmap; nonnegative src when signed=false
+  - Every nonzero source and normalized value is normal float32
+  invalid_input: [missing or extra fields, nonphysical float32 values, Boolean src values, incompatible source length]
+  unsupported: [other dtypes, special values, replacement qmaps, odd block size, negative unsigned state, source or normalized float32 subnormals, arbitrary source shape, dequantization alone, complete AdamW4bit steps]
+mutation_requirements:
+- {id: Q4.M1, misreading: pack the earlier element in the low nibble, witnesses: [Q4.E1]}
+- {id: Q4.M2, misreading: use one scale for the whole tensor, witnesses: [Q4.E2]}
+- {id: Q4.M3, misreading: round down instead of to the nearest qmap entry, witnesses: [Q4.E3]}
+- {id: Q4.M4, misreading: use an unsigned qmap that contains zero, witnesses: [Q4.E2]}
+- {id: Q4.M5, misreading: reverse the packed byte order, witnesses: [Q4.E1]}
+- {id: Q4.M6, misreading: store a zero scale for an all-zero block, witnesses: [Q4.E4]}
+nonclaims:
+- This is a complete physical specification for the reviewed OptimState4bit copy operation, not for the surrounding AdamW4bit parameter update, step counter, size gate or multi-parameter optimizer orchestration.
+- A kernel is eligible only after its source tensor, signedness, canonical qmap, block partition, complete code buffer, complete scale buffer and unchanged state attributes are bound. A name containing 4bit or Adam is insufficient.
+- Other torchao versions, noncanonical qmaps, odd blocks, arbitrary shapes, special values and device-dependent subnormal arithmetic require separate evidence.
+- Rejecting the listed mutants does not prove completeness.
+changes:
+- date: '2026-10-19'
+  change: Replace the dequantized-moment AdamW draft with the narrower versioned physical OptimState4bit copy task.
+  trigger: The former draft omitted codes, scales and qmap even though the public state_dict retains them, and therefore could not certify the optimizer state it claimed to observe.

@@ -9,12 +9,13 @@ implementation of one misreading listed in the contract.
 from __future__ import annotations
 
 from fractions import Fraction
+import math
 
 import yaml
 
 from kernel_spec import aten as A
 from kernel_spec import real as rl
-from kernel_spec.aten_adapter import make_reference
+from kernel_spec.aten_adapter import make_output_checker, make_reference
 from kernel_spec.num import Invalid, Undefined, Unsupported
 from kernel_spec.real import R
 from kernel_spec.registry import CONTRACTS
@@ -60,11 +61,51 @@ def geglu_backward(g, a, b, approximate="none"):
 
 
 def gelu_backward(grad, a, approximate="none"):
+    _same_shape(grad, a)
     return A.gelu_backward(grad, a, _approx(approximate))
 
 
-GLU = {"act.swiglu": swiglu, "act.swiglu_backward": swiglu_backward, "act.geglu": geglu,
-       "act.geglu_backward": geglu_backward, "aten.gelu_backward": gelu_backward}
+def threshold_backward(grad, a, threshold):
+    _same_shape(grad, a)
+    return A.threshold_backward(grad, a, threshold)
+
+
+def silu_backward(grad, a):
+    _same_shape(grad, a)
+    return A.silu_backward(grad, a)
+
+
+def softplus_backward(grad, a, beta=1, threshold=20):
+    _same_shape(grad, a)
+    return A.softplus_backward(grad, a, beta, threshold)
+
+
+def tanh_backward(grad, y):
+    _same_shape(grad, y)
+    return A.tanh_backward(grad, y)
+
+
+def sigmoid_backward(grad, y):
+    _same_shape(grad, y)
+    return A.sigmoid_backward(grad, y)
+
+
+def vjp_tanh(grad, a):
+    _same_shape(grad, a)
+    return A.vjp_tanh(grad, a)
+
+
+def vjp_sigmoid(grad, a):
+    _same_shape(grad, a)
+    return A.vjp_sigmoid(grad, a)
+
+
+OPS = {"act.swiglu": swiglu, "act.swiglu_backward": swiglu_backward, "act.geglu": geglu,
+       "act.geglu_backward": geglu_backward, "aten.gelu_backward": gelu_backward,
+       "aten.threshold_backward": threshold_backward, "aten.silu_backward": silu_backward,
+       "aten.softplus_backward": softplus_backward, "aten.tanh_backward": tanh_backward,
+       "aten.sigmoid_backward": sigmoid_backward, "vjp.aten.tanh": vjp_tanh,
+       "vjp.aten.sigmoid": vjp_sigmoid}
 
 
 # ------------------------------------------------------------------ softplus without the reversion (profile softplus_formula)
@@ -74,24 +115,38 @@ def softplus_formula(a, beta=1, threshold=20):
 
 
 def softplus_backward_formula(grad, a, beta=1, threshold=20):
+    _same_shape(grad, a)
     bt = R(beta)
     return A.mul(grad, A.unary(lambda x: rl.sigmoid(bt * x), A._floatify(a)))
 
 
-_REF = {"torch": make_reference(COVERS, extra=GLU),
-        "softplus_formula": make_reference(COVERS, extra={**GLU, "aten.softplus": softplus_formula,
+_REF = {"torch": make_reference(COVERS, extra=OPS),
+        "softplus_formula": make_reference(COVERS, extra={**OPS, "aten.softplus": softplus_formula,
                                                           "aten.softplus_backward": softplus_backward_formula})}
+_CHECK = {"torch": make_output_checker(COVERS, extra=OPS, profiles=("torch",)),
+          "softplus_formula": make_output_checker(
+              COVERS, extra={**OPS, "aten.softplus": softplus_formula,
+                             "aten.softplus_backward": softplus_backward_formula},
+              profiles=("softplus_formula",))}
 
 
 def _scan(x):
-    """Infinite values are outside every profile (ACT.FINITE); NaN is rejected by the decoder as invalid."""
+    """Validate the deliberately narrow finite floating domain before decoding."""
     if isinstance(x, dict):
+        if "t" in x or "v" in x:
+            dtype = x.get("t")
+            if dtype not in A.FLOAT:
+                raise Unsupported(f"ACT profiles require floating tensor inputs, got {dtype!r}")
         for v in x.values():
             _scan(v)
     elif isinstance(x, list):
         for v in x:
             _scan(v)
     elif isinstance(x, str) and x.strip() in ("inf", "+inf", "-inf"):
+        raise Unsupported("infinite input values are outside the ACT profiles (decision ACT.FINITE)")
+    elif isinstance(x, float) and math.isnan(x):
+        raise Invalid("NaN is not a real ACT input")
+    elif isinstance(x, float) and math.isinf(x):
         raise Unsupported("infinite input values are outside the ACT profiles (decision ACT.FINITE)")
 
 
@@ -106,6 +161,13 @@ def _checked(table):
 
 def reference(profile, inp):
     return _checked(_REF.get(profile, _REF["torch"]))(profile, inp)
+
+
+def check_output(profile, inp, observed):
+    if profile not in PROFILES:
+        raise Unsupported(f"profile {profile!r}")
+    _scan(inp.get("args", [])), _scan(inp.get("kwargs") or {})
+    return _CHECK[profile](profile, inp, observed)
 
 
 # ------------------------------------------------------------------ independent element-wise implementations (mutants)
@@ -198,6 +260,14 @@ def m_sigmoid_backward_from_input(grad, y):                   # sigma(y)(1 - sig
     return _ew(lambda g, v: g * _sig(v) * (1 - _sig(v)), grad, y)
 
 
+def m_vjp_tanh_treat_input_as_output(grad, a):                # 1 - x^2 instead of 1 - tanh(x)^2
+    return _ew(lambda g, x: g * (1 - x * x), grad, a)
+
+
+def m_vjp_sigmoid_treat_input_as_output(grad, a):             # x(1-x) instead of sigma(x)(1-sigma(x))
+    return _ew(lambda g, x: g * x * (1 - x), grad, a)
+
+
 def m_swiglu_backward_no_b(g, a, b):                          # da misses the factor b
     return [_ew(lambda u, x: u * _sig(x) * (1 + x * (1 - _sig(x))), g, a), _ew(lambda u, x: u * x * _sig(x), g, a)]
 
@@ -220,9 +290,18 @@ def m_gelu_backward_overflow(grad, a, approximate="none"):    # B023: x*x overfl
     return _ew(d, grad, a)
 
 
+def m_softplus_backward_boundary_linear(grad, a, beta=1, threshold=20):
+    bt, limit = R(beta), R(threshold)
+    return _ew(lambda g, x: g if bt * x >= limit else g * _sig(bt * x), grad, a)
+
+
+def m_silu_backward_broadcast(grad, a):
+    return A.silu_backward(grad, a)
+
+
 def _mut(**ops):
-    torch_tab = make_reference(COVERS, extra={**GLU, **ops})
-    form_tab = make_reference(COVERS, extra={**GLU, "aten.softplus": softplus_formula,
+    torch_tab = make_reference(COVERS, extra={**OPS, **ops})
+    form_tab = make_reference(COVERS, extra={**OPS, "aten.softplus": softplus_formula,
                                              "aten.softplus_backward": softplus_backward_formula, **ops})
 
     def ref(profile, inp):
@@ -247,5 +326,9 @@ MUTANTS = {
     "ACT.M14": _mut(**{"act.swiglu_backward": m_swiglu_backward_silu_not_derivative}),
     "ACT.M15": _mut(**{"act.geglu": m_geglu_wrong_form}),
     "ACT.M16": _mut(**{"aten.gelu_backward": m_gelu_backward_overflow}),
+    "ACT.M17": _mut(**{"aten.softplus_backward": m_softplus_backward_boundary_linear}),
+    "ACT.M18": _mut(**{"aten.silu_backward": m_silu_backward_broadcast}),
+    "ACT.M19": _mut(**{"vjp.aten.tanh": m_vjp_tanh_treat_input_as_output}),
+    "ACT.M20": _mut(**{"vjp.aten.sigmoid": m_vjp_sigmoid_treat_input_as_output}),
 }
 READINGS = {}

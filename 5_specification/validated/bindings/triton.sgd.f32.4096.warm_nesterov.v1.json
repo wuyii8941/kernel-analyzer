@@ -1,0 +1,46 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.sgd.f32.4096.warm_nesterov.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 warm-buffer Nesterov SGD state transition",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with sixteen Triton programs reading the complete parameter, gradient and old momentum buffer and writing every parameter and momentum-buffer coordinate in place",
+    "measure_call": "../calls/triton_sgd.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "one_parameter_sgd_step",
+      "contract": "SGD",
+      "profile": "torch210",
+      "task_statement": "Perform one complete public torch.optim.SGD state transition on one received dense float32 parameter and its existing momentum buffer with lr 0.125, momentum 0.75, dampening 0, weight_decay 0.25, nesterov and maximize enabled, and return both complete post-states.",
+      "input_map": [
+        {"target": "/state/theta", "source": "/tensor_arguments/theta/before", "conversion": "tensor_values"},
+        {"target": "/state/b", "source": "/tensor_arguments/b/before", "conversion": "tensor_values"},
+        {"target": "/gradient", "source": "/tensor_arguments/gradient/before", "conversion": "tensor_values"},
+        {"target": "/lr", "literal": 0.125, "basis": "the kernel uses the exact binary value 0.125"},
+        {"target": "/momentum", "literal": 0.75, "basis": "the kernel uses the exact binary value 0.75"},
+        {"target": "/dampening", "literal": 0, "basis": "the kernel has no dampening term"},
+        {"target": "/weight_decay", "literal": 0.25, "basis": "the kernel adds the exact binary coupled L2 term 0.25*theta"},
+        {"target": "/nesterov", "literal": true, "basis": "the kernel adds momentum times the new buffer to the processed gradient"},
+        {"target": "/maximize", "literal": true, "basis": "the kernel negates the received gradient before weight decay"},
+        {"target": "/foreach", "literal": false, "basis": "one direct elementwise launch is bound to the non-foreach public task choice"},
+        {"target": "/fused", "literal": false, "basis": "the binding does not claim PyTorch's internal fused implementation"},
+        {"target": "/differentiable", "literal": false, "basis": "the selected public state transition is non-differentiable"}
+      ],
+      "output_map": [
+        {"target": "/theta", "source": "/tensor_arguments/theta/after", "conversion": "tensor_values", "measure_output": "theta"},
+        {"target": "/b", "source": "/tensor_arguments/b/after", "conversion": "tensor_values", "measure_output": "b"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "theta", "effect": "output", "task": "one_parameter_sgd_step", "target": "/theta"},
+    {"argument": "gradient", "effect": "unchanged"},
+    {"argument": "b", "effect": "output", "task": "one_parameter_sgd_step", "target": "/b"}
+  ]
+}

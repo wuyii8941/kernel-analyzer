@@ -11,7 +11,7 @@
 | [2_tool](2_tool/) | 现有工具：源码、脚本、测试、示例、规则注册表与工具文档 | [2_tool/README.md](2_tool/README.md) |
 | [3_audits](3_audits/) | 完整审计：最新外部审计（基线 1aee15e）的发现与处理状态、第一批与第二轮的测量修复、此前审计的待决事项、收到的审计材料 | [3_audits/README.md](3_audits/README.md) |
 | [4_bugs_cases](4_bugs_cases/) | 已找 bug 与重要案例：问题登记 B001–B023、复现、上游草稿、案例结论与主张 | [4_bugs_cases/README.md](4_bugs_cases/README.md) |
-| [5_specification](5_specification/) | 规格：任务规格 f 的方法、来源登记、合同（3 份已审阅、未启用）、可执行参照 v2.4（31 个角色）、证据与审阅记录 | [5_specification/README.md](5_specification/README.md) |
+| [5_specification](5_specification/) | 规格：任务规格 f 的方法、来源登记、62 份合同、127 个 profile（65 个具备声明范围内的参照准入条件）、62 份真实调用计划（58 份已审阅）及证据记录 | [5_specification/README.md](5_specification/README.md) |
 
 2026-10-09 整理前的全部内容（旧研究阶段的结果、脚本、测试与过程文档）都可从标签 `pre-reorg-20261009` 取回：
 `git show pre-reorg-20261009:<旧路径>`。保留文件里出现的 `pre-reorg-20261009:<路径>` 即指该标签下的位置。

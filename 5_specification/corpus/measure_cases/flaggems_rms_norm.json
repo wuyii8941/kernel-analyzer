@@ -1,0 +1,83 @@
+{
+  "call": "../calls/flaggems_rms_norm.py:call",
+  "inputs": {
+    "x": {
+      "sampler": {
+        "uniform": [
+          -0.001953125,
+          0.001953125
+        ]
+      },
+      "shape": [
+        2,
+        7
+      ],
+      "dtype": "float32"
+    },
+    "weight": {
+      "sampler": {
+        "uniform": [
+          0.5,
+          1.5
+        ]
+      },
+      "shape": [
+        7
+      ],
+      "dtype": "float32"
+    },
+    "upstream": {
+      "sampler": {
+        "uniform": [
+          -1,
+          1
+        ]
+      },
+      "shape": [
+        2,
+        7
+      ],
+      "dtype": "float32"
+    }
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": [
+      "y",
+      "dx",
+      "dweight"
+    ],
+    "binding_plan": "../call_bindings/flaggems_rms_norm.json",
+    "specification_root": "../.."
+  },
+  "units": {
+    "development": 8,
+    "confirmation": 16,
+    "seed_offset": 144
+  },
+  "alpha": 0.05,
+  "budget": {
+    "cpu_seconds": 900,
+    "gpu_seconds": 900,
+    "case_timeout": 420,
+    "max_units": 24
+  },
+  "rule_classes": {
+    "fixed_mean": [
+      "R1",
+      "R5"
+    ],
+    "aligned": [
+      "R2",
+      "R3"
+    ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": [
+    "complete_composed"
+  ],
+  "resolution": {
+    "ulp_fraction": 0.125,
+    "max_level": 3
+  }
+}

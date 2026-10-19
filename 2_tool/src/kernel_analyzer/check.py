@@ -1,4 +1,4 @@
-"""Kernel against its declared semantics (mode A) and, when a specification is given, against the task (mode B).
+"""Kernel against its declared semantics and, when supplied, an external numerical reference.
 
 One engine for both modes.  The kernel call runs under ``TritonLaunchRecorder``; the automatic reference K_R of every
 measured output comes from the captured TTIR (``evaluate_sequence``, composed over all launches of the call).
@@ -6,7 +6,9 @@ measured output comes from the captured TTIR (``evaluate_sequence``, composed ov
 - mode A (no specification): e_num = K - K_R, through the decision layer (``analysis.assess_units``: rules R1, R2,
   R3, R5, endpoint-conservative inference on the confirmation seeds, default detector 2.1).  The report says that the
   task semantics were not checked.
-- mode B (``spec`` returns f): in addition e_sem = K_R - f and the total K - f = e_num + e_sem, reported together.
+- mode B (``spec`` returns a reference r): additionally report K_R - r and K - r.  This interface does not establish
+  the reference's source, implementation validity or binding to the captured kernel, so these differences are not
+  semantic-error verdicts.  Certified use requires the separate contract admission and binding path.
 
 A case (``Case``) gives ``setup`` (compilation, warm-up; outside the recorder), ``inputs(seed)``, ``launch(inputs)``
 -> {output name: tensor} and optionally ``spec(inputs)`` -> {output name: (lo, hi)} in the tensors' logical shapes.
@@ -26,7 +28,8 @@ from .reference_eval import intervals as iv
 from .reference_eval.analysis import assess_units, residual_interval
 from .reference_eval.capture import TritonLaunchRecorder
 from .reference_eval.storage_effects import InputSnapshot
-from .reference_eval.ttir_eval import ST_NINF, ST_OK, evaluate_sequence, launch_ir, ptx_zero_fills, unproven_premise
+from .reference_eval.ttir_eval import (ST_NINF, ST_OK, NumericMode, evaluate_sequence, launch_ir, ptx_zero_fills,
+                                       unproven_premise)
 from .reference_eval.ttir_mapping import kernel_coverage
 from .reference_eval.ttir_parser import parse_ttir
 
@@ -65,8 +68,8 @@ def to_storage_order(out: torch.Tensor, lo: np.ndarray, hi: np.ndarray):
 class Case:
     name = ""
     implementation = ""   # what runs (the kernel)
-    specification = ""    # what f is
-    spec_bound = "rigorous float64 enclosure"
+    specification = ""    # what the supplied reference is
+    spec_bound = "unspecified numerical reference; no rigorous guarantee recorded"
 
     def setup(self):
         """Once before the seeds (compilation, warm-up); runs outside the recorder."""
@@ -78,7 +81,7 @@ class Case:
         raise NotImplementedError
 
     def spec(self, inp):
-        """{output name: (lo, hi)} enclosing f, or None: no specification (mode A, task semantics not checked)."""
+        """{output name: (lo, hi)} for a supplied reference, or None for mode A."""
         return None
 
 
@@ -91,7 +94,8 @@ class BindingCase(Case):
         self.name = name or getattr(module, "NAME", module.__name__)
         self.implementation = getattr(module, "IMPLEMENTATION", "")
         self.specification = getattr(module, "SPECIFICATION", "" if not hasattr(module, "spec") else "given")
-        self.spec_bound = getattr(module, "SPEC_BOUND", "rigorous float64 enclosure")
+        self.spec_bound = getattr(module, "SPEC_BOUND",
+                                  "unspecified numerical reference; no rigorous guarantee recorded")
 
     def setup(self):
         if hasattr(self.module, "setup"):
@@ -117,8 +121,10 @@ def storage_positions(out: torch.Tensor):
 
 
 def f64_point_spec(value, rel=2.0 ** -40):
-    """A float64 evaluation of the specification taken as f with a declared bound rel * max|f| (screening use;
-    a confirmed finding gets a rigorous enclosure)."""
+    """A float64 point evaluation with a heuristic relative band for screening.
+
+    The band is not a proved error enclosure and this function does not establish a task specification.
+    """
     value = np.asarray(value, dtype=np.float64)
     finite = np.isfinite(value)
     b = rel * float(np.max(np.abs(value[finite]))) if finite.any() else 0.0
@@ -165,7 +171,8 @@ def input_storages(inp):
 PRODUCER_RECORD = " [producer record: "   # label suffix of an upstream buffer with a recorded copy / constant chain
 
 
-def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decisions=None):
+def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decisions=None,
+                        include_non_floating=False):
     """Per written storage: the float buffers upstream of it (through the recorded launches) that the reference
     loaded but that are neither declared inputs of the case nor carried over from an earlier recorded launch, i.e.
     produced by a torch / ATen op in between.  K_R treats their captured values as exact inputs, so an output
@@ -185,7 +192,9 @@ def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decis
     ``producers`` ({(launch, argument): (provenance, chain)} from ``provenance.producer_records``): a buffer whose
     recorded producers are only copies of declared inputs or exact constants gets the label suffix
     ``PRODUCER_RECORD``; it is an upstream buffer whose captured values are the call's own values, not a mixed one.
-    ``decisions``: a list that receives one entry per float read (launch, argument, outcome, reason) for the report.
+    ``decisions``: a list that receives one entry per relevant read (launch, argument, outcome, reason) for the report.
+    By default only floating reads are relevant to the numerical decomposition.  Contract binding sets
+    ``include_non_floating`` because an undeclared integer index or boolean mask is also an omitted task input.
     Without ``snapshot`` one is taken now (after the call): callers that can should take it before the call."""
     import hashlib
 
@@ -221,7 +230,8 @@ def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decis
                     continue
             else:
                 why = None
-            if a.storage_ptr in ref.loaded and str(a.dtype).startswith(("float", "bfloat")):
+            if a.storage_ptr in ref.loaded and (include_non_floating or
+                                                str(a.dtype).startswith(("float", "bfloat"))):
                 rec_ = (producers or {}).get((i, a.name))
                 if why is None:
                     ok, why = snap.declared_read(a, read_runs_of(ref, a))
@@ -264,6 +274,32 @@ def torch_intermediates(launches, seq, inp, snapshot=None, producers=None, decis
     return {k: sorted(v) for k, v in deps.items()}
 
 
+def contract_binding_context(outs, mixed_sources, producers=None):
+    """Unaccounted tensor sources that reach each public output.
+
+    A reviewed task mapping accounts for the call inputs, but a Python call can
+    also close over a module tensor or global tensor.  The reference evaluator
+    already follows those sources through recorded launches.  Copies of a
+    declared input and exact constants with an aligned producer record are
+    admitted; every other source must stop contract binding rather than merely
+    downgrade the K-G decomposition.
+    """
+    hidden = {}
+    for name, out in outs.items():
+        if not torch.is_tensor(out):
+            continue
+        storage = out.untyped_storage().data_ptr()
+        sources = sorted(source for source in mixed_sources.get(storage, ()) if PRODUCER_RECORD not in source)
+        if sources:
+            hidden[name] = sources
+    context = {"unaccounted_sources_by_output": hidden}
+    from .provenance import ENCLOSED_LAUNCHES
+    enclosed = (producers or {}).get(ENCLOSED_LAUNCHES, [])
+    if enclosed:
+        context["dispatch_calls_with_untraced_internals"] = enclosed
+    return context
+
+
 CAPTURE_STORE_BYTES = int(__import__("os").environ.get("KA_CAPTURE_STORE_BYTES", str(8 << 30)))
 
 
@@ -300,6 +336,65 @@ class _OutputSnapshot:
         host = _host_bytes(st)
         self.view = torch.empty(0, dtype=t.dtype).set_(host.untyped_storage(), t.storage_offset(), tuple(t.shape),
                                                        tuple(t.stride()))
+
+
+def _contract_candidate_values(t, name):
+    """A public result as exact binary64 values, or a refusal when an integer cannot be represented exactly."""
+    if not t.is_floating_point() and t.dtype != torch.bool and any(
+            abs(int(value)) > 2 ** 53 for value in t.reshape(-1).tolist()):
+        raise ValueError(f"contract output {name!r} contains an integer outside exact binary64 range")
+    return t.double().numpy().reshape(-1)
+
+
+def _contract_special_values(rows):
+    """Special-value class comparison over the complete public output used by K-f."""
+    special_f = mismatches = unbounded = 0
+    for row in rows:
+        lo, hi, k = row["f_lo"], row["f_hi"], row["k"]
+        f_cls = np.where(np.isnan(lo), 1, np.where(lo == np.inf, 2, np.where(hi == -np.inf, 3, 0)))
+        k_cls = np.where(np.isnan(k), 1, np.where(k == np.inf, 2, np.where(k == -np.inf, 3, 0)))
+        point_special = f_cls > 0
+        special_f += int(point_special.sum())
+        mismatches += int(((f_cls != k_cls) & (point_special | (k_cls > 0))).sum())
+        unbounded += int(((~np.isfinite(lo) | ~np.isfinite(hi)) & ~point_special).sum())
+    return {"elements_with_special_f": special_f, "k_vs_f_class_mismatch": mismatches,
+            "unbounded_reference_elements": unbounded,
+            "scope": "complete public output against admitted task specification"}
+
+
+def _boolean_task_comparison(rows):
+    """Exact complete-output Boolean comparison in the canonical False=0, True=1 frame."""
+    coordinates = matches = false_positive = false_negative = 0
+    per_unit = []
+    for row in rows:
+        valid = np.asarray(row["ok_total"], dtype=bool)
+        candidate = np.asarray(row["k"], dtype=np.float64)
+        target_lo = np.asarray(row["f_lo"], dtype=np.float64)
+        target_hi = np.asarray(row["f_hi"], dtype=np.float64)
+        if np.any(valid & ((candidate != 0.0) & (candidate != 1.0))):
+            raise ValueError("a Boolean call output did not remain in the exact 0/1 comparison frame")
+        if np.any(valid & ((target_lo != target_hi) | ((target_lo != 0.0) & (target_lo != 1.0)))):
+            raise ValueError("an exact Boolean task reference did not remain in the exact 0/1 comparison frame")
+        same = valid & (candidate == target_lo)
+        fp = valid & (candidate == 1.0) & (target_lo == 0.0)
+        fn = valid & (candidate == 0.0) & (target_lo == 1.0)
+        n = int(valid.sum())
+        miss = int((fp | fn).sum())
+        coordinates += n
+        matches += int(same.sum())
+        false_positive += int(fp.sum())
+        false_negative += int(fn.sum())
+        per_unit.append({"seed": row["seed"], "coordinates": n, "mismatches": miss,
+                         "mismatch_rate": miss / n if n else None})
+    mismatches = false_positive + false_negative
+    return {"encoding": "False=0, True=1 after strict Boolean validation",
+            "coordinates": coordinates, "matches": matches, "mismatches": mismatches,
+            "mismatch_rate": mismatches / coordinates if coordinates else None,
+            "false_positive": false_positive, "false_negative": false_negative,
+            "signed_truth_rate_difference": ((false_positive - false_negative) / coordinates
+                                               if coordinates else None),
+            "per_unit": per_unit,
+            "meaning": "exact Boolean disagreements; signed differences may cancel, so mismatch counts are primary"}
 
 
 def _capture_bytes(launches) -> int:
@@ -395,12 +490,17 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         if captures is not None:
             captures["precision_environment"] = precision_env
     timing["setup_compile_warmup"] = time.time() - t_phase
-    per, coverage, launch_info = {}, None, None
+    per, task_totals, coverage, launch_info = {}, {}, None, None
+    contract_bindings = []
     not_triton, modified_after, aborted_outputs, mixed_by_output = set(), set(), {}, {}
     binding_unconfirmed, reused_address = set(), set()  # detector 2.2: output-to-producer binding by storage identity
     trace_status = collections.Counter()
     provenance_seed0 = None
     precision_calls = 0   # calls of working-precision-dependent rules in the reference evaluations
+    program_reference_mode = getattr(getattr(case, "contract_reference", None), "program_reference_mode",
+                                     NumericMode.NUMERICAL_DIFFERENCE)
+    if program_reference_mode not in (NumericMode.NUMERICAL_DIFFERENCE, NumericMode.ROUNDING_CHECK):
+        raise ValueError(f"unknown program reference mode {program_reference_mode!r}")
     external = None
     special = {}
     mode = None
@@ -418,7 +518,8 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             # ordered digest per input path (two inputs that swap contents are different inputs)
             snap = InputSnapshot(inp)
             rec = TritonLaunchRecorder()
-            rec.watch_tensors(*snap.tensors)
+            rec.watch_tensors(*(snap.all_tensors if getattr(case, "contract_reference", None) is not None
+                                else snap.tensors))
             rng_before = rng_state()       # the trace replays the measured run's random draws (T1)
             with rec:
                 outs = case.launch(inp)
@@ -445,7 +546,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         t_phase = time.time()
         calls0 = sum(iv.PRECISION_DEPENDENT_CALLS.values())
         with iv.working_precision(precision_level):
-            seq = evaluate_sequence(rec.launches, masked_fill_zero=fill)
+            seq = evaluate_sequence(rec.launches, mode=program_reference_mode, masked_fill_zero=fill)
         precision_calls += sum(iv.PRECISION_DEPENDENT_CALLS.values()) - calls0
         timing["reference"] += time.time() - t_phase
         # every seed (audit F04): the upstream sources of a storage can change with the data and the allocator
@@ -470,15 +571,21 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             t_phase = time.time()
             calls0 = sum(iv.PRECISION_DEPENDENT_CALLS.values())
             with iv.working_precision(precision_level):
-                seq = evaluate_sequence(rec.launches, masked_fill_zero=fill, force_external=withdrawn)
+                seq = evaluate_sequence(rec.launches, mode=program_reference_mode, masked_fill_zero=fill,
+                                        force_external=withdrawn)
             precision_calls += sum(iv.PRECISION_DEPENDENT_CALLS.values()) - calls0
             timing["reference"] += time.time() - t_phase
         decisions = [] if seed == list(dev)[0] else None
-        mixed_sources = torch_intermediates(rec.launches, seq, inp, snap, prods, decisions)
+        mixed_sources = torch_intermediates(
+            rec.launches, seq, inp, snap, prods, decisions,
+            include_non_floating=getattr(case, "contract_reference", None) is not None)
         if decisions is not None:
+            from .provenance import ENCLOSED_LAUNCHES
             provenance_seed0 = {"reads": decisions, "carry_overs": seq.carry_overs,
                                 "external_reentries": seq.external_writes,
-                                "carry_overs_withdrawn_by_trace": sorted([list(x) for x in withdrawn])}
+                                "carry_overs_withdrawn_by_trace": sorted([list(x) for x in withdrawn]),
+                                "dispatch_calls_with_untraced_internals":
+                                    (prods or {}).get(ENCLOSED_LAUNCHES, [])}
         if external is None:
             # a buffer changed between recorded launches (a torch op in between): from there on its captured value
             # re-enters as an exact input, so K_R downstream carries the upstream numerical error of K
@@ -487,10 +594,47 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         t_phase = time.time()
         if replay:
             specs = cap["specs"]
+            binding_summary = cap.get("contract_binding")
         else:
-            specs = case.spec(inp)
+            if getattr(case, "contract_reference", None) is not None:
+                specs, binding_summary = case.bound_spec(
+                    inp, outs, rec.launches, snap,
+                    binding_context=contract_binding_context(outs, mixed_sources, prods))
+            else:
+                with snap.pre_call_state():
+                    specs = case.spec(inp)
+                binding_summary = None
             if store:
                 cap["specs"] = specs
+                cap["contract_binding"] = binding_summary
+        if binding_summary is not None:
+            contract_bindings.append({"seed": seed, **binding_summary})
+            # K-f is a statement about the public call result, so it covers the complete logical output.  The
+            # K-G_pi decomposition below remains limited to coordinates whose Triton writes the interpreter can
+            # establish.  Keeping the two coordinate sets apart prevents a partially written output from hiding a
+            # task-level difference in an unwritten or non-Triton-produced coordinate.
+            for name, osnap in out_snaps.items():
+                candidate = osnap.view.detach()
+                k_full = _contract_candidate_values(candidate, name)
+                f_lo_full, f_hi_full = (np.asarray(a, dtype=np.float64).reshape(-1) for a in specs[name])
+                if f_lo_full.shape != k_full.shape or f_hi_full.shape != k_full.shape:
+                    raise ValueError(f"contract output {name!r} shape differs from its task reference")
+                t_lo_full, t_hi_full = residual_interval(k_full, f_lo_full, f_hi_full)
+                ok_full = np.isfinite(k_full) & np.isfinite(f_lo_full) & np.isfinite(f_hi_full)
+                task_totals.setdefault(name, []).append({
+                    "seed": seed, "t": (t_lo_full, t_hi_full), "f_lo": f_lo_full, "f_hi": f_hi_full,
+                    "f": 0.5 * (f_lo_full + f_hi_full), "k": k_full, "k_reps": [], "ok_total": ok_full,
+                    "shape": tuple(candidate.shape)})
+                ob = (observe or {}).get(name)
+                if ob and ob.get("layer") == "increment":
+                    from .reference_eval.observation import floor_of, increment_unit
+                    old = snap.pre_call_values(ob["old"])
+                    if old.size != k_full.size:
+                        raise ValueError(f"observe.{name}.old = {ob['old']}: {old.size} elements, the output has "
+                                         f"{k_full.size}")
+                    task_totals[name][-1]["increment_total"] = {
+                        "seed": seed, **increment_unit(k_full, f_lo_full, f_hi_full, old, ok_full,
+                                                       floor_of(ob.get("floor"), old))}
         timing["specification"] += time.time() - t_phase
         this_mode = "A" if specs is None else "B"
         if mode not in (None, this_mode):
@@ -551,6 +695,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             mixed_by_output.setdefault(name, set()).update(mixed_sources.get(ptr, []))
             n_lo, n_hi = residual_interval(k, r_lo, r_hi)
             s_lo, s_hi = iv.isub(r_lo, r_hi, f_lo, f_hi) if has_f else (None, None)
+            t_lo, t_hi = residual_interval(k, f_lo, f_hi) if has_f else (None, None)
             # special values (NaN / +-inf) are excluded from the residuals; compare their classes separately
             f_cls = np.where(np.isnan(f_lo), 1, np.where(f_lo == np.inf, 2, np.where(f_hi == -np.inf, 3, 0)))
             kr_cls = np.where(buf.st[m] <= ST_NINF, buf.st[m], -1)  # -1: not established
@@ -601,6 +746,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             # proof status (audit F03): an element that holds only under an unproven premise is not ok
             prem = np.asarray(buf.premise[m], dtype=bool) if buf.premise is not None else np.zeros(idx.size, bool)
             ok_e = (buf.st[m] == ST_OK) & ~buf.cond[m] & np.isfinite(f_lo) & ~prem
+            ok_total = inside & np.isfinite(k_arr) & np.isfinite(f_lo) & np.isfinite(f_hi)
             if has_f:
                 special_agree = decided & (f_cls > 0) & (kr_cls == f_cls) & ~prem
             else:
@@ -622,8 +768,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             per.setdefault(name, []).append({
                 "seed": seed, "r_lo": frame(r_lo), "r_hi": frame(r_hi), "k_reps": [], "repeat_inputs_differ": False,
                 "n": (frame(n_lo), frame(n_hi)), "s": (frame(s_lo), frame(s_hi)) if has_f else None,
+                "t": (frame(t_lo), frame(t_hi)) if has_f else None,
+                "f_lo": frame(f_lo), "f_hi": frame(f_hi), "f": frame(0.5 * (f_lo + f_hi)),
                 "kr": frame(0.5 * (r_lo + r_hi)), "k": frame(np.asarray(k, dtype=np.float64)),
-                "ok": frame(ok_e, False), "written": frame(np.ones(idx.size, dtype=bool), False),
+                "ok": frame(ok_e, False), "ok_total": frame(ok_total, False),
+                "written": frame(np.ones(idx.size, dtype=bool), False),
                 "resolved": frame(ok_e | special_agree, False), "inside": np.ones(nv, dtype=bool), "idx": pos,
                 "pos": pos, "shape": tuple(out.shape), "width": frame(r_hi - r_lo), "reasons": reasons,
                 "aborted": aborted, "premise": frame(under_premise, False), "atomic_written": frame(atomic_w, False)})
@@ -650,6 +799,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             r_exec = int(repeats) if repeats is not None else (
                 8 if any(li.get("float_atomics") for li in (launch_info or [])) else 2)
         mine = {name: rows[-1] for name, rows in per.items() if rows and rows[-1]["seed"] == seed}
+        task_mine = {name: rows[-1] for name, rows in task_totals.items() if rows and rows[-1]["seed"] == seed}
         t_phase = time.time()
         if replay:
             reps = cap["reps"]
@@ -676,13 +826,34 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                 v = v.float() if v.dtype in (torch.bfloat16, torch.float16) or (
                     v.dtype.itemsize == 1 and v.is_floating_point()) else v
                 row["k_reps"].append(v.cpu().double().numpy().reshape(-1))
+            for name, row in task_mine.items():
+                o = outs_r.get(name)
+                if o is None or tuple(o.shape) != row["shape"]:
+                    continue
+                v = o.detach()
+                try:
+                    row["k_reps"].append(_contract_candidate_values(v.cpu(), name))
+                except ValueError:
+                    continue
         timing["repeat_launches"] += time.time() - t_phase
     seconds = time.time() - t0
     n_dev = len(list(dev))
+    admitted_contract = mode == "B" and len(contract_bindings) == len(list(dev) + list(conf)) and \
+        all(row.get("reference_usable_for_bias_measurement") is True for row in contract_bindings)
+    contract_output_kinds = dict(getattr(getattr(case, "contract_reference", None), "output_kinds", {}) or {})
     report = {"case": case.name, "mode": mode, "implementation": case.implementation,
               "specification": case.specification if mode == "B" else
               "none: task semantics not checked (mode A, e_num = K - K_R only)",
               "spec_bound": case.spec_bound, "launches": launch_info, "ir_coverage_complete": coverage,
+              "reference_kind": ("admitted_task_specification" if admitted_contract else
+                                 "implementation_reference" if mode == "B" else None),
+              "semantic_verdict": "not_established",
+              "semantic_reason": ("admitted task specification and reviewed call binding; bias decisions are in the "
+                                  "per-output statistical queries" if admitted_contract else
+                                  "supplied reference has no admitted contract and complete kernel binding"
+                                  if mode == "B" else "no independent task specification was supplied"),
+              "contract_bindings": contract_bindings,
+              "program_reference_mode": program_reference_mode,
               "ir_kinds": [li["ir_kind"] for li in (launch_info or [])],
               # kept for the TTIR-only scripts: the coverage of TTIR launches, None for a launch analysed on TTGIR
               "ttir_coverage_complete": [c if li["ir_kind"] == "ttir" else None
@@ -711,7 +882,9 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                                                     "lowering zero-initializes them; TTIR leaves them undefined)"}}
     for name, rows in per.items():
         ok = np.stack([p["ok"] for p in rows])
+        ok_total = np.stack([p["ok_total"] for p in rows])
         kr = np.stack([p["kr"] for p in rows])
+        f_mid = np.stack([p["f"] for p in rows])
         written = np.stack([p["written"] for p in rows])
         resolved = np.stack([p["resolved"] for p in rows])
         premised = np.stack([p["premise"] for p in rows])
@@ -739,6 +912,11 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                  "special_values": special.get(name),
                  "not_established_reasons_seed0": rows[0]["reasons"],
                  "aborted_programs_seed0": rows[0]["aborted"]}
+        if admitted_contract:
+            entry["comparison_kind"] = ("exact_boolean" if contract_output_kinds.get(name) == "boolean"
+                                        else "numeric")
+            if contract_output_kinds.get(name) == "boolean":
+                entry["boolean_task_comparison"] = _boolean_task_comparison(task_totals[name])
         # rc3 02 5.3 / 9: a set target (L_E, e.g. a contended atomic's returned value) encloses every allowed
         # reference choice; its width does not shrink with precision (DSL v2 increment 4)
         sets = sorted({str(r).split("@")[0] for p in rows for r in (p["reasons"] or {}) if str(r).startswith("set:")})
@@ -746,6 +924,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                               "set_targets": sets}
         execution = _execution_status(rows, launch_info, r_exec)
         entry["execution"] = execution
+        task_decomposition_admitted = admitted_contract and not entry["depends_on_non_triton_intermediates"]
         ob = (observe or {}).get(name)
         if ob and ob.get("layer") == "increment":
             from .reference_eval.observation import summarize_increment
@@ -755,39 +934,94 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
                                                   "increment is scaled down against it)",
                                     "summary": summarize_increment(units), "per_unit": units}
             if mode == "B":
+                if admitted_contract:
+                    total_meaning = "total = K against the admitted task specification"
+                    semantic_meaning = ("legacy field semantic = K_R against that task specification"
+                                        if task_decomposition_admitted else
+                                        "legacy field semantic is only a kernel-level reference difference because "
+                                        "the decomposition contains non-Triton intermediates")
+                else:
+                    total_meaning = "total = K against the supplied reference"
+                    semantic_meaning = ("legacy field semantic = K_R against that reference; this is not a semantic "
+                                        "verdict")
                 entry["observation"]["decomposition"] = {
-                    "meaning": "increment frame: numerical = K against K_R (summary above), total = K against f, "
-                               "semantic = the midpoint of K_R against f (retention 1: K_R's increment equals f's)",
-                    "total": summarize_increment([p["increment_total"] for p in rows]),
+                    "meaning": f"increment frame: numerical = K against K_R (summary above), {total_meaning}, "
+                               f"{semantic_meaning}",
+                    "total": summarize_increment([p["increment_total"] for p in
+                                                  (task_totals.get(name, rows) if admitted_contract else rows)]),
                     "semantic": summarize_increment([p["increment_semantic"] for p in rows]),
-                    "per_unit_total": [p["increment_total"] for p in rows],
+                    "per_unit_total": [p["increment_total"] for p in
+                                       (task_totals.get(name, rows) if admitted_contract else rows)],
                     "per_unit_semantic": [p["increment_semantic"] for p in rows]}
             kr = kr - np.stack([p["old"] for p in rows])     # the decision layer's reference frame: the increment
-        for key, label in (("n", "e_num = K - K_R"), ("s", "e_sem = K_R - f"))[: 2 if mode == "B" else 1]:
-            lo = np.stack([p[key][0] for p in rows])
-            hi = np.stack([p[key][1] for p in rows])
+        comparisons = [("n", "e_num = K - K_R")]
+        if mode == "B":
+            comparisons.extend((("s", "G_pi - admitted task specification" if task_decomposition_admitted else
+                                        "reference_difference = K_R - supplied reference"),
+                                ("t", "K - admitted task specification" if admitted_contract else
+                                        "total_difference = K - supplied reference")))
+        for key, label in comparisons:
+            comparison_rows = task_totals.get(name, rows) if key == "t" and admitted_contract else rows
+            lo = np.stack([p[key][0] for p in comparison_rows])
+            hi = np.stack([p[key][1] for p in comparison_rows])
+            valid = ok_total if key == "t" else ok
+            if key == "t" and admitted_contract:
+                valid = np.stack([p["ok_total"] for p in comparison_rows])
+                alignment = np.stack([p["f"] for p in comparison_rows])
+            else:
+                alignment = f_mid if key == "t" else kr
             if key == "n" and execution["statistics"] == "within-input mean":
                 lo, hi = _within_input_mean_residual(rows)
+            elif key == "t" and execution["statistics"] == "within-input mean":
+                lo, hi = _within_input_mean_total(comparison_rows)
             t_phase = time.time()
-            if execution["statistics"] == "withheld":
+            task_direct = key == "t" and admitted_contract
+            if execution["statistics"] == "withheld" and not task_direct:
                 rec = {"comparison": f"{name}: {label}", "verdict": "NOT_ESTABLISHED", "reason": execution["status"]}
             else:
-                rec, _ = assess_units(f"{name}: {label}", lo, hi, kr, ok, n_dev, RULES, alpha=alpha,
-                                      alignment_reference=kr, unit_ids=list(dev) + list(conf),
+                rec, _ = assess_units(f"{name}: {label}", lo, hi, alignment, valid, n_dev, RULES, alpha=alpha,
+                                      alignment_reference=alignment, unit_ids=list(dev) + list(conf),
                                       equivalence_rel=equivalence_rel,
                                       magnitude_bound=magnitude_bound if key == "n" else None)
                 if equivalence_rel is None:
                     rec["equivalence_scale"] = {"delta_rel": None, "meaning": "no equivalence bound declared: no "
                                                 "equivalence statement"}
+                if task_direct:
+                    rec["execution_basis"] = (
+                        "one observed public call per independent input; repeated launches are averaged within the "
+                        "input only for identified float-atomic order variation")
+                    if execution["statistics"] == "withheld":
+                        rec["decomposition_execution_note"] = execution["status"]
             timing["statistics"] += time.time() - t_phase
             mid = 0.5 * (lo + hi)
-            if ok.any():
-                rec["scale"] = {"mean_abs_residual": float(np.abs(mid[ok]).mean()),
-                                "max_abs_residual": float(np.abs(mid[ok]).max()),
-                                "rms_reference": float(np.sqrt((kr[ok] ** 2).mean())),
-                                "relative_rms": float(np.sqrt((mid[ok] ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300))),
-                                "max_K_R_width": float(np.stack([p["width"] for p in rows])[ok].max())}
-            entry["numerical" if key == "n" else "semantic"] = rec
+            if valid.any():
+                widths = (np.stack([p["f_hi"] - p["f_lo"] for p in comparison_rows]) if key == "t" else
+                          np.stack([p["width"] for p in rows]))
+                rec["scale"] = {"mean_abs_residual": float(np.abs(mid[valid]).mean()),
+                                "max_abs_residual": float(np.abs(mid[valid]).max()),
+                                "rms_reference": float(np.sqrt((alignment[valid] ** 2).mean())),
+                                "relative_rms": float(np.sqrt((mid[valid] ** 2).mean() /
+                                                                max((alignment[valid] ** 2).mean(), 1e-300))),
+                                "max_reference_width": float(widths[valid].max())}
+                if key != "t":
+                    rec["scale"]["max_K_R_width"] = rec["scale"]["max_reference_width"]
+            destination = "numerical" if key == "n" else "semantic" if key == "s" else "total"
+            entry[destination] = rec
+            if key == "s":
+                rec["verdict_scope"] = ("G_pi_minus_admitted_task_specification"
+                                        if task_decomposition_admitted else
+                                        "reference_difference; not a semantic verdict")
+            elif key == "t":
+                rec["verdict_scope"] = ("candidate_minus_admitted_task_specification"
+                                        if admitted_contract else
+                                        "candidate versus supplied reference; not a semantic verdict")
+                if rec.get("scale"):
+                    rec["relative_rms"] = rec["scale"]["relative_rms"]
+                    rec["max_abs"] = rec["scale"]["max_abs_residual"]
+                if admitted_contract:
+                    entry["task_comparison_elements_per_seed"] = int(valid.shape[1])
+                    entry["task_comparison_covers_complete_public_output"] = True
+                    entry["task_special_values"] = _contract_special_values(comparison_rows)
         # element-wise view of e_sem over every (seed, element) with a complete finite reference, independent of
         # the coordinate set fixed on the development units (outputs whose finite positions move with the data,
         # e.g. masks that set data-dependent entries to -inf, leave that set nearly empty)
@@ -798,17 +1032,10 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
             entry["semantic_elementwise"] = {
                 "elements": int(ok.sum()),
                 "certified_frac": float(((s_lo_all > 0) | (s_hi_all < 0)).mean()),
-                "relative_rms": float(np.sqrt((mid_all ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300)))}
-        # the total K - f = e_num + e_sem: a semantic deviation that the rounded execution undoes (a branch that
-        # K_R decides on real values while the device decides on rounded ones, e.g. an equality between a
-        # compile-time rounded constant and a value cast at run time) shows as large e_sem and e_num of
-        # opposite sign with a small total
-        if ok.any() and mode == "B":
-            tot = 0.5 * (np.stack([p["n"][0] for p in rows]) + np.stack([p["n"][1] for p in rows])) + \
-                0.5 * (np.stack([p["s"][0] for p in rows]) + np.stack([p["s"][1] for p in rows]))
-            entry["total"] = {"comparison": "K - f = e_num + e_sem (midpoints)",
-                              "relative_rms": float(np.sqrt((tot[ok] ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300))),
-                              "max_abs": float(np.abs(tot[ok]).max())}
+                "relative_rms": float(np.sqrt((mid_all ** 2).mean() / max((kr[ok] ** 2).mean(), 1e-300))),
+                "verdict_scope": ("G_pi_minus_admitted_task_specification"
+                                  if task_decomposition_admitted else
+                                  "reference_difference; not a semantic verdict")}
         # where e_sem sits in seed 0: mean |e_sem| per index of the last logical axis
         r0 = rows[0]
         inv = np.full(int(max(r0["pos"].max(), r0["idx"].max(initial=0))) + 1, -1)
@@ -821,9 +1048,58 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
         last = r0["shape"][-1] if len(r0["shape"]) else 1  # 0-dim outputs: a single column
         entry["sem_profile_last_axis" if mode == "B" else "num_profile_last_axis"] = [
             round(float(x), 8) for x in full.reshape(-1, last).mean(0)]
-        if mode == "A":
-            entry["task_semantics"] = "not checked (no specification)"
+        entry["task_semantics"] = ("not checked (no specification)" if mode == "A" else
+                                   "candidate checked against an admitted task specification and reviewed call binding; "
+                                   "G_pi decomposition also has call-level inputs"
+                                   if task_decomposition_admitted else
+                                   "candidate checked against an admitted task specification and reviewed call binding; "
+                                   "G_pi decomposition includes non-Triton intermediates"
+                                   if admitted_contract else
+                                   "not established (supplied reference is not an admitted contract binding)")
         report["outputs"][name] = entry
+    # A reviewed public-call binding can cover an output even when its value is not written by a recorded Triton
+    # launch.  Preserve the direct K-f result, while stating plainly that no K-G_pi decomposition was established.
+    if admitted_contract:
+        for name, rows in task_totals.items():
+            if name in report["outputs"]:
+                continue
+            lo = np.stack([p["t"][0] for p in rows])
+            hi = np.stack([p["t"][1] for p in rows])
+            valid = np.stack([p["ok_total"] for p in rows])
+            alignment = np.stack([p["f"] for p in rows])
+            t_phase = time.time()
+            rec, _ = assess_units(f"{name}: K - admitted task specification", lo, hi, alignment, valid, n_dev,
+                                  RULES, alpha=alpha, alignment_reference=alignment,
+                                  unit_ids=list(dev) + list(conf), equivalence_rel=equivalence_rel)
+            if equivalence_rel is None:
+                rec["equivalence_scale"] = {"delta_rel": None, "meaning": "no equivalence bound declared: no "
+                                            "equivalence statement"}
+            rec["execution_basis"] = "one observed public call per independent input"
+            timing["statistics"] += time.time() - t_phase
+            mid = 0.5 * (lo + hi)
+            if valid.any():
+                widths = np.stack([p["f_hi"] - p["f_lo"] for p in rows])
+                rec["scale"] = {"mean_abs_residual": float(np.abs(mid[valid]).mean()),
+                                "max_abs_residual": float(np.abs(mid[valid]).max()),
+                                "rms_reference": float(np.sqrt((alignment[valid] ** 2).mean())),
+                                "relative_rms": float(np.sqrt((mid[valid] ** 2).mean() /
+                                                                max((alignment[valid] ** 2).mean(), 1e-300))),
+                                "max_reference_width": float(widths[valid].max())}
+                rec["relative_rms"] = rec["scale"]["relative_rms"]
+                rec["max_abs"] = rec["scale"]["max_abs_residual"]
+            rec["verdict_scope"] = "candidate_minus_admitted_task_specification"
+            report["outputs"][name] = {
+                "elements_per_seed": 0, "shape": list(rows[0]["shape"]),
+                "task_comparison_elements_per_seed": int(valid.shape[1]),
+                "task_comparison_covers_complete_public_output": True,
+                "task_special_values": _contract_special_values(rows),
+                "numerical": {"verdict": "NOT_ESTABLISHED",
+                              "reason": "no recorded Triton write was bound to this public output"},
+                "total": rec, "task_semantics": "candidate checked against an admitted task specification and "
+                                                   "reviewed call binding; K-G_pi not established"}
+            if contract_output_kinds.get(name) == "boolean":
+                report["outputs"][name]["comparison_kind"] = "exact_boolean"
+                report["outputs"][name]["boolean_task_comparison"] = _boolean_task_comparison(rows)
     # cost by phase (evaluation plan, work item H): compile / warm-up, input generation, capture (the launches under
     # the recorder), reference (TTIR evaluation), specification, statistics; "seconds" keeps its old meaning
     report["timing_seconds"] = {k: round(v, 3) for k, v in timing.items()}
@@ -916,6 +1192,22 @@ def _within_input_mean_residual(rows):
     return np.stack(lo_u), np.stack(hi_u)
 
 
+def _within_input_mean_total(rows):
+    """Per unit outward enclosure of the repeated-launch mean of K - f."""
+    lo_u, hi_u = [], []
+    for p in rows:
+        ks = [p["k"]] + [k for k in p["k_reps"] if k.shape == p["k"].shape]
+        los, his = zip(*(residual_interval(k, p["f_lo"], p["f_hi"]) for k in ks))
+        okm = p["ok_total"]
+        L = np.where(okm, np.stack(los), 0.0)
+        H = np.where(okm, np.stack(his), 0.0)
+        s_lo, s_hi = iv.sum_bounds(L, H, axis=0)
+        n = len(ks)
+        lo_u.append(iv.div_bounds(s_lo, n)[0])
+        hi_u.append(iv.div_bounds(s_hi, n)[1])
+    return np.stack(lo_u), np.stack(hi_u)
+
+
 def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None, observe=None, alpha=0.05, magnitude_bound=None):
     """Black-box mode (evaluation plan, work item C) for implementations without TTIR (NumPy, CUDA, cuBLAS): the
     specification is the only reference, so only the total K - f is measured, through the same decision layer.
@@ -926,21 +1218,26 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None, observe=None, 
     t_phase = time.time()
     case.setup()
     timing["setup_compile_warmup"] = time.time() - t_phase
-    rows, special, incs = {}, {}, {}
+    rows, special, incs, contract_bindings = {}, {}, {}, []
     precision_env = precision_environment()
     t0 = time.time()
     for seed in list(dev) + list(conf):
         t_phase = time.time()
         inp = case.inputs(seed)
         timing["inputs"] += time.time() - t_phase
-        snap = InputSnapshot(inp) if observe else None
+        snap = InputSnapshot(inp)
         t_phase = time.time()
         outs = case.launch(inp)
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         timing["call"] += time.time() - t_phase
         t_phase = time.time()
-        specs = case.spec(inp)
+        if getattr(case, "contract_reference", None) is not None:
+            specs, binding_summary = case.bound_spec(inp, outs, [], snap)
+            contract_bindings.append({"seed": seed, **binding_summary})
+        else:
+            with snap.pre_call_state():
+                specs = case.spec(inp)
         timing["specification"] += time.time() - t_phase
         if specs is None:
             raise ValueError("black-box mode needs spec(inputs): the specification is the only reference")
@@ -966,9 +1263,19 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None, observe=None, 
             rows.setdefault(name, []).append((np.where(ok, lo, 0.0), np.where(ok, hi, 0.0),
                                               ref_mid, ok, tuple(np.shape(out))))
     n_dev = len(list(dev))
+    admitted_contract = len(contract_bindings) == len(list(dev) + list(conf)) and \
+        all(row.get("reference_usable_for_bias_measurement") is True for row in contract_bindings)
     report = {"case": case.name, "mode": "black-box", "implementation": case.implementation,
               "specification": case.specification, "spec_bound": case.spec_bound,
-              "comparison": "K - f only (no TTIR: no reference K_R, no decomposition)",
+              "reference_kind": ("admitted_task_specification" if admitted_contract else
+                                 "implementation_reference"), "semantic_verdict": "not_established",
+              "semantic_reason": ("admitted task specification and reviewed call binding; bias decisions are in the "
+                                  "per-output statistical queries" if admitted_contract else
+                                  "supplied reference has no admitted contract and complete kernel binding"),
+              "contract_bindings": contract_bindings,
+              "comparison": ("K - admitted task specification only (no TTIR: no K_R decomposition)"
+                             if admitted_contract else
+                             "K - supplied reference only (no TTIR: no K_R, no decomposition)"),
               "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
               "seconds": round(time.time() - t0, 1), "outputs": {}}
     for name, r in rows.items():
@@ -984,9 +1291,15 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None, observe=None, 
                             "max_abs_residual": float(np.abs(mid[ok]).max()),
                             "rms_reference": float(np.sqrt((fm[ok] ** 2).mean())),
                             "relative_rms": float(np.sqrt((mid[ok] ** 2).mean() / max((fm[ok] ** 2).mean(), 1e-300)))}
+        rec["verdict_scope"] = ("candidate_minus_admitted_task_specification"
+                                if admitted_contract else "reference_difference; not a semantic verdict")
         report["outputs"][name] = {"elements_per_seed": int(ok.shape[1]), "shape": list(r[0][4]),
                                    "finite_fraction": float(ok.mean()), "total_black_box": rec,
-                                   "special_values": special[name]}
+                                   "special_values": special[name],
+                                   "task_semantics": ("checked against an admitted task specification and reviewed "
+                                                      "call binding" if admitted_contract else
+                                                      "not established (supplied reference is not an admitted "
+                                                      "contract binding)")}
         if name in incs:
             from .reference_eval.observation import summarize_increment
             ob = observe[name]

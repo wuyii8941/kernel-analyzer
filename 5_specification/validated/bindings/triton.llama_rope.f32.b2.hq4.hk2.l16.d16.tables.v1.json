@@ -1,0 +1,48 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.llama_rope.f32.b2.hq4.hk2.l16.d16.tables.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 Transformers-Llama supplied-table RoPE and q/k VJP",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "two launches write complete q/k rotated tensors and complete q/k input VJPs",
+    "measure_call": "../calls/triton_llama_rope.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "llama_rope_value_and_qk_vjp",
+      "contract": "ROPE",
+      "profile": "hf4573_llama_tables_real",
+      "task_statement": "Compute the complete Transformers 4.57.3 Llama supplied-table rotate-half q/k outputs and q/k VJPs for rank-4 float32 tensors.",
+      "input_map": [
+        {"target": "/q", "source": "/tensor_arguments/q/before", "conversion": "tensor_values"},
+        {"target": "/k", "source": "/tensor_arguments/k/before", "conversion": "tensor_values"},
+        {"target": "/cos", "source": "/tensor_arguments/cos/before", "conversion": "tensor_values"},
+        {"target": "/sin", "source": "/tensor_arguments/sin/before", "conversion": "tensor_values"},
+        {"target": "/upstream_q", "source": "/tensor_arguments/upstream_q/before", "conversion": "tensor_values"},
+        {"target": "/upstream_k", "source": "/tensor_arguments/upstream_k/before", "conversion": "tensor_values"},
+        {"target": "/dtype", "literal": "f32", "basis": "all six tensor inputs are float32"},
+        {"target": "/position_ids", "literal": null, "basis": "the deprecated public argument is unused and fixed to null"},
+        {"target": "/unsqueeze_dim", "literal": 1, "basis": "tables [B,L,D] broadcast across head dimension 1"}
+      ],
+      "output_map": [
+        {"target": "/q_out", "source": "/returns/q_out", "conversion": "tensor_record", "measure_output": "q_out"},
+        {"target": "/k_out", "source": "/returns/k_out", "conversion": "tensor_record", "measure_output": "k_out"},
+        {"target": "/dq", "source": "/returns/dq", "conversion": "tensor_record", "measure_output": "dq"},
+        {"target": "/dk", "source": "/returns/dk", "conversion": "tensor_record", "measure_output": "dk"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "q", "effect": "unchanged"},
+    {"argument": "k", "effect": "unchanged"},
+    {"argument": "cos", "effect": "unchanged"},
+    {"argument": "sin", "effect": "unchanged"},
+    {"argument": "upstream_q", "effect": "unchanged"},
+    {"argument": "upstream_k", "effect": "unchanged"}
+  ]
+}

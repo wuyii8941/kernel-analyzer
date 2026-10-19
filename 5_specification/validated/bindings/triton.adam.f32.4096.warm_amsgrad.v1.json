@@ -1,0 +1,58 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.adam.f32.4096.warm_amsgrad.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 warm-state coupled Adam/AMSGrad transition",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "two launches: sixteen Triton programs update every parameter and moment coordinate, then one Triton program increments the scalar step",
+    "measure_call": "../calls/triton_adam.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "one_parameter_adam_step",
+      "contract": "ADAM",
+      "profile": "torch210_dense_real",
+      "task_statement": "Perform one complete public torch.optim.Adam transition on one received dense float32 parameter with existing first, second and AMSGrad-maximum state at step 4, using coupled weight decay, maximize and AMSGrad, and return every post-state at step 5.",
+      "input_map": [
+        {"target": "/state/theta", "source": "/tensor_arguments/theta/before", "conversion": "tensor_values"},
+        {"target": "/state/m", "source": "/tensor_arguments/m/before", "conversion": "tensor_values"},
+        {"target": "/state/v", "source": "/tensor_arguments/v/before", "conversion": "tensor_values"},
+        {"target": "/state/vmax", "source": "/tensor_arguments/vmax/before", "conversion": "tensor_values"},
+        {"target": "/state/t", "source": "/tensor_arguments/t/before", "conversion": "tensor_values"},
+        {"target": "/gradient", "source": "/tensor_arguments/gradient/before", "conversion": "tensor_values"},
+        {"target": "/lr", "literal": 0.125, "basis": "the kernel uses the exact binary value 0.125"},
+        {"target": "/beta1", "literal": 0.5, "basis": "the kernel uses the exact binary value 0.5"},
+        {"target": "/beta2", "literal": 0.75, "basis": "the kernel uses the exact binary value 0.75"},
+        {"target": "/eps", "literal": 0.25, "basis": "the kernel adds the exact binary value 0.25 outside sqrt"},
+        {"target": "/weight_decay", "literal": 0.25, "basis": "the kernel adds the exact binary coupled L2 term 0.25*theta"},
+        {"target": "/maximize", "literal": true, "basis": "the kernel negates the received gradient before coupled decay"},
+        {"target": "/amsgrad", "literal": true, "basis": "the kernel stores max(old_vmax,new_v) and uses it in the denominator"},
+        {"target": "/decoupled_weight_decay", "literal": false, "basis": "weight decay is accumulated in both moments"},
+        {"target": "/foreach", "literal": false, "basis": "the bound task is one complete parameter transition"},
+        {"target": "/fused", "literal": false, "basis": "the binding makes no claim about PyTorch's internal fused implementation"},
+        {"target": "/capturable", "literal": false, "basis": "the selected task fixes a noncapturable public transition"},
+        {"target": "/differentiable", "literal": false, "basis": "the selected task is nondifferentiable"}
+      ],
+      "output_map": [
+        {"target": "/theta", "source": "/tensor_arguments/theta/after", "conversion": "tensor_values", "measure_output": "theta"},
+        {"target": "/m", "source": "/tensor_arguments/m/after", "conversion": "tensor_values", "measure_output": "m"},
+        {"target": "/v", "source": "/tensor_arguments/v/after", "conversion": "tensor_values", "measure_output": "v"},
+        {"target": "/vmax", "source": "/tensor_arguments/vmax/after", "conversion": "tensor_values", "measure_output": "vmax"},
+        {"target": "/t", "source": "/tensor_arguments/t/after", "conversion": "tensor_values", "measure_output": "t"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "theta", "effect": "output", "task": "one_parameter_adam_step", "target": "/theta"},
+    {"argument": "gradient", "effect": "unchanged"},
+    {"argument": "m", "effect": "output", "task": "one_parameter_adam_step", "target": "/m"},
+    {"argument": "v", "effect": "output", "task": "one_parameter_adam_step", "target": "/v"},
+    {"argument": "vmax", "effect": "output", "task": "one_parameter_adam_step", "target": "/vmax"},
+    {"argument": "t", "effect": "output", "task": "one_parameter_adam_step", "target": "/t"}
+  ]
+}

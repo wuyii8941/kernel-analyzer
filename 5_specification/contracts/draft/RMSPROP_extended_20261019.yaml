@@ -1,0 +1,175 @@
+schema_version: '1.2'
+id: RMSPROP
+role: RMSPROP
+title: torch.optim.RMSprop (alpha, eps outside the square root, centered, momentum, weight decay, maximize), one step
+  from an explicit pre-state, PyTorch 2.10 algorithm box
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E1_optim), 2026-10-17
+  date: '2026-10-17'
+  scope: One optimizer step on one parameter tensor (flattened), real arithmetic; awaiting a review by someone who did
+    not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [torch.optim.RMSprop]
+profiles:
+  torch210:
+    meaning: torch.optim.RMSprop as its 2.10 algorithm box states, with maximize per decision RM.MAXIMIZE; all option
+      values.
+    task_choice_required: false
+readings:
+  ascent_at_update:
+    meaning: 'Diagnostic: maximize read as an ascent at the update only (states built from +grad, theta_new = theta_old
+      + lr*step). Differs from the contract in the sign of gave and b (and of theta when they enter). Not the task
+      definition (decision RM.MAXIMIZE).'
+    basis: [T_RMSPROP_OPT.MAXIMIZE]
+outputs:
+  theta:
+    shape: '[d]'
+    guarantee: rigorous_enclosure
+  v:
+    shape: '[d] square average'
+    guarantee: exact
+  gave:
+    shape: '[d] gradient average (unchanged unless centered)'
+    guarantee: exact
+  b:
+    shape: '[d] momentum buffer (unchanged unless momentum > 0)'
+    guarantee: rigorous_enclosure
+  t:
+    shape: scalar integer (torch state step)
+    guarantee: exact
+comparison:
+  input_binding: All values are the exactly received rationals.
+  quality: No tolerance; theta and b are strict enclosures (square root), v, gave, t exact.
+  test_evidence: Exact equality or containment of the expected value in the enclosure.
+  error_handling: Inputs validated before evaluation.
+decisions:
+- id: RM.MAXIMIZE
+  status: drafted
+  statement: 'The 2.10 RMSprop box has no maximize line; the parameter is "maximize the objective with respect to the
+    params, instead of minimizing". The contract negates the gradient first (g = -grad, then weight decay, square
+    average, gradient average and buffer), i.e. RMSprop applied to -f. Basis: the sibling boxes of the same release
+    (Adam, AdamW, SGD, RAdam, Adafactor) all define maximize by g_t <- -grad f_t as their first line, and the reference
+    program does the same. Alternative (ascent at the update only, states from +grad) kept as the diagnostic reading
+    ascent_at_update; it gives the same parameter trajectory from a cold start but different stored gave and b.
+    Alternative (negate after weight decay, g = -(grad + lambda*theta)) rejected: it ascends f + lambda/2 |theta|^2, so
+    the decay term grows |theta|, contrary to the meaning of weight decay and to the sibling boxes.'
+  basis: [T_RMSPROP_OPT.MAXIMIZE, T_ADAM_OPT.MAXIMIZE, T_SGD_OPT.MAXIMIZE, TS_RMSPROP.STEP]
+- id: RM.STATE
+  status: drafted
+  statement: 'The post-state always carries v, gave, b and the step counter t (torch state "step"). The box initialises
+    gave = 0 and b = 0 and writes gave only when centered and b only when momentum > 0; otherwise they are returned
+    unchanged (torch does not allocate them).'
+  basis: [T_RMSPROP_OPT.INIT, T_RMSPROP_OPT.CENTERED, T_RMSPROP_OPT.UPDATE, TS_RMSPROP.STEP]
+- id: RM.DOMAIN
+  status: drafted
+  statement: 'With an arbitrary pre-state the centered estimate v~ = v_new - gave_new^2 can be negative (a pre-state no
+    cold start can reach); its square root has no real value: domain_undefined. v~ = 0 with eps = 0 divides by zero:
+    domain_undefined. The contract does not require NaN or inf from the device there.'
+  basis: [T_RMSPROP_OPT.CENTERED, T_RMSPROP_OPT.UPDATE]
+clauses:
+- {id: RM.C1, basis: [RM.MAXIMIZE, T_RMSPROP_OPT.L2], statement: 'g = -grad if maximize else grad; then g <- g +
+    weight_decay*theta_old', observes: [theta, v, gave, b], evidence_kind: definition}
+- {id: RM.C2, basis: [T_RMSPROP_OPT.SQUARE_AVG], statement: 'v_new = alpha*v_old + (1-alpha)*g**2; t_new = t_old + 1',
+  observes: [v, t], evidence_kind: definition}
+- {id: RM.C3, basis: [T_RMSPROP_OPT.CENTERED, RM.STATE, RM.DOMAIN], statement: 'centered: gave_new = alpha*gave_old +
+    (1-alpha)*g and v~ = v_new - gave_new**2; otherwise v~ = v_new and gave unchanged', observes: [gave, theta],
+  evidence_kind: definition}
+- {id: RM.C4, basis: [T_RMSPROP_OPT.UPDATE, T_RMSPROP_OPT.EPS], statement: 'D = sqrt(v~) + eps (eps outside the root);
+    momentum > 0: b_new = momentum*b_old + g/D, theta_new = theta_old - lr*b_new; else theta_new = theta_old - lr*g/D
+    and b unchanged', observes: [theta, b], evidence_kind: definition}
+- {id: RM.C5, basis: [T_ZERO_GRAD.SKIP], statement: 'gradient None leaves the whole state unchanged; a zero gradient is a
+    full step', observes: [theta, v, gave, b, t], evidence_kind: definition}
+examples:
+- id: RM.E1
+  profile: torch210
+  clauses: [RM.C2, RM.C4]
+  input: &c0 {state: {theta: [1], v: [0], gave: [0], b: [0], t: 0}, gradient: [2], lr: 1/10, alpha: 3/4, eps: 0,
+    weight_decay: 0, momentum: 0, centered: false, maximize: false}
+  expected: {outcome: value, fields: {theta: ['4/5'], v: [1], gave: [0], b: [0], t: 1}}
+- id: RM.E2
+  profile: torch210
+  clauses: [RM.C4]
+  input: {<<: *c0, eps: 1}
+  expected: {outcome: value, fields: {theta: ['9/10'], v: [1], gave: [0], b: [0], t: 1}}
+  note: eps added after the square root, 1 - (1/10)*2/(1+1).
+- id: RM.E3
+  profile: torch210
+  clauses: [RM.C1, RM.C2, RM.C3, RM.C4]
+  input: {state: {theta: [1], v: [2], gave: [1], b: [1], t: 3}, gradient: [1], lr: 1/10, alpha: 1/2, eps: 0,
+    weight_decay: 1, momentum: 1/2, centered: true, maximize: false}
+  expected: {outcome: value, fields: {theta: [19/20-2*sqrt(3)/15], v: [3], gave: ['3/2'], b: [1/2+4*sqrt(3)/3], t: 4}}
+  note: g = 2; v = 3; gave = 3/2; v~ = 3/4; b = 1/2 + 2/(sqrt(3)/2).
+- id: RM.E4
+  profile: torch210
+  clauses: [RM.C1, RM.C2, RM.C4]
+  input: {<<: *c0, weight_decay: 1/2, maximize: true}
+  expected: {outcome: value, fields: {theta: ['6/5'], v: ['9/16'], gave: [0], b: [0], t: 1}}
+  note: g = -2 + 1/2 = -3/2; v = 9/16; theta = 1 + (1/10)(3/2)/(3/4).
+- id: RM.E5
+  profile: torch210
+  clauses: [RM.C1, RM.C3, RM.C4]
+  input: {state: {theta: [0], v: [1], gave: [0], b: [1], t: 1}, gradient: [1], lr: 1, alpha: 1/2, eps: 0,
+    weight_decay: 0, momentum: 1, centered: true, maximize: true}
+  expected: {outcome: value, fields: {theta: [-1+2*sqrt(3)/3], v: [1], gave: ['-1/2'], b: [1-2*sqrt(3)/3], t: 2}}
+  readings:
+    ascent_at_update: {outcome: value, fields: {theta: [1+2*sqrt(3)/3], v: [1], gave: ['1/2'], b: [1+2*sqrt(3)/3], t: 2}}
+- id: RM.E6
+  profile: torch210
+  clauses: [RM.C5]
+  input: {state: {theta: [1], v: [1], gave: ['1/2'], b: [1], t: 2}, gradient: null, lr: 1/10, alpha: 1/2, eps: 0,
+    weight_decay: 0, momentum: 1/2, centered: true, maximize: false}
+  expected: {outcome: value, fields: {theta: [1], v: [1], gave: ['1/2'], b: [1], t: 2}}
+- id: RM.E7
+  profile: torch210
+  clauses: [RM.C3, RM.C5]
+  input: {state: {theta: [1], v: [1], gave: ['1/2'], b: [0], t: 2}, gradient: [0], lr: 1/10, alpha: 1/2, eps: 0,
+    weight_decay: 0, momentum: 0, centered: true, maximize: false}
+  expected: {outcome: value, fields: {theta: [1], v: ['1/2'], gave: ['1/4'], b: [0], t: 3}}
+- id: RM.E8
+  profile: torch210
+  clauses: [RM.C3]
+  input: {state: {theta: [1], v: [0], gave: [1], b: [0], t: 1}, gradient: [0], lr: 1/10, alpha: 1/2, eps: 1/10,
+    weight_decay: 0, momentum: 0, centered: true, maximize: false}
+  expected: {outcome: domain_undefined}
+  note: v~ = 0 - (1/2)^2 < 0.
+- id: RM.E9
+  profile: torch210
+  clauses: [RM.C4]
+  input: {<<: *c0, gradient: [0]}
+  expected: {outcome: domain_undefined}
+- id: RM.N1
+  profile: torch210
+  clauses: [RM.C2]
+  input: {<<: *c0, state: {theta: [1], v: [-1], gave: [0], b: [0], t: 0}}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['gradient [d] or None', lr, alpha, eps, weight_decay, momentum, 'centered, maximize (booleans)']
+  pre_state: ['theta [d]', 'v [d]', 'gave [d]', 'b [d]', t nonnegative integer]
+  post_state: ['theta [d]', 'v [d]', 'gave [d]', 'b [d]', t]
+  observation_unit: one parameter tensor (flattened; element-wise update), one optimizer step
+domain:
+  valid: [d >= 1, finite rationals, v >= 0, 'lr, alpha, eps, weight_decay, momentum >= 0']
+  domain_undefined: ['centered v~ < 0', 'v~ = 0 and eps = 0']
+  invalid_input: [length mismatch, negative v, NaN or infinite values, non-boolean options, negative hyperparameters]
+  unsupported: [sparse gradients, complex parameters, differentiable=True]
+mutation_requirements:
+- {id: RM.M1, misreading: eps inside the square root (the TensorFlow order the documentation warns about), witnesses: [
+    RM.E2]}
+- {id: RM.M2, misreading: centered subtracts the square of the old gradient average, witnesses: [RM.E3]}
+- {id: RM.M3, misreading: centered flag ignored, witnesses: [RM.E3]}
+- {id: RM.M4, misreading: maximize negates after weight decay, witnesses: [RM.E4]}
+- {id: RM.M5, misreading: 'lr inside the momentum buffer (b = mu*b + lr*g/D, theta -= b)', witnesses: [RM.E3]}
+- {id: RM.M6, misreading: None gradient treated as zero, witnesses: [RM.E6]}
+- {id: RM.M7, misreading: 'centered subtracts gave instead of gave**2 (the v2.2 defect of the centered path)', witnesses: [
+    RM.E3]}
+- {id: RM.M8, misreading: step counter not advanced in the post-state, witnesses: [RM.E1]}
+nonclaims:
+- Device rounding of for-loop, foreach and compiled implementations is not judged here (K - f).
+- The reading ascent_at_update is diagnostic; agreement with it is not agreement with the contract.
+- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+changes: []

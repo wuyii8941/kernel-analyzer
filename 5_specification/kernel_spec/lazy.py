@@ -2,12 +2,15 @@
 
 Each node is a LazyTensor: a shape, a dtype and a memoised get(index). Only the elements an output element depends on
 are computed (a matrix-product element reads one row and one column; a reduction reads its slice). The scalar
-semantics are those of kernel_spec.aten (the contracts' references): tests/test_lazy.py compares every operation with
-aten on random small tensors, so the two cannot drift apart silently.
+semantics are intended to match kernel_spec.aten (the contracts' references).
+Differential tests check the exercised inputs; they do not establish general equivalence.
 """
 from __future__ import annotations
 
 import math
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from fractions import Fraction
 
 import numpy as np
@@ -19,18 +22,59 @@ from .num import Invalid, NotEstablished, Undefined, Unsupported
 from .real import R
 
 
+@dataclass
+class EvaluationBudget:
+    limit: int
+    used: int = 0
+
+
+_budgets = ContextVar("lazy_evaluation_budgets", default=())
+
+
+def evaluation_budget_exhausted():
+    """Whether any active scalar evaluation budget has no remaining work."""
+    return any(b.used >= b.limit for b in _budgets.get())
+
+
+@contextmanager
+def evaluation_budget(limit):
+    """Limit uncached scalar evaluations, including all dependency nodes.
+
+    This is a work counter, not a bound on time or arbitrary-precision memory.
+    Nested budgets also consume their enclosing budgets; exhaustion is unknown,
+    never a claim that the mathematical operation is undefined.
+    """
+    if type(limit) is not int or limit <= 0:
+        raise Invalid("lazy evaluation budget must be a positive integer")
+    budget = EvaluationBudget(limit)
+    token = _budgets.set((*_budgets.get(), budget))
+    try:
+        yield budget
+    finally:
+        _budgets.reset(token)
+
+
 class Lazy:
     __slots__ = ("shape", "dtype", "_get", "_memo")
 
     def __init__(self, shape, dtype, get):
-        self.shape = tuple(int(s) for s in shape)
+        self.shape = tuple(A._layout_sizes(shape, "lazy tensor shape"))
+        if any(size < 0 for size in self.shape):
+            raise Invalid("lazy tensor shape must be nonnegative")
         self.dtype = A.dt(dtype)
         self._get = get
         self._memo = {}
 
     def get(self, idx):
-        idx = tuple(int(i) for i in idx)
+        idx = tuple(A._layout_sizes(idx, "lazy coordinate"))
+        if len(idx) != self.ndim or any(i < 0 or i >= size for i, size in zip(idx, self.shape)):
+            raise Invalid("lazy coordinate is outside the tensor shape")
         if idx not in self._memo:
+            budgets = _budgets.get()
+            if evaluation_budget_exhausted():
+                raise NotEstablished("lazy scalar evaluation budget exhausted")
+            for budget in budgets:
+                budget.used += 1
             self._memo[idx] = self._get(idx)
         return self._memo[idx]
 
@@ -39,7 +83,7 @@ class Lazy:
         return len(self.shape)
 
     def numel(self):
-        return int(np.prod(self.shape)) if self.shape else 1
+        return math.prod(self.shape)
 
 
 def const(value, dtype):
@@ -69,7 +113,7 @@ def as_lazy(x, like=None):
 
 
 def _bshape(*shapes):
-    return tuple(np.broadcast_shapes(*shapes))
+    return A._broadcast_shape(*shapes)
 
 
 def _bidx(idx, shape):
@@ -96,28 +140,23 @@ def _float(x):
 
 
 def l_add(a, b, alpha=1):
-    al = R(alpha)
-    return _map(lambda x, y: (x or y) if isinstance(x, bool) else x + (y * al if isinstance(y, R) else y * int(alpha)), a, b)
+    a, b = A._arithmetic_operands(a, b, convert=as_lazy, tensor_types=(Lazy, A.Ten))
+    alpha, al = A._arithmetic_alpha(A.promote(a.dtype, b.dtype), alpha)
+    return _map(lambda x, y: x + y * al if isinstance(x, R) else A._iadd(x, y, alpha), a, b)
 
 
 def l_sub(a, b, alpha=1):
-    al = R(alpha)
-    return _map(lambda x, y: x - (y * al if isinstance(y, R) else y * int(alpha)), a, b)
+    a, b = A._arithmetic_operands(a, b, convert=as_lazy, tensor_types=(Lazy, A.Ten))
+    if a.dtype in A.BOOL or b.dtype in A.BOOL:
+        raise Invalid("subtraction of booleans is not supported (torch.sub)")
+    alpha, al = A._arithmetic_alpha(A.promote(a.dtype, b.dtype), alpha)
+    return _map(lambda x, y: x - y * al if isinstance(x, R) else x - y * int(alpha), a, b)
 
 
 def l_div(a, b, rounding_mode=None):
-    if rounding_mode is None:
-        return _map(lambda x, y: x / y, _float(a) if isinstance(a, (Lazy, A.Ten)) else a,
-                    _float(b) if isinstance(b, (Lazy, A.Ten)) else b, compute=None)
-    def f(x, y):
-        if isinstance(x, R) or isinstance(y, R):
-            q = R(x) / R(y)
-            return rl.trunc(q) if rounding_mode == "trunc" else rl.floor(q)
-        if y == 0:
-            raise Invalid("integer division by zero")
-        q = Fraction(x, y)
-        return math.trunc(q) if rounding_mode == "trunc" else math.floor(q)
-    return _map(f, a, b)
+    a, b = A._arithmetic_operands(a, b, convert=as_lazy, tensor_types=(Lazy, A.Ten))
+    dtype = A._division_dtype(a, b, rounding_mode)
+    return _map(lambda x, y: A._division_value(x, y, rounding_mode), a, b, compute=dtype)
 
 
 def _fl1(fn):
@@ -132,10 +171,8 @@ UNARY = {
 
 
 def l_pow(a, b):
-    a = as_lazy(a)
-    if a.dtype in A.INT and isinstance(b, int):
-        return _map(lambda x: x ** b, a)
-    return _map(lambda x, y: x ** y, _float(a), b if not isinstance(b, (Lazy, A.Ten)) else _float(b))
+    a, b, dtype = A._power_operands(a, b, convert=as_lazy, tensor_types=(Lazy, A.Ten))
+    return _map(A._power_value, a, b, compute=dtype)
 
 
 def _cmp(fn):
@@ -149,6 +186,7 @@ def _truth(x):
 
 def l_where(c, a, b):
     c = as_lazy(c)
+    A._where_condition(c)
     a = as_lazy(a, b if isinstance(b, (Lazy, A.Ten)) else None)
     b = as_lazy(b, a)
     d = A.promote(a.dtype, b.dtype)
@@ -178,13 +216,7 @@ def _strides(shape):
 
 def l_view(a, shape):
     a = as_lazy(a)
-    shape = list(shape)
-    n = a.numel()
-    if -1 in shape:
-        known = int(np.prod([s for s in shape if s != -1])) if len(shape) > 1 else 1
-        shape[shape.index(-1)] = n // known if known else 0
-    if int(np.prod(shape)) != n:
-        raise Invalid(f"view {a.shape} -> {shape}")
+    shape = A._view_shape(a.shape, shape)
     src_st, dst_st = _strides(a.shape), _strides(shape)
 
     def g(idx):
@@ -195,7 +227,7 @@ def l_view(a, shape):
 
 def l_permute(a, dims):
     a = as_lazy(a)
-    dims = [d % a.ndim for d in dims]
+    dims = A._permutation(a.ndim, dims)
     inv = [0] * a.ndim
     for i, d in enumerate(dims):
         inv[d] = i
@@ -204,26 +236,30 @@ def l_permute(a, dims):
 
 def l_transpose(a, d0, d1):
     a = as_lazy(a)
+    d0, d1 = A._layout_axis(d0, max(1, a.ndim)), A._layout_axis(d1, max(1, a.ndim))
+    if a.ndim == 0:
+        return a
     p = list(range(a.ndim))
-    p[d0 % a.ndim], p[d1 % a.ndim] = p[d1 % a.ndim], p[d0 % a.ndim]
+    p[d0], p[d1] = p[d1], p[d0]
     return l_permute(a, p)
 
 
 def l_t(a):
     a = as_lazy(a)
+    if a.ndim > 2:
+        raise Invalid("t requires a tensor with at most two dimensions")
     return a if a.ndim < 2 else l_transpose(a, 0, 1)
 
 
 def l_expand(a, shape):
     a = as_lazy(a)
-    off = len(shape) - a.ndim
-    full = [a.shape[i - off] if s == -1 else s for i, s in enumerate(shape)]
+    full = A._expand_shape(a.shape, shape)
     return Lazy(full, a.dtype, lambda idx: a.get(_bidx(idx, a.shape)))
 
 
 def l_unsqueeze(a, d):
     a = as_lazy(a)
-    d = d if d >= 0 else d + a.ndim + 1
+    d = A._layout_axis(d, a.ndim + 1)
     shape = list(a.shape)
     shape.insert(d, 1)
     return Lazy(shape, a.dtype, lambda idx: a.get(idx[:d] + idx[d + 1:]))
@@ -231,12 +267,8 @@ def l_unsqueeze(a, d):
 
 def l_squeeze(a, dims=None):
     a = as_lazy(a)
-    if dims is None:
-        keep = [i for i, s in enumerate(a.shape) if s != 1]
-    else:
-        dims = [dims] if isinstance(dims, int) else list(dims)
-        drop = {d % a.ndim for d in dims if a.shape[d % a.ndim] == 1} if a.ndim else set()
-        keep = [i for i in range(a.ndim) if i not in drop]
+    drop = set(A._squeeze_axes(a.shape, dims))
+    keep = [i for i in range(a.ndim) if i not in drop]
 
     def g(idx):
         full = [0] * a.ndim
@@ -248,14 +280,13 @@ def l_squeeze(a, dims=None):
 
 def l_select(a, dim, index):
     a = as_lazy(a)
-    dim = dim % a.ndim
-    index = index % a.shape[dim]
+    dim, index = A._select_coordinate(a.shape, dim, index)
     return Lazy(a.shape[:dim] + a.shape[dim + 1:], a.dtype, lambda idx: a.get(idx[:dim] + (index,) + idx[dim:]))
 
 
 def l_slice(a, dim=0, start=None, end=None, step=1):
     a = as_lazy(a)
-    dim = dim % a.ndim
+    dim = A._layout_axis(dim, a.ndim)
     s, e, st = A._slice_bounds(a.shape[dim], start, end, step)
     n = max(0, (e - s + st - 1) // st)
     shape = list(a.shape)
@@ -264,10 +295,7 @@ def l_slice(a, dim=0, start=None, end=None, step=1):
 
 
 def l_cat(tensors, dim=0):
-    ts = [as_lazy(t) for t in tensors]
-    ts = [t for t in ts if not (t.ndim == 1 and t.shape[0] == 0)] or ts[:1]
-    dim = dim % ts[0].ndim
-    d = A.promote(*[t.dtype for t in ts])
+    ts, dim, d = A._cat_layout([as_lazy(t) for t in tensors], dim)
     offs, acc = [], 0
     for t in ts:
         offs.append(acc)
@@ -286,6 +314,7 @@ def l_cat(tensors, dim=0):
 
 def l_split_with_sizes(a, sizes, dim=0):
     a = as_lazy(a)
+    dim, sizes = A._split_sections(a.shape, sizes, dim)
     out, start = [], 0
     for s in sizes:
         out.append(l_slice(a, dim, start, start + s))
@@ -295,18 +324,13 @@ def l_split_with_sizes(a, sizes, dim=0):
 
 def l_split(a, size, dim=0):
     a = as_lazy(a)
-    n = a.shape[dim % a.ndim]
-    return l_split_with_sizes(a, [min(size, n - i) for i in range(0, n, size)] or [0], dim)
+    dim, sizes = A._split_size(a.shape, size, dim)
+    return l_split_with_sizes(a, sizes, dim)
 
 
 def l_pad(a, pad, value=0):
     a = as_lazy(a)
-    lo = [0] * a.ndim
-    hi = [0] * a.ndim
-    for k in range(len(pad) // 2):
-        d = a.ndim - 1 - k
-        lo[d], hi[d] = pad[2 * k], pad[2 * k + 1]
-    shape = [a.shape[d] + lo[d] + hi[d] for d in range(a.ndim)]
+    lo, hi, shape = A._padding_layout(a.shape, pad)
     v = A._elem(R(value) if not isinstance(value, (bool, int)) or a.dtype in A.FLOAT else value, a.dtype)
 
     def g(idx):
@@ -319,16 +343,14 @@ def l_pad(a, pad, value=0):
 
 def l_select_scatter(base, src, dim, index):
     base, src = as_lazy(base), as_lazy(src)
-    dim = dim % base.ndim
-    index = index % base.shape[dim]
+    dim, index = A._select_scatter_layout(base.shape, src.shape, dim, index)
     return Lazy(base.shape, base.dtype, lambda idx: _conv(src.get(idx[:dim] + idx[dim + 1:]), base.dtype)
                 if idx[dim] == index else base.get(idx))
 
 
 def l_slice_scatter(base, src, dim=0, start=None, end=None, step=1):
     base, src = as_lazy(base), as_lazy(src)
-    dim = dim % base.ndim
-    s, e, st = A._slice_bounds(base.shape[dim], start, end, step)
+    dim, s, e, st = A._slice_scatter_layout(base.shape, src.shape, dim, start, end, step)
 
     def g(idx):
         i = idx[dim]
@@ -339,33 +361,36 @@ def l_slice_scatter(base, src, dim=0, start=None, end=None, step=1):
 
 
 def l_full(size, value, dtype=None, **kw):
+    A._unimplemented_options(kw)
+    size = A._creation_shape(size)
     d = A.dt(dtype) if dtype is not None else ("b8" if isinstance(value, bool) else "i64" if isinstance(value, int) else "f32")
     v = A._elem(R(value) if isinstance(value, (float, str, Fraction)) else value, d)
     return Lazy(list(size), d, lambda idx: v)
 
 
 def l_iota(length, start=0, step=1, dtype="i64", **kw):
+    A._unimplemented_options(kw)
     return Lazy([length], dtype, lambda idx: start + idx[0] * step)
 
 
-def l_copy(dst, src, *a):
+def l_copy(dst, src, non_blocking=False):
+    A._copy_options(non_blocking)
     dst, src = as_lazy(dst), as_lazy(src)
     s = l_expand(src, list(dst.shape)) if src.shape != dst.shape else src
     return s if s.dtype == dst.dtype else l_convert(s, dst.dtype)
 
 
 # ------------------------------------------------------------------ indexing
-def l_index(a, indices):
-    a = as_lazy(a)
-    ixs = [None if i is None else as_lazy(i) for i in indices]
+def _index_coordinates(input_shape, ixs):
+    """Map coordinates of the indexed result back to the original tensor."""
+    bshape = A._advanced_index_metadata(input_shape, ixs)
     adv = [k for k, i in enumerate(ixs) if i is not None]
-    bshape = _bshape(*[ixs[k].shape for k in adv]) if adv else ()
     contiguous = adv == list(range(adv[0], adv[-1] + 1)) if adv else True
-    rest = [k for k in range(a.ndim) if k not in adv]
+    rest = [k for k in range(len(input_shape)) if k not in adv]
     if contiguous and adv:
-        shape = [a.shape[k] for k in range(adv[0])] + list(bshape) + [a.shape[k] for k in range(adv[-1] + 1, a.ndim)]
+        shape = [input_shape[k] for k in range(adv[0])] + list(bshape) + [input_shape[k] for k in range(adv[-1] + 1, len(input_shape))]
     else:
-        shape = list(bshape) + [a.shape[k] for k in rest]
+        shape = list(bshape) + [input_shape[k] for k in rest]
     nb = len(bshape)
 
     def g(idx):
@@ -376,21 +401,32 @@ def l_index(a, indices):
             src = list(pre)
             for k in adv:
                 v = ixs[k].get(_bidx(bi, ixs[k].shape))
-                n = a.shape[k]
+                n = input_shape[k]
                 if not -n <= v < n:
                     raise Invalid("index out of range")
                 src.append(v % n)
             src += list(post)
-            return a.get(tuple(src))
+            return tuple(src)
         bi, post = idx[:nb], idx[nb:]
-        src = [0] * a.ndim
+        src = [0] * len(input_shape)
         for k in adv:
-            src[k] = ixs[k].get(_bidx(bi, ixs[k].shape)) % a.shape[k]
+            value = ixs[k].get(_bidx(bi, ixs[k].shape))
+            size = input_shape[k]
+            if not -size <= value < size:
+                raise Invalid("index out of range")
+            src[k] = value % size
         for j, k in enumerate(rest):
             src[k] = post[j]
-        return a.get(tuple(src))
-    return Lazy(shape, a.dtype, g)
+        return tuple(src)
+    return tuple(shape), g
 
+
+
+def l_index(a, indices):
+    a = as_lazy(a)
+    ixs = [None if i is None else as_lazy(i) for i in indices]
+    shape, coordinate = _index_coordinates(a.shape, ixs)
+    return Lazy(shape, a.dtype, lambda idx: a.get(coordinate(idx)))
 
 def _materialize_ints(t):
     t = as_lazy(t)
@@ -399,13 +435,32 @@ def _materialize_ints(t):
 
 def l_gather(a, dim, idx):
     a, idx = as_lazy(a), as_lazy(idx)
-    dim = dim % a.ndim
-    return Lazy(idx.shape, a.dtype, lambda i: a.get(i[:dim] + (idx.get(i) % a.shape[dim],) + i[dim + 1:]))
+    dim = A.index_dimension(a.shape, dim)
+    if idx.numel() == 0:
+        return from_array(np.empty(idx.shape), a.dtype)
+    A.require_integer_indices(idx)
+    dim = A.gather_dimension(a.shape, idx.shape, dim)
+    source_shape = a.shape or (1,)
+    def get(i):
+        index = idx.get(i)
+        if not 0 <= index < source_shape[dim]:
+            raise Invalid("gather: index out of range")
+        coordinate = i or (0,)
+        return a.get(coordinate[:dim] + (index,) + coordinate[dim + 1:] if a.ndim else ())
+    return Lazy(idx.shape, a.dtype, get)
 
 
 def l_embedding(weight, indices, padding_idx=-1, **kw):
     w, ix = as_lazy(weight), as_lazy(indices)
-    return Lazy(ix.shape + w.shape[1:], w.dtype, lambda i: w.get((ix.get(i[:ix.ndim]),) + i[ix.ndim:]))
+    A.require_integer_indices(ix)
+    if w.ndim != 2:
+        raise Invalid("embedding: weight must be a matrix")
+    def get(i):
+        index = ix.get(i[:ix.ndim])
+        if not 0 <= index < w.shape[0]:
+            raise Invalid("embedding: index out of range")
+        return w.get((index,) + i[ix.ndim:])
+    return Lazy(ix.shape + w.shape[1:], w.dtype, get)
 
 
 def _writes(index_positions):
@@ -417,9 +472,23 @@ def _writes(index_positions):
 
 def l_scatter(a, dim, idx, src=None, value=None, reduce=None):
     a, idx = as_lazy(a), as_lazy(idx)
-    dim = dim % a.ndim
+    dim = A.index_dimension(a.shape, dim)
+    if idx.numel() == 0:
+        return a
+    A.require_integer_indices(idx)
     srcl = as_lazy(src) if src is not None else None
-    writes = _writes(((i[:dim] + (idx.get(i) % a.shape[dim],) + i[dim + 1:], i) for i in np.ndindex(*idx.shape)))
+    A.scatter_shape(a.shape, idx.shape, None if srcl is None else srcl.shape)
+    A.gather_dimension(a.shape, idx.shape, dim)
+    source_shape = a.shape or (1,)
+    positions = []
+    for i in np.ndindex(*idx.shape):
+        index = idx.get(i)
+        if not 0 <= index < source_shape[dim]:
+            raise Invalid("scatter: index out of range")
+        coordinate = i or (0,)
+        target = coordinate[:dim] + (index,) + coordinate[dim + 1:] if a.ndim else ()
+        positions.append((target, coordinate if srcl is not None and srcl.ndim else ()))
+    writes = _writes(positions)
 
     def g(t):
         if t not in writes:
@@ -438,7 +507,10 @@ def l_scatter(a, dim, idx, src=None, value=None, reduce=None):
             return acc
         if len(vals) == 1:
             return vals[0]
-        return A.AllowedSet(vals)
+        exact = [v.v if isinstance(v, R) and v.exact else v for v in vals]
+        if all(not isinstance(v, R) or v.exact for v in vals) and all(v == exact[0] for v in exact):
+            return vals[0]
+        raise NotEstablished("lazy scatter requires a shared graph choice at duplicated indices")
     return Lazy(a.shape, a.dtype, g)
 
 
@@ -448,45 +520,45 @@ def l_scatter_add(a, dim, idx, src):
 
 def l_index_put(a, indices, values, accumulate=False):
     a, vals = as_lazy(a), as_lazy(values)
+    accumulate = A._index_put_parameters(a, vals, accumulate)
     ixs = [None if i is None else as_lazy(i) for i in indices]
-    adv = [k for k, i in enumerate(ixs) if i is not None]
-    bshape = _bshape(*[ixs[k].shape for k in adv])
-    if any(k != j for j, k in enumerate(adv)):
-        raise Unsupported("index_put with non-leading index tensors")
-    rest_shape = a.shape[len(adv):]
+    vshape, coordinate = _index_coordinates(a.shape, ixs)
+    A._index_put_values_shape(vals.shape, vshape)
+    # INDEX requires in-range indices even when an unindexed axis is empty.
+    for axis, ix in enumerate(ixs):
+        if ix is not None:
+            for idx in np.ndindex(*ix.shape):
+                if not -a.shape[axis] <= ix.get(idx) < a.shape[axis]:
+                    raise Invalid("index out of range")
     writes = {}
-    for bi in np.ndindex(*bshape):
-        tgt = tuple(ixs[k].get(_bidx(bi, ixs[k].shape)) % a.shape[k] for k in adv)
-        for r in np.ndindex(*rest_shape):
-            writes.setdefault(tgt + r, []).append(bi + r)
-    vshape = tuple(bshape) + tuple(rest_shape)
+    for source in np.ndindex(*vshape):
+        writes.setdefault(coordinate(source), []).append(source)
+    if not accumulate and any(len(sources) > 1 for sources in writes.values()):
+        raise Undefined("index_put duplicates with accumulate=False")
 
     def g(t):
         if t not in writes:
             return a.get(t)
-        vs = [_conv(vals.get(_bidx(s, vals.shape) if len(s) >= vals.ndim else s), a.dtype) for s in writes[t]]
+        vs = [_conv(vals.get(_bidx(s, vals.shape)), a.dtype) for s in writes[t]]
         if accumulate:
             acc = a.get(t)
             for v in vs:
-                acc = acc + v
+                acc = A._iadd(acc, v, 1)
             return acc
-        if len(vs) > 1:
-            raise Undefined("index_put duplicates with accumulate=False")
         return vs[0]
     return Lazy(a.shape, a.dtype, g)
 
 
 # ------------------------------------------------------------------ reductions
 def _slices(a, dims):
-    dims = sorted({d % a.ndim for d in dims}) if dims is not None else list(range(a.ndim))
+    dims = A._axes(a, dims)
     keep = [i for i in range(a.ndim) if i not in dims]
     return dims, keep
 
 
 def _reduce(a, dim, keepdim, fn, out_dtype=None):
     a = as_lazy(a)
-    dims, keep = _slices(a, None if dim is None or (isinstance(dim, (list, tuple)) and not dim) else
-                         ([dim] if isinstance(dim, int) else list(dim)))
+    dims, keep = _slices(a, dim)
     shape = [a.shape[i] if i in keep else 1 for i in range(a.ndim)] if keepdim else [a.shape[i] for i in keep]
 
     def g(idx):
@@ -513,18 +585,28 @@ def _sum(vals, zero):
     return s
 
 
-def l_sum(a, dim=None, keepdim=False, dtype=None):
+def _reduction_input(a, dtype, *, floating=False):
     a = as_lazy(a)
-    d = A.dt(dtype) if dtype else ("i64" if a.dtype in A.INT | A.BOOL else a.dtype)
-    return _reduce(a, dim, keepdim, lambda vs: _sum([_conv(v, d) for v in vs], R(0) if d in A.FLOAT else 0), d)
+    d = A._reduction_dtype(a, dtype, floating=floating)
+    if dtype is not None:
+        return l_convert(a, d)
+    return Lazy(a.shape, d, lambda idx: _conv(a.get(idx), d)) if d != a.dtype else a
+
+
+def l_sum(a, dim=None, keepdim=False, dtype=None):
+    a = _reduction_input(a, dtype)
+    d = a.dtype
+    return _reduce(a, dim, keepdim, any if d in A.BOOL else
+                   lambda vs: _sum(vs, R(0) if d in A.FLOAT else 0), d)
 
 
 def l_mean(a, dim=None, keepdim=False, dtype=None):
+    a = _reduction_input(a, dtype, floating=True)
     def m(vs):
         if not vs:
             raise Undefined("mean of an empty reduction")
         return _sum(vs, R(0)) / len(vs)
-    return _reduce(_float(a), dim, keepdim, m)
+    return _reduce(a, dim, keepdim, m)
 
 
 def _ext(pick):
@@ -539,10 +621,14 @@ def _ext(pick):
 
 
 def l_amax(a, dim=None, keepdim=False):
+    a = as_lazy(a)
+    A._extremum_axes(a, dim)
     return _reduce(a, dim, keepdim, _ext(lambda x, y: rl.max_(x, y) if isinstance(x, R) else max(x, y)))
 
 
 def l_amin(a, dim=None, keepdim=False):
+    a = as_lazy(a)
+    A._extremum_axes(a, dim)
     return _reduce(a, dim, keepdim, _ext(lambda x, y: rl.min_(x, y) if isinstance(x, R) else min(x, y)))
 
 
@@ -564,6 +650,8 @@ def l_var_mean(a, dim=None, correction=1, keepdim=False):
 
 def l_max_dim(a, dim, keepdim=False):
     a = as_lazy(a)
+    A._layout_axis(dim, max(1, a.ndim))
+    A._extremum_axes(a, dim)
 
     def first_max(vs):
         best, k = vs[0], 0
@@ -576,16 +664,26 @@ def l_max_dim(a, dim, keepdim=False):
 
 
 def l_cumsum(a, dim, dtype=None):
-    a = as_lazy(a)
-    d = A.dt(dtype) if dtype else ("i64" if a.dtype in A.INT | A.BOOL else a.dtype)
-    dim = dim % a.ndim
+    a = _reduction_input(a, dtype)
+    d = a.dtype
+    dim = A._layout_axis(dim, max(1, a.ndim))
+    if a.ndim == 0 or 0 in a.shape or a.shape[dim] == 1:
+        return a
+    if d in A.BOOL:
+        raise NotEstablished("boolean-output cumsum accumulation semantics have not been established")
     out = Lazy(a.shape, d, None)
+    completed = {}
 
     def g(idx):
-        cur = _conv(a.get(idx), d)
-        if idx[dim] == 0:
-            return cur
-        return out.get(idx[:dim] + (idx[dim] - 1,) + idx[dim + 1:]) + cur
+        row, position = idx[:dim] + idx[dim + 1:], idx[dim]
+        # Build missing earlier prefixes through get(), preserving per-coordinate
+        # budget accounting and caching, without a chain of recursive calls.
+        for j in range(completed.get(row, -1) + 1, position):
+            out.get(idx[:dim] + (j,) + idx[dim + 1:])
+        cur = a.get(idx)
+        value = cur if position == 0 else out._memo[idx[:dim] + (position - 1,) + idx[dim + 1:]] + cur
+        completed[row] = position
+        return value
     out._get = g
     return out
 
@@ -598,51 +696,58 @@ def l_prepare_softmax_online(a, dim):
 
 
 # ------------------------------------------------------------------ matrix products
-def _dot(a_row, b_col, k):
-    s = R(0)
+def _dot(a_row, b_col, k, zero):
+    s = zero
     for i in range(k):
         s = s + a_row(i) * b_col(i)
     return s
 
 
 def l_mm(a, b):
-    a, b = _float(a), _float(b)
-    if a.ndim != 2 or b.ndim != 2 or a.shape[1] != b.shape[0]:
-        raise Invalid("mm shapes")
+    a, b = as_lazy(a), as_lazy(b)
+    A._product_layout(a, b, 2)
     k = a.shape[1]
+    zero = R(0) if a.dtype in A.FLOAT else 0
     return Lazy((a.shape[0], b.shape[1]), A.promote(a.dtype, b.dtype),
-                lambda idx: _dot(lambda t: a.get((idx[0], t)), lambda t: b.get((t, idx[1])), k))
+                lambda idx: _dot(lambda t: a.get((idx[0], t)), lambda t: b.get((t, idx[1])), k, zero))
 
 
 def l_bmm(a, b):
-    a, b = _float(a), _float(b)
+    a, b = as_lazy(a), as_lazy(b)
+    A._product_layout(a, b, 3)
     k = a.shape[2]
+    zero = R(0) if a.dtype in A.FLOAT else 0
     return Lazy((a.shape[0], a.shape[1], b.shape[2]), A.promote(a.dtype, b.dtype),
-                lambda idx: _dot(lambda t: a.get((idx[0], idx[1], t)), lambda t: b.get((idx[0], t, idx[2])), k))
+                lambda idx: _dot(lambda t: a.get((idx[0], idx[1], t)), lambda t: b.get((idx[0], t, idx[2])), k, zero))
 
 
-def l_addmm(c, a, b, beta=1, alpha=1):
-    p = l_mm(a, b)
+def _scaled_product(c, a, b, beta, alpha, rank):
+    c, a, b = as_lazy(c), as_lazy(a), as_lazy(b)
+    A._scaled_product_layout(c, a, b, rank)
+
+    def scalar(value, name):
+        if isinstance(value, Lazy):
+            if value.shape != ():
+                raise Invalid(f"{name} must be scalar")
+            return value.get(())
+        return value
+
+    beta, alpha = A._product_scales(c, scalar(beta, "beta"), scalar(alpha, "alpha"))
+    p = l_mm(a, b) if rank == 2 else l_bmm(a, b)
     if alpha != 1:
-        p = _map(lambda x: x * R(alpha), p)
+        p = _map(lambda x: x * alpha, p)
     if beta == 0:
         return p
-    cc = as_lazy(c)
-    if beta != 1:
-        cc = _map(lambda x: x * R(beta), _float(cc))
+    cc = c if beta == 1 else _map(lambda x: x * beta, c)
     return l_add(cc, p)
 
 
-def l_baddbmm(c, a, b, beta=1, alpha=1):
-    p = l_bmm(a, b)
-    if alpha != 1:
-        p = _map(lambda x: x * R(alpha), p)
-    if beta == 0:
-        return p
-    cc = as_lazy(c)
-    if beta != 1:
-        cc = _map(lambda x: x * R(beta), _float(cc))
-    return l_add(cc, p)
+def l_addmm(c, a, b, *, beta=1, alpha=1):
+    return _scaled_product(c, a, b, beta, alpha, 2)
+
+
+def l_baddbmm(c, a, b, *, beta=1, alpha=1):
+    return _scaled_product(c, a, b, beta, alpha, 3)
 
 
 def l_mm_plus_mm(mat1, mat2, mat3, mat4):
@@ -650,29 +755,30 @@ def l_mm_plus_mm(mat1, mat2, mat3, mat4):
 
 
 def l_convolution(x, w, bias, stride, padding, dilation, transposed, output_padding, groups):
-    if transposed:
-        raise Unsupported("transposed convolution")
-    x, w = _float(x), _float(w)
+    x, w = as_lazy(x), as_lazy(w)
+    bl = as_lazy(bias) if bias is not None else None
+    A._convolution_dtypes(x, w, bl)
+    stride, padding, dilation, shape, groups = A._convolution_layout(
+        x.shape, w.shape, stride, padding, dilation, transposed, output_padding, groups)
     nsp = x.ndim - 2
-    stride, padding, dilation = ([v] * nsp if isinstance(v, int) else list(v) for v in (stride, padding, dilation))
     N, Cin = x.shape[:2]
     Cout, cpg = w.shape[:2]
     ksz = w.shape[2:]
-    osz = [(x.shape[2 + d] + 2 * padding[d] - dilation[d] * (ksz[d] - 1) - 1) // stride[d] + 1 for d in range(nsp)]
+    osz = shape[2:]
     opg = Cout // groups
-    bl = as_lazy(bias) if bias is not None else None
+    A._convolution_bias(bl, Cout)
 
     def g(idx):
         n, co, o = idx[0], idx[1], idx[2:]
         grp = co // opg
-        s = R(0) if bl is None else bl.get((co,))
+        s = (R(0) if x.dtype in A.FLOAT else 0) if bl is None else bl.get((co,))
         for ci in range(cpg):
             for k in np.ndindex(*ksz):
                 pos = tuple(o[d] * stride[d] + k[d] * dilation[d] - padding[d] for d in range(nsp))
                 if all(0 <= pos[d] < x.shape[2 + d] for d in range(nsp)):
                     s = s + x.get((n, grp * cpg + ci) + pos) * w.get((co, ci) + k)
         return s
-    return Lazy([N, Cout] + osz, x.dtype, g)
+    return Lazy(shape, x.dtype, g)
 
 
 # ------------------------------------------------------------------ dispatch
@@ -716,17 +822,25 @@ OPS.update({k: _fl1(v) for k, v in UNARY.items()})
 
 
 def evaluate_lazy(graph, inputs, elide_intermediate_casts=False):
-    """graph: GRAPH contract format (nodes / outputs; inputs given separately as Lazy placeholders). Returns {name: Lazy}."""
+    """Evaluate available lazy helpers for a GRAPH-shaped record.
+
+    This function is also used for development references whose operations are
+    outside the admitted base contracts. Semantic GRAPH callers must first use
+    graph.covered_ops(); helper availability alone is not contract admission.
+    """
+    from .graph import functional_value_graph, select_result
+    graph, _ = functional_value_graph(graph, input_names=inputs)
     env = dict(inputs)
     outputs = {o["ref"] if isinstance(o, dict) else o for o in graph.get("outputs", [])}
-    from .aten_adapter import decode
+    from .aten_adapter import decode, bind_reference_call
+    import inspect
 
     def res(x):
         if isinstance(x, dict) and "ref" in x:
             v = env[x["ref"]]
             if isinstance(v, Exception):
                 raise v
-            return v[x["index"]] if "index" in x else v
+            return select_result(v, x["index"]) if "index" in x else v
         if isinstance(x, list):
             return [res(v) for v in x]
         return decode(x)
@@ -736,8 +850,11 @@ def evaluate_lazy(graph, inputs, elide_intermediate_casts=False):
             args = [res(a) for a in n.get("args", [])]
             kwargs = {k: res(v) for k, v in (n.get("kwargs") or {}).items()}
             if op == "operator.getitem":
-                env[n["name"]] = args[0][args[1]]
+                env[n["name"]] = select_result(args[0], args[1])
                 continue
+            if op in A.OPS:
+                bound = bind_reference_call(op, inspect.signature(A.OPS[op]), args, kwargs)
+                args, kwargs = bound.args, bound.kwargs
             if (elide_intermediate_casts and op in ("prims.convert_element_type", "aten._to_copy")
                     and n["name"] not in outputs and isinstance(args[0], Lazy) and args[0].dtype in A.FLOAT):
                 target = A.dt(args[1] if len(args) > 1 else kwargs.get("dtype"))
@@ -750,4 +867,9 @@ def evaluate_lazy(graph, inputs, elide_intermediate_casts=False):
             env[n["name"]] = OPS[op](*args, **kwargs)
         except (Undefined, Invalid, Unsupported, NotEstablished) as e:
             env[n["name"]] = e
+    for output in graph.get("outputs", []):
+        if isinstance(output, dict) and "index" in output:
+            value = env[output["ref"]]
+            if not isinstance(value, Exception):
+                select_result(value, output["index"])
     return env

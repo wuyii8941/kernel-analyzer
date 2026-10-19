@@ -1,0 +1,245 @@
+schema_version: '1.2'
+id: MOE
+role: MOE
+title: Mixture-of-experts routing, capacity dropping, combination and load-balancing loss (Switch / Mixtral), real-number
+  semantics with ties as allowed sets
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D1_attention), 2026-10-17
+  date: '2026-10-17'
+  scope: Routing and combination of one MoE layer on given expert outputs; awaiting a review by someone who did not write
+    it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - reviewed_contract_and_adapter_match_current
+covers:
+- top-k softmax router with renormalised (Mixtral) or raw (Switch) gates
+- token-order expert capacity dropping (top-1)
+- permute / expert / unpermute combination (index_add)
+- Switch load-balancing loss and the dispatched-expert count
+- transformers MixtralSparseMoeBlock routing and load_balancing_loss_func
+- Liger fused MoE experts (combination of the expert outputs)
+profiles:
+  renorm_aux_top1:
+    meaning: Gates are the router probabilities of the selected experts renormalised to sum to 1 (Mixtral Softmax(TopK));
+      the auxiliary loss counts each token's top-1 expert (Switch eq. 5), before capacity dropping.
+    task_choice_required: false
+  raw_aux_top1:
+    meaning: Gates are the raw router probabilities p_i(x) (Switch eq. 2); auxiliary loss as in renorm_aux_top1.
+    task_choice_required: false
+  renorm_aux_dispatched:
+    meaning: Renormalised gates; the auxiliary loss counts every expert a token was dispatched to (selected and not dropped),
+      as HF Mixtral counts its top-k selections (it has no capacity) and the v2.4 reference counted.
+    task_choice_required: true
+  raw_aux_dispatched:
+    meaning: Raw gates; auxiliary loss as in renorm_aux_dispatched.
+    task_choice_required: true
+outputs:
+  topk:
+    shape: per token, the allowed set of selected expert sets (sorted index tuples)
+    guarantee: allowed_set
+  weights:
+    shape: '[T][E] gate weights (0 for experts not selected); an allowed set under unresolved ties'
+    guarantee: rigorous_enclosure
+  dropped:
+    shape: '[T][E] booleans: selected but over capacity'
+    guarantee: exact
+    kind: boolean
+  out:
+    shape: '[T][Dout] combined output; an allowed set under unresolved ties'
+    guarantee: rigorous_enclosure
+  aux:
+    shape: scalar auxiliary loss
+    guarantee: rigorous_enclosure
+comparison:
+  complete_output_membership: The observed topk is one sorted list of distinct expert indices per token, not
+    the reference's set of allowed choices. All weights, dropped flags, output coordinates and auxiliary loss
+    must match the same joint routing choice, including token-order capacity state. If ranked selection is
+    absent, permitted tied top-1 choices are considered jointly within the stated budget. Separate field-wise
+    allowed sets are marginal descriptions, not permission to mix results from different routes. Nonpoint
+    interval containment does not establish equality. This comparison does not establish kernel binding.
+  input_binding: router logits (rationals or -inf), expert outputs or linear expert weights, alpha and capacity are the
+    exact values received; selection is the implementation's observed routing (expert indices in rank order).
+  quality: No tolerance; exact values compare exactly, softmax values are rigorous enclosures, allowed sets compare as sets.
+  test_evidence: Exact equality, containment of the expected formula's enclosure, or equality of allowed sets.
+  error_handling: Invalid k, capacity or selection are invalid_input; a token whose logits are all -inf is domain_undefined;
+    capacity with k > 1 is unsupported.
+decisions:
+- id: MO.GATE
+  status: drafted
+  statement: 'Switch (eqs. 1-2) weights each selected expert by its router probability p_i(x) (raw gates); Mixtral uses
+    Softmax(TopK(logits)), which equals the router probabilities of the selected experts renormalised to sum to one (HF
+    Mixtral divides the top-k probabilities by their sum). Both are documented formulas of different models: profiles raw_*
+    and renorm_*; a kernel is compared with the one it declares (the essential round declared renormalised gates, MOE-C1).
+    With k = 1 the renormalised gate is 1.'
+  basis:
+  - SWITCH.ROUTER
+  - SWITCH.COMBINE
+  - MIXTRAL.GATE
+  - HF_MIXTRAL.ROUTER
+- id: MO.TIES
+  status: drafted
+  statement: 'The top-k selection is decided on the exact router logits (softmax is strictly increasing): a set S of k experts
+    is allowed iff no expert outside S has a larger logit than one inside. No source fixes the choice among tied experts
+    (the essential-round construction notes that torch.topk does not specify it), so topk is the allowed set. When the implementation''s
+    selection is supplied it must be allowed and listed in non-increasing logit order (its first entry is the token''s top-1
+    expert); the other outputs are then values for that choice. Without a selection, weights, dropped, out and aux are the
+    sets of values over every joint choice of all tokens, enumerated with the capacity state carried in token order (the
+    v2.2 reference lost that state; v2.3 fixed it), within a budget of 4096 joint choices; such sets need exact values,
+    otherwise the result is not_established and the selection must be given.'
+  basis:
+  - SWITCH.ROUTER
+  - MIXTRAL.GATE
+- id: MO.CAPACITY
+  status: drafted
+  statement: 'An expert processes at most capacity tokens; tokens routed to it beyond that are dropped: their contribution
+    from that expert is zero (Switch passes their representation through the residual connection, outside this layer) and
+    the remaining gates are not renormalised. Tokens claim capacity in their order in the batch (the Switch appendix code
+    ranks tokens by a cumulative sum over the token axis). capacity null means no dropping; capacity is the integer the
+    implementation uses (Switch derives it from tokens per batch / experts x capacity factor).'
+  basis:
+  - SWITCH.CAPACITY
+  - SWITCH.CODE
+- id: MO.DROP_ORDER
+  status: drafted
+  statement: For k = 1 the token order is unambiguous. For k > 1 with a capacity, the order in which (token, slot) pairs
+    claim capacity is not fixed by the sources read (token-major as the v2.4 reference, or slot-major with all first choices
+    before second choices, or priority by probability); the readings give different drops, so that case is unsupported here
+    rather than decided. The tested capacity conditions all use k = 1.
+  basis:
+  - SWITCH.CODE
+  - SWITCH.CAPACITY
+- id: MO.AUX
+  status: drafted
+  statement: 'Switch eq. 4: loss = alpha * E * sum_e f_e * P_e with P_e the mean router probability of expert e (eq. 6).
+    f_e is, in Switch eq. 5, the fraction of tokens whose argmax expert is e, counted before capacity masking in the appendix
+    code (profiles *_aux_top1, the essential-round candidates). HF Mixtral''s load_balancing_loss_func counts every top-k
+    selection instead (tokens_per_expert per slot, summed); with dropping, the v2.4 reference counted only dispatched (not
+    dropped) experts. This is the declared difference recorded by the closure round: profiles *_aux_dispatched, bound by
+    the task. alpha is an input (Switch uses 10^-2; the essential round used 1).'
+  basis:
+  - SWITCH.AUX
+  - SWITCH.CODE
+  - HF_MIXTRAL.AUX
+clauses:
+- {id: MO.C1, basis: [SWITCH.ROUTER], statement: p_t = softmax of the router logits of token t (exp(-inf) = 0), observes: [
+      weights, aux], evidence_kind: definition}
+- {id: MO.C2, basis: [MO.TIES], statement: 'topk: the allowed k-sets (no outside logit larger than an inside one)', observes: [
+      topk], evidence_kind: definition}
+- {id: MO.C3, basis: [MO.GATE, MIXTRAL.GATE, HF_MIXTRAL.ROUTER], statement: 'renorm profiles: w_te = p_te / sum over the selected
+      set of p', observes: [weights, out], evidence_kind: definition}
+- {id: MO.C4, basis: [MO.GATE, SWITCH.COMBINE], statement: 'raw profiles: w_te = p_te', observes: [weights, out], evidence_kind: definition}
+- {id: MO.C5, basis: [SWITCH.COMBINE, MIXTRAL.GATE], statement: 'out_t = sum over selected, not dropped e of w_te * E_e(x_t)
+      (expert outputs given, or x_t @ W_e)', observes: [out], evidence_kind: definition}
+- {id: MO.C6, basis: [MO.CAPACITY, MO.DROP_ORDER], statement: 'k = 1: tokens claim capacity in order; beyond capacity dropped
+      (zero contribution); capacity with k > 1 unsupported', observes: [dropped, out], evidence_kind: definition}
+- {id: MO.C7, basis: [MO.AUX, SWITCH.AUX], statement: 'aux_top1: alpha * E * sum_e f_e P_e, f_e = fraction of tokens with
+      top-1 expert e (before dropping)', observes: [aux], evidence_kind: definition}
+- {id: MO.C8, basis: [MO.AUX, HF_MIXTRAL.AUX], statement: 'aux_dispatched: f_e = fraction of tokens dispatched (selected,
+      not dropped) to e', observes: [aux], evidence_kind: definition}
+- {id: MO.C9, basis: [MO.TIES], statement: 'ties: with a valid selection the outputs are values for it; an invalid selection
+      is invalid_input; without one, allowed sets over all joint choices', observes: [weights, out, aux], evidence_kind: definition}
+examples:
+- {id: MO.E1, profile: renorm_aux_top1, clauses: [MO.C1, MO.C2, MO.C3, MO.C5, MO.C7], input: {capacity: null, alpha: 1, selection: null,
+      router_logits: [[2, 1, 0]], expert_outputs: [[[1], [10], [100]]], k: 2}, expected: {outcome: value, fields: {topk: [
+          {set: [[0, 1]]}], weights: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1)), 0]], dropped: [[false, false, false]], out: [
+          [(exp(1) + 10)/(1 + exp(1))]], aux: 3*exp(2)/(1 + exp(1) + exp(2))}}, note: Mixtral gate over the top-2}
+- {id: MO.E2, profile: raw_aux_top1, clauses: [MO.C4, MO.C7], input: {capacity: null, alpha: 1, selection: null, router_logits: [
+        [1, 0]], expert_outputs: [[[2], [3]]], k: 1}, expected: {outcome: value, fields: {topk: [{set: [[0]]}], weights: [
+          [exp(1)/(1 + exp(1)), 0]], dropped: [[false, false]], out: [[2*exp(1)/(1 + exp(1))]], aux: 2*exp(1)/(1 + exp(1))}},
+    note: 'Switch gate: the raw probability'}
+- {id: MO.E3, profile: renorm_aux_dispatched, clauses: [MO.C8], input: {capacity: null, alpha: 1, selection: null, router_logits: [
+        [2, 1, 0]], expert_outputs: [[[1], [10], [100]]], k: 2}, expected: {outcome: value, fields: {topk: [{set: [[0, 1]]}],
+        weights: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1)), 0]], dropped: [[false, false, false]], out: [[(exp(1) + 10)/(1 + exp(1))]],
+        aux: 3*exp(1)*(1 + exp(1))/(1 + exp(1) + exp(2))}}}
+- {id: MO.E4, profile: renorm_aux_top1, clauses: [MO.C6, MO.C7], input: {capacity: 2, alpha: 1, selection: null, router_logits: [
+        [1, 0], [1, 0], [1, 0]], expert_outputs: [[[1], [0]], [[2], [0]], [[4], [0]]], k: 1}, expected: {outcome: value, fields: {
+        topk: [{set: [[0]]}, {set: [[0]]}, {set: [[0]]}], weights: [[1, 0], [1, 0], [1, 0]], dropped: [[false, false], [false,
+            false], [true, false]], out: [[1], [2], [0]], aux: 2*exp(1)/(1 + exp(1))}}, note: 'capacity 2: the third token
+      is dropped; its top-1 still counts in the Switch loss'}
+- {id: MO.E5, profile: renorm_aux_dispatched, clauses: [MO.C6, MO.C8], input: {capacity: 2, alpha: 1, selection: null, router_logits: [
+        [1, 0], [1, 0], [1, 0]], expert_outputs: [[[1], [0]], [[2], [0]], [[4], [0]]], k: 1}, expected: {outcome: value, fields: {
+        topk: [{set: [[0]]}, {set: [[0]]}, {set: [[0]]}], weights: [[1, 0], [1, 0], [1, 0]], dropped: [[false, false], [false,
+            false], [true, false]], out: [[1], [2], [0]], aux: 4*exp(1)/(3*(1 + exp(1)))}}}
+- {id: MO.E6, profile: renorm_aux_top1, clauses: [MO.C2, MO.C9], input: {capacity: null, alpha: 1, selection: null, router_logits: [
+        [0, 0, 0]], expert_outputs: [[[1], [2], [3]]], k: 1}, expected: {outcome: value, fields: {topk: [{set: [[0], [1],
+              [2]]}], weights: {set: [[[1, 0, 0]], [[0, 1, 0]], [[0, 0, 1]]]}, dropped: [[false, false, false]], out: {set: [
+            [[1]], [[2]], [[3]]]}, aux: 1}}, note: 'three-way tie, no selection given'}
+- {id: MO.E7, profile: renorm_aux_top1, clauses: [MO.C6, MO.C9], input: {capacity: 1, alpha: 1, selection: null, router_logits: [
+        [-inf, 0, -inf, 0], [-inf, 0, -inf, 0]], expert_outputs: [[[0], [1], [2], [3]], [[0], [1], [2], [3]]], k: 1}, expected: {
+      outcome: value, fields: {topk: [{set: [[1], [3]]}, {set: [[1], [3]]}], weights: {set: [[[0, 1, 0, 0], [0, 1, 0, 0]],
+            [[0, 1, 0, 0], [0, 0, 0, 1]], [[0, 0, 0, 1], [0, 1, 0, 0]], [[0, 0, 0, 1], [0, 0, 0, 1]]]}, dropped: {set: [[
+              [false, false, false, false], [false, true, false, false]], [[false, false, false, false], [false, false, false,
+                false]], [[false, false, false, false], [false, false, false, true]]]}, out: {set: [[[1], [0]], [[1], [3]],
+            [[3], [1]], [[3], [0]]]}, aux: 2}}, note: 'v2.3 re-check: two tied tokens, capacity 1 -> joint trajectories {(1,0),(1,3),(3,0),(3,1)}'}
+- {id: MO.E8, profile: renorm_aux_top1, clauses: [MO.C9, MO.C7], input: {capacity: null, alpha: 1, selection: [[1, 0]], router_logits: [
+        [0, 0, -1]], expert_outputs: [[[1], [3], [5]]], k: 2}, expected: {outcome: value, fields: {topk: [{set: [[0, 1]]}],
+        weights: [[1/2, 1/2, 0]], dropped: [[false, false, false]], out: [[2]], aux: 3*exp(1)/(1 + 2*exp(1))}}, note: top-1
+      tie resolved by the implementation's selection}
+- {id: MO.E9, profile: renorm_aux_top1, clauses: [MO.C9], input: {capacity: null, alpha: 1, selection: [[2, 0]], router_logits: [
+        [0, 0, -1]], expert_outputs: [[[1], [3], [5]]], k: 2}, expected: {outcome: invalid_input}, note: not a top-2 set}
+- {id: MO.E10, profile: renorm_aux_top1, clauses: [MO.C9], input: {capacity: null, alpha: 1, selection: [[1, 0]], router_logits: [
+        [2, 1, 0]], expert_outputs: [[[1], [10], [100]]], k: 2}, expected: {outcome: invalid_input}, note: wrong rank order}
+- {id: MO.E11, profile: renorm_aux_top1, clauses: [MO.C6], input: {capacity: 1, alpha: 1, selection: null, router_logits: [
+        [2, 1, 0]], expert_outputs: [[[1], [10], [100]]], k: 2}, expected: {outcome: unsupported}}
+- {id: MO.E12, profile: renorm_aux_top1, clauses: [MO.C5], input: {capacity: null, alpha: 1, selection: null, router_logits: [
+        [0, 1]], x: [[1, 2]], expert_weights: [[[1], [1]], [[2], [0]]], k: 1}, expected: {outcome: value, fields: {topk: [
+          {set: [[1]]}], weights: [[0, 1]], dropped: [[false, false]], out: [[2]], aux: 2*exp(1)/(1 + exp(1))}}, note: linear
+      experts x @ W_e}
+- {id: MO.E13, profile: raw_aux_top1, clauses: [MO.C7], input: {capacity: null, alpha: 1/100, selection: null, router_logits: [
+        [1, 0]], expert_outputs: [[[2], [3]]], k: 1}, expected: {outcome: value, fields: {topk: [{set: [[0]]}], weights: [
+          [exp(1)/(1 + exp(1)), 0]], dropped: [[false, false]], out: [[2*exp(1)/(1 + exp(1))]], aux: exp(1)/(50*(1 + exp(1)))}},
+    note: alpha = 1/100}
+signature:
+  inputs:
+  - router_logits [T][E] (rationals, -inf allowed)
+  - expert_outputs [T][E][Dout], or x [T][D] with expert_weights [E][D][Dout]
+  - k, capacity (null or integer >= 0), alpha
+  - selection [T][k] (optional, rank order)
+  pre_state: []
+  post_state: []
+  observation_unit: routing sets, gates, drops, combined output and auxiliary loss of one layer call
+domain:
+  valid:
+  - 1 <= k <= E
+  - capacity >= 0 or null
+  - at least one finite logit per token
+  domain_undefined:
+  - a token whose router logits are all -inf
+  invalid_input:
+  - k outside 1..E
+  - negative capacity
+  - a selection that is not an allowed top-k set or not in rank order
+  - shape mismatches
+  unsupported:
+  - capacity with k > 1
+  - sigmoid routers
+  - expert-choice routing
+  - router noise
+  - joint tie choices beyond the budget (not_established)
+mutation_requirements:
+- {id: MO.M1, misreading: raw gates where renormalised gates are declared, witnesses: [MO.E1]}
+- {id: MO.M2, misreading: renormalised gates where raw gates are declared, witnesses: [MO.E2]}
+- {id: MO.M3, misreading: auxiliary loss counts dispatched experts where top-1 assignments are declared (the closure-round
+      declared difference), witnesses: [MO.E1]}
+- {id: MO.M4, misreading: auxiliary loss counts top-1 assignments where dispatched experts are declared, witnesses: [MO.E3,
+      MO.E5]}
+- {id: MO.M5, misreading: capacity keeps the last tokens instead of the first, witnesses: [MO.E4]}
+- {id: MO.M6, misreading: dropped tokens still contribute (capacity ignored), witnesses: [MO.E4]}
+- {id: MO.M7, misreading: ties broken by the lowest expert index and reported as the only top-k set, witnesses: [MO.E6]}
+- {id: MO.M8, misreading: 'tied tokens enumerated one by one, losing the capacity state (the v2.2 reference error)', witnesses: [
+      MO.E7]}
+- {id: MO.M9, misreading: auxiliary loss without the factor E, witnesses: [MO.E13]}
+- {id: MO.M10, misreading: P_e averaged from the gate weights instead of the router probabilities, witnesses: [MO.E1]}
+nonclaims:
+- Expert computations (matmuls, activations) belong to the MATMUL / ACT contracts; TF32 use inside a fused expert kernel
+  (bug B003) is a numerical deviation (K - G), not a semantic one, and is not judged here.
+- The dispatched-expert count of the auxiliary loss rests on a reference program (HF Mixtral) and the v2.4 reference.
+changes: []

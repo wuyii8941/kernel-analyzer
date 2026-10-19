@@ -1,0 +1,106 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.avg_pool2d.f32.n1.c1.h4.w4.k3.s2.ceil.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(F.avg_pool2d), then public autograd VJP",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "complete public forward and input VJP for contiguous CUDA float32 x[1,1,4,4], upstream[1,1,2,2], finite in [-2,2]; kernel=3, stride=2, padding=0, ceil=true, count_include_pad=true, divisor_override=None; inputs unchanged",
+    "measure_call": "../calls/inductor_avg_pool2d.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_average_pool_forward_and_vjp",
+      "contract": "POOL",
+      "profile": "finite_avg2d_autograd",
+      "task_statement": "Select the exact real idealization of PyTorch 2.10 two-dimensional average pooling with its complete input VJP: count explicit padding but exclude ceil overhang beyond that domain. For this zero-padding call, divisors are 9,6,6,4; the same chosen linear map defines forward and backward.",
+      "input_map": [
+        {
+          "target": "/op",
+          "literal": "avg_pool2d",
+          "basis": "the public wrapper calls F.avg_pool2d"
+        },
+        {
+          "target": "/x",
+          "source": "/tensor_arguments/x/before",
+          "conversion": "tensor_record"
+        },
+        {
+          "target": "/upstream",
+          "source": "/tensor_arguments/upstream/before",
+          "conversion": "tensor_record"
+        },
+        {
+          "target": "/kernel_size",
+          "literal": [
+            3,
+            3
+          ],
+          "basis": "explicit public-call keyword"
+        },
+        {
+          "target": "/stride",
+          "literal": [
+            2,
+            2
+          ],
+          "basis": "explicit public-call keyword"
+        },
+        {
+          "target": "/padding",
+          "literal": [
+            0,
+            0
+          ],
+          "basis": "explicit public-call keyword"
+        },
+        {
+          "target": "/ceil_mode",
+          "literal": true,
+          "basis": "explicit public-call keyword"
+        },
+        {
+          "target": "/count_include_pad",
+          "literal": true,
+          "basis": "explicit public-call keyword"
+        },
+        {
+          "target": "/divisor_override",
+          "literal": null,
+          "basis": "explicit public-call keyword"
+        }
+      ],
+      "output_map": [
+        {
+          "target": "/out",
+          "source": "/returns/y",
+          "conversion": "tensor_record",
+          "measure_output": "y"
+        },
+        {
+          "target": "/grad",
+          "source": "/returns/dx",
+          "conversion": "tensor_record",
+          "measure_output": "dx"
+        }
+      ]
+    }
+  ],
+  "state_map": [
+    {
+      "argument": "x",
+      "effect": "unchanged"
+    },
+    {
+      "argument": "upstream",
+      "effect": "unchanged"
+    }
+  ]
+}

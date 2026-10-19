@@ -1,0 +1,327 @@
+schema_version: '1.2'
+id: MSE
+role: MSE
+title: PyTorch 2.10 unweighted same-shape float32 squared error and complete input/target VJP
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  reviewer: Codex independent source, formula, domain and implementation review
+  date: '2026-10-19'
+  scope: Finite nonempty same-shape physical float32 tensors, original mean profile plus all-reductions profile, weight absent, and complete input/target VJP
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/mse_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.mse_loss, vjp.aten.mse_loss]
+profiles:
+  torch210_mean_f32_same_shape:
+    meaning: >-
+      The public PyTorch 2.10 unweighted functional MSE call on two finite nonempty physical float32 tensors of one
+      shape, with reduction='mean' and deprecated overrides absent. The VJP receives an explicit physical float32
+      scalar upstream and returns gradients with respect to both input and target.
+    task_choice_required: false
+  torch210_unweighted_f32_same_shape:
+    meaning: >-
+      Unweighted same-shape finite nonempty physical float32 loss. Reduction none preserves the full tensor;
+      sum and mean return a scalar. VJP upstream has the full output shape and returns both input and target gradients.
+      Default reduction is mean. Weight, broadcasting and deprecated overrides remain outside the selected task.
+    task_choice_required: false
+outputs:
+  out:
+    shape: Full input-shaped loss for none or scalar loss for sum/mean; VJP returns ordered complete pair [grad_input, grad_target]
+    guarantee: exact
+comparison:
+  input_binding: >-
+    Input, target and upstream values are the exact real values represented by the received float32 tensors. The
+    selected public call has weight absent, a reduction admitted by its profile, and no size_average or reduce override. Both data tensors
+    are read-only.
+  complete_output: >-
+    The forward task requires every loss coordinate for none, or its scalar loss for sum/mean. The VJP task requires both complete tensors, in the order
+    [grad_input, grad_target], with float32 dtype and the input shape.
+  quality: No tolerance. The selected formula contains only exact rational arithmetic on the bound physical values.
+  test_evidence: Independent exact calculations, public PyTorch 2.10 autograd comparisons, complete-output checks and rejected wrong formulas.
+  error_handling: >-
+    Malformed records, unequal or empty shapes, wrong upstream shape and nonphysical values are invalid_input.
+    Other dtypes, weights, deprecated overrides and infinities are unsupported; NaN and invalid reduction names
+    are invalid_input in the all-reductions profile. The original mean profile refuses any non-mean reduction.
+decisions:
+- id: MSE.TASK
+  status: reviewed
+  statement: >-
+    The original torch210_mean_f32_same_shape profile selects public torch.nn.functional.mse_loss with weight absent, reduction='mean', deprecated
+    size_average/reduce absent and equal input/target shapes. Other documented reductions, the weighted path and the
+    wrapper's broadcasting behavior are different legal tasks outside this profile, not implementations declared
+    wrong by this contract.
+  basis: [T_MSE_LOSS_INSTALLED.FUNCTIONAL, TORCH210_MSE_FUNCTIONAL.SIGNATURE,
+    TORCH210_MSE_FUNCTIONAL.BROADCAST, TORCH210_MSE_FUNCTIONAL.UNWEIGHTED,
+    TORCH210_MSE_FUNCTIONAL.WEIGHTED, TS_NATIVE_FUNCTIONS.MSE_SCHEMAS]
+- id: MSE.VALUE
+  status: reviewed
+  statement: >-
+    For N elements, the scalar result is sum_i (input_i - target_i)^2 / N. Mean divides by every element of the
+    output, rather than only a leading dimension.
+  basis: [T_MSE_LOSS_INSTALLED.VALUE, T_MSE_LOSS_INSTALLED.MEAN, T_MSE_LOSS_INSTALLED.SHAPE]
+- id: MSE.VJP
+  status: reviewed
+  statement: >-
+    Differentiating the selected real formula for an explicit scalar upstream g gives
+    grad_input_i = g * 2 * (input_i - target_i) / N and grad_target_i = -grad_input_i. Both are promised because both
+    public arguments are differentiable tensors in the selected task. The packaged native backward schema returning
+    only the self gradient describes one lower-level operation, not the complete public-call VJP promised here.
+  basis: [MSE.VALUE, TS_NATIVE_FUNCTIONS.MSE_SCHEMAS]
+- id: MSE.PHYSICAL
+  status: reviewed
+  statement: >-
+    The executable profile conservatively admits finite, nonempty, equal-shape physical float32 input and target plus
+    a finite physical float32 scalar upstream. This is the reviewed measurement range and is not asserted as a
+    general restriction of the PyTorch API.
+  basis: [MSE.TASK, T_MSE_LOSS_INSTALLED.SHAPE]
+- id: MSE.REDUCTIONS
+  status: reviewed
+  statement: >-
+    The all-reductions profile selects the same unweighted public task and physical domain, extending reduction to
+    none and sum. For none return every element loss; for sum return the sum without division; mean retains division
+    by all elements. The element derivative is 2*(input_i-target_i).
+    Multiply each derivative by its corresponding upstream for none, or by the scalar upstream for sum/mean;
+    only mean divides by numel. Target gradient is the negative input gradient. Scalar inputs are valid.
+    The original mean profile still refuses non-mean calls; it does not silently expand its binding scope.
+  basis: [T_MSE_LOSS_INSTALLED.VALUE, T_MSE_LOSS_INSTALLED.REDUCTIONS,
+    TORCH210_LOSS_REDUCTIONS.REDUCTION, MSE.VJP, MSE.PHYSICAL]
+clauses:
+- {id: MSE.C1, basis: [MSE.VALUE], statement: 'aten.mse_loss(input, target, mean) = sum((input-target)^2) / numel', observes: [out], evidence_kind: definition}
+- {id: MSE.C2, basis: [MSE.VJP], statement: 'vjp.aten.mse_loss(g,input,target,mean) returns the ordered complete pair [g*2*(input-target)/numel, -g*2*(input-target)/numel]', observes: [out], evidence_kind: derived}
+- {id: MSE.C3, basis: [MSE.TASK, MSE.PHYSICAL], statement: 'The original mean profile checks its selected parameters, physical float32 values, equal nonempty shapes and scalar upstream before evaluation.', observes: [out], evidence_kind: derived}
+- {id: MSE.C4, basis: [MSE.REDUCTIONS], statement: All three reductions preserve their full output shape and complete upstream-dependent input and target gradients., observes: [out], evidence_kind: derived}
+examples:
+- id: MSE.E1
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C1]
+  input:
+    op: aten.mse_loss
+    args: [{t: f32, v: [[1, 3]]}, {t: f32, v: [[0, 1]]}]
+    kwargs: {reduction: mean}
+  expected: {outcome: value, fields: {out: '5/2'}}
+- id: MSE.E2
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C2]
+  input:
+    op: vjp.aten.mse_loss
+    args: [{t: f32, v: 2, shape: []}, {t: f32, v: [[1, 3]]}, {t: f32, v: [[0, 1]]}]
+    kwargs: {reduction: mean}
+  expected: {outcome: value, fields: {out: [[[2, 4]], [[-2, -4]]]}}
+- id: MSE.E3
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C1]
+  input:
+    op: aten.mse_loss
+    args: [{t: f32, v: [[-2, 0], [4, 8]]}, {t: f32, v: [[-2, 0], [4, 8]]}]
+  expected: {outcome: value, fields: {out: 0}}
+- id: MSE.E4
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C2]
+  input:
+    op: vjp.aten.mse_loss
+    args: [{t: f32, v: -1, shape: []}, {t: f32, v: [3, 1]}, {t: f32, v: [1, 2]}]
+  expected: {outcome: value, fields: {out: [[-2, 1], [2, -1]]}}
+- id: MSE.E5
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: [1, 2]}, {t: f32, v: [[1, 2]]}]}
+  expected: {outcome: invalid_input}
+- id: MSE.E6
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f64, v: [1, 2]}, {t: f32, v: [1, 2]}]}
+  expected: {outcome: unsupported}
+- id: MSE.E7
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: ['1/10']}, {t: f32, v: [0]}]}
+  expected: {outcome: invalid_input}
+- id: MSE.E8
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: [], shape: [0]}, {t: f32, v: [], shape: [0]}]}
+  expected: {outcome: invalid_input}
+- id: MSE.E9
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: [1]}, {t: f32, v: [0]}], kwargs: {reduction: sum}}
+  expected: {outcome: unsupported}
+- id: MSE.E10
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: [inf]}, {t: f32, v: [0]}]}
+  expected: {outcome: unsupported}
+- id: MSE.E11
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: [.nan]}, {t: f32, v: [0]}]}
+  expected: {outcome: invalid_input}
+- id: MSE.E12
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input: {op: aten.mse_loss, args: [{t: f32, v: [1]}, {t: f32, v: [0]}], kwargs: {weight: null}}
+  expected: {outcome: unsupported}
+- id: MSE.E13
+  profile: torch210_mean_f32_same_shape
+  clauses: [MSE.C3]
+  input:
+    op: vjp.aten.mse_loss
+    args: [{t: f32, v: [1]}, {t: f32, v: [1]}, {t: f32, v: [0]}]
+  expected: {outcome: invalid_input}
+- id: MSE.R1
+  profile: torch210_unweighted_f32_same_shape
+  clauses:
+  - MSE.C4
+  input:
+    op: aten.mse_loss
+    args:
+    - &id001
+      t: f32
+      v:
+      - 0
+      - 2
+      - -1
+    - &id002
+      t: f32
+      v:
+      - 0
+      - 0
+      - 1
+    kwargs:
+      reduction: none
+  expected:
+    outcome: value
+    fields:
+      out:
+      - 0
+      - 4
+      - 4
+- id: MSE.R2
+  profile: torch210_unweighted_f32_same_shape
+  clauses:
+  - MSE.C4
+  input:
+    op: aten.mse_loss
+    args:
+    - *id001
+    - *id002
+    kwargs:
+      reduction: sum
+  expected:
+    outcome: value
+    fields:
+      out: 8
+- id: MSE.R3
+  profile: torch210_unweighted_f32_same_shape
+  clauses:
+  - MSE.C4
+  input:
+    op: vjp.aten.mse_loss
+    args:
+    - t: f32
+      v:
+      - -2
+      - 0.5
+      - -1
+    - *id001
+    - *id002
+    kwargs:
+      reduction: none
+  expected:
+    outcome: value
+    fields:
+      out:
+      - - 0
+        - 2
+        - 4
+      - - 0
+        - -2
+        - -4
+- id: MSE.R4
+  profile: torch210_unweighted_f32_same_shape
+  clauses:
+  - MSE.C4
+  input:
+    op: vjp.aten.mse_loss
+    args:
+    - t: f32
+      v: 2
+    - *id001
+    - *id002
+    kwargs:
+      reduction: sum
+  expected:
+    outcome: value
+    fields:
+      out:
+      - - 0
+        - 8
+        - -8
+      - - 0
+        - -8
+        - 8
+- id: MSE.R5
+  profile: torch210_unweighted_f32_same_shape
+  clauses:
+  - MSE.C4
+  input:
+    op: vjp.aten.mse_loss
+    args:
+    - t: f32
+      v: 1
+    - *id001
+    - *id002
+    kwargs:
+      reduction: none
+  expected:
+    outcome: invalid_input
+- id: MSE.R6
+  profile: torch210_unweighted_f32_same_shape
+  clauses:
+  - MSE.C4
+  input:
+    op: aten.mse_loss
+    args:
+    - *id001
+    - *id002
+    kwargs:
+      reduction: invalid
+  expected:
+    outcome: invalid_input
+signature:
+  inputs:
+  - 'input, target: finite physical float32 tensors of one arbitrary nonempty shape'
+  - 'reduction: mean only in the original profile; none/sum/mean in the all-reductions profile; weight and deprecated overrides absent'
+  - 'VJP only: upstream is finite physical float32 with exactly the selected forward output shape'
+  pre_state: [complete read-only input, target and upstream]
+  post_state: [full float32 loss tensor or scalar as selected, or complete ordered float32 input/target VJP; all inputs unchanged]
+  observation_unit: Every loss coordinate and every coordinate of both gradient tensors
+domain:
+  valid:
+  - Finite physical float32 input and target with one equal nonempty shape
+  - Profile-admitted reduction without weight or deprecated overrides; complete physical float32 upstream for VJP
+  invalid_input: [missing or malformed records, unequal or empty shapes, wrong upstream shape, invalid reduction in full profile, Boolean or NaN values, values not exactly representable as float32]
+  unsupported: [other dtypes, non-mean reduction in original mean profile, weight, deprecated size_average or reduce, infinities, broadcasting, device rounding or a different call task]
+mutation_requirements:
+- {id: MSE.M1, misreading: divide by the leading dimension rather than the total number of elements, witnesses: [MSE.E1]}
+- {id: MSE.M2, misreading: sum squared errors without applying the mean divisor, witnesses: [MSE.E1]}
+- {id: MSE.M3, misreading: omit the factor two in the VJP, witnesses: [MSE.E2]}
+- {id: MSE.M4, misreading: give the target gradient the same sign as the input gradient, witnesses: [MSE.E2]}
+- {id: MSE.M5, misreading: ignore the explicit upstream in the VJP, witnesses: [MSE.E4]}
+- {id: MSE.M6, misreading: return only the input gradient and omit the target gradient, witnesses: [MSE.E2]}
+- {id: MSE.M7, misreading: reduce a none result to a scalar, witnesses: [MSE.R1]}
+- {id: MSE.M8, misreading: divide the sum by element count, witnesses: [MSE.R2]}
+nonclaims:
+- This contract does not decide whether weighting, broadcasting or another dtype is implemented correctly.
+- It does not cover special values or an empty mean.
+- Device rounding and reduction order remain numerical questions. A real kernel still needs complete input, output and state binding.
+changes:
+- date: '2026-10-19'
+  note: Added one conservative public PyTorch 2.10 mean-MSE profile with complete input and target VJP.
+- date: '2026-10-19'
+  note: Added all-reductions profile after real public loss calls exposed the missing none and sum tasks; original mean profile preserved.

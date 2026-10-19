@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 public Tensor/Tensor torch.where with complete VJPs for both data tensors",
+  "reference": "Cross-check the versioned PyTorch 2.10 public call against ARITH.torch210_where_tensor_autograd, whose selection and two broadcast-gradient reductions are evaluated independently with exact rational values",
+  "limits": "The batch excludes scalar, out and one-argument overloads, mixed data dtypes, special values and a condition gradient. Every execution failure, missing task output, missing Triton phase and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261901, 20261902],
+    "cases": [
+      {"id": "where_channel_broadcast", "condition_shape": [2, 1, 7], "input_shape": [2, 4, 7], "other_shape": [1, 4, 1], "condition": "alternating"},
+      {"id": "where_input_expands", "condition_shape": [3, 7], "input_shape": [1, 7], "other_shape": [3, 1], "condition": "alternating"},
+      {"id": "where_both_data_broadcast", "condition_shape": [3, 5, 7], "input_shape": [3, 1, 7], "other_shape": [1, 5, 1], "condition": "alternating"},
+      {"id": "where_all_true", "condition_shape": [2, 1, 9], "input_shape": [2, 3, 9], "other_shape": [1, 3, 1], "condition": "all_true"},
+      {"id": "where_noncontiguous_input", "condition_shape": [2, 1, 7], "input_shape": [2, 5, 7], "other_shape": [1, 5, 1], "condition": "alternating", "input_noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "seeds": [20261903, 20261904],
+    "cases": [
+      {"id": "where_heldout_two_data_axes", "condition_shape": [3, 5, 11], "input_shape": [3, 1, 11], "other_shape": [1, 5, 1], "condition": "alternating"},
+      {"id": "where_heldout_condition_broadcast", "condition_shape": [1, 1, 11], "input_shape": [4, 3, 11], "other_shape": [4, 1, 1], "condition": "alternating"},
+      {"id": "where_heldout_rank4", "condition_shape": [2, 1, 4, 9], "input_shape": [2, 3, 1, 9], "other_shape": [1, 3, 4, 1], "condition": "alternating"},
+      {"id": "where_heldout_all_false", "condition_shape": [1, 6], "input_shape": [4, 6], "other_shape": [4, 1], "condition": "all_false"},
+      {"id": "where_heldout_noncontiguous", "condition_shape": [3, 1, 10], "input_shape": [3, 6, 10], "other_shape": [3, 6, 10], "condition": "alternating", "input_noncontiguous": true, "other_noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, all cases, shapes, condition patterns and seeds were fixed before GPU execution. The acceptance split uses another implementation and unseen ranks, dimensions, broadcast directions, masks and noncontiguous layouts."
+}

@@ -1,0 +1,223 @@
+schema_version: '1.2'
+id: SAMPLING
+role: SAMPLING
+title: Top-k / top-p filtering and sampling given the kernel's exponential noise (vLLM topk_topp sampler), exact semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D2_special), 2026-10-17
+  date: '2026-10-17'
+  scope: The filtered logits, the renormalised distribution and the sampled index given the random numbers; the distribution
+    of the random numbers themselves is a separate statistical question. Awaiting a review by someone who did not write it.
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers:
+- vllm.v1.sample.ops.topk_topp_triton.apply_top_k_top_p_triton (masked logits; top-k, top-p or both)
+- vllm.v1.sample.ops.topk_topp_sampler.apply_top_k_top_p_pytorch and random_sample (argmax of probs / q given q)
+profiles:
+  nucleus:
+    meaning: 'Per row: top-k keeps a set of k tokens of maximal mass (Holtzman et al. 3.2), then top-p keeps the smallest set
+      of the renormalised remaining distribution with mass >= p (3.1); with ties every such set is allowed. The masked logits
+      keep the kept values and put -inf elsewhere; sampling given the exponential noise q returns argmax over the kept tokens
+      of P_i / q_i.'
+    task_choice_required: false
+outputs:
+  out:
+    shape: 'one entry per row: op mask - allowed set of masked rows; op sample - allowed set of indices; op filtered_probs -
+      the renormalised probabilities on the given kept set'
+    guarantee: allowed_set
+comparison:
+  input_binding: Logits are the exact values received (-inf allowed for already masked tokens); q is the kernel's own
+    exponential noise (conditioning, as in RANDOM); keep is the kernel's own kept set (conditioning for filtered_probs).
+  quality: Allowed sets compare as exact sets; probabilities are rigorous enclosures; no tolerance.
+  test_evidence: Exact set equality; containment of the expected formula's enclosure.
+  error_handling: A row without a finite logit and p = 0 are domain_undefined; +inf logits, k < 1, p outside [0, 1], q <= 0
+    and a conditioning keep set that is not allowed are invalid_input.
+decisions:
+- id: SP.VERSION
+  status: drafted
+  statement: The general-round vLLM cases ran vLLM main of 2026-10-05; the contract cites commit 51eeb0c.
+  basis: [VLLM_TOPKP_TRITON.API, VLLM_SAMPLER.NATIVE]
+- id: SP.TOPP_TIES
+  status: drafted
+  statement: 'Top-p is the smallest set whose mass is >= p (Holtzman Eq. 2). Taking tokens in decreasing probability, token j
+    is kept iff the mass before it is < p; vLLM''s PyTorch path masks cumsum(ascending) <= 1 - p, the same rule. When the
+    boundary falls inside a group of equal logits, the smallest set is not unique: any m of the n tied copies may be kept
+    (the PyTorch path takes them in its unstable sort order, the Triton kernel in index order). All of them are allowed. The
+    general-round f kept every token whose strictly-higher mass is < p (all tied copies): that set is not a smallest set, and
+    it is mutant SP.M1, not a legal reading.'
+  basis: [NUCLEUS_PAPER.TOPP, VLLM_SAMPLER.TORCH_TOPP, VLLM_TOPKP_TRITON.TIES]
+- id: SP.TOPK_TIES
+  status: drafted
+  statement: 'Top-k is a set of size k of maximal mass (Holtzman 3.2); with ties at the k-th value any k-set made of the tokens
+    above it plus copies of it is allowed (the Triton kernel keeps copies in index order). vLLM''s PyTorch fallback instead
+    keeps every copy of the k-th value (more than k tokens); that is recorded as the diagnostic reading vllm_torch_topk, not
+    merged into the allowed set, because the paper fixes the size k. The tested case v2_topkp_p_split has no top-k.'
+  basis: [NUCLEUS_PAPER.TOPK, VLLM_SAMPLER.TORCH_TOPK, VLLM_TOPKP_TRITON.TIES]
+- id: SP.ORDER
+  status: drafted
+  statement: The paper defines top-k and top-p separately. With both, vLLM applies top-k first (by logit value) and top-p to
+    the renormalised remainder (both the Triton docstring and the PyTorch path); the contract follows that composition.
+  basis: [VLLM_TOPKP_TRITON.API, VLLM_SAMPLER.TORCH_TOPP]
+- id: SP.BOUNDS
+  status: drafted
+  statement: 'p = 1 keeps every finite token (the Triton kernel leaves the row unmasked). p = 0 has no smallest set (the empty
+    set already has mass >= 0, and it is not a distribution); vLLM''s PyTorch path keeps one token, the docstring only says "0
+    to 1": the contract reports domain_undefined (no requirement). k >= the number of finite tokens keeps all of them. A row
+    whose logits are all -inf has no softmax: domain_undefined.'
+  basis: [NUCLEUS_PAPER.TOPP, VLLM_TOPKP_TRITON.PGE1, VLLM_TOPKP_TRITON.API, VLLM_SAMPLER.TORCH_TOPP]
+- id: SP.CONDITION
+  status: drafted
+  statement: The sampled index is stated given the kernel's exponential noise q (vLLM samples argmax(probs / q) with q from
+    exponential_(), support (0, inf)); whether q follows Exp(1) is a statistical question reported separately, as for
+    RANDOM. Exact ties of P_i / q_i (equal logits and equal q) give the first index, as torch.argmax documents.
+  basis: [VLLM_SAMPLER.SAMPLE, T_EXPONENTIAL.DEF, T_ARGMAX.DEF]
+- id: SP.EXACT
+  status: drafted
+  statement: The kept sets are decided exactly. Probabilities are exp(l_i - max) / Z; when the compared mass is irrational it
+    cannot equal the rational p (by the Lindemann-Weierstrass theorem a nonzero combination of exponentials of distinct
+    rationals with rational coefficients is not zero), so a strict comparison is decided by enclosures; equal masses arise only
+    on rows whose kept logits are all equal, where the probabilities are exact rationals. The Triton kernel's shortcut that
+    leaves a nearly uniform row (max_prob <= min_prob (1 + 1e-6)) unmasked is a deviation from this f, not part of it.
+  basis: [NUCLEUS_PAPER.TOPP, VLLM_TOPKP_TRITON.UNIFORM]
+clauses:
+- {id: SP.C1, basis: [NUCLEUS_PAPER.TOPP, SP.TOPP_TIES], statement: 'top-p: the smallest set of mass >= p of the (renormalised)
+    distribution; tied boundary copies: any of the minimal choices', observes: [out], evidence_kind: definition}
+- {id: SP.C2, basis: [NUCLEUS_PAPER.TOPK, SP.TOPK_TIES], statement: 'top-k: a k-set of maximal mass; tied copies at the k-th value:
+    any choice', observes: [out], evidence_kind: definition}
+- {id: SP.C3, basis: [SP.ORDER], statement: top-k first, then top-p on the renormalised remaining tokens, observes: [out],
+  evidence_kind: definition}
+- {id: SP.C4, basis: [VLLM_TOPKP_TRITON.API], statement: masked positions are -inf; kept positions keep their logit, observes: [
+    out], evidence_kind: definition}
+- {id: SP.C5, basis: [SP.BOUNDS], statement: '-inf logits are already masked; k >= number of finite tokens and p = 1 keep all;
+    an all -inf row and p = 0 are domain_undefined', observes: [out], evidence_kind: definition}
+- {id: SP.C6, basis: [SP.CONDITION, VLLM_SAMPLER.SAMPLE, VLLM_SAMPLER.NATIVE], statement: 'sample given q: argmax over the kept
+    tokens of P_i / q_i (first index on exact ties), for every allowed kept set', observes: [out], evidence_kind: definition}
+- {id: SP.C7, basis: [NUCLEUS_PAPER.RESCALE, VLLM_SAMPLER.NATIVE], statement: 'filtered distribution: P''_i = P_i / p'' on the kept
+    set (= softmax of the masked logits), 0 elsewhere', observes: [out], evidence_kind: definition}
+- {id: SP.C8, basis: [VLLM_TOPKP_TRITON.API, T_EXPONENTIAL.DEF], statement: '+inf logits, k < 1, p outside [0, 1] and q <= 0 are
+    invalid_input', observes: [out], evidence_kind: definition}
+examples:
+- id: SP.E1
+  profile: nucleus
+  clauses: [SP.C1, SP.C4, SP.C5]
+  input: {op: mask, logits: [[2, 1, 0], [1, 0, 0]], p: ['7/10', 1]}
+  expected: {outcome: value, fields: {out: [{set: [[2, 1, '-inf']]}, {set: [[1, 0, 0]]}]}}
+  note: 'row 0 (the tested configuration: top-p only): P = e^2/(e^2+e+1) = 0.665 < 0.7 so token 1 is kept; the mass before token
+    2 is 0.910 >= 0.7. Row 1: p = 1 keeps all'
+- id: SP.E2
+  profile: nucleus
+  clauses: [SP.C1]
+  input: {op: mask, logits: [[0, 0, 0, 0]], p: ['1/2']}
+  expected: {outcome: value, fields: {out: [{set: [[0, 0, '-inf', '-inf'], [0, '-inf', 0, '-inf'], [0, '-inf', '-inf', 0], ['-inf',
+              0, 0, '-inf'], ['-inf', 0, '-inf', 0], ['-inf', '-inf', 0, 0]]}]}}
+  note: 'four tokens of probability 1/4: masses before the 1st, 2nd, 3rd copy are 0, 1/4, 1/2; two tokens are kept, any two'
+- id: SP.E3
+  profile: nucleus
+  clauses: [SP.C3, SP.C2]
+  input: {op: mask, logits: [[2, 1, 0]], k: [2], p: ['7/10']}
+  expected: {outcome: value, fields: {out: [{set: [[2, '-inf', '-inf']]}]}}
+  note: 'after top-2 the renormalised P0 = e/(e+1) = 0.731 >= 0.7, so token 1 is dropped (on the full distribution it would stay)'
+- id: SP.E4
+  profile: nucleus
+  clauses: [SP.C2]
+  input: {op: mask, logits: [[1, 1, 0]], k: [1]}
+  expected: {outcome: value, fields: {out: [{set: [[1, '-inf', '-inf'], ['-inf', 1, '-inf']]}]}}
+  readings: {vllm_torch_topk: {outcome: value, fields: {out: [{set: [[1, 1, '-inf']]}]}}}
+- id: SP.E5
+  profile: nucleus
+  clauses: [SP.C2]
+  input: {op: mask, logits: [[3, 1, 2]], k: [1]}
+  expected: {outcome: value, fields: {out: [{set: [[3, '-inf', '-inf']]}]}}
+- id: SP.E6
+  profile: nucleus
+  clauses: [SP.C5, SP.C1]
+  input: {op: mask, logits: [['-inf', 0, '-inf', 0]], k: [20], p: ['19/20']}
+  expected: {outcome: value, fields: {out: [{set: [['-inf', 0, '-inf', 0]]}]}}
+  note: 'two finite logits (as grammar_few_finite_kp): k = 20 >= 2 keeps both; masses before them 0 and 1/2 < 19/20'
+- id: SP.E7
+  profile: nucleus
+  clauses: [SP.C5]
+  input: {op: mask, logits: [['-inf', '-inf']], p: ['1/2']}
+  expected: {outcome: domain_undefined}
+- id: SP.E8
+  profile: nucleus
+  clauses: [SP.C5]
+  input: {op: mask, logits: [[1, 0]], p: [0]}
+  expected: {outcome: domain_undefined}
+- id: SP.E9
+  profile: nucleus
+  clauses: [SP.C8]
+  input: {op: mask, logits: [[1, 0]], p: ['3/2']}
+  expected: {outcome: invalid_input}
+- id: SP.E10
+  profile: nucleus
+  clauses: [SP.C8]
+  input: {op: mask, logits: [[1, 0]], k: [0]}
+  expected: {outcome: invalid_input}
+- id: SP.E11
+  profile: nucleus
+  clauses: [SP.C6]
+  input: {op: sample, logits: [[0, 0]], q: [[1, 2]]}
+  expected: {outcome: value, fields: {out: [{set: [0]}]}}
+  note: P = (1/2, 1/2); P / q = (1/2, 1/4)
+- id: SP.E12
+  profile: nucleus
+  clauses: [SP.C6, SP.C3]
+  input: {op: sample, logits: [[2, 1, 0]], k: [1], q: [[10, 1, 1]]}
+  expected: {outcome: value, fields: {out: [{set: [0]}]}}
+  note: only token 0 survives top-1; unfiltered, e^1 / 1 > e^2 / 10 would pick token 1
+- id: SP.E13
+  profile: nucleus
+  clauses: [SP.C6, SP.C2]
+  input: {op: sample, logits: [[1, 1, 0]], k: [1], q: [[2, 1, 1]]}
+  expected: {outcome: value, fields: {out: [{set: [0, 1]}]}}
+  note: either tied token may be the kept one; each is then the sample
+- id: SP.E14
+  profile: nucleus
+  clauses: [SP.C7]
+  input: {op: filtered_probs, logits: [[2, 1, 0]], p: ['7/10'], keep: [[true, true, false]]}
+  expected: {outcome: value, fields: {out: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1)), 0]]}}
+- id: SP.E15
+  profile: nucleus
+  clauses: [SP.C7]
+  input: {op: filtered_probs, logits: [[2, 1, 0]], p: ['7/10'], keep: [[true, false, false]]}
+  expected: {outcome: invalid_input}
+  note: '{0} is not the top-p set for p = 7/10'
+- id: SP.E16
+  profile: nucleus
+  clauses: [SP.C8]
+  input: {op: sample, logits: [[0, 0]], q: [[1, 0]]}
+  expected: {outcome: invalid_input}
+readings:
+  vllm_torch_topk:
+    meaning: vLLM's PyTorch fallback top-k, which keeps every token equal to the k-th largest value (possibly more than k).
+    basis: [VLLM_SAMPLER.TORCH_TOPK]
+signature:
+  inputs: ['op: mask | sample | filtered_probs', 'logits [B][V] (rationals, -inf)', 'k [B] or null', 'p [B] or null',
+    'q [B][V] (op sample: the kernel''s exponential noise)', 'keep [B][V] (op filtered_probs: the kernel''s kept set)']
+  pre_state: []
+  post_state: []
+  observation_unit: one row's masked logits, sampled index or filtered distribution
+domain:
+  valid: ['finite or -inf logits with at least one finite per row; k >= 1; p in (0, 1]; q > 0']
+  domain_undefined: [a row of -inf logits, p = 0]
+  invalid_input: ['+inf logits', 'k < 1', 'p outside [0, 1]', 'q <= 0', 'a keep set that is not allowed']
+  unsupported: []
+mutation_requirements:
+- {id: SP.M1, misreading: 'top-p keeps every copy of the boundary value (strictly-higher mass < p; the general-round f)', witnesses: [
+    SP.E2]}
+- {id: SP.M2, misreading: top-p keeps a token while the mass before it is <= p, witnesses: [SP.E2]}
+- {id: SP.M3, misreading: top-p computed on the full distribution instead of the top-k renormalised one, witnesses: [SP.E3]}
+- {id: SP.M4, misreading: top-p applied before top-k, witnesses: [SP.E3]}
+- {id: SP.M5, misreading: top-k keeps k + 1 tokens, witnesses: [SP.E5]}
+- {id: SP.M6, misreading: sample = argmax(probs * q), witnesses: [SP.E11]}
+- {id: SP.M7, misreading: sample drawn from the unfiltered distribution, witnesses: [SP.E12]}
+- {id: SP.M8, misreading: masked logits set to 0 instead of -inf, witnesses: [SP.E1]}
+nonclaims:
+- Composition order, -inf masking and the exponential-race sampler are those of the vLLM program at 51eeb0c; the top-k and
+  top-p sets are the paper's definitions.
+- The statistical quality of q and the Triton kernel's near-uniform shortcut are not certified by this contract.
+changes: []

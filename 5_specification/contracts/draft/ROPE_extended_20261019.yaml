@@ -1,0 +1,230 @@
+schema_version: '1.2'
+id: ROPE
+role: ROPE
+title: Rotary position embedding (rotate-half and interleaved layouts, partial rotary dimension, theta base, linear scaling,
+  position ids, precomputed tables) with its VJP, real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D1_attention), 2026-10-17
+  date: '2026-10-17'
+  scope: Real-number semantics of applying RoPE to one tensor (forward and VJP); awaiting a review by someone who did not
+    write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - reviewed_contract_and_adapter_match_current
+covers:
+- transformers apply_rotary_pos_emb (Llama, Phi-3 partial rotary, GPT-OSS half-width tables, GPT-J interleaved)
+- liger_kernel LigerRopeFunction / liger_rotary_pos_emb (_triton_rope)
+- unsloth fast_rope_embedding (rotate-half)
+- in-repo rotate-half and interleaved references of the essential round
+profiles:
+  rotate_half:
+    meaning: Angles from position ids, theta base, rotary_dim and a linear scaling factor; pairs (i, i + r/2) inside the
+      first r dimensions (GPT-NeoX / HF Llama layout).
+    task_choice_required: false
+  interleaved:
+    meaning: As rotate_half but pairs (2i, 2i + 1) (RoFormer / GPT-J layout).
+    task_choice_required: false
+  tables_duplicated:
+    meaning: cos / sin tables given per token with width r = rotary dimension, laid out as cat(freqs, freqs) (equal halves);
+      pairs (i, i + r/2); dimensions >= r pass through (HF Llama / Phi-3 apply_rotary_pos_emb, Liger).
+    task_choice_required: false
+  tables_half:
+    meaning: cos / sin tables of width r/2 (not duplicated); pairs (i, i + r/2) with r = 2 * width (HF GPT-OSS).
+    task_choice_required: false
+  liger_batched_tables_duplicated:
+    meaning: Liger/HuggingFace rotate-half layout for x [B][H][L][d], with duplicated cos/sin tables shaped
+      [1 or B][L][d]. A leading table batch of one is shared; otherwise each input batch uses its corresponding table.
+    task_choice_required: false
+outputs:
+  out:
+    shape: shape of x ([L][d], [H][L][d], or [B][H][L][d] in the Liger batched profile)
+    guarantee: rigorous_enclosure
+  grad:
+    shape: shape of x; VJP against the explicit upstream
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: x, upstream, base, scaling factor and table entries are the exact values received; position ids are exact
+    integers.
+  quality: No tolerance; table profiles are exact rational arithmetic, angle profiles enclose cos, sin and powers.
+  test_evidence: Exact equality or containment of the expected formula's enclosure.
+  error_handling: Odd or oversized rotary widths, tables with unequal halves in the duplicated layout and shape mismatches
+    are invalid_input.
+decisions:
+- id: RO.LAYOUT
+  status: drafted
+  statement: 'Two pairings are in use: rotate-half pairs dimension i with i + r/2 (HF Llama rotate_half, GPT-NeoX, Liger,
+    which states it implements the HF Llama version) and interleaved pairs 2i with 2i + 1 (RoFormer eqs. 15 and 34, GPT-J
+    rotate_every_two). They are declared conventions, not interchangeable readings: two profiles; a kernel is compared with
+    the layout it declares (the essential round compared each candidate only on its own layout).'
+  basis:
+  - ROFORMER.ROTARY
+  - ROFORMER.EFFICIENT
+  - HF_LLAMA.ROTATE_HALF
+  - HF_GPTJ.EVERY_TWO
+  - LIGER_ROPE.HF
+- id: RO.ROTARY_DIM
+  status: drafted
+  statement: 'The rotated width r is part of the declaration. Angle profiles take it explicitly (HF: int(head_dim * partial_rotary_factor))
+    and use it in theta_i = base^(-2i/r) (HF computes inv_freq with dim = r). Table profiles derive it from the table width
+    through the layout: r = width for duplicated tables (Phi-3 rotary_dim = cos.shape[-1]), r = 2 * width for half-width
+    tables (GPT-OSS). The table width alone does not determine the layout: reading a half-width table as a duplicated one
+    (bug B001) or ignoring r < head_dim (bug B002) are the misreadings the mutants test. Dimensions from r to head_dim pass
+    through unchanged.'
+  basis:
+  - HF_ROPE_UTILS.DEFAULT
+  - HF_PHI3.PARTIAL
+  - HF_GPT_OSS.HALF
+- id: RO.TABLE_HALVES
+  status: drafted
+  statement: In the duplicated layout the HF formula q * cos + rotate_half(q) * sin reads both halves of the tables, while
+    the Liger kernel reads only the left half, stating that the right half is a clone. Tables built by the rotary embedding
+    (cat(freqs, freqs)) satisfy this; for tables with unequal halves the two readings differ and no source defines which
+    is meant, so such tables are invalid_input rather than decided for either reading.
+  basis:
+  - HF_LLAMA.APPLY
+  - HF_LLAMA.TABLES
+  - LIGER_ROPE.LEFT_HALF
+- id: RO.SCALING
+  status: drafted
+  statement: Linear scaling divides the inverse frequencies by the factor, equivalently the position ids (HF linear rope
+    type; the essential round divides positions by 2). The angle profiles assume attention_scaling = 1, which holds for
+    the default and linear types; NTK, YaRN, llama3 and dynamic scaling are unsupported here.
+  basis:
+  - HF_ROPE_UTILS.LINEAR
+  - HF_ROPE_UTILS.DEFAULT
+  - HF_LLAMA.TABLES
+- id: RO.VJP
+  status: drafted
+  statement: 'out = M x with M the block rotation of each token, so the VJP for an upstream g is M^T g: grad_p = g_p cos
+    + g_s sin, grad_s = g_s cos - g_p sin (Liger''s backward kernel computes the same with -sin). Pass-through dimensions
+    copy the upstream.'
+  basis:
+  - LIGER_ROPE.BWD
+  - ROFORMER.RELATIVE
+clauses:
+- {id: RO.C1, basis: [ROFORMER.THETA, HF_ROPE_UTILS.DEFAULT, RO.ROTARY_DIM], statement: 'theta_i = base^(-2i/r), i = 0 ..
+      r/2 - 1', observes: [out], evidence_kind: definition}
+- {id: RO.C2, basis: [HF_LLAMA.ROTATE_HALF, HF_LLAMA.APPLY, RO.LAYOUT], statement: 'rotate_half: for p = i, s = i + r/2, out_p
+      = x_p cos - x_s sin, out_s = x_s cos + x_p sin', observes: [out], evidence_kind: definition}
+- {id: RO.C3, basis: [ROFORMER.ROTARY, ROFORMER.EFFICIENT, HF_GPTJ.EVERY_TWO, RO.LAYOUT], statement: 'interleaved: the same
+      rotation on p = 2i, s = 2i + 1', observes: [out], evidence_kind: definition}
+- {id: RO.C4, basis: [HF_PHI3.PARTIAL, RO.ROTARY_DIM], statement: 'r even, 2 <= r <= head_dim; dimensions >= r pass through',
+    observes: [out, grad], evidence_kind: definition}
+- {id: RO.C5, basis: [ROFORMER.ROTARY, HF_LLAMA.TABLES], statement: 'angle of pair i at token t = position_ids[t] * theta_i
+      (given ids, any offset; position 0 is the identity)', observes: [out], evidence_kind: definition}
+- {id: RO.C6, basis: [RO.SCALING], statement: linear scaling divides the angle by the factor, observes: [out], evidence_kind: definition}
+- {id: RO.C7, basis: [RO.VJP], statement: grad = M^T upstream (transpose rotation per pair), observes: [grad], evidence_kind: derived}
+- {id: RO.C8, basis: [HF_LLAMA.APPLY, HF_PHI3.PARTIAL, LIGER_ROPE.LEFT_HALF, RO.TABLE_HALVES], statement: 'tables_duplicated:
+      width = r with equal halves; pair i uses cos[t][i], sin[t][i]', observes: [out, grad], evidence_kind: definition}
+- {id: RO.C9, basis: [HF_GPT_OSS.HALF, RO.ROTARY_DIM], statement: 'tables_half: width = r/2; pair (i, i + r/2) uses cos[t][i],
+      sin[t][i]', observes: [out, grad], evidence_kind: definition}
+- {id: RO.C10, basis: [LIGER_ROPE.HF, LIGER_ROPE.LEFT_HALF, LIGER_ROPE.BWD], statement: 'liger_batched_tables_duplicated:
+      x is [B,H,L,d]; cos/sin are [1 or B,L,d], with batch-one tables shared and batch-B tables selected by the input
+      batch; every head in a batch uses the selected token table', observes: [out, grad], evidence_kind: definition}
+examples:
+- {id: RO.E1, profile: rotate_half, clauses: [RO.C1, RO.C2, RO.C7], input: {base: 10000, scaling_factor: 1, x: [[1, 2, 3,
+          4]], positions: [1], rotary_dim: 4, upstream: [[1, 0, 0, 0]]}, expected: {outcome: value, fields: {out: [[-3*sin(1)
+              + cos(1), -4*sin((1/100)) + 2*cos((1/100)), sin(1) + 3*cos(1), 2*sin((1/100)) + 4*cos((1/100))]], grad: [[cos(1),
+            0, -sin(1), 0]]}}, note: 'theta = (1, 1/100), pairs (0,2), (1,3)'}
+- {id: RO.E2, profile: interleaved, clauses: [RO.C1, RO.C3, RO.C7], input: {base: 10000, scaling_factor: 1, x: [[1, 2, 3,
+          4]], positions: [1], rotary_dim: 4, upstream: [[0, 1, 0, 0]]}, expected: {outcome: value, fields: {out: [[-2*sin(1)
+              + cos(1), sin(1) + 2*cos(1), -4*sin((1/100)) + 3*cos((1/100)), 3*sin((1/100)) + 4*cos((1/100))]], grad: [[sin(1),
+            cos(1), 0, 0]]}}, note: 'pairs (0,1), (2,3)'}
+- {id: RO.E3, profile: rotate_half, clauses: [RO.C5], input: {base: 10000, scaling_factor: 1, x: [[1, 2, 3, 4]], positions: [
+        0], rotary_dim: 4, upstream: [[5, 6, 7, 8]]}, expected: {outcome: value, fields: {out: [[1, 2, 3, 4]], grad: [[5,
+            6, 7, 8]]}}, note: position 0 is the identity}
+- {id: RO.E4, profile: rotate_half, clauses: [RO.C5], input: {base: 10000, scaling_factor: 1, x: [[1, 0]], positions: [7],
+      rotary_dim: 2, upstream: [[0, 0]]}, expected: {outcome: value, fields: {out: [[cos(7), sin(7)]], grad: [[0, 0]]}}, note: position
+      ids start at 7}
+- {id: RO.E5, profile: rotate_half, clauses: [RO.C6], input: {base: 10000, scaling_factor: 2, x: [[1, 0]], positions: [2],
+      rotary_dim: 2, upstream: [[0, 0]]}, expected: {outcome: value, fields: {out: [[cos(1), sin(1)]], grad: [[0, 0]]}}, note: linear
+      scaling factor 2}
+- {id: RO.E6, profile: rotate_half, clauses: [RO.C1, RO.C4], input: {base: 10000, scaling_factor: 1, x: [[1, 2, 3, 4, 5, 6]],
+      positions: [1], rotary_dim: 4, upstream: [[0, 0, 0, 0, 1, 0]]}, expected: {outcome: value, fields: {out: [[-3*sin(1)
+              + cos(1), -4*sin((1/100)) + 2*cos((1/100)), sin(1) + 3*cos(1), 2*sin((1/100)) + 4*cos((1/100)), 5, 6]], grad: [
+          [0, 0, 0, 0, 1, 0]]}}, note: 'partial rotary: head_dim 6, rotary_dim 4'}
+- {id: RO.E7, profile: tables_duplicated, clauses: [RO.C8, RO.C7], input: {x: [[1, 2, 3, 4]], cos: [[3/5, 0, 3/5, 0]], sin: [
+        [4/5, 1, 4/5, 1]], upstream: [[1, 1, 1, 1]]}, expected: {outcome: value, fields: {out: [[-9/5, -4, 13/5, 2]], grad: [
+          [7/5, 1, -1/5, -1]]}}}
+- {id: RO.E8, profile: tables_duplicated, clauses: [RO.C8, RO.C4, RO.C7], input: {x: [[1, 2, 3, 4]], cos: [[3/5, 3/5]], sin: [
+        [4/5, 4/5]], upstream: [[1, 0, 1, 0]]}, expected: {outcome: value, fields: {out: [[-1, 2, 3, 4]], grad: [[3/5, -4/5,
+            1, 0]]}}, note: 'Phi-3 style partial rotary: table width 2 = rotary_dim < head_dim 4'}
+- {id: RO.E9, profile: tables_half, clauses: [RO.C9, RO.C7], input: {x: [[1, 2, 3, 4]], cos: [[3/5, 0]], sin: [[4/5, 1]],
+      upstream: [[0, 1, 0, 0]]}, expected: {outcome: value, fields: {out: [[-9/5, -4, 13/5, 2]], grad: [[0, 0, 0, -1]]}},
+    note: 'GPT-OSS layout: half-width tables, full rotation'}
+- {id: RO.E10, profile: tables_duplicated, clauses: [RO.C8], input: {x: [[1, 2, 3, 4]], cos: [[3/5, 0, 1, 0]], sin: [[4/5,
+          1, 0, 1]], upstream: [[0, 0, 0, 0]]}, expected: {outcome: invalid_input}, note: unequal halves}
+- {id: RO.E11, profile: rotate_half, clauses: [RO.C4], input: {base: 10000, scaling_factor: 1, x: [[1, 2, 3, 4]], positions: [
+        1], rotary_dim: 3, upstream: [[0, 0, 0, 0]]}, expected: {outcome: invalid_input}, note: odd rotary_dim}
+- {id: RO.E12, profile: rotate_half, clauses: [RO.C2, RO.C5, RO.C7], input: {base: 10000, scaling_factor: 1, x: [[[1, 0],
+          [0, 1]], [[2, 0], [0, 2]]], positions: [0, 1], rotary_dim: 2, upstream: [[[0, 0], [1, 1]], [[0, 0], [0, 1]]]}, expected: {
+      outcome: value, fields: {out: [[[1, 0], [-sin(1), cos(1)]], [[2, 0], [-2*sin(1), 2*cos(1)]]], grad: [[[0, 0], [cos(1)
+                + sin(1), -sin(1) + cos(1)]], [[0, 0], [sin(1), cos(1)]]]}}, note: 'two heads, two tokens'}
+- id: RO.E13
+  profile: liger_batched_tables_duplicated
+  clauses: [RO.C10, RO.C7]
+  input:
+    x: [[[[1, 2]]], [[[3, 4]]]]
+    cos: [[[1, 1]], [[0, 0]]]
+    sin: [[[0, 0]], [[1, 1]]]
+    upstream: [[[[5, 6]]], [[[7, 8]]]]
+  expected:
+    outcome: value
+    fields:
+      out: [[[[1, 2]]], [[[-4, 3]]]]
+      grad: [[[[5, 6]]], [[[8, -7]]]]
+  note: Two input batches select different duplicated token tables; each batch has one head and one token.
+signature:
+  inputs:
+  - x [L][d] or [H][L][d]; Liger batched profile x [B][H][L][d]; upstream of the same shape
+  - 'angle profiles: positions [L], rotary_dim, base, scaling_factor (default 1)'
+  - 'table profiles: cos, sin [L][width]; Liger batched profile [1 or B][L][width]'
+  pre_state: []
+  post_state: []
+  observation_unit: rotated tensor and its VJP
+domain:
+  valid:
+  - rational x and upstream
+  - integer positions
+  - base > 0
+  - scaling_factor > 0
+  - 2 <= r <= d with r even
+  domain_undefined: []
+  invalid_input:
+  - odd or oversized rotary width
+  - duplicated tables with unequal halves
+  - shape mismatches
+  unsupported:
+  - NTK
+  - YaRN
+  - llama3 and dynamic scaling
+  - attention_scaling != 1 in the angle profiles
+mutation_requirements:
+- {id: RO.M1, misreading: rotate-half declared but interleaved pairs used, witnesses: [RO.E1]}
+- {id: RO.M2, misreading: interleaved declared but rotate-half pairs used, witnesses: [RO.E2]}
+- {id: RO.M3, misreading: 'partial rotary ignored: whole head rotated with pairs (i, i + d/2) reading cos[i] of the r-wide
+      table (Liger <= 0.8.4 on Phi-3, bug B002)', witnesses: [RO.E8]}
+- {id: RO.M4, misreading: 'half-width table read as a duplicated one, rotary width inferred from the table width (Liger main
+      on GPT-OSS, bug B001)', witnesses: [RO.E9]}
+- {id: RO.M5, misreading: theta exponent uses head_dim instead of the rotary dimension, witnesses: [RO.E6]}
+- {id: RO.M6, misreading: linear scaling factor ignored, witnesses: [RO.E5]}
+- {id: RO.M7, misreading: backward applies the forward rotation instead of its transpose, witnesses: [RO.E7]}
+- {id: RO.M8, misreading: 'given position ids replaced by 0 .. L-1 (the KV-cache counterexample of v2.4: rotation at the wrong
+      position)', witnesses: [RO.E4]}
+nonclaims:
+- Rounding of cos / sin tables computed by a device, and TF32 or bf16 arithmetic, are the numerical question (K - G).
+- The rotate-half layout and partial rotary width rest on reference programs (HF, Liger); the paper defines the interleaved
+  layout with full rotation.
+changes:
+- date: '2026-10-18'
+  change: Added the source-declared Liger batch/head interface with shared or per-batch duplicated cos/sin tables.
+  trigger: A real LigerRopeFunction call uses q/k [B,H,L,d] and cos/sin [1 or B,L,d]; the previous one-tensor
+    evaluator rejected this legal public shape before evaluating the formula.

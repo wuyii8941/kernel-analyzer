@@ -134,13 +134,91 @@ def test_reference_check_finds_an_error_orthogonal_to_the_reference():
     assert s["semantic_alignment"] == 0
     assert s["verdict"] == "不一致" and s["exceeding"] == int((x < 0).sum()) and s["compared"] == 4096
     assert s["exceeding_by_program"] == [[[0, 0, 0], int((x < 0).sum())]]
-    assert any(f["kind"] == "semantic" for f in rep["findings"])
+    assert any(f["kind"] == "reference_difference" for f in rep["findings"])
+    assert not any(f["kind"] == "semantic" for f in rep["findings"])
+    assert s["semantic_verdict"] == "无法判断"
     assert "与参照程序不一致" in rep["text"].splitlines()[0] and "relu（torch，float64）" in rep["text"]
     assert "assert_close 的 dtype 默认值 不通过" in rep["text"] and "随机误差已超出" not in rep["text"]
 
 
+def test_float64_reference_does_not_certify_semantics():
+    """A large G-S difference alone cannot decide which program implements the task."""
+    from types import SimpleNamespace
+    from kernel_analyzer.reference_eval.audit import _compare_reference, _semantic_text, render
+    buf = SimpleNamespace(global_indices=lambda: np.arange(2), written=np.ones(2, dtype=bool),
+                          actual_after_st=np.zeros(2, dtype=int), writer=np.zeros(2, dtype=int), elem="f32")
+    s = _compare_reference(buf, np.ones(2, dtype=bool), np.array([2., 2.]), np.zeros(2),
+                           np.array([2., 2.]), np.ones(2), [(0, 0, 0)], 2**-24)
+    assert s["verdict"] == "不一致"  # retain the useful implementation comparison
+    assert s["semantic_verdict"] == "无法判断"
+    assert s["reference_kind"] == "implementation_reference"
+    assert "不能据此确认语义错误" in _semantic_text(s)
+    assert "数值舍入解释不了" not in _semantic_text(s)
+    rep = {"names": {}, "prediction": None, "verify": {"status": "bit_identical"},
+           "measured": {"out": dict(alignment=0., se=0., energy_relative=0., max_abs=0.,
+                                    elements=2, written=2, format_resolution=2**-24)},
+           "spec": {"out": s}, "findings": [{"output": "out", "kind": "reference_difference",
+                                               "text": _semantic_text(s)}],
+           "attribution": {}, "fix_groups": [], "tolerance_checks": {}, "cannot_decide": [],
+           "scope": dict(kernel="example", target="test", rule="all")}
+    text = render(rep)
+    assert "与参照程序不一致" in text.splitlines()[0]
+    assert "语义正确性尚无法判断" in text
+    assert "G − S（语义）" not in text
+    assert "来自公式、常数或 mask，不是数值误差" not in text
+
+
+def test_matching_callback_does_not_certify_task_or_inputs():
+    from types import SimpleNamespace
+    from kernel_analyzer.reference_eval.audit import _compare_reference, render
+    buf = SimpleNamespace(global_indices=lambda: np.arange(2), written=np.ones(2, dtype=bool),
+                          actual_after_st=np.zeros(2, dtype=int), writer=np.zeros(2, dtype=int), elem="f32")
+    s = _compare_reference(buf, np.ones(2, dtype=bool), np.ones(2), np.zeros(2),
+                           np.full(2, 1.1), np.ones(2), [(0, 0, 0)], 2**-24)
+    rep = {"names": {}, "prediction": None, "verify": {"status": "bit_identical"},
+           "measured": {"out": dict(alignment=0.1, se=0., energy_relative=0.1, max_abs=0.1,
+                                    elements=2, written=2, format_resolution=2**-24, significant=True)},
+           "spec": {"out": s}, "findings": [], "attribution": {}, "fix_groups": [],
+           "tolerance_checks": {}, "cannot_decide": [],
+           "scope": dict(kernel="example", target="test", rule="all")}
+    text = render(rep)
+    assert "问题出在数值实现" not in text
+    assert "在 kernel 实际收到的输入上" not in text
+    assert "语义正确性尚未建立" in text
+    assert "输入与前态对应尚未核验" in text
+
+
+def test_callback_values_follow_output_view_addresses():
+    from types import SimpleNamespace
+    from kernel_analyzer.reference_eval.audit import _reference_storage
+    arg = SimpleNamespace(shape=(2, 2), stride=(1, 3), data_ptr=104, storage_ptr=100,
+                          element_size=4, storage_nbytes=28)
+    storage = _reference_storage(np.array([[10., 20.], [30., 40.]]), arg)
+    assert np.isnan(storage[[0, 3, 6]]).all()
+    assert storage[[1, 2, 4, 5]].tolist() == [10., 30., 20., 40.]
+    with pytest.raises(ValueError, match="shape"):
+        _reference_storage(np.array([10., 20., 30., 40.]), arg)
+    for changes in ({"stride": (1, 1)}, {"storage_nbytes": 16}, {"data_ptr": 102}):
+        with pytest.raises(ValueError):
+            _reference_storage(np.ones((2, 2)), SimpleNamespace(**(vars(arg) | changes)))
+
+
+@pytest.mark.parametrize("shape,stride,offset", [((2, 3), (5, 1), 2), ((3, 2), (1, 5), 1),
+                                                ((), (), 2), ((0, 2), (2, 1), 0)])
+def test_callback_storage_matches_independent_coordinate_enumeration(shape, stride, offset):
+    from types import SimpleNamespace
+    from kernel_analyzer.reference_eval.audit import _reference_storage
+    values = np.arange(np.prod(shape, dtype=int), dtype=np.float64).reshape(shape)
+    arg = SimpleNamespace(shape=shape, stride=stride, data_ptr=100 + offset * 4, storage_ptr=100,
+                          element_size=4, storage_nbytes=64)
+    expected = np.full(16, np.nan)
+    for coordinate in np.ndindex(shape):
+        expected[offset + sum(i * s for i, s in zip(coordinate, stride))] = values[coordinate]
+    np.testing.assert_equal(_reference_storage(values, arg), expected)
+
+
 @cuda
-def test_reference_check_leaves_out_where_the_reference_is_undefined():
+def test_reference_check_leaves_out_nonfinite_callback_values():
     x = torch.randn(4096, device="cuda", generator=torch.Generator(device="cuda").manual_seed(19))
     y = torch.empty_like(x)
     nan = torch.tensor(float("nan"), dtype=torch.float64, device="cuda")
@@ -150,7 +228,8 @@ def test_reference_check_leaves_out_where_the_reference_is_undefined():
     assert undefined > 0 and s["undefined"] == undefined and s["compared"] == 4096 - undefined
     assert s["verdict"] == "未发现差异" and s["exceeding"] == 0 and s["semantic_alignment"] == 0
     assert rep["tolerance_checks"]["y_ptr"][0]["passes"] and not rep["findings"]
-    assert f"参照程序在 {undefined} 个元素上没有定义" in rep["text"]
+    assert f"参照程序在 {undefined} 个元素上返回非有限值" in rep["text"]
+    assert "不等于数学目标无定义" in rep["text"]
 
 
 @triton.jit

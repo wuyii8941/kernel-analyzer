@@ -6,7 +6,7 @@ from __future__ import annotations
 from fractions import Fraction
 
 from kernel_spec import v24
-from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer, vector
+from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer, rational, require_fields, vector
 
 tp = v24.module("spec_training_program")
 
@@ -14,12 +14,20 @@ tp = v24.module("spec_training_program")
 def _inputs(profile, inp, count=integer):
     if profile != "base":
         raise Unsupported(f"profile {profile!r}")
+    required = {"S", "n", "participant_ids"}
+    require_fields(inp, required, "RANKMEAN input")
+    if set(inp) - required:
+        raise Unsupported("RANKMEAN input contains options outside the equal-valid-token profile")
     ids = inp["participant_ids"]
     S = vector(inp["S"], "S")
     n = vector(inp["n"], "n", item=count)
     if not isinstance(ids, (list, tuple)) or not (len(S) == len(n) == len(ids)) or not S:
         raise Invalid("S, n and participant_ids must have the same nonzero length")
-    if len(set(ids)) != len(ids):
+    try:
+        distinct_ids = set(ids)
+    except TypeError as exc:
+        raise Unsupported("participant IDs must have a hashable representation") from exc
+    if len(distinct_ids) != len(ids):
         raise Invalid("duplicate participant IDs")
     if any(c < 0 for c in n):
         raise Invalid("negative count")
@@ -33,6 +41,17 @@ def reference(profile, inp):
     if sum(n) == 0:
         raise Undefined("no valid tokens on any rank")
     return Result("value", {"loss": v24.value(tp.cross_rank_mean(S, n))})
+
+
+def check_output(profile, inp, observed):
+    """Exact membership for the explicitly selected equal-token task (RM.C1)."""
+    S, n = _inputs(profile, inp)
+    total = sum(n)
+    if total == 0:
+        raise Undefined("no valid tokens on any rank")
+    if not isinstance(observed, dict) or set(observed) != {"loss"}:
+        return False
+    return rational(observed["loss"], "observed loss") * total == sum(S)
 
 
 # ------------------------------------------------------------------ independent mutants

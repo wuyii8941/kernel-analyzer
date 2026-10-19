@@ -1581,6 +1581,7 @@
     "items": {
       "IOTA": "prims.iota constructs a 1-D tensor t with t[i] == start + i * step (integer dtypes).",
       "SCALAR_TENSOR": "prims.scalar_tensor makes a 0-dim tensor of a number.",
+      "CONVERT_ELEMENT_TYPE": "convert_element_type(Tensor a, ScalarType dtype) creates a new pointwise tensor with the requested dtype; its metadata rule preserves dense strides and otherwise selects elementwise output strides.",
       "PAGE": "definitions in torch/_prims/__init__.py"
     },
     "snapshot": "sources/TS_PRIMS.py.gz",
@@ -1611,9 +1612,10 @@
     "items": {
       "LIFT": "aten.detach, aten.lift and aten.lift_fresh decompose to an alias of the input (no change of values).",
       "SLICE_SCATTER": "slice_scatter decomposition: input with src written at the slice.",
+      "SOFTMAX_TYPES": "_softmax and _log_softmax require half input when half_to_float is true, and then return the float computation dtype; otherwise the result dtype is the input dtype.",
       "SAFE_SOFTMAX": "aten._safe_softmax: softmax(self, dim), except that rows in which every element equals -inf give zeros.",
-      "SOFTMAX_BWD": "aten._softmax_backward_data(grad, output, dim): grad*output - output * sum(grad*output, dim, keepdim).",
-      "LOG_SOFTMAX_BWD": "aten._log_softmax_backward_data(grad, output, dim): grad - exp(output) * sum(grad, dim, keepdim).",
+      "SOFTMAX_BWD": "aten._softmax_backward_data(grad, output, dim, input_dtype): grad*output - output * sum(grad*output, dim, keepdim); _cast_grad_to_input_dtype selects input_dtype. The source notes that the CPU kernel does not respect input_dtype.",
+      "LOG_SOFTMAX_BWD": "aten._log_softmax_backward_data(grad, output, dim, input_dtype): grad - exp(output) * sum(grad, dim, keepdim); _cast_grad_to_input_dtype selects input_dtype.",
       "DROPOUT": "native_dropout(input, p, train): for train and p != 0: p == 1 gives (zeros, all-False mask); otherwise bool_mask = rand_like(input) > p, result = bool_mask * input * (1/(1-p)); otherwise (input, all-True mask).",
       "DROPOUT_BWD": "native_dropout_backward(grad, mask, scale) = grad * (mask * scale).",
       "PAGE": "definitions in torch/_decomp/decompositions.py"
@@ -1629,6 +1631,7 @@
     "kind": "torch_source",
     "items": {
       "RSUB": "torch/_refs/__init__.py rsub(a, b, alpha) returns torch.sub(b, a, alpha=alpha) (a must be a tensor).",
+      "MASKED_FILL": "masked_fill checks a boolean mask, converts the scalar or zero-dimensional fill value to the input dtype, and selects that value where the mask is true before returning a new contiguous tensor.",
       "SCALAR_TENSOR": "torch/_refs scalar_tensor(a, dtype=None): 0-dim tensor of the number a; dtype inferred from the Python type of a unless given.",
       "CONSTANT_PAD": "torch/_refs constant_pad_nd(input, pad, value): pads (negative pads crop) from the last dimension backwards.",
       "PAGE": "definitions in torch/_refs/__init__.py"
@@ -1955,6 +1958,7 @@
     "items": {
       "PAGE": "Liger RMSNorm source",
       "DEF": "y_i = (x_i / RMS) * (offset + w_i) with rstd = rsqrt(mean(x^2) + eps) per row; LigerRMSNormFunction.forward(X, W, eps, offset=0.0, casting_mode='llama', in_place=True, row_mode=None).",
+      "BWD": "The backward kernel computes dX = rstd*(m - x*rstd^2*sum(m*x)/N), with m = dY*(W+offset) when affine, and dW = sum_rows dY*(x*rstd).",
       "OFFSET": "Some models shift the weight by a constant offset; Gemma uses offset 1.0, giving (X / RMS(X)) * (W + 1.0).",
       "CAST": "casting_mode llama: only rstd computed in fp32 and x*rstd cast back before the weight; gemma: everything in fp32, output cast back; none: no casting."
     },
@@ -1988,7 +1992,8 @@
     "version": "v0.7.0",
     "items": {
       "PAGE": "Liger LayerNorm source",
-      "DEF": "mean = sum(x)/n, var = sum((x - mean)^2)/n, rstd = rsqrt(var + eps), Y = (X - mean) * rstd * W + B per row; LigerLayerNormFunction.forward(X, W, B, eps)."
+      "DEF": "mean = sum(x)/n, var = sum((x - mean)^2)/n, rstd = rsqrt(var + eps), Y = (X - mean) * rstd * W + B per row; LigerLayerNormFunction.forward(X, W, B, eps).",
+      "BWD": "For each row, x_hat=(x-mean)*rstd, wdy=w*dY, c1=mean(x_hat*wdy), c2=mean(wdy), dX=(wdy-x_hat*c1-c2)*rstd; dW and dB sum dY*x_hat and dY over rows."
     },
     "snapshot": "sources/NORM_LIGER_LN.py.gz",
     "snapshot_sha256": "7f1f97ab641dfdb0e3c5df5a4309807fcc7192936197a10ef3ab70cad6d857fd",
@@ -2009,7 +2014,8 @@
       "MEAN": "reduction 'mean' divides by n_non_ignore (no weight) or by sum_non_ignore_weight = sum of weight[target] over non-ignored rows (weight given); 'sum' and 'none' do not divide.",
       "GRAD": "Gradient (weighted): (1 - label_smoothing) w_y (softmax_c - [c = y]) + eps (-w_c + softmax_c * sum_c w_c), divided by sum_non_ignore_weight for 'mean'; unweighted: softmax_c - eps - (1 - label_smoothing)[c = y], divided by n_non_ignore for 'mean'.",
       "EXTRAS": "lse_square_scale adds z_loss = lse_square_scale * lse^2 (divided by n_non_ignore for 'mean'); softcap replaces logits by softcap * tanh(x / softcap); both default off.",
-      "BACKWARD": "cross_entropy_backward: if grad_output equals 1.0 the gradient is kept; if grad_output.ndim > 0 (reduction 'none') the gradient rows are multiplied by grad_output.unsqueeze(1); otherwise by the scalar via element_mul_kernel."
+      "BACKWARD": "cross_entropy_backward: if grad_output equals 1.0 the gradient is kept; if grad_output.ndim > 0 (reduction 'none') the gradient rows are multiplied by grad_output.unsqueeze(1); otherwise by the scalar via element_mul_kernel.",
+      "POSTSTATE": "The forward kernel stores each computed derivative block back to X_ptr (the input logits storage). For reduction none, backward forms _input * grad_output.unsqueeze(1) as a separate tensor; scalar backward uses element_mul_kernel on the saved _input storage."
     },
     "snapshot": "sources/CE_LIGER_CE.py.gz",
     "snapshot_sha256": "0e75c5459f5318dd529c4a3cc4604514f2cd41a7a7f1a2d534f2757a6f8b6cae",
@@ -2024,7 +2030,8 @@
     "version": "v0.7.0",
     "items": {
       "PAGE": "Liger GroupNorm source",
-      "DEF": "X viewed as (batch, num_groups, -1) (contiguous blocks of num_channels/num_groups channels); variance = E[X^2] - E[X]^2 per group; rstd = rsqrt(variance + eps); Y = (X - m) * rstd * W[c] + B[c] with per-channel W, B."
+      "DEF": "X viewed as (batch, num_groups, -1) (contiguous blocks of num_channels/num_groups channels); variance = E[X^2] - E[X]^2 per group; rstd = rsqrt(variance + eps); Y = (X - m) * rstd * W[c] + B[c] with per-channel W, B.",
+      "BWD": "Per sample and contiguous group, c1=mean(x_hat*W*dY), c2=mean(W*dY), dX=(W*dY-x_hat*c1-c2)*rstd; per-channel dW and dB sum dY*x_hat and dY."
     },
     "snapshot": "sources/NORM_LIGER_GN.py.gz",
     "snapshot_sha256": "ec1a9820fe7e1d009dbc728c26503a8c242860a6636edb280fdf9e5e5779ab39",
@@ -2305,6 +2312,109 @@
     "raw_html_sha256": "2b48cb2caab53440475ca3bee908ca5f86ddc153b6c7a87b63b0931b5928fd5d",
     "snapshot_note": "main text extracted from the HTML page",
     "retrieved": "2026-10-16"
+  },
+  "TORCH210_KLDIV_FUNCTIONAL": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 torch.nn.functional.kl_div wrapper",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/nn/functional.py",
+    "snapshot": "sources/TORCH210_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/nn/functional.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "SIGNATURE": "kl_div receives input, target, the deprecated size_average/reduce options, reduction and log_target, then calls torch.kl_div.",
+      "BATCHMEAN": "The wrapper maps batchmean to the sum reduction and, when input is not scalar, divides the result by input.size(0).",
+      "WARNING": "The wrapper warns that mean divides by both batch and support sizes, while batchmean aligns with the mathematical KL definition."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution. The reviewed contract uses the public documentation for the formula and this installed wrapper only to corroborate the selected batchmean call boundary."
+  },
+  "T_MSE_LOSS_INSTALLED": {
+    "kind": "versioned_document",
+    "title": "PyTorch 2.10 torch.nn.MSELoss and torch.nn.functional.mse_loss documentation from the installed distribution",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.MSELoss.html",
+    "snapshot": "sources/T_MSE_LOSS_INSTALLED.txt.gz",
+    "retrieval_method": "installed_torch_distribution_docstrings",
+    "retrieved": "2026-10-19",
+    "items": {
+      "VALUE": "The unreduced loss is l_n=(x_n-y_n)^2 for N elements.",
+      "MEAN": "With reduction='mean', the sum of all element losses is divided by N, the number of elements in the output.",
+      "SHAPE": "Input and target have the same arbitrary shape; the default reduced output is scalar.",
+      "FUNCTIONAL": "torch.nn.functional.mse_loss computes element-wise mean squared error; reduction is one of none, mean or sum and weight is optional.",
+      "REDUCTIONS": "The displayed piecewise definition returns the element tensor for none, its sum for sum, and its element mean for mean."
+    },
+    "verification": "The snapshot was retained from torch.nn.MSELoss and torch.nn.functional.mse_loss docstrings in the installed PyTorch 2.10.0+cu128 distribution after the required localhost:27891 proxy refused the versioned web page."
+  },
+  "TORCH210_MSE_FUNCTIONAL": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 torch.nn.functional.mse_loss wrapper",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/nn/functional.py",
+    "snapshot": "sources/TORCH210_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/nn/functional.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "SIGNATURE": "mse_loss receives input, target, deprecated size_average/reduce, reduction and optional weight.",
+      "BROADCAST": "The public wrapper warns on different input and target sizes, then broadcasts them; the reviewed profile deliberately requires equal shapes.",
+      "UNWEIGHTED": "With weight absent, the wrapper calls the native mse_loss operation using the selected reduction enum.",
+      "WEIGHTED": "With weight present, the wrapper uses a separately written weighted formula; this path is outside the reviewed profile."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution. It fixes the public call boundary; the mathematical formula comes from the installed official MSELoss documentation."
+  },
+  "T_L1_LOSS_INSTALLED": {
+    "kind": "versioned_document",
+    "title": "PyTorch 2.10 torch.nn.L1Loss and torch.nn.functional.l1_loss documentation from the installed distribution",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.L1Loss.html",
+    "snapshot": "sources/T_L1_LOSS_INSTALLED.txt.gz",
+    "retrieval_method": "installed_torch_distribution_docstrings",
+    "retrieved": "2026-10-19",
+    "items": {
+      "VALUE": "The unreduced loss is l_n=|x_n-y_n|.",
+      "MEAN": "With reduction='mean', the sum of the output elements is divided by the number of elements.",
+      "SHAPE": "Input and target have the same arbitrary shape and number of elements; the default reduced output is scalar.",
+      "FUNCTIONAL": "torch.nn.functional.l1_loss computes the mean element-wise absolute difference and optionally accepts weight.",
+      "REDUCTIONS": "The displayed piecewise definition returns the element tensor for none, its sum for sum, and its element mean for mean."
+    },
+    "verification": "The snapshot was retained from torch.nn.L1Loss and torch.nn.functional.l1_loss docstrings in the installed PyTorch 2.10.0+cu128 distribution; no direct network route was used after the required localhost:27891 proxy had refused the versioned documentation page during this review session."
+  },
+  "TORCH210_L1_FUNCTIONAL": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 torch.nn.functional.l1_loss wrapper",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/nn/functional.py",
+    "snapshot": "sources/TORCH210_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/nn/functional.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "SIGNATURE": "l1_loss receives input, target, deprecated size_average/reduce, reduction and optional weight.",
+      "BROADCAST": "The wrapper warns on different input and target sizes, then broadcasts them; the reviewed profile deliberately requires equal shapes.",
+      "UNWEIGHTED": "With weight absent, the wrapper calls the native l1_loss operation using the selected reduction enum.",
+      "WEIGHTED": "With weight present, the wrapper uses a separately written weighted formula whose mean divides by the weight sum; this path is outside the reviewed profile."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution. It fixes the selected public call boundary."
+  },
+  "TORCH210_L1_REFERENCE": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 refs implementation of torch.nn.functional.l1_loss",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/_refs/nn/functional/__init__.py",
+    "snapshot": "sources/TORCH210_REFS_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/_refs/nn/functional/__init__.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "FORMULA": "The reference implementation computes abs(input-target) and applies the selected loss reduction.",
+      "BOUNDARY": "The reference implementation supports the unweighted public boundary and the deprecated reduction overrides; the reviewed profile keeps the overrides absent."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution as an independent implementation-level cross-check of the documented formula."
   },
   "DIV_LIGER_KLDIV": {
     "url": "https://raw.githubusercontent.com/linkedin/Liger-Kernel/v0.7.0/src/liger_kernel/ops/kl_div.py",
@@ -3084,6 +3194,7 @@
     "items": {
       "PAGE": "definitions in torch/_decomp/decompositions.py",
       "LN_BWD": "native_layer_norm_backward(grad_out, input, normalized_shape, mean, rstd, weight, bias, output_mask): x_hat = (x - mean) rstd; g = grad_out * weight (or grad_out); d_input = rstd / N * (N g - sum(g) - x_hat sum(g x_hat)) over the inner dims; d_weight = sum over outer dims of grad_out * x_hat; d_bias = sum over outer dims of grad_out.",
+      "RMS_BWD": "_fused_rms_norm_backward: x_hat = input*rstd; g = grad_out*weight (or grad_out); d_input = (g - x_hat*sum(x_hat*g)/N)*rstd; d_weight is the outer-dimension sum of grad_out*x_hat.",
       "BN_HELPER": "native_batch_norm_helper: training - biased var_mean over dims [0, 2, ...], rstd = rsqrt(var + eps), new_running_mean = momentum * mean + (1 - momentum) * running_mean, new_running_var = momentum * var * n / (n - 1) + (1 - momentum) * running_var, n = numel / C; eval - running statistics, invstd = 1 / sqrt(running_var + eps); output * weight + bias."
     },
     "snapshot": "sources/NORM_TS_DECOMP.py.gz",
@@ -3109,7 +3220,9 @@
     "title": "torch 2.10 source torch/nn/functional.py",
     "kind": "torch_source",
     "items": {
-      "PAGE": "definitions in torch/nn/functional.py"
+      "PAGE": "definitions in torch/nn/functional.py",
+      "NORM_CALLS": "layer_norm and rms_norm pass eps directly to the corresponding torch operations without imposing a nonnegative-eps check.",
+      "GROUP_PUBLIC": "group_norm requires rank at least two, then calls _verify_batch_size on [N*C//G, G, *spatial]; that helper rejects exactly when (N*C//G)*product(spatial) equals one before calling torch.group_norm."
     },
     "snapshot": "sources/NORM_TS_FUNC.py.gz",
     "snapshot_sha256": "f6335e443ce93ddf21ecf9d94bbb4d4a4d92e128c5bfb59826f35495c9c28703",
@@ -3357,6 +3470,42 @@
     "path": ".cache/spec_v3/d1_scratch/dl/tut06.py",
     "retrieved": "2026-10-17"
   },
+  "TRITON_MATH": {
+    "title": "Installed Triton 3.6.0 language math.py",
+    "kind": "triton_source",
+    "version": "3.6.0",
+    "items": {
+      "EXP": "triton.language.exp accepts fp32/fp64 blocks, creates an element-wise exponential operation, and preserves the input block type."
+    },
+    "snapshot": "sources/TRITON_MATH.py.gz",
+    "path": "triton/language/math.py",
+    "retrieved": "2026-10-18",
+    "snapshot_note": "Full installed source retained from the same Triton 3.6.0 distribution used by the call; no new content digest is used."
+  },
+  "TRITON_STANDARD": {
+    "title": "Installed Triton 3.6.0 language standard.py",
+    "kind": "triton_source",
+    "version": "3.6.0",
+    "items": {
+      "SUM": "triton.language.sum selects the reduction dtype, converts when needed, and calls core.reduce over the selected axis with the addition combiner."
+    },
+    "snapshot": "sources/TRITON_STANDARD.py.gz",
+    "path": "triton/language/standard.py",
+    "retrieved": "2026-10-18",
+    "snapshot_note": "Full installed source retained from the same Triton 3.6.0 distribution used by the call; no new content digest is used."
+  },
+  "TRITON_CORE": {
+    "title": "Installed Triton 3.6.0 language core.py",
+    "kind": "triton_source",
+    "version": "3.6.0",
+    "items": {
+      "CAST": "triton.language.cast performs a numerical cast; for floating downcasts fp_downcast_rounding accepts rtne (round to nearest, ties to even) or rtz (round toward zero), while bitcast is a separate option."
+    },
+    "snapshot": "sources/TRITON_CORE.py.gz",
+    "path": "triton/language/core.py",
+    "retrieved": "2026-10-18",
+    "snapshot_note": "Full installed source retained from the same Triton 3.6.0 distribution used by the call; no new content digest is used."
+  },
   "VLLM_UA": {
     "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/v1/attention/ops/triton_unified_attention.py",
     "title": "vLLM main 51eeb0c vllm/v1/attention/ops/triton_unified_attention.py",
@@ -3369,12 +3518,20 @@
       "GQA": "query head = kv_head_idx * num_queries_per_kv + offs_m % num_queries_per_kv with num_queries_per_kv = num_query_heads // num_kv_heads.",
       "ORDER": "S = softmax_scale * (Q K); softcap applied when softcap > 0; then S = -inf outside the query and KV masks; then the online softmax.",
       "WINDOW_ARG": "the kernel receives SLIDING_WINDOW = 1 + window_size[0]; window_size[1] is not passed.",
-      "V_MASK": "with SLIDING_WINDOW, V rows are zeroed unless dist < SLIDING_WINDOW (causal) or (dist < SLIDING_WINDOW) & (dist > -SLIDING_WINDOW) (non-causal), dist = context_len + qpos_lo - seq_offset with qpos_lo the first query position of the query block."
+      "V_MASK": "with SLIDING_WINDOW, V rows are zeroed unless dist < SLIDING_WINDOW (causal) or (dist < SLIDING_WINDOW) & (dist > -SLIDING_WINDOW) (non-causal), dist = context_len + qpos_lo - seq_offset with qpos_lo the first query position of the query block.",
+      "PARTIAL_MERGE": "Retained source lines 591-645 stores unnormalized acc plus M,L for each segment; reduce_segments lines 734-764 rescales masses and accumulators by exp(segm_max-overall_max), sums, then divides; lines 770-776 writes only acc through output_ptr, no LSE. Supports the representation and algebra, not independent correctness certification or all-empty behavior of the complete launch."
     },
     "snapshot": "sources/VLLM_UA.py.gz",
     "snapshot_sha256": "d714e6217b9dba1bb41148778e748badb9971d9cdf33b3984196283b5618e338",
     "path": ".cache/spec_v3/d1_scratch/dl/vllm_ua.py",
-    "retrieved": "2026-10-17"
+    "retrieved": "2026-10-17",
+    "version_review": {
+      "status": "unverified",
+      "date": "2026-10-18",
+      "claimed_revision": "51eeb0c",
+      "local_evidence": "Retained decompressed bytes equal the named local cache file. B013 records this claimed revision and release range; those historical statements are not a new verification of the retained file's origin.",
+      "missing_evidence": "No matching vLLM checkout or retained upstream response linking these bytes to the claimed revision was available in this review. localhost:27891 refused connections inside and outside the sandbox. This does not establish that the claimed version is wrong."
+    }
   },
   "VLLM_HELPERS": {
     "url": "https://raw.githubusercontent.com/vllm-project/vllm/51eeb0c/vllm/v1/attention/ops/triton_attention_helpers.py",
@@ -3388,7 +3545,14 @@
     "snapshot": "sources/VLLM_HELPERS.py.gz",
     "snapshot_sha256": "d134f1919807183f54a3a57499703da44ab2127d033aff3c1509a3274f37a5f7",
     "path": ".cache/spec_v3/d1_scratch/dl/vllm_helpers.py",
-    "retrieved": "2026-10-17"
+    "retrieved": "2026-10-17",
+    "version_review": {
+      "status": "unverified",
+      "date": "2026-10-18",
+      "claimed_revision": "51eeb0c",
+      "local_evidence": "Retained decompressed bytes equal the named local cache file; helper semantics were read directly from the retained source.",
+      "missing_evidence": "No matching vLLM checkout or retained upstream response linking these bytes to the claimed revision was available in this review. localhost:27891 refused connections inside and outside the sandbox. This does not establish that the claimed version is wrong."
+    }
   },
   "HF_LLAMA": {
     "url": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/llama/modeling_llama.py",
@@ -3600,6 +3764,51 @@
     "torch_version": "2.10.0+cu128",
     "retrieved": "2026-10-17"
   },
+  "TS_AUTOGRAD_DERIVATIVES": {
+    "title": "torch 2.10 packaged autograd derivatives.yaml",
+    "kind": "torch_source",
+    "items": {
+      "CAT": "The cat Tensor-list derivative is cat_tensors_backward applied to the complete upstream gradient, every input size and dtype, and the selected dimension.",
+      "CLAMP": "For clamp, the derivative is undefined at min and max, but PyTorch deliberately returns subgradient 1 at both boundaries; the Scalar overload uses clamp_backward, while scalar clamp_min and clamp_max spell the inclusive >= min and <= max rules explicitly.",
+      "EXTREMA": "For maximum and minimum with two Tensor operands, strict winner coordinates receive the full upstream gradient and equality coordinates give half to each operand; ordinary autograd broadcasting then sums each gradient back to its source shape.",
+      "PAGE": "torchgen/packaged/autograd/derivatives.yaml"
+    },
+    "snapshot": "sources/TS_AUTOGRAD_DERIVATIVES.yaml.gz",
+    "path": "torchgen/packaged/autograd/derivatives.yaml",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-19",
+    "snapshot_note": "Full installed PyTorch 2.10 source retained and directly compared with the installed file; no content fingerprint is introduced."
+  },
+  "TS_NATIVE_FUNCTIONS": {
+    "title": "torch 2.10 packaged ATen native_functions.yaml",
+    "kind": "torch_source",
+    "items": {
+      "CONV_SCHEMAS": "The default convolution schema takes input, weight, optional bias, stride, padding, dilation, transposed, output_padding and groups. convolution_backward additionally requires optional bias_sizes and an explicit bool[3] output_mask, and returns three positional tensors.",
+      "ARITH_SCHEMAS": "Default functional schemas separately declare tensor/scalar add, sub, rsub, mul and div overloads; tensor div with rounding_mode makes it keyword-only. Unary arithmetic and floor/ceil take one tensor. Scalar clamp bounds, tensor maximum/minimum, tensor/scalar branch overloads of where, scalar masked_fill and floor_divide are distinct from their in-place and out overloads; these selected functions are tagged pointwise where recorded.",
+      "LAYOUT_SCHEMAS": "Default functional schemas separately declare view/reshape, integer-dimension axis and range operations, tensor-list cat/stack, integer-size split, constant padding, select/slice scatter, clone, lift/alias and triangular operations. Named-dimension, dtype-view, tensor-start narrow, out and in-place overloads are distinct; expand has keyword-only implicit and clone has keyword-only memory_format.",
+      "LOGIC_SCHEMAS": "Functional comparison schemas distinguish Tensor/Tensor and Tensor/Scalar overloads. Logical operations use tensor inputs. Bitwise tensor and scalar overloads are separate. any/all declare all-elements, one integer dimension, optional dimension-list, named-dimension and out forms separately. isnan takes one tensor. In-place and out operations are distinct from the selected functional calls.",
+      "INDEX_SCHEMAS": "The default gather schema takes self, one integer dimension, an index tensor and keyword-only sparse_grad. The default index_select schema takes self, one integer dimension and one index tensor. The default embedding schema takes weight, indices, padding_idx, scale_grad_by_freq and sparse. Their out, backward, scatter and in-place operations are separate schemas.",
+      "INDEX_REDUCE_SCHEMAS": "The default functional index_add schema takes self, one integer dimension, index, source and keyword-only alpha and returns one tensor. Its out overload is separate. In-place index_add_, index_reduce and scatter_reduce are distinct schemas.",
+      "SORT_SCHEMAS": "The default sort schema takes self, an integer dimension and descending; stable sort is a separate schema with keyword-only stable. The default argsort schema takes self, an integer dimension and descending, with stable argsort separate. The default topk schema takes self, k, an integer dimension, largest and sorted. Out and named-dimension forms are separate schemas.",
+      "POOL_SCHEMAS": "The default max_pool2d schema takes self, two-dimensional kernel size, optional stride, padding, dilation and ceil_mode, and returns one tensor. max_pool2d_with_indices is a separate schema returning both values and indices; its out form is separate. avg_pool2d and pooling backward operations are also separate schemas.",
+      "BN_SCHEMAS": "The functional batch_norm schema takes input, optional weight and bias, optional running mean and variance, training, momentum, eps and cudnn_enabled, and returns one tensor. native_batch_norm and the legit variants are separate schemas returning three tensors; backward and out forms are also separate.",
+      "DROPOUT_SCHEMAS": "The functional dropout schema takes input, probability and a training flag and returns one tensor. Native dropout returns a value tensor and mask tensor. Native dropout backward takes grad_output, mask and scale and returns one tensor. In-place, feature and alpha dropout are distinct schemas.",
+      "MATHFN_SCHEMAS": "The functional exp, log, log1p, expm1, sqrt, rsqrt, sin, cos, tanh, sigmoid and erf schemas each take one Tensor and return one Tensor. In-place and out variants are declared separately; the functional schemas are tagged pointwise.",
+      "MATMUL_SCHEMAS": "Default mm/bmm take two tensors; default addmm/baddbmm take three tensors with keyword-only beta/alpha. Separate dtype and out overloads are declared. matmul and linear have their own default functional schemas.",
+      "REDUCE_SCHEMAS": "Default sum and mean accept an optional integer dimension list; prod accepts one integer dimension; cumsum accepts one integer dimension; logsumexp requires an integer dimension list. Their dtype parameters, where present, are keyword-only. var.correction, std.correction and var_mean.correction accept an optional integer dimension list plus keyword-only optional Scalar correction and Boolean keepdim; var_mean returns the ordered pair (variance, mean). linalg_vector_norm accepts a Scalar order, optional integer dimension list, Boolean keepdim and keyword-only optional dtype; its out form is a distinct schema. Legacy unbiased, other out and named-dimension forms are distinct schemas. Extrema default functional schemas and distinct out or named-dimension overloads are also declared.",
+      "MSE_SCHEMAS": "The default native mse_loss schema takes self, target and a reduction enum and returns one tensor. mse_loss_backward takes grad_output, self, target and reduction and returns the input gradient. Out variants are separate schemas.",
+      "L1_SCHEMAS": "The default native l1_loss schema takes self, target and a reduction enum and returns one tensor. Sign, absolute value and their out or in-place forms are declared separately.",
+      "TO_COPY_SCHEMA": "_to_copy takes one tensor and keyword-only optional dtype, layout, device, pin_memory, non_blocking and memory_format arguments and returns one tensor; its out form is separate.",
+      "PAGE": "torchgen/packaged/ATen/native/native_functions.yaml",
+      "HUBER_SCHEMAS": "smooth_l1_loss(self,target,reduction,beta) and huber_loss(self,target,reduction,delta) return one tensor; lower-level backward schemas return grad_input only, distinct from the public-call VJP for both differentiable inputs.",
+      "UPSAMPLE_SCHEMAS": "upsample_nearest2d takes input, a two-dimensional output size and optional height/width scales; its backward takes complete grad_output, output size, four-dimensional input size and the same optional scales. nearest-exact and out forms are separate schemas."
+    },
+    "snapshot": "sources/TS_NATIVE_FUNCTIONS.yaml.gz",
+    "path": "torchgen/packaged/ATen/native/native_functions.yaml",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-18",
+    "snapshot_note": "Full installed source retained and directly compared byte-for-byte with the installed PyTorch 2.10 package; no new content digest is used."
+  },
   "TS_POST_GRAD": {
     "title": "torch 2.10 source torch/_inductor/fx_passes/post_grad.py",
     "kind": "torch_source",
@@ -3788,7 +3997,13 @@
     "title": "torch 2.10 source torch/optim/adam.py",
     "kind": "reference_program",
     "items": {
-      "PAGE": "adam source"
+      "PAGE": "adam source",
+      "VALIDATION": "Adam.__init__ rejects negative lr, eps or weight_decay, beta values outside [0,1), fused=True with differentiable=True, and fused=True with foreach=True.",
+      "LAZY_STATE": "Adam._init_group visits only parameters whose grad is not None. An empty state then receives scalar step=0, exp_avg=zeros_like(param), exp_avg_sq=zeros_like(param), and max_exp_avg_sq=zeros_like(param) only when amsgrad is enabled.",
+      "NONE": "Adam._init_group omits a parameter whose grad is None from every list passed to adam(), so that step does not create or change its optimizer state.",
+      "STEP": "_single_tensor_adam first negates grad when maximize is enabled, increments step, adds coupled weight decay to grad unless decoupled_weight_decay is selected, updates exp_avg and exp_avg_sq, applies bias correction at the incremented step, updates max_exp_avg_sq from the uncorrected exp_avg_sq for AMSGrad, and uses sqrt(corrected second moment)+eps in the denominator.",
+      "STATE_KEYS": "The public per-parameter state created by _init_group contains step, exp_avg and exp_avg_sq; max_exp_avg_sq is present only for amsgrad=True.",
+      "STRATEGIES": "Adam.step passes foreach, capturable, differentiable and fused to the functional implementation. decoupled_weight_decay is passed separately and selects the AdamW-style task rather than coupled Adam."
     },
     "snapshot": "sources/TS_ADAM.py.gz",
     "snapshot_sha256": "691246e104a54c3ff985922a4f551aea088c06c3358a18861e59c34a920d21e1",
@@ -3815,7 +4030,12 @@
     "kind": "reference_program",
     "items": {
       "PAGE": "rmsprop source",
-      "STEP": "_single_tensor_rmsprop: grad = -grad if maximize (first), step += 1, weight decay added to grad, square_avg = alpha*square_avg + (1-alpha)*grad^2, if centered grad_avg.lerp_(grad, 1-alpha) and avg = sqrt(square_avg - grad_avg^2) else sqrt(square_avg); avg += eps; momentum > 0: buf = momentum*buf + grad/avg, param -= lr*buf; else param -= lr*grad/avg. State keys: step, square_avg, momentum_buffer (momentum > 0), grad_avg (centered)."
+      "STEP": "_single_tensor_rmsprop: grad = -grad if maximize (first), step += 1, weight decay added to grad, square_avg = alpha*square_avg + (1-alpha)*grad^2, if centered grad_avg.lerp_(grad, 1-alpha) and avg = sqrt(square_avg - grad_avg^2) else sqrt(square_avg); avg += eps; momentum > 0: buf = momentum*buf + grad/avg, param -= lr*buf; else param -= lr*grad/avg.",
+      "VALIDATION": "RMSprop.__init__ rejects negative lr, eps, momentum, weight_decay or alpha. The public constructor has foreach, capturable and differentiable choices and no fused option.",
+      "LAZY_STATE": "RMSprop._init_group skips parameters whose grad is None. An empty state with a present gradient receives step=0 and square_avg=zeros_like(param), plus momentum_buffer only when momentum>0 and grad_avg only when centered=True.",
+      "NONE": "A parameter whose grad is None is omitted from every list passed to rmsprop(), so its parameter and optimizer state are neither created nor changed in that step.",
+      "STATE_KEYS": "The public per-parameter state always contains step and square_avg after initialization; momentum_buffer exists only when momentum>0 and grad_avg exists only when centered=True.",
+      "STRATEGIES": "RMSprop.step passes foreach, capturable and differentiable to the functional implementation. foreach selects the multi-tensor implementation when enabled; both implementations use the same stated update order."
     },
     "snapshot": "sources/TS_RMSPROP.py.gz",
     "snapshot_sha256": "ee4e612d83c543dd3ad7b645830cd59812aad6ce1d79a68e992f7eb755e0ecbd",
@@ -3828,7 +4048,12 @@
     "kind": "reference_program",
     "items": {
       "PAGE": "radam source",
-      "STEP": "_single_tensor_radam: grad negated if maximize; step += 1; weight decay (decoupled: param *= 1 - lr*wd; else grad += wd*param); exp_avg.lerp_(grad, 1-beta1); exp_avg_sq = beta2*exp_avg_sq + (1-beta2)*grad^2; rho_inf = 2/(1-beta2) - 1; rho_t = rho_inf - 2*step*beta2^step/(1-beta2^step); if rho_t > 5.0: param -= m/(1-beta1^step) * lr * sqrt(1-beta2^step)/(sqrt(exp_avg_sq)+eps) * sqrt((rho_t-4)(rho_t-2)rho_inf/((rho_inf-4)(rho_inf-2)rho_t)); else param -= m/(1-beta1^step) * lr. With capturable=True the same formula is evaluated with torch.where on tensors."
+      "STEP": "_single_tensor_radam: grad negated if maximize; step += 1; weight decay (decoupled: param *= 1 - lr*wd; else grad += wd*param); exp_avg.lerp_(grad, 1-beta1); exp_avg_sq = beta2*exp_avg_sq + (1-beta2)*grad^2; rho_inf = 2/(1-beta2) - 1; rho_t = rho_inf - 2*step*beta2^step/(1-beta2^step); if rho_t > 5.0: param -= m/(1-beta1^step) * lr * sqrt(1-beta2^step)/(sqrt(exp_avg_sq)+eps) * sqrt((rho_t-4)(rho_t-2)rho_inf/((rho_inf-4)(rho_inf-2)rho_t)); else param -= m/(1-beta1^step) * lr. With capturable=True the same formula is evaluated with torch.where on tensors.",
+      "VALIDATION": "RAdam.__init__ rejects negative lr, eps or weight_decay and beta values outside [0,1). The public options are foreach, maximize, capturable, differentiable and decoupled_weight_decay; there is no fused option.",
+      "LAZY_STATE": "RAdam._init_group visits only parameters whose grad is not None. An empty state then receives scalar step=0, exp_avg=zeros_like(param) and exp_avg_sq=zeros_like(param).",
+      "NONE": "A parameter whose grad is None is omitted from every list passed to radam(), so that step neither creates nor changes its optimizer state.",
+      "STATE_KEYS": "The public per-parameter state created by _init_group contains exactly step, exp_avg and exp_avg_sq.",
+      "STRATEGIES": "RAdam.step passes foreach, capturable, differentiable and decoupled_weight_decay to radam(). foreach selects the multi-tensor implementation when enabled; both public noncapturable paths use the same rho>5 branch rule and update order."
     },
     "snapshot": "sources/TS_RADAM.py.gz",
     "snapshot_sha256": "4f99da3c574225177181f054f395fc3b8e4fa379979c69311e9a847aebb3660e",
@@ -3841,8 +4066,12 @@
     "kind": "reference_program",
     "items": {
       "PAGE": "rprop source",
-      "ETAS_CHECK": "Rprop.__init__ raises ValueError unless 0.0 < etas[0] < 1.0 < etas[1]; lr must be >= 0.",
-      "STATE": "State initialisation: step = 0, prev = zeros_like(p), step_size = full_like(grad, lr).",
+      "ETAS_CHECK": "Rprop.__init__ raises ValueError unless 0.0 < etas[0] < 1.0 < etas[1]; lr must be >= 0. It does not validate the ordering or signs of step_sizes.",
+      "LAZY_STATE": "_init_group skips a parameter whose grad is None. For the first present gradient it creates scalar step=0, prev=zeros_like(parameter), and step_size=full_like(gradient, lr).",
+      "NONE": "A parameter whose grad is None is omitted from every list passed to rprop, so neither its parameter nor existing state changes.",
+      "STATE": "Initialized state contains step, prev with the complete parameter shape, and step_size with the complete gradient shape. For real dense parameters these shapes coincide.",
+      "STATE_KEYS": "The public per-parameter state created by _init_group contains exactly step, prev and step_size.",
+      "STRATEGIES": "rprop selects the multi-tensor implementation when foreach resolves true and otherwise the single-tensor implementation. Both negate the current gradient before sign logic when maximize=true, clamp every updated step_size coordinate, zero a sign-change gradient, update the parameter, and store the processed gradient.",
       "STEP": "_single_tensor_rprop: grad = -grad if maximize (first); step += 1; sign = sign(grad*prev) replaced by etaplus (>0), etaminus (<0), 1 (=0); step_size = clamp(step_size*sign, step_size_min, step_size_max) for every coordinate (also where the product is 0); grad set to 0 where sign == etaminus; param -= sign(grad)*step_size; prev = grad."
     },
     "snapshot": "sources/TS_RPROP.py.gz",
@@ -3857,7 +4086,11 @@
     "items": {
       "PAGE": "adafactor source",
       "CHECKS": "Adafactor.__init__ raises ValueError unless lr >= 0, beta2_decay <= 0, eps1 (if not None) >= 0, eps2 >= 0, d >= 1, weight_decay >= 0.",
-      "STATE": "State: step; for grad.dim() > 1 row_var of shape grad.shape with last dim 1 and col_var of shape grad.shape with dim -2 equal to 1 (factored along the last two dimensions, leading dimensions batched); otherwise variance of the shape of grad.",
+      "LAZY_STATE": "_init_group skips a parameter whose grad is None. For the first present gradient it creates scalar step=0 and either row_var/col_var or variance before invoking the transition.",
+      "NONE": "A parameter with grad is None is omitted from every tensor list passed to adafactor, so neither its parameter nor any existing state changes.",
+      "STATE": "For grad.dim() > 1, row_var has the gradient shape with its last dimension replaced by 1 and col_var has the gradient shape with its penultimate dimension replaced by 1; otherwise variance has the complete gradient shape.",
+      "STATE_KEYS": "Initialized factored state has exactly step, row_var and col_var; initialized vector state has exactly step and variance. The step is a scalar tensor.",
+      "STRATEGIES": "adafactor selects _multi_tensor_adafactor only when foreach is true and otherwise selects _single_tensor_adafactor. Both implement the same public transition; None therefore selects the single-tensor implementation in this version.",
       "STEP": "_single_tensor_adafactor: grad = -grad if maximize; eps1 = finfo(param.dtype).eps if eps1 is None; step += 1; one_minus_beta2_t = step**beta2_decay; rho_t = min(lr, 1/sqrt(step)); alpha = max(eps2, ||param||_2/sqrt(numel))*rho_t computed before the decay; param *= 1 - lr*weight_decay; factored: row_var.lerp_(mean of grad^2 over dim -1, one_minus_beta2_t), col_var.lerp_(mean of grad^2 over dim -2, one_minus_beta2_t), var_estimate = row_var @ col_var / clamp(mean of row_var over dim -2, min=eps1); vector: variance.lerp_(grad^2, one_minus_beta2_t), var_estimate = variance; update = rsqrt(clamp(var_estimate, min=eps1^2))*grad; denom = max(1, ||update||_2/(sqrt(numel)*d)); param -= alpha/denom * update."
     },
     "snapshot": "sources/TS_ADAFACTOR.py.gz",
@@ -3907,7 +4140,6 @@
       "ADAMW_SR": "_AdamW(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-2, amsgrad=False, bf16_stochastic_round=False): AdamW (is_adamw=True) meant for torchao quantized training."
     },
     "snapshot": "sources/AO_ADAM.py.gz",
-    "snapshot_sha256": "918863461ba430e0924944b561e298ce6e0ff870ef834eb02da93d5542adf55f",
     "path": ".cache/spec_v3/e1_scratch/src/torchao_adam.py",
     "retrieved": "2026-10-17"
   },
@@ -3925,7 +4157,6 @@
       "DEQUANT": "dequant_with_qmap(codes, qmap, scale) = qmap[codes] * scale per block."
     },
     "snapshot": "sources/AO_QUANT_UTILS.py.gz",
-    "snapshot_sha256": "b0c1409ebb6654399bc901230489f8f1e2bdb6b1a96fb1fe90050131de29a937",
     "path": ".cache/spec_v3/e1_scratch/src/torchao_quant_utils.py",
     "retrieved": "2026-10-17"
   },
@@ -3937,10 +4168,11 @@
     "items": {
       "PAGE": "torchao 4-bit subclass source",
       "QMAPS": "get_qmap_signed() = create_dynamic_map(True, 3, 4); get_qmap_unsigned() = torch.linspace(0, 1, 17)[1:].tolist() (k/16 for k = 1..16, no zero); qmap stored as a float32 tensor.",
-      "COPY": "aten.copy_ into an OptimState4bit from a float tensor: scaled, scale = scale_tensor(src.view(-1), block_size); codes = quantize_4bit_with_qmap(scaled, qmap); codes packed two per byte; scale stored. Reading (dequantize) gives qmap[codes]*scale per block. block_size = codes.numel()*2 // scale.numel()."
+      "COPY": "aten.copy_ into an OptimState4bit from a float tensor: scaled, scale = scale_tensor(src.view(-1), block_size); codes = quantize_4bit_with_qmap(scaled, qmap); codes packed as (codes[::2] << 4) | codes[1::2], then codes and scale are stored. Reading (dequantize) unpacks the high nibble before the low nibble and gives qmap[codes]*scale per block.",
+      "STATE": "OptimState4bit.tensor_attrs is [codes, scale, qmap]; codes is flattened uint8 packed storage, scale is one-dimensional, qmap is float32, and signed plus logical shape are tensor attributes. __tensor_flatten__ retains the three tensor fields and the signed/shape attributes. block_size is codes.numel()*2 // scale.numel().",
+      "ZEROS": "OptimState4bit.zeros creates codes with n_elems//2 uint8 entries, scales with n_elems//block_size float32 entries, and the canonical signed or unsigned float32 qmap."
     },
     "snapshot": "sources/AO_SUBCLASS_4BIT.py.gz",
-    "snapshot_sha256": "349a6cab12a7b42a86ee25bc14e1e7f40f117022e5b6f23bbe38d5ab7e023d8d",
     "path": ".cache/spec_v3/e1_scratch/src/torchao_subclass_4bit.py",
     "retrieved": "2026-10-17"
   },
@@ -4316,7 +4548,7 @@
     "title": "FLA chunk_gated_delta_rule (chunked training path)",
     "items": {
       "SHAPES": "Docstring: q, k [B, T, H, K]; v [B, T, HV, V], GVA when HV > H with HV divisible by H; g and beta [B, T, HV]; o [B, T, HV, V].",
-      "GATE_LOG": "Docstring: with use_gate_in_kernel=False (default) g is in log space (pre-computed decay); with use_gate_in_kernel=True g is the raw input and the kernel fuses -exp(A_log) * softplus(g + dt_bias); A_log [HV] required, dt_bias [HV] optional.",
+      "GATE_LOG": "Docstring: with use_gate_in_kernel=False (default) g is in log space (pre-computed decay); with use_gate_in_kernel=True g is the raw input and the kernel fuses -exp(A_log) * softplus(g + dt_bias); A_log [HV] required, dt_bias [HV] optional. The public wrapper accepts both keywords regardless of the flag; chunk_gated_delta_rule_fwd reads them only in the use_gate_in_kernel branch, so they are inactive when the flag is False.",
       "SCALE": "Docstring: scale defaults to 1 / sqrt(K); code: if scale is None: scale = k.shape[-1] ** -0.5.",
       "STATE": "Docstring: initial_state [N, HV, K, V] for N input sequences (N = B for equal lengths); output_final_state returns the final state [N, HV, K, V]; state_v_first stores the state in [V, K] layout instead of [K, V].",
       "BETA": "Docstring: use_beta_sigmoid_in_kernel=True applies sigmoid(beta) (beta are logits), False means beta is already post-sigmoid; allow_neg_eigval scales beta to [0, 2) (2 * sigmoid(beta)) and requires use_beta_sigmoid_in_kernel=True (ValueError otherwise).",
@@ -4426,6 +4658,7 @@
       "GROUPS": "Kernel: head pid_h reads B and C of group pid_h // (nheads / ngroups).",
       "SOFTPLUS": "Kernel: if DT_SOFTPLUS, dt = softplus(dt) where dt <= 20, else dt.",
       "PAD": "Kernel: with state_batch_indices, row b uses state slot state_batch_indices[b]; a negative index is a padding token: the output row is set to 0 and the state is not touched.",
+      "STATE_ACCESS": "Kernel: pid_b = tl.program_id(axis=1); state_batch_idx is loaded for that row and used to offset state_ptr. State is read with tl.load and written with tl.store; there is no atomic update or inter-row ordering. The wrapper checks state_batch_indices.shape == (batch,) but does not enforce unique indices.",
       "INPLACE": "The kernel stores the updated state into the state tensor (in place) and returns out."
     },
     "snapshot": "sources/MAMBA_SSU.py.gz",
@@ -4701,5 +4934,448 @@
     "path": "torch/sparse/_triton_ops.py",
     "torch_version": "2.10.0+cu128",
     "retrieved": "2026-10-17"
+  },
+  "A1_LOCAL_LINEAR": {
+    "kind": "supporting_implementation",
+    "title": "Local FLA working copy: fla/ops/linear_attn/naive.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/linear_attn/naive.py",
+    "snapshot": "sources/A1_LOCAL_LINEAR.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally, not executed to generate expected results. Supports only the named formula; not a reviewed upstream task definition or proof of full API equivalence.",
+    "items": {
+      "RECURRENCE": "naive_recurrent_linear_attn: default K**-0.5, update S before output; optional S0; normalize=False core.",
+      "NORMALIZED": "normalize=True: key prefix sums plus z_init; denominator sum(q*scale*Z)+1e-10. The contract requires explicit epsilon instead of adopting this literal automatically."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T12:54:28+00:00 [Conv] stop causal_conv1d from recompiling for every new sequence length (#1388)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "A1_LOCAL_NORMALIZE": {
+    "kind": "supporting_implementation",
+    "title": "Local FLA working copy: fla/ops/linear_attn/utils.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/linear_attn/utils.py",
+    "snapshot": "sources/A1_LOCAL_NORMALIZE.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally, not executed to generate expected results. Supports only the named formula; not a reviewed upstream task definition or proof of full API equivalence.",
+    "items": {
+      "STATE": "StatefulNormalizeFunction: per-sequence Z0/ZT and empty-segment identity; backward includes dz_state and dz_init."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T12:54:28+00:00 [Conv] stop causal_conv1d from recompiling for every new sequence length (#1388)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "A1_LOCAL_SCALAR": {
+    "kind": "supporting_implementation",
+    "title": "Local FLA working copy: fla/ops/simple_gla/naive.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/simple_gla/naive.py",
+    "snapshot": "sources/A1_LOCAL_SCALAR.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally, not executed to generate expected results. Supports only the named formula; not a reviewed upstream task definition or proof of full API equivalence.",
+    "items": {
+      "RECURRENCE": "naive_recurrent_simple_gla: S=exp(g)*S+k*v^T, default scale K**-0.5; input initial_state and output final state."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T12:54:28+00:00 [Conv] stop causal_conv1d from recompiling for every new sequence length (#1388)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "A1_LOCAL_GLA": {
+    "kind": "supporting_implementation",
+    "title": "Local FLA working copy: fla/ops/gla/naive.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gla/naive.py",
+    "snapshot": "sources/A1_LOCAL_GLA.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally, not executed to generate expected results. Supports only the named formula; not a reviewed upstream task definition or proof of full API equivalence.",
+    "items": {
+      "RECURRENCE": "naive_recurrent_gla: key-wise exp(gk) multiplies old state before k*v^T; default scale K**-0.5."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T12:54:28+00:00 [Conv] stop causal_conv1d from recompiling for every new sequence length (#1388)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "A1_LOCAL_DELTA": {
+    "kind": "supporting_implementation",
+    "title": "Local FLA working copy: fla/ops/delta_rule/naive.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/delta_rule/naive.py",
+    "snapshot": "sources/A1_LOCAL_DELTA.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally, not executed to generate expected results. Supports only the named formula; not a reviewed upstream task definition or proof of full API equivalence.",
+    "items": {
+      "RECURRENCE": "delta_rule_recurrence: residual v-S^T*k, multiply by beta, add k*residual^T, output scaled query. This draft selects scalar beta."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T12:54:28+00:00 [Conv] stop causal_conv1d from recompiling for every new sequence length (#1388)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "A1_LOCAL_KDA": {
+    "kind": "supporting_implementation",
+    "title": "Local FLA working copy: fla/ops/kda/naive.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/kda/naive.py",
+    "snapshot": "sources/A1_LOCAL_KDA.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally, not executed to generate expected results. Supports only the named formula; not a reviewed upstream task definition or proof of full API equivalence.",
+    "items": {
+      "RECURRENCE": "naive_recurrent_kda: per-key exp(g) multiplies state before delta correction; scale default K**-0.5."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T12:54:28+00:00 [Conv] stop causal_conv1d from recompiling for every new sequence length (#1388)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "MX_LOCAL_TRITON_FORMATS": {
+    "kind": "supporting_implementation",
+    "title": "Local Triton working copy: python/triton/tools/mxfp.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/triton-lang/triton/blob/main/python/triton/tools/mxfp.py",
+    "snapshot": "sources/MX_LOCAL_TRITON_FORMATS.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally as support, not a verified standard edition or full kernel correctness oracle. No claim that a local implementation exhausts legal OCP conversion choices.",
+    "items": {
+      "FP4": "MXFP4Tensor.to and _from_float document E2M1 finite values, nearest-even and saturation. The float epsilon tie-break implementation is not used by the exact reference.",
+      "E8M0": "MXScaleTensor: finite exponent encodings 0..254, bias127; encoding255 invalid/NaN."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T09:41:28-04:00 [NFC] Remove unused triton.0.code-workspace file (#12312)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "MX_LOCAL_TRITON_DOWNCAST": {
+    "kind": "supporting_implementation",
+    "title": "Local Triton working copy: python/triton_kernels/triton_kernels/numerics_details/mxfp_details/_downcast_to_mxfp.py",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/triton-lang/triton/blob/main/python/triton_kernels/triton_kernels/numerics_details/mxfp_details/_downcast_to_mxfp.py",
+    "snapshot": "sources/MX_LOCAL_TRITON_DOWNCAST.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally as support, not a verified standard edition or full kernel correctness oracle. No claim that a local implementation exhausts legal OCP conversion choices.",
+    "items": {
+      "SCALES": "_compute_quant_and_scale distinguishes ROUND_UP using amax/qmax from ROUND_DOWN using amax/the largest power of two in the element range; implementations use float32 intermediates.",
+      "FORMATS": "_get_max_quant_val and _get_max_power_of_2_quant_val declare E2M1, E4M3 and E5M2 maxima. MICROBLOCK_SIZE is32 for MX."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T09:41:28-04:00 [NFC] Remove unused triton.0.code-workspace file (#12312)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    },
+    "known_limit": "Source-expression boundary audit: ROUND_DOWN with FP4 and amax=2^-127 gives internal float32 scale0, stored E8M0 code0, and zero scaled elements; finite E8M0 code0 denotes2^-127. It is not a correct oracle for the selected clamped real conversion in that case. No device measurement or universal OCP violation claimed. See .cache/mx_source_boundary_audit.json. Device follow-up: evidence/mx_boundary/observed.json records RTX A6000, Triton3.9.0, two identical replays each for six inputs; scales match but all32 element values differ for amax=2^-125,2^-126,2^-127. Kernel source unchanged; installed CUDA capability helper bridged to omit unrelated AMD imports. Three controls match. Still no claim against every legal MX conversion."
+  },
+  "MX_LOCAL_TRITON_API": {
+    "kind": "supporting_implementation",
+    "title": "Local Triton working copy: MX tensor API",
+    "version": "Local working copy inspected 2026-10-18; upstream revision and local modifications not independently verified",
+    "url": "https://github.com/triton-lang/triton/blob/main/python/triton_kernels/triton_kernels/numerics_details/mxfp.py",
+    "snapshot": "sources/MX_LOCAL_TRITON_API.py",
+    "retained_on": "2026-10-18",
+    "verification": "Read locally as support for logical axis and scale shape. Not a complete storage/packing binding or a verified OCP standard.",
+    "items": {
+      "AXIS": "downcast_to_mxfp: axis required and range checked, negative axes normalized; MX axis length must be divisible by32.",
+      "SCALE_SHAPE": "Scale shape replaces the selected axis length by ceil(length/microblock_size), preserving all other axes. The implementation uses transposed storage views, not inferred from shape alone.",
+      "SATFINITE": "The retained torch reference states that FP8 conversion must use satfinite PTX and clamps normalized values to the finite format range before conversion."
+    },
+    "local_checkout_review": {
+      "date": "2026-10-18",
+      "retained_matches_local_commit": true,
+      "revision_description": "2026-10-15T09:41:28-04:00 [NFC] Remove unused triton.0.code-workspace file (#12312)",
+      "limit": "Direct byte comparison with local git contents; remote upstream provenance remains unverified."
+    }
+  },
+  "VLLM016_SAMPLER": {
+    "kind": "versioned_reference_program",
+    "title": "Installed vLLM 0.16.0 top-k / top-p sampler",
+    "version": "vllm 0.16.0",
+    "url": "https://github.com/vllm-project/vllm/blob/v0.16.0/vllm/v1/sample/ops/topk_topp_sampler.py",
+    "verification": "Retained directly from the installed vllm 0.16.0 distribution. The active contract uses only the named deterministic filtering function; random sampling and alternate backends remain outside its scope.",
+    "items": {
+      "ORDER": "apply_top_k_top_p sorts each row ascending, applies the top-k mask first, then computes softmax and the top-p cumulative mask on the remaining logits.",
+      "TOPK": "With k present, values strictly below the k-th largest logit are masked. The active tie-free profile therefore keeps exactly k tokens when k is smaller than the vocabulary.",
+      "TOPP": "After top-k, ascending softmax probabilities are cumulatively summed; entries with cumulative mass <= 1-p are masked and the largest entry is always retained. Equivalently in the tie-free exact-real task, a token is kept when the retained mass strictly above it is less than p.",
+      "MASK": "Filtered positions are replaced by negative infinity and the remaining logits keep their values; the active values-core contract exposes the equivalent complete Boolean keep mask.",
+      "RANDOM": "forward_native applies the deterministic filter, computes float32 softmax, and samples through exponential noise. This later random stage is not part of the active keep-mask profile."
+    },
+    "snapshot": "sources/VLLM016_SAMPLER.py.gz",
+    "path": "vllm/v1/sample/ops/topk_topp_sampler.py",
+    "retrieval_method": "installed_vllm_distribution_file",
+    "retrieved": "2026-10-19"
+  },
+  "TORCH_LOCAL_COLLECTIVES": {
+    "kind": "supporting_implementation",
+    "title": "Installed PyTorch distributed collective API documentation and implementation",
+    "version": "Locally installed torch 2.10.0+cu128",
+    "verification": "Retained from the installed package. Upstream provenance has not been independently verified. API examples support explicit task choices, not full-domain reference correctness or collective execution certification.",
+    "items": {
+      "ALL_REDUCE": "all_reduce, lines 2918-3014: Docstring and implementation: in-place elementwise reduction over the selected process group; every participant receives the reduced tensor. SUM example is [1,2]+[3,4]=[4,6]. Floating-point order is not an exact-real guarantee.",
+      "REDUCE_SCATTER": "reduce_scatter_tensor, lines 4502-4598: Docstring and implementation: reduce then scatter equal-sized output tensors; input concatenation or stacking along the primary dimension. Examples state per-rank shard order. This is not authority for arbitrary uneven shards.",
+      "ALL_GATHER": "all_gather_into_tensor, lines 4030-4132: Docstring and implementation: equal-sized participant tensors gathered into concatenated or stacked output on every participant. Distinct from all_gather, whose input-size allowances differ."
+    },
+    "snapshot": "sources/TORCH_LOCAL_COLLECTIVES.py.gz",
+    "path": "torch/distributed/distributed_c10d.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-18"
+  },
+  "MAMBA232_SSU": {
+    "kind": "versioned_reference_program",
+    "title": "Installed mamba-ssm 2.3.2.post1 selective state update",
+    "version": "mamba-ssm 2.3.2.post1",
+    "url": "https://github.com/state-spaces/mamba/blob/v2.3.2/mamba_ssm/ops/triton/selective_state_update.py",
+    "verification": "Retained directly from two installed mamba-ssm 2.3.2.post1 distributions. Both installed files, including the Triton kernel, wrapper and reference function, equal this retained source.",
+    "items": {
+      "SHAPES": "selective_state_update accepts state with or without a head dimension; x and dt match its batch, head and channel dimensions; A supplies each head/channel/state coefficient; B and C may be grouped across heads.",
+      "FORMULA": "selective_state_update_ref adds dt_bias, optionally applies softplus, computes dA=exp(dt*A) and dB=dt*B, updates state in place as state*dA+dB*x, then forms the C projection plus optional D*x and optional SiLU(z) gate.",
+      "WRAPPER": "The signature gives D and dt_bias default None, but this installed wrapper cannot launch with either absent: its starred stride expression selects integer 0, which raises TypeError before Triton launch. The Mamba and Mamba2 inference call sites supply both tensors. The reviewed executable profile therefore requires D and dt_bias.",
+      "GROUPS": "B and C groups are repeated contiguously across heads; the Triton kernel selects group h // (nheads/ngroups).",
+      "STATE": "The wrapper mutates the complete state tensor and returns only y. With state_batch_indices, negative rows write zero output without touching state; concurrent duplicate active slots have no declared serial order.",
+      "DTYPES": "The Triton kernel converts x, dt, A, B, C, D and z loads to float32 before its arithmetic, stores the updated state in the state tensor dtype, and allocates y with x dtype."
+    },
+    "snapshot": "sources/MAMBA232_SSU.py.gz",
+    "path": "mamba_ssm/ops/triton/selective_state_update.py",
+    "retrieval_method": "installed_mamba_ssm_distribution_file",
+    "retrieved": "2026-10-19"
+  },
+  "VLLM016_LORA_SHRINK": {
+    "kind": "versioned_reference_program",
+    "title": "Installed vLLM 0.16.0 LoRA shrink Triton wrapper and kernel",
+    "version": "vLLM 0.16.0",
+    "url": "https://github.com/vllm-project/vllm/blob/v0.16.0/vllm/lora/ops/triton_ops/lora_shrink_op.py",
+    "verification": "Retained directly from the installed vLLM 0.16.0 distribution used for the official GPU call.",
+    "items": {
+      "ARGS": "_lora_shrink receives input [tokens,hidden], a list of A weights [loras,rank,hidden], output [slices,tokens,rank], the token mapping and its grouping metadata, a CPU no-LoRA flag, active count and scaling.",
+      "ACTIVE": "When at least one token uses LoRA, the wrapper first zeroes the complete output. Each nonnegative active LoRA id launches its grouped tokens and every slice; lora_id -1 exits, so unmapped rows remain zero.",
+      "NO_LORA": "When no_lora_flag_cpu is true, the wrapper returns before dtype, shape and zeroing checks and preserves the complete output pre-state.",
+      "CHECKS": "For an active call, input and every weight use the same float16 or bfloat16 dtype; input and output are contiguous; hidden size and metadata lengths are checked. The selected reviewed profile additionally fixes a float32 output buffer and physical finite values.",
+      "STATE": "output_tensor is the only declared mutated argument of the registered custom operation. Other tensor inputs are read-only in the wrapper and kernel."
+    },
+    "snapshot": "sources/VLLM016_LORA_SHRINK.py.gz",
+    "path": "vllm/lora/ops/triton_ops/lora_shrink_op.py",
+    "retrieval_method": "installed_vllm_distribution_file",
+    "retrieved": "2026-10-19"
+  },
+  "VLLM016_LORA_KERNEL_UTILS": {
+    "kind": "versioned_reference_program",
+    "title": "Installed vLLM 0.16.0 LoRA Triton kernel utilities",
+    "version": "vLLM 0.16.0",
+    "url": "https://github.com/vllm-project/vllm/blob/v0.16.0/vllm/lora/ops/triton_ops/kernel_utils.py",
+    "verification": "Retained directly from the same installed vLLM 0.16.0 distribution.",
+    "items": {
+      "SHRINK": "do_shrink_kernel computes float32 dot accumulators for the selected token rows, LoRA id and slice, multiplies the accumulator by the supplied scaling once, then stores it or atomically combines K splits in the output buffer."
+    },
+    "snapshot": "sources/VLLM016_LORA_KERNEL_UTILS.py.gz",
+    "path": "vllm/lora/ops/triton_ops/kernel_utils.py",
+    "retrieval_method": "installed_vllm_distribution_file",
+    "retrieved": "2026-10-19"
+  },
+  "VLLM016_LORA_METADATA": {
+    "kind": "versioned_reference_program",
+    "title": "Installed vLLM 0.16.0 LoRA kernel metadata preparation",
+    "version": "vLLM 0.16.0",
+    "url": "https://github.com/vllm-project/vllm/blob/v0.16.0/vllm/lora/ops/triton_ops/lora_kernel_metadata.py",
+    "verification": "Retained directly from the same installed vLLM 0.16.0 distribution.",
+    "items": {
+      "GROUPING": "prepare_tensors stable-sorts token indices by the received token-to-LoRA mapping, records sorted unique LoRA ids and counts, forms cumulative start locations, and sets the no-LoRA flag exactly when every mapping entry is -1."
+    },
+    "snapshot": "sources/VLLM016_LORA_METADATA.py.gz",
+    "path": "vllm/lora/ops/triton_ops/lora_kernel_metadata.py",
+    "retrieval_method": "installed_vllm_distribution_file",
+    "retrieved": "2026-10-19"
+  },
+  "VLLM016_LORA_TORCH": {
+    "kind": "versioned_reference_program",
+    "title": "Installed vLLM 0.16.0 LoRA torch reference operations",
+    "version": "vLLM 0.16.0",
+    "url": "https://github.com/vllm-project/vllm/blob/v0.16.0/vllm/lora/ops/torch_ops/lora_ops.py",
+    "verification": "Retained directly from the same installed vLLM 0.16.0 distribution; its bytes also equal the earlier retained torch reference file.",
+    "items": {
+      "BGMV_SHRINK": "bgmv_shrink selects one LoRA A matrix per row, computes einsum bi,boi->bo, and writes scaling times the result to the output rank coordinates."
+    },
+    "snapshot": "sources/VLLM016_LORA_TORCH.py.gz",
+    "path": "vllm/lora/ops/torch_ops/lora_ops.py",
+    "retrieval_method": "installed_vllm_distribution_file",
+    "retrieved": "2026-10-19"
+  },
+  "TORCHAO016_MX_TENSOR": {
+    "kind": "reference_program",
+    "title": "Installed torchao 0.16.0 prototype/mx_formats/mx_tensor.py",
+    "version": "0.16.0 (installed distribution)",
+    "url": "https://github.com/pytorch/ao/blob/v0.16.0/torchao/prototype/mx_formats/mx_tensor.py",
+    "snapshot": "sources/TORCHAO016_MX_TENSOR.py",
+    "license": "sources/TORCHAO016_LICENSE.txt",
+    "retrieved": "2026-10-19",
+    "items": {
+      "INTERFACE": "to_mx accepts contiguous bfloat16 or float32 input, groups the last dimension by the supplied block size, supports declared MX element formats, and returns a separate E8M0 scale tensor and element tensor.",
+      "FLOOR": "The default ScaleCalculationMode.FLOOR takes the stored float32 exponent of each block maximum, subtracts the largest power-of-two exponent of the element format, clamps the E8M0 exponent, and divides before element conversion.",
+      "FORMATS": "For MXFP8, E4M3 uses maximum448 and maximum-power exponent8; E5M2 uses maximum57344 and maximum-power exponent15. Eager conversion clamps before casting to either format.",
+      "ZERO_BOUNDARY": "The implementation reconstructs the scale as float32 bits and clamps the divisor to the smallest normal float32 value. Thus returned E8M0 code0 denotes2^-127 while the current conversion divisor is2^-126 when code0 occurs.",
+      "OUTPUT": "Non-swizzled execution returns scale_e8m0_biased with the last dimension divided by block_size and data_lp reshaped to the original input shape."
+    },
+    "verification": "Copied from the installed torchao 0.16.0 distribution. It defines the selected versioned framework task; independent tests do not import it to calculate expected answers."
+  },
+  "TORCHAO016_MX_CONFIG": {
+    "kind": "framework_semantics",
+    "title": "Installed torchao 0.16.0 prototype/mx_formats/config.py",
+    "version": "0.16.0 (installed distribution)",
+    "url": "https://github.com/pytorch/ao/blob/v0.16.0/torchao/prototype/mx_formats/config.py",
+    "snapshot": "sources/TORCHAO016_MX_CONFIG.py",
+    "license": "sources/TORCHAO016_LICENSE.txt",
+    "retrieved": "2026-10-19",
+    "items": {
+      "MODES": "ScaleCalculationMode defines FLOOR, RCEIL, CEIL and EVEN as distinct formulas; FLOOR is the default in QuantizeTensorToMXKwargs.",
+      "SCOPE": "The configuration identifies FLOOR as the OCP MX 1.0 recommended formula and RCEIL as the cublas block-quantization formula; selecting one does not make the others erroneous."
+    }
+  },
+  "TORCHAO016_MX_CONSTANTS": {
+    "kind": "framework_semantics",
+    "title": "Installed torchao 0.16.0 prototype/mx_formats/constants.py",
+    "version": "0.16.0 (installed distribution)",
+    "url": "https://github.com/pytorch/ao/blob/v0.16.0/torchao/prototype/mx_formats/constants.py",
+    "snapshot": "sources/TORCHAO016_MX_CONSTANTS.py",
+    "license": "sources/TORCHAO016_LICENSE.txt",
+    "retrieved": "2026-10-19",
+    "items": {
+      "BLOCK": "The default MX block size is32.",
+      "E8M0": "E8M0 has exponent bias127 and byte255 is the NaN marker.",
+      "MXFP8": "The retained constants fix the E4M3 and E5M2 maxima and largest represented power-of-two exponents used by to_mx."
+    }
+  },
+  "VLLM016_UA": {
+    "kind": "reference_program",
+    "title": "Installed vLLM 0.16.0 vllm/v1/attention/ops/triton_unified_attention.py",
+    "version": "0.16.0 (installed distribution)",
+    "snapshot": "sources/VLLM016_UA.py.gz",
+    "retrieved": "2026-10-19",
+    "path": "/data1/tzh/envs/vllm_0160_qwen35412/lib/python3.12/site-packages/vllm/v1/attention/ops/triton_unified_attention.py",
+    "items": {
+      "SIGNATURE": "unified_attention receives packed q, paged k/v caches, out, cu_seqlens_q, seqused_k, softmax_scale, causal, window_size, block_table, softcap, descales and optional execution buffers or biases.",
+      "CAUSAL": "The wrapper asserts causal is true and rejects q_descale; the reviewed profile therefore does not invent bidirectional behavior.",
+      "PATH_2D": "The wrapper launches kernel_unified_attention_2d when the optional parallel-softmax buffers are absent; this is the reviewed execution path.",
+      "SHAPES": "q and out are [num_tokens,num_query_heads,head_size]; cache layout is [num_blocks,block_size,num_kv_heads,head_size]; query heads are divided into contiguous groups per KV head.",
+      "POSITIONS": "context_len=seq_len-query_len and query_abs_pos=context_len+query_pos, placing packed query tokens at the last query_len positions.",
+      "BLOCK_TABLE": "Logical key/value position j reads physical block block_table[sequence,j//block_size], slot j%block_size and the selected KV head.",
+      "MASK": "The base mask admits keys at or before query_abs_pos; with a left window it also requires query_abs_pos-key < 1+window_size[0].",
+      "ORDER": "Scores are softmax_scale times QK; positive softcap applies c*tanh(score/c); masking precedes online softmax and multiplication by V.",
+      "WINDOW": "Only window_size[0] enters SLIDING_WINDOW; the reviewed causal profile requires window_size[1]=-1 because a right window has no effect under causal masking.",
+      "DTYPES": "The two-dimensional kernel stores the complete output and distinguishes FP8 through output_scale; the reviewed unquantized profile fixes matching finite f16, bf16 or f32 q/k/v/out and no descales.",
+      "OPTIONS": "Sinks, ALiBi, qq_bias and multimodal prefix ranges are optional branches; the reviewed profile fixes each absent."
+    }
+  },
+  "T_HUBER_INSTALLED": {
+    "kind": "versioned_document",
+    "title": "Installed PyTorch 2.10 SmoothL1Loss and HuberLoss documentation",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.SmoothL1Loss.html",
+    "snapshot": "sources/T_HUBER_INSTALLED.txt.gz",
+    "retrieval_method": "installed_torch_docstrings",
+    "retrieved": "2026-10-19",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "items": {
+      "SMOOTH": "SmoothL1Loss: d^2/(2 beta) for |d|<beta; |d|-beta/2 otherwise; beta is nonnegative and beta=0 is L1.",
+      "HUBER": "HuberLoss: d^2/2 for |d|<delta; delta*(|d|-delta/2) otherwise; delta must be positive.",
+      "REDUCTION": "none returns input shape; sum sums all element losses; mean divides by every element, not batch size.",
+      "BOUNDARY": "Both branches have matching value and first derivative at positive threshold. SmoothL1Loss explicitly states beta=0 equals L1.",
+      "API": "Public module input and target share shape. Functional wrapper may broadcast; this profile selects same-shape unweighted module semantics with deprecated overrides absent."
+    }
+  },
+  "TORCH210_HUBER_REFERENCE": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 refs SmoothL1 and Huber implementations",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/_refs/nn/functional/__init__.py",
+    "snapshot": "sources/TORCH210_REFS_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/_refs/nn/functional/__init__.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "FORMULA": "smooth_l1_loss uses the documented two branches and explicitly delegates beta=0 to L1. huber_loss checks delta>0 and uses the documented delta-scaled branches.",
+      "REDUCTION": "Both apply the selected none, sum or mean loss reduction."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution as an independent implementation-level cross-check of the documented formula."
+  },
+  "TORCH210_HUBER_FUNCTIONAL": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 functional SmoothL1 and Huber wrappers",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/nn/functional.py",
+    "snapshot": "sources/TORCH210_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/nn/functional.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "ZERO": "smooth_l1_loss explicitly selects native l1_loss for beta==0, despite its shorter functional docstring saying positive.",
+      "BOUNDARY": "smooth_l1_loss has deprecated reduction overrides; huber_loss has a separate optional weighted path. The selected module task uses neither."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution. It fixes the selected public call boundary."
+  },
+  "TORCH210_LOSS_REDUCTIONS": {
+    "kind": "versioned_reference_program",
+    "title": "Installed PyTorch 2.10 refs implementation of torch.nn.functional.l1_loss",
+    "version": "2.10.0+cu128 (installed distribution)",
+    "url": "https://github.com/pytorch/pytorch/blob/v2.10.0/torch/_refs/nn/functional/__init__.py",
+    "snapshot": "sources/TORCH210_REFS_NN_FUNCTIONAL.py.gz",
+    "license": "sources/TORCH210_LICENSE.txt",
+    "path": "torch/_refs/nn/functional/__init__.py",
+    "retrieval_method": "installed_torch_distribution_file",
+    "retrieved": "2026-10-19",
+    "items": {
+      "MSE": "mse_loss computes (input-target)^2 before _apply_loss_reduction.",
+      "REDUCTION": "_apply_loss_reduction returns torch.sum for sum, torch.mean for mean and the original loss tensor for none. _check_reduction_value rejects other names.",
+      "L1_DOC_AMBIGUITY": "The installed L1 doc prose says sum divides by N, but its explicit formula, subsequent sum sentence and this executable helper all distinguish sum from mean."
+    },
+    "verification": "Retained directly from the installed PyTorch 2.10.0+cu128 distribution as an independent implementation-level cross-check of the documented formula."
+  },
+  "TORCH210_INTERPOLATE_FUNCTIONAL": {
+    "title": "PyTorch 2.10 torch.nn.functional.interpolate implementation and public documentation",
+    "kind": "torch_source",
+    "version": "2.10.0+cu128",
+    "items": {
+      "PUBLIC_TASK": "interpolate downsamples or upsamples a 3D, 4D or 5D tensor to either size or scale_factor; the 4D spatial form is N,C,H,W and mode chooses the interpolation algorithm.",
+      "NEAREST_MODE": "nearest and nearest-exact are distinct modes; nearest-exact matches Scikit-Image and PIL, while nearest preserves compatibility with OpenCV INTER_NEAREST behavior.",
+      "OPTIONS": "For nearest, align_corners must be None; size and scale_factor are mutually exclusive; explicit size is expanded to the number of spatial dimensions; antialias is restricted to bilinear and bicubic.",
+      "DISPATCH": "A rank-4 nearest call dispatches to upsample_nearest2d with the computed output_size and scale_factors."
+    },
+    "snapshot": "sources/TORCH210_NN_FUNCTIONAL.py.gz",
+    "path": "torch/nn/functional.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-19",
+    "snapshot_note": "Full installed PyTorch 2.10 functional source retained; the same file is shared by other versioned functional source entries."
+  },
+  "TORCH210_UPSAMPLE_DECOMP": {
+    "title": "PyTorch 2.10 official nearest-neighbor upsample decomposition",
+    "kind": "torch_source",
+    "version": "2.10.0+cu128",
+    "items": {
+      "INDEX": "With explicit output size and legacy nearest mode, scale=isize/osize and input_index=floor(output_index*scale), matching OpenCV INTER_NEAREST. nearest-exact uses a half-pixel offset and is a different task.",
+      "GATHER": "The nearest forward constructs one spatial index tensor per output dimension and gathers input at those indices.",
+      "SCOPE": "The decomposition covers 1D, 2D and 3D nearest and nearest-exact ATen schemas; the selected contract narrows it to 2D legacy nearest with explicit size."
+    },
+    "snapshot": "sources/TORCH210_DECOMPOSITIONS.py.gz",
+    "path": "torch/_decomp/decompositions.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieved": "2026-10-19",
+    "snapshot_note": "Full installed official PyTorch 2.10 source retained and compared directly with the installed file; no content fingerprint is introduced."
   }
 }

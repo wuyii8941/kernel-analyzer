@@ -1,0 +1,41 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "liger.cross_entropy.inplace.v1",
+  "status": "drafted",
+  "subject": {
+    "library": "Liger Kernel",
+    "version": "0.6.2",
+    "callable": "LigerCrossEntropyFunction.apply",
+    "boundary": "public forward followed by scalar backward"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "unresolved": [
+    "The measured Liger Kernel package is 0.6.2, while CE_EXT cites the retained Liger 0.7.0 source for the in-place post-state; equivalence of this boundary has not been independently established."
+  ],
+  "tasks": [
+    {
+      "id": "cross_entropy",
+      "contract": "CE_EXT",
+      "profile": "liger_inplace_index_unsmoothed",
+      "task_statement": "Two-dimensional unsmoothed class-index mean cross entropy, including the public logits storage after scalar backward.",
+      "input_map": [
+        {"target": "/logits", "source": "/tensor_arguments/logits/before", "conversion": "tensor_values"},
+        {"target": "/target", "source": "/tensor_arguments/target/before", "conversion": "tensor_values"},
+        {"target": "/weights", "literal": null, "basis": "public call argument"},
+        {"target": "/eps", "literal": 0, "basis": "selected unsmoothed profile"},
+        {"target": "/ignore_index", "source": "/scalars/ignore_index"},
+        {"target": "/reduction", "source": "/scalars/reduction"},
+        {"target": "/upstream", "source": "/scalars/upstream"}
+      ],
+      "output_map": [
+        {"target": "/loss", "source": "/returns/loss"},
+        {"target": "/gradient", "source": "/gradients/logits", "conversion": "tensor_values"},
+        {"target": "/post_logits", "source": "/tensor_arguments/logits/after", "conversion": "tensor_values"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "logits", "effect": "output", "task": "cross_entropy", "target": "/post_logits"},
+    {"argument": "target", "effect": "unchanged"}
+  ]
+}

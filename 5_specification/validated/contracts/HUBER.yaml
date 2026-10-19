@@ -1,0 +1,151 @@
+schema_version: '1.2'
+id: HUBER
+role: HUBER
+title: PyTorch 2.10 public unweighted SmoothL1 and Huber losses with complete input and target VJPs
+review:
+  status: reviewed_for_implementation
+  author: Codex, source and implementation review
+  reviewer: Codex source, branch, reduction and complete-output review; not external third-party review
+  date: '2026-10-19'
+  scope: Public module tasks with same-shape nonempty finite physical float32 tensors, all three reductions, no deprecated overrides
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/huber_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.smooth_l1_loss, aten.huber_loss, vjp.aten.smooth_l1_loss, vjp.aten.huber_loss]
+profiles:
+  torch210_unweighted_f32:
+    meaning: >-
+      Unweighted same-shape public SmoothL1Loss or HuberLoss, selected by the operation name.
+      Physical float32 input/target and upstream, finite binary64 beta or delta as actually received.
+      Reduction none, sum or mean, default mean; beta default 1 and nonnegative, delta default 1 and positive.
+    task_choice_required: false
+outputs:
+  out:
+    shape: Full input-shaped loss for none or scalar for sum/mean; VJP returns ordered complete pair [grad_input, grad_target]
+    guarantee: exact
+comparison:
+  input_binding: >-
+    Input and target are read-only tensors with exactly represented physical float32 values.
+    Beta/delta retain their received Python binary64 values, not decimal reinterpretations or implicit float32 casts.
+    VJP upstream has the complete forward output shape. No weight or deprecated override is accepted.
+  complete_output: Every forward coordinate, or both complete gradients in the declared order, shape and float32 dtype.
+  quality: Exact rational arithmetic and exact piecewise comparisons; no tolerance in mathematical equality checks.
+  test_evidence: Independent Fraction scalar calculations, public module/autograd comparisons, branch and malformed-input checks.
+  error_handling: Invalid input is distinct from unsupported options and reference implementation errors.
+decisions:
+- id: HB.TASK
+  status: reviewed
+  statement: >-
+    Select the unweighted public modules with same-shape inputs and no deprecated reduction overrides.
+    Public functional broadcasting and weighted Huber are legal but outside this task.
+    This matches the attorch module inheritance and documented call boundary; its output does not determine the formula.
+  basis: [T_HUBER_INSTALLED.API, TORCH210_HUBER_FUNCTIONAL.BOUNDARY, TS_NATIVE_FUNCTIONS.HUBER_SCHEMAS]
+- id: HB.VALUE
+  status: reviewed
+  statement: >-
+    Let d=input-target. SmoothL1 for beta>0 is d^2/(2*beta) when |d|<beta and |d|-beta/2 otherwise.
+    Huber is d^2/2 when |d|<delta and delta*(|d|-delta/2) otherwise.
+    Reduction none preserves all entries, sum sums them, and mean divides the sum by their count.
+  basis: [T_HUBER_INSTALLED.SMOOTH, T_HUBER_INSTALLED.HUBER, T_HUBER_INSTALLED.REDUCTION,
+    TORCH210_HUBER_REFERENCE.FORMULA, TORCH210_HUBER_REFERENCE.REDUCTION]
+- id: HB.ZERO
+  status: reviewed
+  statement: >-
+    SmoothL1 beta=0 is L1, as explicitly specified by the module and wrapper branch, despite the functional
+    docstring saying positive. At d=0 the selected PyTorch L1 subgradient is zero. Huber delta=0 is invalid.
+  basis: [T_HUBER_INSTALLED.BOUNDARY, TORCH210_HUBER_FUNCTIONAL.ZERO, ACT_AUTOGRAD.NONDIFF, T_SIGN.DEF]
+- id: HB.VJP
+  status: reviewed
+  statement: >-
+    The per-element input derivative for SmoothL1 beta>0 is d/beta inside and sign(d) outside;
+    for Huber it is d inside and delta*sign(d) outside. Both sides agree at positive threshold equality.
+    For beta=0 use sign(d) with sign(0)=0. Multiply by the corresponding upstream and, for mean, divide by numel.
+    Target gradient is the negative input gradient; return both. No gradients for hyperparameters are promised.
+  basis: [HB.VALUE, HB.ZERO, TS_NATIVE_FUNCTIONS.HUBER_SCHEMAS]
+- id: HB.DOMAIN
+  status: reviewed
+  statement: >-
+    Same-shape nonempty finite physical float32 input/target, same-dtype complete upstream and finite binary64
+    threshold define the reviewed range. Other dtypes, weights, broadcasts, deprecated overrides and empty tensors
+    are outside it. This is a reference range, not a claim that the public API forbids all such calls.
+  basis: [HB.TASK, T_HUBER_INSTALLED.API]
+clauses:
+- {id: HB.C1, basis: [HB.VALUE], statement: The selected piecewise forward formula and reduction determine every output., observes: [out], evidence_kind: definition}
+- {id: HB.C2, basis: [HB.VJP], statement: The full VJP consumes the complete upstream and returns both gradients., observes: [out], evidence_kind: derived}
+- {id: HB.C3, basis: [HB.ZERO, HB.DOMAIN], statement: Validate the task and physical input domain before evaluating a branch., observes: [out], evidence_kind: derived}
+examples:
+- id: HB.E1
+  profile: torch210_unweighted_f32
+  clauses: [HB.C1]
+  input: {op: aten.smooth_l1_loss, args: [{t: f32, v: [[0.25, 2]]}, {t: f32, v: [[0, 0]]}], kwargs: {beta: 0.5, reduction: none}}
+  expected: {outcome: value, fields: {out: [['1/16', '7/4']]}}
+- id: HB.E2
+  profile: torch210_unweighted_f32
+  clauses: [HB.C1]
+  input: {op: aten.huber_loss, args: [{t: f32, v: [[0.25, 2]]}, {t: f32, v: [[0, 0]]}], kwargs: {delta: 0.5}}
+  expected: {outcome: value, fields: {out: '29/64'}}
+- id: HB.E3
+  profile: torch210_unweighted_f32
+  clauses: [HB.C2]
+  input: {op: vjp.aten.huber_loss, args: [{t: f32, v: [[2, -1]]}, {t: f32, v: [[0.25, 2]]}, {t: f32, v: [[0, 0]]}], kwargs: {delta: 0.5, reduction: none}}
+  expected: {outcome: value, fields: {out: [[['1/2', '-1/2']], [['-1/2', '1/2']]]}}
+- id: HB.E4
+  profile: torch210_unweighted_f32
+  clauses: [HB.C2, HB.C3]
+  input: {op: vjp.aten.smooth_l1_loss, args: [{t: f32, v: 3}, {t: f32, v: [0, 1, -1]}, {t: f32, v: [0, 0, 0]}], kwargs: {beta: 0}}
+  expected: {outcome: value, fields: {out: [[0, 1, -1], [0, -1, 1]]}}
+- id: HB.E5
+  profile: torch210_unweighted_f32
+  clauses: [HB.C1]
+  input: {op: aten.huber_loss, args: [{t: f32, v: [0.5, -0.5]}, {t: f32, v: [0, 0]}], kwargs: {delta: 0.5, reduction: sum}}
+  expected: {outcome: value, fields: {out: '1/4'}}
+- id: HB.E6
+  profile: torch210_unweighted_f32
+  clauses: [HB.C3]
+  input: {op: aten.huber_loss, args: [{t: f32, v: [1]}, {t: f32, v: [0]}], kwargs: {delta: 0}}
+  expected: {outcome: invalid_input}
+- id: HB.E7
+  profile: torch210_unweighted_f32
+  clauses: [HB.C3]
+  input: {op: aten.smooth_l1_loss, args: [{t: f32, v: [1]}, {t: f32, v: [0]}], kwargs: {beta: -1}}
+  expected: {outcome: invalid_input}
+- id: HB.E8
+  profile: torch210_unweighted_f32
+  clauses: [HB.C3]
+  input: {op: vjp.aten.huber_loss, args: [{t: f32, v: 1}, {t: f32, v: [1]}, {t: f32, v: [0]}], kwargs: {reduction: none}}
+  expected: {outcome: invalid_input}
+- id: HB.E9
+  profile: torch210_unweighted_f32
+  clauses: [HB.C3]
+  input: {op: aten.huber_loss, args: [{t: f32, v: ['1/10']}, {t: f32, v: [0]}]}
+  expected: {outcome: invalid_input}
+- id: HB.E10
+  profile: torch210_unweighted_f32
+  clauses: [HB.C3]
+  input: {op: aten.huber_loss, args: [{t: f64, v: [1]}, {t: f64, v: [0]}]}
+  expected: {outcome: unsupported}
+signature:
+  inputs: ['input and target: finite physical float32, identical nonempty shape', 'reduction: none/sum/mean; beta>=0 or delta>0 as finite received binary64', 'VJP upstream: float32 with complete forward output shape']
+  pre_state: [complete read-only input, target and upstream]
+  post_state: [complete loss or ordered complete input and target gradients; all inputs unchanged]
+  observation_unit: Every promised output and gradient coordinate
+domain:
+  valid: [same-shape nonempty finite physical float32 tensors, all three reductions, finite nonnegative beta or positive delta]
+  invalid_input: [shape mismatch, upstream shape mismatch, nonphysical values, negative beta, nonpositive delta, Boolean threshold, invalid reduction, NaN]
+  unsupported: [other dtypes, empty tensors, infinities, weights, broadcasting, deprecated overrides, parameter gradients]
+mutation_requirements:
+- {id: HB.M1, misreading: use Huber scaling for SmoothL1, witnesses: [HB.E1]}
+- {id: HB.M2, misreading: omit the mean divisor, witnesses: [HB.E2]}
+- {id: HB.M3, misreading: give both gradients the same sign, witnesses: [HB.E3]}
+- {id: HB.M4, misreading: omit target gradient, witnesses: [HB.E3]}
+- {id: HB.M5, misreading: choose positive gradient at equality when beta is zero, witnesses: [HB.E4]}
+- {id: HB.M6, misreading: ignore the supplied upstream, witnesses: [HB.E3]}
+nonclaims:
+- Public device rounding is measured separately from this exact piecewise mathematical task.
+- Reference availability does not establish a complete Triton binding or a statistical bias conclusion.
+changes:
+- {date: '2026-10-19', note: Added after the fixed attorch public-call batch exposed missing mathematical references for SmoothL1 and Huber.}

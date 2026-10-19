@@ -1,0 +1,106 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.embedding.f32.v64.d16.n128.pad0.freq.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 embedding forward and deterministic dense weight VJP",
+    "runtime_package": {
+      "distribution": "triton",
+      "version": "3.6.0"
+    },
+    "boundary": "two launches write the complete 128x16 forward output and complete 64x16 dense weight VJP",
+    "measure_call": "../calls/triton_embedding.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_embedding_forward_and_dense_vjp",
+      "contract": "EMB",
+      "profile": "torch210_dense_real",
+      "task_statement": "Compute one complete public PyTorch 2.10 float32 functional embedding lookup and dense weight VJP with padding_idx=0 and scale_grad_by_freq=true.",
+      "input_map": [
+        {
+          "target": "/weight",
+          "source": "/tensor_arguments/weight/before",
+          "conversion": "tensor_values"
+        },
+        {
+          "target": "/indices",
+          "source": "/tensor_arguments/indices/before",
+          "conversion": "tensor_values"
+        },
+        {
+          "target": "/upstream",
+          "source": "/tensor_arguments/upstream/before",
+          "conversion": "tensor_values"
+        },
+        {
+          "target": "/dtype",
+          "literal": "f32",
+          "basis": "weight and upstream are float32"
+        },
+        {
+          "target": "/index_dtype",
+          "literal": "i64",
+          "basis": "indices are int64"
+        },
+        {
+          "target": "/padding_idx",
+          "literal": 0,
+          "basis": "the dense VJP explicitly zeros row 0"
+        },
+        {
+          "target": "/max_norm",
+          "literal": null,
+          "basis": "the call performs no weight renormalisation"
+        },
+        {
+          "target": "/norm_type",
+          "literal": 2,
+          "basis": "the public default is retained and max_norm is null"
+        },
+        {
+          "target": "/scale_grad_by_freq",
+          "literal": true,
+          "basis": "the dense VJP divides each row sum by its complete occurrence count"
+        },
+        {
+          "target": "/sparse",
+          "literal": false,
+          "basis": "the call returns a complete dense gradient tensor"
+        }
+      ],
+      "output_map": [
+        {
+          "target": "/out",
+          "source": "/returns/out",
+          "conversion": "tensor_record",
+          "measure_output": "out"
+        },
+        {
+          "target": "/dweight",
+          "source": "/returns/dweight",
+          "conversion": "tensor_record",
+          "measure_output": "dweight"
+        }
+      ]
+    }
+  ],
+  "state_map": [
+    {
+      "argument": "weight",
+      "effect": "unchanged"
+    },
+    {
+      "argument": "indices",
+      "effect": "unchanged"
+    },
+    {
+      "argument": "upstream",
+      "effect": "unchanged"
+    }
+  ]
+}

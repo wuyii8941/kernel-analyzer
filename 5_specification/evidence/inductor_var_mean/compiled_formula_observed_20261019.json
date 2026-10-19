@@ -1,0 +1,51 @@
+{
+  "task": "PyTorch ordered variance/mean pair and combined input VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_per_fused_add_div_expand_mean_mul_ones_like_sub_unsqueeze_var_mean_0"
+  ],
+  "generated_triton_kernel_count": 1,
+  "generated_code_uses_welford": false,
+  "generated_code_has_variance_divisor_127": true,
+  "generated_code_has_variance_gradient_scale_literal": true,
+  "generated_code_has_mean_gradient_scale_literal": true,
+  "combined_vjp_scales": {
+    "variance_task_value": "2/127",
+    "variance_generated_decimal_literal": "0.015748031496062992",
+    "variance_value_after_float32_conversion": 0.015748031437397003,
+    "variance_float32_minus_task": "-1/17045651456",
+    "mean_task_value": "1/128",
+    "mean_generated_decimal_literal": "0.0078125",
+    "mean_value_after_float32_conversion": 0.0078125
+  },
+  "outputs": {
+    "variance": {
+      "shape": [
+        16
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 9.5367431640625e-07
+    },
+    "mean": {
+      "shape": [
+        16
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 4.470348358154297e-08
+    },
+    "dx": {
+      "shape": [
+        16,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 1.4901161193847656e-08
+    }
+  },
+  "inputs_unchanged": true,
+  "inspection_passed": true
+}

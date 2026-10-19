@@ -6,10 +6,9 @@ review:
   status: reviewed_for_implementation
   date: '2026-10-15'
   reviewer: ChatGPT review of uploaded contract draft
-  input_package_sha256: a9a2a9123c2f39f5f76d1c82d61d70869bc0ec8236cce16d978f9556293d15a3
   scope: Contract content and explicit profiles, not all-domain oracle certification
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires:
   - source_profile_matched
@@ -17,7 +16,7 @@ activation:
   - all_required_outputs_bound
   - reference_semantics_and_guarantees_validated
   - no_unresolved_contradiction
-  - contract_and_implementation_hashes_bound
+  - reviewed_contract_and_adapter_match_current
 profiles:
   base:
     meaning: One step, dense vector, maximize=False, amsgrad=False; arbitrary supplied finite rational pre-state.
@@ -314,6 +313,7 @@ signature:
   - beta2
   - eps
   - weight_decay
+  - optional explicit profile assertions decoupled=True and differentiable=False
   pre_state:
   - theta [d]
   - m [d]
@@ -335,11 +335,15 @@ domain:
   - gradient is not None and at least one sqrt(v_new_i/(1-beta2**(t+1))) + eps == 0
   unsupported:
   - amsgrad=True
+  - explicitly coupled weight decay or input fields outside this profile
   - maximize=True for this pilot
   - sparse gradients
   - differentiating through the optimizer
   - unverified interval-valued external prestate
+  not_established:
+  - the interval backend cannot enclose a mathematically defined result within its precision or exponent range
   invalid_input:
+  - missing declared input fields or non-mapping input
   - wrong shapes
   - negative second moment
   - nonintegral or negative step counter
@@ -383,3 +387,11 @@ nonclaims:
   role.
 - No device rounding or actual parameter writeback certification merely from this ideal-state contract.
 - A rejected mutant witnesses a particular error; killing all listed mutants does not prove completeness.
+
+changes:
+- date: '2026-10-18'
+  change: Complete scoped implementation review; check explicit profile assertions and classify interval-valued prestate as unsupported.
+  trigger: evidence/adamw_implementation.md; tests/test_adamw_independent.py and tests/test_training_output_membership.py.
+- date: '2026-10-18'
+  change: Require all declared inputs before evaluation; preserve typed interval-backend refusals and exponent limits as not_established, while leaving unexpected errors as implementation_error.
+  trigger: tests/test_adamw_independent.py and the retained PyTorch 2.10 algorithm; independent rational sqrt enclosures and controlled backend exponent limits.

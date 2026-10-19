@@ -1,116 +1,136 @@
 schema_version: '1.2'
 id: SORT
 role: ATEN_SORT
-title: Sorting and top-k selection (torch.sort, torch.argsort, torch.topk), exact values and allowed index sets
+title: Exact sort, argsort and sorted top-k for finite physical tensors with unique rows
 review:
-  status: drafted
-  author: Claude (spec v3 author, group D2_special), 2026-10-17
-  date: '2026-10-17'
-  scope: Values and indices of one sort / argsort / topk call along one dimension; awaiting a review by someone who did not
-    write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 functional sort, argsort and sorted topk on finite physical floating tensors whose selected rows contain no equal values
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers: [aten.sort, aten.argsort, aten.topk]
 profiles:
-  real:
-    meaning: Elements are exact extended reals (rationals, -inf, +inf); the order is the order of the reals. Values are exact;
-      an index is exact where the documented order determines it and otherwise an allowed set.
+  finite_unique:
+    meaning: >-
+      Exact ordering of physical finite f16, bf16, f32 or f64 tensors. Along the selected dimension every row has
+      pairwise distinct values, so values and original indices are uniquely determined without choosing a tie rule.
+      topk is restricted to sorted=true.
     task_choice_required: false
+    basis: [SO.SCHEMA, SO.PHYSICAL, SO.UNIQUE]
 outputs:
   out:
-    shape: '[values, indices] (argsort: indices only), the input shape with the sorted dimension of size n (topk: k)'
-    kind: discrete
-    guarantee: allowed_set
+    shape: sort and topk return the complete values and int64 indices tensors; argsort returns the complete int64 indices tensor
+    guarantee: exact
 comparison:
-  input_binding: Tensor values are the exact values received (a binary float is its exact value).
-  quality: Exact equality of values and indices; an index position with several allowed originals compares as a set.
-  test_evidence: Exact equality.
-  error_handling: k outside [0, n] is invalid_input; NaN is not a real value (invalid_input); topk with sorted=False is unsupported.
+  input_binding: >-
+    The input record is the exact physical tensor received in its declared dtype. Dimension, direction, stability, k,
+    largest and sorted are call arguments, not inferred from a kernel name.
+  complete_output: Every returned tensor is observed with dtype, explicit shape and every value.
+  quality: Exact logical values, indices, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent NumPy row ordering and PyTorch 2.10 comparisons in every selected dtype.
+  error_handling: Malformed calls and illegal dimensions or k are invalid_input; ties, special values, unselected dtypes,
+    unsorted top-k and other overloads are unsupported.
 decisions:
-- id: SO.INDEX_SETS
-  status: drafted
-  statement: 'With stable=False the order of equal elements is not guaranteed (torch.sort example, argsort documentation), and
-    topk documents that tied indices are not stable. The indices output is therefore stated per position as the set of original
-    indices whose value equals the value at that position (exact when the value is unique). The joint constraint that the
-    indices of a row are a permutation (sort) or distinct (topk) is part of the clause but is not encoded in the per-position
-    sets: a comparison tool must also check distinctness. With stable=True the indices are exact: equal elements keep their
-    original relative order, in ascending and in descending sorts alike ("preserving the order of equivalent elements").'
-  basis: [T_SORT.STABLE, T_ARGSORT.DEF, T_TOPK.TIES]
-- id: SO.UNSORTED
-  status: drafted
-  statement: topk with sorted=False returns the k elements in an unspecified order; stating it needs a multiset comparison the
-    output format here does not have, so it is unsupported. The tested FlagGems call uses the default sorted=True.
-  basis: [T_TOPK.SORTED]
-- id: SO.REALS
-  status: drafted
-  statement: Infinities sort at the ends (-inf first in ascending order); NaN is not a real number and is outside the contract
-    (its IEEE placement is not a real-number property).
+- id: SO.SCHEMA
+  status: reviewed
+  statement: >-
+    Select the functional integer-dimension sort, argsort and topk tasks. sort and argsort may be ascending or
+    descending and stable or unstable. topk may select largest or smallest but must use sorted=true. Out and named
+    dimension overloads are different tasks and are outside this profile.
+  basis: [TS_NATIVE_FUNCTIONS.SORT_SCHEMAS, T_SORT.DEF, T_ARGSORT.DEF, T_TOPK.DEF, T_TOPK.SORTED]
+- id: SO.PHYSICAL
+  status: reviewed
+  statement: >-
+    The executable profile accepts only finite f16, bf16, f32 and f64 tensor records whose listed values are exactly
+    representable in the declared dtype. It does not claim an ordering for NaNs, infinities, signed-zero distinctions,
+    integer tensors, complex tensors or values that are merely mathematical literals rather than the received bits.
   basis: [T_SORT.DEF]
+- id: SO.UNIQUE
+  status: reviewed
+  statement: >-
+    Every row along the selected dimension must contain pairwise distinct values. This makes the returned original
+    index at every position unique and avoids relying on an unstable tie order. Stable and unstable calls agree on
+    this domain. Calls with equal values remain valid library calls but receive no answer from this profile.
+  basis: [T_SORT.STABLE, T_ARGSORT.DEF, T_TOPK.TIES]
 clauses:
-- {id: SO.C1, basis: [T_SORT.DEF], statement: 'sort: values along dim in ascending order (descending=True: descending); indices
-    point to the original positions', observes: [out], evidence_kind: definition}
-- {id: SO.C2, basis: [T_SORT.STABLE, SO.INDEX_SETS], statement: 'stable=True: equal elements keep their original relative order
-    (exact indices), in both directions', observes: [out], evidence_kind: definition}
-- {id: SO.C3, basis: [SO.INDEX_SETS, T_ARGSORT.DEF], statement: 'stable=False: the index at a position with tied values is any of
-    the tied originals (allowed set)', observes: [out], evidence_kind: definition}
-- {id: SO.C4, basis: [T_SORT.DEF], statement: dim selects the sorted dimension (default the last), observes: [out], evidence_kind: definition}
-- {id: SO.C5, basis: [T_TOPK.DEF, T_TOPK.SORTED], statement: 'topk: the k largest (largest=False: smallest) values, sorted from
-    the most extreme', observes: [out], evidence_kind: definition}
-- {id: SO.C6, basis: [T_TOPK.TIES, SO.INDEX_SETS], statement: 'topk indices of tied values (including ties across the k
-    boundary) are allowed sets', observes: [out], evidence_kind: definition}
-- {id: SO.C7, basis: [T_TOPK.DEF], statement: 'k outside [0, n] is invalid_input; sorted=False is unsupported', observes: [out],
-  evidence_kind: definition}
-- {id: SO.C8, basis: [SO.REALS], statement: infinities are ordered as extended reals, observes: [out], evidence_kind: definition}
-- {id: SO.C9, basis: [T_ARGSORT.DEF], statement: argsort returns the indices output of sort, observes: [out], evidence_kind: definition}
+- id: SO.C1
+  basis: [SO.SCHEMA, SO.PHYSICAL, SO.UNIQUE]
+  statement: Every selected call has one rank-one-or-higher finite physical floating tensor and a valid integer dimension whose rows contain no equal values.
+  observes: [out]
+  evidence_kind: definition
+- id: SO.C2
+  basis: [T_SORT.DEF]
+  statement: sort orders every selected row by value, ascending by default and descending when requested, and returns both all ordered values and their original positions as int64 indices.
+  observes: [out]
+  evidence_kind: definition
+- id: SO.C3
+  basis: [T_ARGSORT.DEF, T_SORT.DEF]
+  statement: argsort returns exactly the index tensor that the corresponding sort call returns.
+  observes: [out]
+  evidence_kind: definition
+- id: SO.C4
+  basis: [T_TOPK.DEF, T_TOPK.SORTED]
+  statement: >-
+    topk returns the k largest values by default, or the k smallest when largest=false, together with their original
+    positions; sorted=true orders the selected values from most to least extreme. k is an integer from zero through
+    the selected dimension length.
+  observes: [out]
+  evidence_kind: definition
+- id: SO.C5
+  basis: [SO.SCHEMA, SO.PHYSICAL, SO.UNIQUE]
+  statement: >-
+    Ties, NaN, infinities, rank-zero inputs, integer or complex data, unrepresentable literals, sorted=false topk,
+    named dimensions and out overloads receive no reference answer from this profile.
+  observes: [out]
+  evidence_kind: definition
 examples:
-- {id: SO.E1, profile: real, clauses: [SO.C1], input: {op: aten.sort, args: [{t: f32, v: [[3, 1, 2]]}, 1]}, expected: {outcome: value,
-    fields: {out: [[[1, 2, 3]], [[1, 2, 0]]]}}}
-- {id: SO.E2, profile: real, clauses: [SO.C3], input: {op: aten.sort, args: [{t: f32, v: [1, 0, 1]}]}, expected: {outcome: value,
-    fields: {out: [[0, 1, 1], [1, {set: [0, 2]}, {set: [0, 2]}]]}}}
-- {id: SO.E3, profile: real, clauses: [SO.C2], input: {op: aten.sort, args: [{t: f32, v: [1, 0, 1]}], kwargs: {stable: true}},
-  expected: {outcome: value, fields: {out: [[0, 1, 1], [1, 0, 2]]}}}
-- {id: SO.E4, profile: real, clauses: [SO.C2, SO.C1], input: {op: aten.sort, args: [{t: bf16, v: [1, 2, 1, 2]}], kwargs: {descending: true,
-      stable: true}}, expected: {outcome: value, fields: {out: [[2, 2, 1, 1], [1, 3, 0, 2]]}}}
-- {id: SO.E5, profile: real, clauses: [SO.C3, SO.C1], input: {op: aten.sort, args: [{t: f16, v: [1, 2, 1, 2]}], kwargs: {descending: true}},
-  expected: {outcome: value, fields: {out: [[2, 2, 1, 1], [{set: [1, 3]}, {set: [1, 3]}, {set: [0, 2]}, {set: [0, 2]}]]}}}
-- {id: SO.E6, profile: real, clauses: [SO.C4], input: {op: aten.sort, args: [{t: f32, v: [[2, 0], [1, 3]]}, 0]}, expected: {outcome: value,
-    fields: {out: [[[1, 0], [2, 3]], [[1, 0], [0, 1]]]}}}
-- {id: SO.E7, profile: real, clauses: [SO.C8], input: {op: aten.sort, args: [{t: f32, v: [0, -inf, inf]}]}, expected: {outcome: value,
-    fields: {out: [[-inf, 0, inf], [1, 0, 2]]}}}
-- {id: SO.E8, profile: real, clauses: [SO.C5], input: {op: aten.topk, args: [{t: f32, v: [[1, 5, 3, 4]]}, 2, 1]}, expected: {outcome: value,
-    fields: {out: [[[5, 4]], [[1, 3]]]}}}
-- {id: SO.E9, profile: real, clauses: [SO.C6], input: {op: aten.topk, args: [{t: f32, v: [5, 3, 3]}, 2]}, expected: {outcome: value,
-    fields: {out: [[5, 3], [0, {set: [1, 2]}]]}}}
-- {id: SO.E10, profile: real, clauses: [SO.C5], input: {op: aten.topk, args: [{t: f32, v: [1, 5, 3, 4]}, 2], kwargs: {largest: false}},
-  expected: {outcome: value, fields: {out: [[1, 3], [0, 2]]}}}
-- {id: SO.E11, profile: real, clauses: [SO.C7], input: {op: aten.topk, args: [{t: f32, v: [1, 5]}, 3]}, expected: {outcome: invalid_input}}
-- {id: SO.E12, profile: real, clauses: [SO.C7], input: {op: aten.topk, args: [{t: f32, v: [1, 5]}, 1], kwargs: {sorted: false}},
-  expected: {outcome: unsupported}}
-- {id: SO.E13, profile: real, clauses: [SO.C9], input: {op: aten.argsort, args: [{t: f32, v: ['1/2', '-1/3', 0]}]}, expected: {
-    outcome: value, fields: {out: [1, 2, 0]}}}
+- {id: SO.E1, profile: finite_unique, clauses: [SO.C1, SO.C2], input: {op: aten.sort, args: [{t: f32, v: [[3, 1, 2], [0, -2, 4]]}, 1]}, expected: {outcome: value, fields: {out: [[[1, 2, 3], [-2, 0, 4]], [[1, 2, 0], [1, 0, 2]]]}}}
+- {id: SO.E2, profile: finite_unique, clauses: [SO.C2], input: {op: aten.sort, args: [{t: f16, v: [1, 4, -2, 3]}], kwargs: {descending: true, stable: true}}, expected: {outcome: value, fields: {out: [[4, 3, 1, -2], [1, 3, 0, 2]]}}}
+- {id: SO.E3, profile: finite_unique, clauses: [SO.C2], input: {op: aten.sort, args: [{t: bf16, v: [[2, 0], [1, 3]]}, 0]}, expected: {outcome: value, fields: {out: [[[1, 0], [2, 3]], [[1, 0], [0, 1]]]}}}
+- {id: SO.E4, profile: finite_unique, clauses: [SO.C3], input: {op: aten.argsort, args: [{t: f64, v: ['1/2', '-1/4', 0]}]}, expected: {outcome: value, fields: {out: [1, 2, 0]}}}
+- {id: SO.E5, profile: finite_unique, clauses: [SO.C3], input: {op: aten.argsort, args: [{t: f32, v: [[1, 5, 3], [7, 0, 2]]}, 1, true]}, expected: {outcome: value, fields: {out: [[1, 2, 0], [0, 2, 1]]}}}
+- {id: SO.E6, profile: finite_unique, clauses: [SO.C4], input: {op: aten.topk, args: [{t: f32, v: [[1, 5, 3, 4]]}, 2, 1]}, expected: {outcome: value, fields: {out: [[[5, 4]], [[1, 3]]]}}}
+- {id: SO.E7, profile: finite_unique, clauses: [SO.C4], input: {op: aten.topk, args: [{t: f64, v: [1, 5, 3, 4]}, 2], kwargs: {largest: false}}, expected: {outcome: value, fields: {out: [[1, 3], [0, 2]]}}}
+- {id: SO.E8, profile: finite_unique, clauses: [SO.C4], input: {op: aten.topk, args: [{t: f32, v: [1, 5, 3]}, 0]}, expected: {outcome: value, fields: {out: [[], []]}}}
+- {id: SO.E9, profile: finite_unique, clauses: [SO.C5], input: {op: aten.sort, args: [{t: f32, v: [1, 0, 1]}]}, expected: {outcome: unsupported}}
+- {id: SO.E10, profile: finite_unique, clauses: [SO.C5], input: {op: aten.topk, args: [{t: f32, v: [5, 3, 3]}, 2]}, expected: {outcome: unsupported}}
+- {id: SO.E11, profile: finite_unique, clauses: [SO.C5], input: {op: aten.sort, args: [{t: f32, v: [0, inf]}]}, expected: {outcome: unsupported}}
+- {id: SO.E12, profile: finite_unique, clauses: [SO.C5], input: {op: aten.sort, args: [{t: i64, v: [2, 1]}]}, expected: {outcome: unsupported}}
+- {id: SO.E13, profile: finite_unique, clauses: [SO.C5], input: {op: aten.sort, args: [{t: f32, v: ['1/3', 1]}]}, expected: {outcome: invalid_input}}
+- {id: SO.E14, profile: finite_unique, clauses: [SO.C1], input: {op: aten.sort, args: [{t: f32, v: [2, 1]}, 1]}, expected: {outcome: invalid_input}}
+- {id: SO.E15, profile: finite_unique, clauses: [SO.C4], input: {op: aten.topk, args: [{t: f32, v: [1, 5]}, 3]}, expected: {outcome: invalid_input}}
+- {id: SO.E16, profile: finite_unique, clauses: [SO.C5], input: {op: aten.topk, args: [{t: f32, v: [1, 5]}, 1], kwargs: {sorted: false}}, expected: {outcome: unsupported}}
+- {id: SO.E17, profile: finite_unique, clauses: [SO.C5], input: {op: aten.sort, args: [{t: f32, v: 1}]}, expected: {outcome: unsupported}}
 signature:
-  inputs: ['op: aten.sort (self, dim=-1, descending=False, stable=False) | aten.argsort | aten.topk (self, k, dim=-1, largest=True,
-      sorted=True)', 'tensor {t, v, shape}']
-  pre_state: []
-  post_state: []
-  observation_unit: the values and indices of one call
+  inputs: [selected functional operation and exact positional or keyword arguments, physical finite f16/bf16/f32/f64 tensor with unique rows]
+  pre_state: [the input tensor is unchanged]
+  post_state: [complete returned values and indices, or indices for argsort]
+  observation_unit: every returned coordinate together with dtype and shape
 domain:
-  valid: [exact extended reals, k in 0 .. n]
-  domain_undefined: []
-  invalid_input: [NaN, k out of range]
-  unsupported: [topk with sorted=False]
+  valid: [rank-one-or-higher physical finite f16/bf16/f32/f64 tensors, pairwise distinct values in every selected row, valid integer dimension and k, sorted topk]
+  invalid_input: [malformed record, unrepresentable source value, noninteger or out-of-range dimension or k, nonboolean options]
+  unsupported: [ties, special values, rank-zero input, integer or complex data, sorted=false topk, named dimensions, out overloads]
 mutation_requirements:
-- {id: SO.M1, misreading: descending flag ignored, witnesses: [SO.E4]}
-- {id: SO.M2, misreading: stable descending sort taken as the reverse of the stable ascending sort (equal elements reversed),
-  witnesses: [SO.E4]}
-- {id: SO.M3, misreading: 'unstable sort indices claimed exact (first occurrence) where ties allow several', witnesses: [SO.E2]}
-- {id: SO.M4, misreading: dim ignored (always the last dimension), witnesses: [SO.E6]}
-- {id: SO.M5, misreading: topk returns its k values in ascending order, witnesses: [SO.E8]}
-- {id: SO.M6, misreading: topk largest flag ignored, witnesses: [SO.E10]}
+- {id: SO.M1, misreading: descending flag ignored, witnesses: [SO.E2]}
+- {id: SO.M2, misreading: dimension ignored and the last dimension always sorted, witnesses: [SO.E3]}
+- {id: SO.M3, misreading: argsort returns the reverse ordering, witnesses: [SO.E4]}
+- {id: SO.M4, misreading: argsort descending flag ignored, witnesses: [SO.E5]}
+- {id: SO.M5, misreading: topk returns selected values in the opposite order, witnesses: [SO.E6]}
+- {id: SO.M6, misreading: topk largest flag ignored, witnesses: [SO.E7]}
 nonclaims:
-- The per-position index sets do not encode that indices of a row are distinct; that check belongs to the comparison tool.
-- NaN placement (IEEE) and the device's tie-breaking order are not judged.
-changes: []
+- No result is certified for tied or special values, unsorted top-k, output-buffer effects, named dimensions, device placement, strides or another overload.
+- Exact logical ordering does not claim a particular device sorting algorithm.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the active extended-real and allowed-index-set draft with a reviewed exact profile for physical finite
+    floating tensors with unique rows. Preserve the broader draft under contracts/draft.
+  trigger: >-
+    PyTorch explicitly leaves unstable tie indices unconstrained, while the former per-position allowed sets required
+    extra joint constraints and could not serve as an ordinary exact numeric reference. The unique-row domain removes
+    that ambiguity and permits complete values-and-indices comparison.

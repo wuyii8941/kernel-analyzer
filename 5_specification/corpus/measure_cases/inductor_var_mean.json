@@ -1,0 +1,24 @@
+{
+  "call": "../calls/inductor_var_mean.py:call",
+  "inputs": {
+    "x": {"sampler": {"normal": [0, 2]}, "shape": [16, 128], "dtype": "float32"},
+    "upstream_var": {"sampler": {"normal": [0, 1]}, "shape": [16], "dtype": "float32"},
+    "upstream_mean": {"sampler": {"normal": [0, 1]}, "shape": [16], "dtype": "float32"},
+    "dim": {"const": 1},
+    "correction": {"const": 1},
+    "keepdim": {"const": false}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["variance", "mean", "dx"],
+    "binding_plan": "../call_bindings/inductor_var_mean.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 1200, "gpu_seconds": 1200, "case_timeout": 600, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

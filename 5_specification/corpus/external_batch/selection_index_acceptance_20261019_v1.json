@@ -1,0 +1,13 @@
+{
+  "purpose": "Separate calls fixed after the documented keyword mapping repair, before executing these shapes/seeds and the FlagGems index_select implementation. Do not tune references to this batch. Not independently blinded.",
+  "candidate": "FlagGems 5.0.2 public torch calls with only the selected operation enabled",
+  "standard": "PyTorch 2.10.0+cu128 native CUDA, outside use_gems",
+  "scope": "forward, full output shape/dtype/values and unchanged inputs; no backward or statistical bias claim",
+  "shapes": [[7, 43], [9, 29]],
+  "seeds": [20261123, 20261124],
+  "cases": [
+    {"id": "index_select_rows", "op": "index_select", "reference_op": "torch.index_select", "keyword_input": true, "contract": "INDEX", "profile": "real", "kwargs": {"dim": 0}, "input": "dyadic_with_indices", "expected_reference": "value"},
+    {"id": "index_select_columns", "op": "index_select", "reference_op": "torch.index_select", "keyword_input": true, "contract": "INDEX", "profile": "real", "kwargs": {"dim": 1}, "input": "dyadic_with_indices", "expected_reference": "value"},
+    {"id": "gather_rows", "op": "gather", "reference_op": "torch.gather", "keyword_input": true, "contract": "INDEX", "profile": "real", "kwargs": {"dim": 0}, "input": "dyadic_with_indices", "expected_reference": "value"}
+  ]
+}

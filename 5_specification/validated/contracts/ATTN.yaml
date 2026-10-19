@@ -1,0 +1,269 @@
+schema_version: '1.2'
+id: ATTN
+role: ATTN
+title: Defined-row public PyTorch 2.10 scaled dot-product attention forward and complete VJP
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Public PyTorch 2.10 SDPA forward and its complete q/k/v VJP on finite dense rank-3 or rank-4 real tensors, dropout disabled
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.functional.scaled_dot_product_attention]
+profiles:
+  torch210_sdpa_defined_real:
+    meaning: >-
+      One public PyTorch 2.10 scaled_dot_product_attention forward with dropout_p=0 on finite dense rank-3
+      [H,L,E] or rank-4 [B,H,L,E] real tensors. Batch sizes are equal, every query row has at least one finite
+      participating score, and only the documented upper-left causal mask, a Boolean mask or a same-dtype additive
+      mask is selected. The profile returns the complete public output only.
+    task_choice_required: false
+    basis: [AT.TASK, AT.MASKS, AT.HEADS, AT.DEFINED_ROWS]
+    outputs: [out]
+  torch210_sdpa_defined_real_vjp:
+    meaning: >-
+      The same selected public PyTorch 2.10 SDPA task with an explicit complete upstream tensor. It returns the public
+      forward output and the complete vector-Jacobian products for q, k and v. Shared key/value heads receive the sum
+      of contributions from every query head that uses them.
+    task_choice_required: false
+    basis: [AT.TASK, AT.MASKS, AT.HEADS, AT.DEFINED_ROWS, AT.VJP]
+    outputs: [out, dq, dk, dv]
+outputs:
+  out: {shape: 'complete [Hq,L,Ev] or [B,Hq,L,Ev]', guarantee: rigorous_enclosure}
+  dq: {shape: 'complete shape of q', guarantee: rigorous_enclosure}
+  dk: {shape: 'complete shape of k', guarantee: rigorous_enclosure}
+  dv: {shape: 'complete shape of v', guarantee: rigorous_enclosure}
+comparison:
+  input_binding: >-
+    q, k, v, the optional mask and, for the VJP profile, upstream are the complete values received; dtype records
+    their common physical floating dtype. A binary floating value is bound as its exact rational value. Scale is null
+    for 1/sqrt(E) or an explicit finite real scalar.
+  complete_output: >-
+    The forward profile requires the complete public result. The VJP profile requires out, dq, dk and dv together.
+    Every tensor's dtype, rank, shape and coordinate is checked; a missing or extra gradient is a contradiction.
+  quality: Exact products and sums with rigorous outward enclosures for sqrt and exp; no tolerance is used.
+  test_evidence: >-
+    Independent high-precision softmax evaluation and public PyTorch 2.10 math-backend comparisons cover default and
+    explicit scale, Boolean and additive masks, non-square causal attention, GQA, head broadcasting, rank and dtype.
+  error_handling: >-
+    Malformed public calls are invalid_input. Dropout, empty effective rows, nonfinite data, unsupported dtype or rank,
+    softcap, windows, extra outputs, device layout and backend-specific rounding receive no answer.
+decisions:
+- id: AT.TASK
+  status: reviewed
+  statement: >-
+    Select the public PyTorch 2.10 scaled_dot_product_attention forward and its documented equivalent formula:
+    scores are q times transposed k times scale, the chosen bias is applied, softmax is taken on the last dimension,
+    and the probabilities multiply v. Only the returned output belongs to this task; backend LSE buffers and VJP
+    outputs are separate interfaces.
+  basis: [T_SDPA.SIGNATURE, T_SDPA.REFERENCE, T_SDPA.SCALE]
+- id: AT.MASKS
+  status: reviewed
+  statement: >-
+    A true Boolean entry participates, a same-dtype additive mask is added to the score, and is_causal uses the
+    documented inclusive upper-left triangle. An explicit mask and is_causal together are invalid.
+  basis: [T_SDPA.BOOL_MASK, T_SDPA.FLOAT_MASK, T_SDPA.MASK_SHAPE, T_SDPA.CAUSAL, T_SDPA.EXCLUSIVE,
+    TS_ATTN_CPP.MATH]
+- id: AT.HEADS
+  status: reviewed
+  statement: >-
+    With enable_gqa, key and value heads are repeated in contiguous groups and Hq must be divisible by the shared
+    key/value head count. Without enable_gqa, equal head counts and ordinary singleton-head broadcasting are the
+    selected cases.
+  basis: [T_SDPA.GQA, T_SDPA.REFERENCE, TS_ATTN_CPP.MATH]
+- id: AT.DEFINED_ROWS
+  status: reviewed
+  statement: >-
+    This profile is restricted to rows with at least one participating finite score. The public math backend sets an
+    all-negative-infinity row to zero, while the documentation's equivalent plain softmax formula does not by itself
+    establish that convention for every backend. Empty effective rows are therefore unsupported here rather than
+    assigned a guessed universal answer.
+  basis: [T_SDPA.REFERENCE, TS_ATTN_CPP.SAFE_SOFTMAX]
+- id: AT.VJP
+  status: reviewed
+  statement: >-
+    For explicit upstream U, let P be the selected forward softmax probabilities, O=P V, and
+    D_ij=P_ij*(dot(U_i,V_j)-dot(U_i,O_i)). Then dq_i=scale*sum_j D_ij*k_j,
+    dk_j=scale*sum_i D_ij*q_i, and dv_j=sum_i P_ij*U_i over participating entries. When key/value heads are shared,
+    dk and dv additionally sum over all query heads mapped to that original head. These are the chain-rule derivatives
+    of AT.TASK; the mask, scale and head mapping are identical to the forward call.
+  basis: [AT.TASK, AT.MASKS, AT.HEADS]
+clauses:
+- {id: AT.C1, basis: [T_SDPA.SCALE, AT.TASK], statement: 'score_ij = scale * dot(q_i,k_j), where scale is 1/sqrt(E) when null and otherwise the supplied scalar.', observes: [out], evidence_kind: definition}
+- {id: AT.C2, basis: [AT.MASKS], statement: 'A Boolean false or -inf additive entry does not participate; a finite additive entry is added before softmax.', observes: [out], evidence_kind: definition}
+- {id: AT.C3, basis: [AT.MASKS], statement: 'is_causal permits key j for query i exactly when j <= i, including when L and S differ.', observes: [out], evidence_kind: definition}
+- {id: AT.C4, basis: [AT.HEADS], statement: 'enable_gqa repeats each key/value head for a contiguous group of Hq/Hkv query heads; without it only equal heads or a singleton key/value head are selected.', observes: [out], evidence_kind: definition}
+- {id: AT.C5, basis: [T_SDPA.REFERENCE, AT.TASK], statement: 'P_i is softmax of all participating biased scores and out_i is the complete sum over j of P_ij v_j.', observes: [out], evidence_kind: definition}
+- {id: AT.C6, basis: [T_SDPA.EXCLUSIVE, AT.MASKS], statement: 'attn_mask together with is_causal is invalid_input.', observes: [out], evidence_kind: definition}
+- {id: AT.C7, basis: [T_SDPA.DROPOUT, AT.TASK], statement: 'Only dropout_p=0 is deterministic and belongs to this profile.', observes: [out], evidence_kind: definition}
+- {id: AT.C8, basis: [AT.DEFINED_ROWS], statement: 'A row with no participating finite score is unsupported and cannot produce a semantic verdict under this profile.', observes: [out], evidence_kind: definition}
+- {id: AT.C9, basis: [AT.TASK], statement: 'The selected call requires all public inputs and excludes undeclared options, unsupported dtypes and ranks, backend buffers and backward outputs.', observes: [out], evidence_kind: definition}
+- {id: AT.C10, basis: [AT.VJP], statement: 'With an explicit upstream of the complete output shape, return out and complete dq, dk and dv according to AT.VJP; shared key/value heads sum all mapped query-head contributions.', observes: [out, dq, dk, dv], evidence_kind: derived}
+examples:
+- id: AT.E1
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C1, AT.C5]
+  input: &base
+    q: [[[1, 1, 1, 1]]]
+    k: [[[1, 1, 1, 1], [0, 0, 0, 0]]]
+    v: [[[1], [0]]]
+    dtype: f32
+    attn_mask: null
+    attn_mask_dtype: null
+    is_causal: false
+    scale: null
+    enable_gqa: false
+    dropout_p: 0
+  expected: {outcome: value, fields: {out: [[[exp(2)/(1 + exp(2))]]]}}
+- id: AT.E2
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C1]
+  input: {<<: *base, scale: 1}
+  expected: {outcome: value, fields: {out: [[[exp(4)/(1 + exp(4))]]]}}
+- id: AT.E3
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2]
+  input: {<<: *base, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], attn_mask: [[true, false]], attn_mask_dtype: b8}
+  expected: {outcome: value, fields: {out: [[[1]]]}}
+- id: AT.E4
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2, AT.C5]
+  input: {<<: *base, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [0]]], attn_mask: [[1, 0]], attn_mask_dtype: f32}
+  expected: {outcome: value, fields: {out: [[[exp(1)/(1 + exp(1))]]]}}
+- id: AT.E5
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2]
+  input: {<<: *base, q: [[[2]]], k: [[[1], [5]]], v: [[[1], [3]]], attn_mask: [[0, -inf]], attn_mask_dtype: f32}
+  expected: {outcome: value, fields: {out: [[[1]]]}}
+- id: AT.E6
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C3]
+  input: {<<: *base, q: [[[0], [0]]], k: [[[0], [0], [0]]], v: [[[0], [1], [2]]], is_causal: true}
+  expected: {outcome: value, fields: {out: [[[0], [1/2]]]}}
+- id: AT.E7
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C4]
+  input: {<<: *base, q: [[[0]], [[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[1]], [[2]]], enable_gqa: true}
+  expected: {outcome: value, fields: {out: [[[1]], [[1]], [[2]], [[2]]]}}
+- id: AT.E8
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C4]
+  input: {<<: *base, q: [[[0]], [[0]]], k: [[[0]]], v: [[[3]]], enable_gqa: false}
+  expected: {outcome: value, fields: {out: [[[3]], [[3]]]}}
+- id: AT.E9
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C5]
+  input: {<<: *base, q: [[[[0]]], [[[0]]]], k: [[[[0]]], [[[0]]]], v: [[[[1]]], [[[2]]]]}
+  expected: {outcome: value, fields: {out: [[[[1]]], [[[2]]]]}}
+- id: AT.E10
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C8]
+  input: {<<: *base, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], attn_mask: [[false, false]], attn_mask_dtype: b8}
+  expected: {outcome: unsupported}
+- id: AT.E11
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C6]
+  input: {<<: *base, q: [[[0]]], k: [[[0]]], v: [[[1]]], attn_mask: [[true]], attn_mask_dtype: b8, is_causal: true}
+  expected: {outcome: invalid_input}
+- id: AT.E12
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C7]
+  input: {<<: *base, dropout_p: 1/10}
+  expected: {outcome: unsupported}
+- id: AT.E13
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C4]
+  input: {<<: *base, q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[1]], [[2]]], enable_gqa: true}
+  expected: {outcome: invalid_input}
+- id: AT.E14
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C9]
+  input: {<<: *base, window: [1, 1]}
+  expected: {outcome: unsupported}
+- id: AT.E15
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C9]
+  input: {<<: *base, dtype: i32}
+  expected: {outcome: unsupported}
+- id: AT.E16
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C9]
+  input: {q: [[[0]]], k: [[[0]]], v: [[[1]]], dtype: f32, attn_mask: null, attn_mask_dtype: null,
+    is_causal: false, scale: null, enable_gqa: false}
+  expected: {outcome: invalid_input}
+- id: AT.E17
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2]
+  input: {<<: *base, q: [[[0]]], k: [[[0]]], v: [[[1]]], attn_mask: [[0]], attn_mask_dtype: f64}
+  expected: {outcome: invalid_input}
+- id: AT.E18
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C1]
+  input: {<<: *base, q: [[0]], k: [[0]], v: [[1]]}
+  expected: {outcome: invalid_input}
+- id: AT.E19
+  profile: torch210_sdpa_defined_real_vjp
+  clauses: [AT.C10]
+  input: {<<: *base, q: [[[0]]], k: [[[1], [3]]], v: [[[1], [3]]], scale: 1, upstream: [[[2]]]}
+  expected: {outcome: value, fields: {out: [[[2]]], dq: [[[2]]], dk: [[[0], [0]]], dv: [[[1], [1]]]}}
+- id: AT.E20
+  profile: torch210_sdpa_defined_real_vjp
+  clauses: [AT.C4, AT.C10]
+  input: {<<: *base, q: [[[0]], [[0]], [[0]], [[0]]], k: [[[1]], [[2]]], v: [[[1]], [[2]]],
+    enable_gqa: true, scale: 1, upstream: [[[1]], [[2]], [[4]], [[8]]]}
+  expected: {outcome: value, fields: {out: [[[1]], [[1]], [[2]], [[2]]], dq: [[[0]], [[0]], [[0]], [[0]]],
+    dk: [[[0]], [[0]]], dv: [[[3]], [[12]]]}}
+- id: AT.E21
+  profile: torch210_sdpa_defined_real_vjp
+  clauses: [AT.C10]
+  input: {<<: *base, q: [[[0]]], k: [[[1], [3]]], v: [[[1], [3]]], scale: 1, upstream: [[2]]}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: [complete q, complete k, complete v, common dtype, complete optional mask and mask dtype,
+    is_causal, scale, enable_gqa, dropout_p, and complete upstream for the VJP profile]
+  pre_state: []
+  post_state: [complete public output; the VJP profile additionally returns complete dq, dk and dv]
+  observation_unit: one complete public scaled_dot_product_attention forward call, optionally followed by its q/k/v VJP
+domain:
+  valid: [rank-3 or rank-4 nonempty positive dense tensors, f16/bf16/f32/f64 common dtype,
+    finite exactly represented q/k/v values and, for VJP, same-dtype finite exactly represented upstream values,
+    compatible query/key dimensions and key/value lengths,
+    equal batch sizes, documented equal/broadcast/GQA head relation, dropout_p=0,
+    no mask or broadcastable Boolean/same-dtype finite-or-negative-infinity additive mask,
+    every row has a finite participating score]
+  domain_undefined: []
+  invalid_input: [missing required field, ragged tensor, incompatible shape, mixed or mismatched mask dtype,
+    VJP upstream shape or dtype different from the complete public output, attn_mask together with is_causal,
+    invalid Boolean or probability]
+  unsupported: [empty effective row, nonfinite q/k/v, positive-infinity mask, dtype outside f16/bf16/f32/f64,
+    dropout, rank outside three or four, arbitrary batch broadcasting, softcap, window, LSE or backend gradient buffers,
+    sparse or complex data, layout and backend-specific device rounding]
+mutation_requirements:
+- {id: AT.M1, misreading: use 1/E instead of 1/sqrt(E) for default scale, witnesses: [AT.E1]}
+- {id: AT.M2, misreading: ignore an explicit scale and use the default, witnesses: [AT.E2]}
+- {id: AT.M3, misreading: invert the Boolean mask convention, witnesses: [AT.E3]}
+- {id: AT.M4, misreading: interpret a numeric additive mask as a Boolean keep mask, witnesses: [AT.E4]}
+- {id: AT.M5, misreading: use bottom-right rather than upper-left causal alignment, witnesses: [AT.E6]}
+- {id: AT.M6, misreading: assign GQA heads round-robin rather than in contiguous groups, witnesses: [AT.E7]}
+- {id: AT.M7, misreading: manufacture a uniform result for a row without a participating score, witnesses: [AT.E10]}
+- {id: AT.M8, misreading: accept an explicit mask together with is_causal and silently combine them, witnesses: [AT.E11]}
+nonclaims:
+- These profiles do not define FlashAttention bottom-right alignment, window or softcap options, FlexAttention score modifications, Triton tutorial LSE storage, or backend-specific backward interfaces.
+- The VJP profile defines derivatives of the selected public result for an explicit upstream. It does not claim that every backend stores the same probabilities or LSE internally.
+- The defined-row restriction avoids claiming that one backend's all-masked-row convention is universal public SDPA behavior.
+- Rigorous real arithmetic defines f. Device dtype rounding and backend selection are measured separately as K-f.
+- Rejected mutants witness listed mistakes only and do not prove completeness.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Added a separate complete VJP profile for the already reviewed public SDPA task. It requires explicit upstream and
+    returns out, dq, dk and dv; GQA gradients are summed back to the original key/value head shapes. The forward-only
+    profile and its interface remain unchanged.
+  trigger: >-
+    Real training calls need all three operand gradients. The derivative is obtained from the reviewed forward formula
+    and is checked independently; the broader draft combining FlashAttention, FlexAttention, LSE, window and softcap
+    remains unadmitted.

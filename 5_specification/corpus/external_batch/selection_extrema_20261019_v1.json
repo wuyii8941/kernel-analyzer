@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 public Tensor/Tensor torch.maximum and torch.minimum with complete VJPs for both operands",
+  "reference": "Cross-check the versioned PyTorch 2.10 public calls against ARITH.torch210_extrema_tensor_autograd, whose exact coordinate formula independently selects the strict extremum, splits equality upstream in half and reduces each broadcast VJP",
+  "limits": "The batch excludes scalar, out, reduction, fmax/fmin, mixed-dtype and special-value variants. Every execution failure, missing gradient, missing Triton phase and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261931, 20261932],
+    "cases": [
+      {"id": "maximum_same_shape", "op": "maximum", "input_shape": [3, 17], "other_shape": [3, 17]},
+      {"id": "minimum_same_shape", "op": "minimum", "input_shape": [4, 13], "other_shape": [4, 13]},
+      {"id": "maximum_two_way_broadcast", "op": "maximum", "input_shape": [2, 1, 11], "other_shape": [1, 5, 1]},
+      {"id": "minimum_rank3_broadcast", "op": "minimum", "input_shape": [1, 4, 9], "other_shape": [3, 1, 1]},
+      {"id": "maximum_noncontiguous", "op": "maximum", "input_shape": [2, 5, 9], "other_shape": [2, 5, 9], "input_noncontiguous": true, "other_noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "seeds": [20261933, 20261934],
+    "cases": [
+      {"id": "maximum_heldout_rank4", "op": "maximum", "input_shape": [2, 3, 1, 11], "other_shape": [1, 1, 4, 1]},
+      {"id": "minimum_heldout_broadcast", "op": "minimum", "input_shape": [1, 5, 13], "other_shape": [3, 1, 1]},
+      {"id": "maximum_heldout_all_equal", "op": "maximum", "input_shape": [4, 29], "other_shape": [4, 29], "all_equal": true},
+      {"id": "minimum_heldout_outer", "op": "minimum", "input_shape": [7, 1], "other_shape": [1, 23]},
+      {"id": "maximum_heldout_noncontiguous", "op": "maximum", "input_shape": [3, 4, 10], "other_shape": [3, 4, 10], "input_noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, operation names, all shapes, layouts and seeds were fixed before candidate execution. Every ordinary case forces exact equality coordinates with nonzero even upstream, and the held-out set includes an all-equal case. The acceptance split uses another implementation and unseen ranks, sizes, broadcast directions and layout combinations."
+}

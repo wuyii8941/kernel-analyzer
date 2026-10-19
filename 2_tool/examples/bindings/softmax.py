@@ -1,7 +1,7 @@
-"""Binding example for `kernel-analyzer check` (mode B: with a specification).
+"""Binding example for `kernel-analyzer check` (mode B: with a screening reference).
 
-A binding gives one independent draw of the inputs per seed and the call; `spec` is optional (without it the check
-runs in mode A: e_num = K - K_R only, task semantics not checked).
+A binding gives one independent draw of the inputs per seed and the call. The optional float64 reference does not
+provide contract review or kernel/task binding, so the report cannot certify a semantic error.
 """
 import numpy as np
 import torch
@@ -11,7 +11,8 @@ from scripts.reference_eval_kernels import softmax_rows
 
 NAME = "softmax_rows"
 IMPLEMENTATION = "row softmax Triton kernel (scripts/reference_eval_kernels.py)"
-SPECIFICATION = "softmax over the last axis, float64"
+SPECIFICATION = "screening reference: softmax over the last axis, float64"
+SPEC_BOUND = "heuristic float64 band; not a rigorous enclosure"
 
 
 def make_inputs(seed):

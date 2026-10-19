@@ -1,0 +1,38 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "liger.rms_norm.public_autograd.v1",
+  "status": "drafted",
+  "subject": {
+    "library": "Liger Kernel",
+    "version": "0.6.2",
+    "callable": "LigerRMSNormFunction.apply",
+    "boundary": "public forward followed by sum backward"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "rms_norm",
+      "contract": "NORM",
+      "profile": "torch_autograd",
+      "task_statement": "Llama RMSNorm with the received weight and epsilon; public y and VJP are observed, internal rstd is not an output.",
+      "input_map": [
+        {"target": "/op", "literal": "rms_norm", "basis": "public callable"},
+        {"target": "/x", "source": "/tensor_arguments/x/before", "conversion": "tensor_values"},
+        {"target": "/normalized_shape", "source": "/scalars/normalized_shape"},
+        {"target": "/weight", "source": "/tensor_arguments/weight/before", "conversion": "tensor_values"},
+        {"target": "/eps", "source": "/scalars/eps"},
+        {"target": "/upstream", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_values"}
+      ],
+      "output_map": [
+        {"target": "/y", "source": "/returns/y", "conversion": "tensor_values"},
+        {"target": "/grad/x", "source": "/gradients/x", "conversion": "tensor_values"},
+        {"target": "/grad/weight", "source": "/gradients/weight", "conversion": "tensor_values"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "weight", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

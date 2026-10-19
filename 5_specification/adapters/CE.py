@@ -18,13 +18,36 @@ ce = v24.module("spec_cross_entropy")
 PROFILES = ("index_unsmoothed", "index_smoothing_unweighted", "index_smoothing_R_A", "probability_unsmoothed")
 
 
+def _rectangular_shape(value):
+    if not isinstance(value, (list, tuple)):
+        return ()
+    if not value:
+        return (0,)
+    shapes = [_rectangular_shape(item) for item in value]
+    if shapes[0] is None or any(shape != shapes[0] for shape in shapes):
+        return None
+    return (len(value),) + shapes[0]
+
+
 def _inputs(profile, inp):
     if profile not in PROFILES:
         raise Unsupported(f"profile {profile!r}")
+    required = {"logits", "target", "eps", "reduction", "upstream"}
+    if profile != "probability_unsmoothed":
+        required.add("ignore_index")
+    if not isinstance(inp, dict) or not required.issubset(inp):
+        raise Invalid("cross entropy requires all declared inputs for the selected profile")
+    if set(inp) - required - {"weights", "ignore_index"}:
+        raise Unsupported("cross entropy input contains options outside the selected profile")
+    shape = _rectangular_shape(inp["logits"])
+    if shape is not None and (len(shape) > 2 or len(shape) == 1 and shape[0] > 0):
+        raise Unsupported("unbatched and higher-rank logits require a separate flattening binding")
     x = matrix(inp["logits"], "logits")
     N, C = len(x), len(x[0])
-    if C < 2:
-        raise Unsupported("C = 1 is outside this contract")
+    if C == 0:
+        raise Invalid("logits must contain at least one class")
+    if C == 1:
+        raise Unsupported("one class is outside this contract")
     red = inp["reduction"]
     if red not in ("sum", "mean", "none"):
         raise Invalid(f"reduction {red!r}")
@@ -62,8 +85,16 @@ def _inputs(profile, inp):
     return x, y, w, eps, ii, red, u, prob
 
 
+def _require_defined_mean(target, weights, ignore_index, reduction, probability):
+    if reduction == "mean" and not probability:
+        mass = sum((1 if weights is None else weights[t]) for t in target if t != ignore_index)
+        if mass == 0:
+            raise Undefined("mean normalization mass is zero")
+
+
 def reference(profile, inp):
     x, y, w, eps, ii, red, u, prob = _inputs(profile, inp)
+    _require_defined_mean(y, w, ii, red, prob)
     z = ce.cross_entropy(x, y, weights=w, ignore_index=-10 ** 9 if prob else ii, reduction=red, label_smoothing=eps,
                          reading="R_A", prob_target=prob)
     if not z.get("established", False):
@@ -74,6 +105,13 @@ def reference(profile, inp):
     rows = u if red == "none" else [u] * len(x)
     grad = [[g * rows[n] if isinstance(g, Fraction) else g * to_iv(rows[n]) for g in row] for n, row in enumerate(grad)]
     return Result("value", {"loss": v24.tree(z["loss"]), "gradient": grad})
+
+
+def check_output(profile, inp, observed):
+    """Complete loss/VJP; interval containment alone never certifies equality."""
+    from kernel_spec.compare import check_enclosed_output
+    result = reference(profile, inp)
+    return check_enclosed_output(result.fields, observed)
 
 
 # ------------------------------------------------------------------ independent implementation for the mutants
@@ -144,6 +182,7 @@ def reading_R_B(profile, inp):
     """Diagnostic reading R_B of weighted label smoothing (target-class weight on every class term); not a task
     definition, used only where a contract lists it as a reading."""
     x, y, w, eps, ii, red, u, prob = _inputs(profile, inp)
+    _require_defined_mean(y, w, ii, red, prob)
     z = ce.cross_entropy(x, y, weights=w, ignore_index=ii, reduction=red, label_smoothing=eps, reading="R_B",
                          prob_target=prob)
     if not z.get("established", False):

@@ -1,0 +1,55 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.logsumexp.f32.r16.c128.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.logsumexp))",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "generated Triton launch returns the complete float32[16] forward result and float32[16,128] input VJP",
+    "measure_call": "../calls/inductor_logsumexp.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_logsumexp_forward",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute public PyTorch 2.10 logsumexp over the final dimension of the complete finite float32 input.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.logsumexp", "basis": "the public callable is torch.logsumexp"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/scalars/dim"},
+        {"target": "/args/2", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/y", "conversion": "tensor_record", "measure_output": "y"}
+      ]
+    },
+    {
+      "id": "public_logsumexp_input_vjp",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute the complete input VJP of public PyTorch 2.10 logsumexp against the received upstream tensor.",
+      "input_map": [
+        {"target": "/op", "literal": "vjp.aten.logsumexp", "basis": "the public autograd boundary differentiates logsumexp"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/scalars/dim"},
+        {"target": "/args/3", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

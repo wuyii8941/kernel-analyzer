@@ -1,0 +1,182 @@
+{
+  "purpose": "Supplementary separate-implementation acceptance of forward-only low-level loss functions; not public autograd acceptance or statistical bias certification",
+  "prior_exposure": "FlagGems package used previously for other tasks. These two module interfaces were inspected to select valid forward tasks; numerical results have not been examined. Not blind first encounter.",
+  "source_root": ".cache/pydeps/flag_gems_5_0_2",
+  "package": "flag_gems",
+  "version": "5.0.2",
+  "standard_reference": "PyTorch 2.10.0+cu128 functional forward, CUDA float32, no autocast",
+  "observation": "complete forward tensor or scalar, no changes to input or target; gradients not supplied by these entry points and not claimed",
+  "shapes": [
+    [
+      2,
+      19
+    ],
+    [
+      5,
+      33
+    ]
+  ],
+  "seeds": [
+    20261027,
+    20261028
+  ],
+  "input_rule": "Same integer-eighth generator and five boundary coordinates as development, with different seeds and shapes.",
+  "cases": [
+    {
+      "id": "flaggems_smooth_l1_beta_0p0_none",
+      "op": "smooth_l1",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "none",
+        "beta": 0.0
+      },
+      "module": "flag_gems/experimental_ops/smooth_l1_loss.py",
+      "function": "smooth_l1_loss",
+      "entry": "flag_gems.experimental_ops.smooth_l1_loss(input, target, reduction='none', beta=0.0)"
+    },
+    {
+      "id": "flaggems_smooth_l1_beta_0p0_sum",
+      "op": "smooth_l1",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "sum",
+        "beta": 0.0
+      },
+      "module": "flag_gems/experimental_ops/smooth_l1_loss.py",
+      "function": "smooth_l1_loss",
+      "entry": "flag_gems.experimental_ops.smooth_l1_loss(input, target, reduction='sum', beta=0.0)"
+    },
+    {
+      "id": "flaggems_smooth_l1_beta_0p0_mean",
+      "op": "smooth_l1",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "mean",
+        "beta": 0.0
+      },
+      "module": "flag_gems/experimental_ops/smooth_l1_loss.py",
+      "function": "smooth_l1_loss",
+      "entry": "flag_gems.experimental_ops.smooth_l1_loss(input, target, reduction='mean', beta=0.0)"
+    },
+    {
+      "id": "flaggems_smooth_l1_beta_1p5_none",
+      "op": "smooth_l1",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "none",
+        "beta": 1.5
+      },
+      "module": "flag_gems/experimental_ops/smooth_l1_loss.py",
+      "function": "smooth_l1_loss",
+      "entry": "flag_gems.experimental_ops.smooth_l1_loss(input, target, reduction='none', beta=1.5)"
+    },
+    {
+      "id": "flaggems_smooth_l1_beta_1p5_sum",
+      "op": "smooth_l1",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "sum",
+        "beta": 1.5
+      },
+      "module": "flag_gems/experimental_ops/smooth_l1_loss.py",
+      "function": "smooth_l1_loss",
+      "entry": "flag_gems.experimental_ops.smooth_l1_loss(input, target, reduction='sum', beta=1.5)"
+    },
+    {
+      "id": "flaggems_smooth_l1_beta_1p5_mean",
+      "op": "smooth_l1",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "mean",
+        "beta": 1.5
+      },
+      "module": "flag_gems/experimental_ops/smooth_l1_loss.py",
+      "function": "smooth_l1_loss",
+      "entry": "flag_gems.experimental_ops.smooth_l1_loss(input, target, reduction='mean', beta=1.5)"
+    },
+    {
+      "id": "flaggems_huber_delta_0p125_none",
+      "op": "huber",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "none",
+        "delta": 0.125
+      },
+      "module": "flag_gems/experimental_ops/huber_loss.py",
+      "function": "huber_loss",
+      "entry": "flag_gems.experimental_ops.huber_loss(input, target, reduction='none', delta=0.125)"
+    },
+    {
+      "id": "flaggems_huber_delta_0p125_sum",
+      "op": "huber",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "sum",
+        "delta": 0.125
+      },
+      "module": "flag_gems/experimental_ops/huber_loss.py",
+      "function": "huber_loss",
+      "entry": "flag_gems.experimental_ops.huber_loss(input, target, reduction='sum', delta=0.125)"
+    },
+    {
+      "id": "flaggems_huber_delta_0p125_mean",
+      "op": "huber",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "mean",
+        "delta": 0.125
+      },
+      "module": "flag_gems/experimental_ops/huber_loss.py",
+      "function": "huber_loss",
+      "entry": "flag_gems.experimental_ops.huber_loss(input, target, reduction='mean', delta=0.125)"
+    },
+    {
+      "id": "flaggems_huber_delta_1p5_none",
+      "op": "huber",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "none",
+        "delta": 1.5
+      },
+      "module": "flag_gems/experimental_ops/huber_loss.py",
+      "function": "huber_loss",
+      "entry": "flag_gems.experimental_ops.huber_loss(input, target, reduction='none', delta=1.5)"
+    },
+    {
+      "id": "flaggems_huber_delta_1p5_sum",
+      "op": "huber",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "sum",
+        "delta": 1.5
+      },
+      "module": "flag_gems/experimental_ops/huber_loss.py",
+      "function": "huber_loss",
+      "entry": "flag_gems.experimental_ops.huber_loss(input, target, reduction='sum', delta=1.5)"
+    },
+    {
+      "id": "flaggems_huber_delta_1p5_mean",
+      "op": "huber",
+      "contract": "HUBER",
+      "profile": "torch210_unweighted_f32",
+      "parameters": {
+        "reduction": "mean",
+        "delta": 1.5
+      },
+      "module": "flag_gems/experimental_ops/huber_loss.py",
+      "function": "huber_loss",
+      "entry": "flag_gems.experimental_ops.huber_loss(input, target, reduction='mean', delta=1.5)"
+    }
+  ]
+}

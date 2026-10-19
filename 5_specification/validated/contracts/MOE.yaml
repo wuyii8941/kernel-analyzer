@@ -1,0 +1,192 @@
+schema_version: '1.2'
+id: MOE
+role: MOE
+title: Exact Mixtral top-2 routing and expert-output combination
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Versioned Mixtral top-2 routing core with supplied expert outputs, no ties, capacity or auxiliary loss
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- Mixtral top-2 router and expert-output combination defined by the Mixtral paper and Transformers 4.57.3 MixtralSparseMoeBlock
+profiles:
+  mixtral_top2_real:
+    meaning: >-
+      For finite nonempty router_logits [T,E] and supplied expert_outputs [T,E,D], with E at least two and no equal
+      logits within a token, select the two largest logits. Normalise their router probabilities to sum to one, set
+      every unselected dense weight to zero, and combine the two supplied expert outputs. All inputs share one physical
+      f16, bf16, f32 or f64 dtype. There is no capacity dropping, router noise or auxiliary loss.
+    task_choice_required: false
+    basis: [MO.TASK, MO.ROUTER, MO.COMBINE]
+outputs:
+  selected: {shape: 'complete Boolean mask [T,E]', guarantee: exact, kind: boolean}
+  weights: {shape: 'complete dense gate weights [T,E], zero outside the selected pair', guarantee: rigorous_enclosure}
+  out: {shape: 'complete combined expert result [T,D]', guarantee: rigorous_enclosure}
+comparison:
+  input_binding: >-
+    router_logits and expert_outputs are the exact finite physical values received in their declared common dtype.
+  complete_output: The complete selected mask, dense weights and combined result are all required.
+  quality: Exact real products and sums; exponential values and their quotients use rigorous enclosures.
+  test_evidence: >-
+    Independent high-precision evaluation and public PyTorch operations cover four physical dtypes, five shapes and
+    routing patterns, complete output checking, rejected ties and refused task variants. The retained Transformers
+    4.57.3 and installed 4.57.6 routing bodies agree for this selected task.
+  error_handling: >-
+    Missing fields, malformed or incompatible shapes and values not represented by the declared dtype are
+    invalid_input. Ties, special values and other routing algorithms are unsupported.
+decisions:
+- id: MO.TASK
+  status: reviewed
+  statement: >-
+    Select the common Mixtral routing subtask with supplied router logits and supplied per-expert outputs: top-2,
+    full capacity, no dropped tokens, no router jitter and no auxiliary loss. Switch capacity routing, raw gates,
+    load-balancing losses, sigmoid routers and expert-choice routing are separate tasks.
+  basis: [MIXTRAL.GATE, HF_MIXTRAL.ROUTER]
+- id: MO.ROUTER
+  status: reviewed
+  statement: >-
+    The selected experts are the two largest logits. Transformers first computes softmax over every expert, takes
+    top-2 probabilities and divides them by their selected sum; in exact real arithmetic this is Softmax(Top2(logits))
+    from the Mixtral paper. Dense weights are zero for every unselected expert.
+  basis: [MIXTRAL.GATE, HF_MIXTRAL.ROUTER]
+- id: MO.COMBINE
+  status: reviewed
+  statement: >-
+    For each token, the result is the sum of each selected expert output multiplied by its corresponding normalised
+    routing weight. Supplied expert outputs make this contract about routing and combination, not the internal SwiGLU
+    expert implementation.
+  basis: [MIXTRAL.GATE, HF_MIXTRAL.ROUTER]
+- id: MO.TIES
+  status: reviewed
+  statement: >-
+    Neither retained source selects a portable winner among equal logits. The reviewed profile therefore requires all
+    logits of a token to be distinct. Inputs with a tie are unsupported and cannot be used for an error verdict.
+  basis: [MIXTRAL.GATE, HF_MIXTRAL.ROUTER]
+clauses:
+- {id: MO.C1, basis: [MO.TASK], statement: 'The task receives complete finite physical [T,E] logits and [T,E,D] supplied expert outputs in one declared floating dtype.', observes: [selected, weights, out], evidence_kind: definition}
+- {id: MO.C2, basis: [MO.ROUTER, MO.TIES], statement: 'Exactly the two experts with largest distinct logits are selected for every token.', observes: [selected], evidence_kind: definition}
+- {id: MO.C3, basis: [MO.ROUTER], statement: 'Selected weights equal exp(logit_e) divided by the sum of exponentials over the selected pair; every other dense weight is zero.', observes: [weights], evidence_kind: definition}
+- {id: MO.C4, basis: [MO.COMBINE], statement: 'out[t,d] is the sum over the selected pair of weights[t,e] times expert_outputs[t,e,d].', observes: [out], evidence_kind: definition}
+- {id: MO.C5, basis: [MO.TASK], statement: 'Both inputs are read-only and all three promised outputs are complete.', observes: [selected, weights, out], evidence_kind: definition}
+examples:
+- id: MO.E1
+  profile: mixtral_top2_real
+  clauses: [MO.C1, MO.C2, MO.C3, MO.C4, MO.C5]
+  input: &base
+    router_logits: [[1, 0, -1]]
+    expert_outputs: [[[1, 0], [0, 1], [9, 9]]]
+    dtype: f64
+  expected:
+    outcome: value
+    fields:
+      selected: [[true, true, false]]
+      weights: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1)), 0]]
+      out: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1))]]
+- id: MO.E2
+  profile: mixtral_top2_real
+  clauses: [MO.C2, MO.C3, MO.C4]
+  input:
+    router_logits: [[0, 2, 1], [3, 0, 2]]
+    expert_outputs: [[[100], [2], [4]], [[5], [100], [1]]]
+    dtype: f64
+  expected:
+    outcome: value
+    fields:
+      selected: [[false, true, true], [true, false, true]]
+      weights: [[0, exp(1)/(1 + exp(1)), 1/(1 + exp(1))], [exp(1)/(1 + exp(1)), 0, 1/(1 + exp(1))]]
+      out: [[(2*exp(1) + 4)/(1 + exp(1))], [(5*exp(1) + 1)/(1 + exp(1))]]
+- id: MO.E3
+  profile: mixtral_top2_real
+  clauses: [MO.C3, MO.C4]
+  input: {router_logits: [[2, 1, -8]], expert_outputs: [[[1], [3], [100]]], dtype: f64}
+  expected: {outcome: value, fields: {selected: [[true, true, false]], weights: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1)), 0]], out: [[(exp(1) + 3)/(1 + exp(1))]]}}
+- id: MO.E4
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {router_logits: [[1, 0, -1]], expert_outputs: [[[2], [4], [8]]], dtype: f16}
+  expected: {outcome: value, fields: {selected: [[true, true, false]], weights: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1)), 0]], out: [[(2*exp(1) + 4)/(1 + exp(1))]]}}
+- id: MO.E5
+  profile: mixtral_top2_real
+  clauses: [MO.C2, MO.C3]
+  input: {router_logits: [[-1, 1]], expert_outputs: [[[2, 3], [5, 7]]], dtype: f32}
+  expected: {outcome: value, fields: {selected: [[true, true]], weights: [[1/(1 + exp(2)), exp(2)/(1 + exp(2))]], out: [[(2 + 5*exp(2))/(1 + exp(2)), (3 + 7*exp(2))/(1 + exp(2))]]}}
+- id: MO.E6
+  profile: mixtral_top2_real
+  clauses: [MO.C2]
+  input: {<<: *base, router_logits: [[1, 1, 0]]}
+  expected: {outcome: unsupported}
+- id: MO.E7
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {<<: *base, router_logits: [[inf, 0, -1]]}
+  expected: {outcome: unsupported}
+- id: MO.E8
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {<<: *base, dtype: i32}
+  expected: {outcome: unsupported}
+- id: MO.E9
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {<<: *base, router_logits: [['1/3', 0, -1]], dtype: f32}
+  expected: {outcome: invalid_input}
+- id: MO.E10
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {<<: *base, expert_outputs: [[[1], [2]]]}
+  expected: {outcome: invalid_input}
+- id: MO.E11
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {router_logits: [[1]], expert_outputs: [[[2]]], dtype: f64}
+  expected: {outcome: invalid_input}
+- id: MO.E12
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {router_logits: [], expert_outputs: [], dtype: f64}
+  expected: {outcome: invalid_input}
+- id: MO.E13
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {<<: *base, k: 2}
+  expected: {outcome: unsupported}
+- id: MO.E14
+  profile: mixtral_top2_real
+  clauses: [MO.C1]
+  input: {router_logits: [[1, 0]], expert_outputs: [[[1], [2]]], dtype: bf16}
+  expected: {outcome: value, fields: {selected: [[true, true]], weights: [[exp(1)/(1 + exp(1)), 1/(1 + exp(1))]], out: [[(exp(1) + 2)/(1 + exp(1))]]}}
+signature:
+  inputs: ['complete physical router_logits [T,E]', 'complete physical expert_outputs [T,E,D]', common floating dtype]
+  pre_state: [router_logits and expert_outputs unchanged]
+  post_state: [complete selected mask, dense selected weights and combined output]
+  observation_unit: every coordinate of the three outputs together with dtype and shape
+domain:
+  valid: [finite physical f16/bf16/f32/f64 values, positive T and D, E at least two, pairwise-distinct logits per token]
+  invalid_input: [missing or malformed records, ragged or incompatible shapes, values not exactly represented by the declared dtype, fewer than two experts]
+  unsupported: [ties, special or complex values, other dtypes, capacity dropping, auxiliary loss, raw gates, router noise, sigmoid or expert-choice routing, internal expert computation, layout and alias effects]
+mutation_requirements:
+- {id: MO.M1, misreading: keep the full-router probabilities of the selected experts without renormalising their sum, witnesses: [MO.E1]}
+- {id: MO.M2, misreading: select the two smallest logits, witnesses: [MO.E1]}
+- {id: MO.M3, misreading: select only the largest expert, witnesses: [MO.E1]}
+- {id: MO.M4, misreading: give both selected experts weight one half regardless of logits, witnesses: [MO.E1]}
+- {id: MO.M5, misreading: combine every expert with the full softmax probabilities, witnesses: [MO.E1, MO.E3]}
+- {id: MO.M6, misreading: swap the two selected weights before combining expert outputs, witnesses: [MO.E1]}
+nonclaims:
+- The profile defines one Mixtral routing and combination subtask, not every operation called MoE or a complete Mixtral block.
+- It makes no claim about expert MLP computation, router-logit generation, load-balancing loss, capacity, ties, dispatch layout or distributed communication.
+- Exact real arithmetic is the task target; device softmax, casts, accumulation and expert execution rounding are measured separately.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace four mixed Switch/Mixtral gate, capacity and auxiliary-loss profiles with one reviewed, tie-free Mixtral
+    top-2 routing and supplied-expert combination task. Preserve the broader former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The former contract combined different models and left two auxiliary-loss profiles dependent on a task choice;
+    those choices cannot be inferred from an unfamiliar kernel name.

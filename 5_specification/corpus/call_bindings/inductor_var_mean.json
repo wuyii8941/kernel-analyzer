@@ -1,0 +1,60 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.var_mean.f32.r16.c128.dim1.correction1.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.var_mean))",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "all generated Triton launches return the complete ordered variance/mean pair and complete combined input VJP for float32[16,128]",
+    "measure_call": "../calls/inductor_var_mean.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_var_mean_forward",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute the ordered public PyTorch 2.10 variance and mean pair along dimension one with correction one for the complete finite float32 input.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.var_mean", "basis": "the public callable is torch.var_mean"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/scalars/dim"},
+        {"target": "/kwargs/correction", "source": "/scalars/correction"},
+        {"target": "/kwargs/keepdim", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out/0", "source": "/returns/variance", "conversion": "tensor_record", "measure_output": "variance"},
+        {"target": "/out/1", "source": "/returns/mean", "conversion": "tensor_record", "measure_output": "mean"}
+      ]
+    },
+    {
+      "id": "public_var_mean_input_vjp",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute the complete input VJP of public PyTorch 2.10 var_mean against both received upstream tensors.",
+      "input_map": [
+        {"target": "/op", "literal": "vjp.aten.var_mean", "basis": "the public autograd boundary differentiates both outputs of torch.var_mean"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream_var/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/upstream_mean/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/3", "source": "/scalars/dim"},
+        {"target": "/kwargs/correction", "source": "/scalars/correction"},
+        {"target": "/kwargs/keepdim", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "upstream_var", "effect": "unchanged"},
+    {"argument": "upstream_mean", "effect": "unchanged"}
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.transpose.f32.32x64.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 matrix transpose",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with eight Triton programs covering one contiguous 32x64 input and the complete contiguous 64x32 output",
+    "measure_call": "../calls/triton_transpose.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "transpose",
+      "contract": "LAYOUT",
+      "profile": "real",
+      "task_statement": "Swap dimensions 0 and 1 of the received contiguous finite float32 tensor and return every logical value in the complete 64x32 output; storage aliasing is outside this call because the wrapper allocates the returned output.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.transpose", "basis": "selected functional integer-dimension transpose task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": 0, "basis": "the first input axis is swapped"},
+        {"target": "/args/2", "literal": 1, "basis": "the second input axis is swapped"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

@@ -1,0 +1,648 @@
+schema_version: '1.2'
+id: POOL
+role: POOL
+title: Exact two-dimensional pooling values and explicitly selected complete pooling VJPs
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite max_pool2d forward values; separately selected unique-max PyTorch 2.10 max_pool2d values, indices and input VJP; finite avg_pool2d forward and input VJP with explicit padding-domain divisor semantics
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.max_pool2d, torch.nn.functional.max_pool2d, torch.nn.functional.avg_pool2d]
+profiles:
+  finite_max2d_values:
+    outputs: [out]
+    meaning: >-
+      Complete forward values of two-dimensional max pooling on rank-3 or rank-4 physical finite f16, bf16, f32 or
+      f64 tensors. Padding is zero, ceil_mode is false, and only the values result is selected. Kernel, stride and
+      dilation may be positive integers or pairs.
+    task_choice_required: false
+    basis: [P2.SCHEMA, P2.PHYSICAL, P2.WINDOW]
+  torch210_unique_max2d_autograd:
+    outputs: [out, indices, grad]
+    meaning: >-
+      Complete public PyTorch 2.10 functional max_pool2d with return_indices=true and its input VJP on finite
+      rank-3/rank-4 physical floating tensors. Every effective output window has one unique maximum. Parameters,
+      complete upstream, flattened spatial indices and all overlapping gradient contributions are explicit.
+    task_choice_required: true
+    basis: [PM.SCHEMA, PM.WINDOW, PM.UNIQUE, PM.INDEX, PM.GRAD]
+  finite_avg2d_autograd:
+    outputs: [out, grad]
+    meaning: >-
+      Real arithmetic of finite rank-3/rank-4 avg_pool2d and its complete input VJP. All public options and physical
+      input/upstream records are explicit. The chosen divisor counts explicit padding when count_include_pad=true,
+      but excludes ceil overhang beyond the explicit padding domain. A nonzero integer divisor_override takes precedence.
+    task_choice_required: true
+    basis: [PA.SCHEMA, PA.DIVISOR, PA.GRAD]
+outputs:
+  out:
+    shape: input leading dimensions followed by the two output dimensions of the selected profile
+    guarantee: exact
+  grad:
+    shape: complete input shape, for either autograd profile
+    guarantee: exact
+  indices:
+    shape: complete output shape, for the unique-max autograd profile
+    dtype: i64
+    guarantee: exact
+comparison:
+  input_binding: >-
+    The tensor record contains the exact physical values received in its declared dtype. Kernel size, stride,
+    dilation, padding, ceil mode and the values-only choice are explicit call arguments.
+  complete_output: >-
+    The values-only profile observes its complete returned tensor. The autograd profiles require every declared
+    forward value and input-gradient coordinate; unique-max max pooling additionally requires every int64 index.
+  quality: Exact selected input values, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent coordinate loops and PyTorch 2.10 comparisons over all selected dtypes and parameter forms.
+  error_handling: Profile-specific limits apply; malformed inputs and inconsistent upstream are invalid_input. No implicit profile change or fallback to the old broad pooling draft.
+decisions:
+- id: PM.SCHEMA
+  status: reviewed
+  statement: >-
+    Select PyTorch 2.10 torch.nn.functional.max_pool2d with return_indices=true, followed by the complete input VJP
+    for an explicit upstream. Input and upstream are finite same-dtype rank-3 or rank-4 physical f16/bf16/f32/f64
+    tensors. Kernel, stride, padding, dilation and ceil mode are explicit; stride None selects kernel size. All
+    inputs remain unchanged and the complete values, int64 indices and input gradient are returned.
+  basis: [T_F_MAX_POOL2D.CEIL_PARAM, T_MAXPOOL2D.PARAMS, T_MAXPOOL2D.RETURN_INDICES,
+    TS_NATIVE_FUNCTIONS.POOL_SCHEMAS, P2.PHYSICAL]
+- id: PM.WINDOW
+  status: reviewed
+  statement: >-
+    Output shape follows the documented floor or ceil formula, including removal of a final window that starts in
+    right or bottom padding. Window starts are output*stride-padding; dilation selects kernel positions and only real
+    input coordinates participate because padding is negative infinity. Padding is nonnegative and at most half the
+    corresponding kernel size, as required by the selected public interface.
+  basis: [T_MAXPOOL2D.DEF, T_MAXPOOL2D.PARAMS, T_MAXPOOL2D.SHAPE,
+    T_F_MAX_POOL2D.CEIL_PARAM]
+- id: PM.UNIQUE
+  status: reviewed
+  statement: >-
+    Every effective output window must have exactly one maximum among real input coordinates. Tied maxima are
+    unsupported because the public pages identify an argmax but do not establish one universal tie choice, and the
+    derivative at a tie is not uniquely determined by the maximum function alone.
+  basis: [T_MAXPOOL2D.DEF, T_MAXPOOL2D.RETURN_INDICES]
+- id: PM.INDEX
+  status: needs_binding
+  statement: >-
+    For this versioned PyTorch 2.10 task, the returned int64 index of unique maximum (h,w) is h*input_width+w within
+    its channel plane. This implementation convention is selected explicitly and checked against public CPU and CUDA
+    calls and max-unpool use; it is not claimed as an implementation-independent encoding for every pooling system.
+  basis: [T_MAXPOOL2D.RETURN_INDICES, T_F_MAX_POOL2D.CEIL_PARAM, TS_NATIVE_FUNCTIONS.POOL_SCHEMAS]
+- id: PM.GRAD
+  status: reviewed
+  statement: >-
+    With a unique maximum, each output is locally the selected input coordinate. Its VJP adds that output's upstream
+    to the selected input coordinate and zero elsewhere; overlapping windows selecting the same input accumulate all
+    contributions. This is the ordinary derivative of the selected unique-max function.
+  basis: [PM.WINDOW, PM.UNIQUE]
+- id: PA.SCHEMA
+  status: reviewed
+  statement: >-
+    avg_pool2d uses finite positive rank-3 or rank-4 physical f16/bf16/f32/f64 inputs; the upstream has the same dtype
+    and complete output shape. Integer kernel, stride and padding accept scalar, single-component or two-component
+    forms. None or empty stride selects kernel_size. Padding is at most half kernel size; output shape uses the
+    documented floor/ceil rule with right/bottom-start correction. Options and upstream are all explicit, including
+    None defaults. No dilation, indices, adaptive pooling or other dimensions are silently accepted.
+  basis: [T_AVGPOOL2D.PARAMS, T_AVGPOOL2D.SHAPE, T_F_AVG_POOL2D.DIVISOR, P2.PHYSICAL]
+- id: PA.DIVISOR
+  status: needs_binding
+  statement: >-
+    The task explicitly chooses the window intersected with the explicit padded input domain as the divisor region
+    when count_include_pad=true; false counts only real input positions. A supplied nonzero integer divisor_override,
+    including a negative one, takes precedence. Sum only real inputs; implicit padding contributes zero. This chooses
+    the retained R2 task convention, checked against native PyTorch 2.10 CPU/CUDA, and does not declare all other
+    pooling conventions mathematically wrong. The reference is its exact real idealization, not rounded PyTorch output.
+  basis: [T_AVGPOOL2D.DEF, T_AVGPOOL2D.DIVISOR, PH1_DECISIONS.POOL_A1]
+- id: PA.GRAD
+  status: reviewed
+  statement: >-
+    For fixed geometry and the selected divisor, y_o=sum_i A_oi*x_i with A_oi=1/divisor_o for real inputs in window o
+    and zero otherwise. Differentiation gives grad_i=sum_o A_oi*upstream_o, including every overlapping window.
+    This is the ordinary derivative of a linear map; no tie or subgradient convention is needed. Forward and backward
+    must use the same divisor. All inputs are unchanged; return every forward and input-gradient coordinate.
+  basis: [PA.SCHEMA, PA.DIVISOR]
+- id: P2.SCHEMA
+  status: reviewed
+  statement: >-
+    Select only functional max_pool2d forward values. The ATen max_pool2d task returns one values tensor. The public
+    functional task is selected only with return_indices=false. The with-indices, out, backward, average, adaptive,
+    one-dimensional and three-dimensional schemas are different tasks. Padding is fixed to zero and ceil_mode to
+    false in this reviewed profile.
+  basis: [TS_NATIVE_FUNCTIONS.POOL_SCHEMAS, T_MAXPOOL2D.RETURN_INDICES, T_F_MAX_POOL2D.CEIL_PARAM]
+- id: P2.PHYSICAL
+  status: reviewed
+  statement: >-
+    Inputs are rank-3 (C,H,W) or rank-4 (N,C,H,W) physical finite f16, bf16, f32 or f64 tensors whose listed values
+    are exactly representable in the declared dtype. All dimensions are positive. Special values, signed-zero
+    distinctions, integer or complex data and unrepresentable mathematical literals are outside this profile.
+  basis: [T_MAXPOOL2D.DEF]
+- id: P2.WINDOW
+  status: reviewed
+  statement: >-
+    For output coordinate (h,w), inspect input positions (stride_h*h + dilation_h*m,
+    stride_w*w + dilation_w*n) for 0 <= m < kernel_h and 0 <= n < kernel_w and return their maximum. With zero padding
+    and floor mode, H_out=floor((H-dilation_h*(kernel_h-1)-1)/stride_h)+1 and likewise for W. Stride defaults to the
+    kernel size. Ties do not change the forward value.
+  basis: [T_MAXPOOL2D.DEF, T_MAXPOOL2D.PARAMS, T_MAXPOOL2D.SHAPE]
+clauses:
+- id: PM.C1
+  basis: [PM.SCHEMA, PM.WINDOW]
+  statement: Every selected public parameter, complete physical input and complete same-dtype upstream is validated before evaluation.
+  observes: [out, indices, grad]
+  evidence_kind: definition
+- id: PM.C2
+  basis: [PM.WINDOW, PM.UNIQUE]
+  statement: Every output is the unique maximum of the real coordinates in its padded, dilated window; tied windows are unsupported.
+  observes: [out]
+  evidence_kind: definition
+- id: PM.C3
+  basis: [PM.INDEX]
+  statement: Every returned int64 index is the selected maximum's row-major spatial index h*input_width+w within its plane.
+  observes: [indices]
+  evidence_kind: definition
+- id: PM.C4
+  basis: [PM.GRAD]
+  statement: The complete input VJP sums upstream from every output window selecting each input coordinate.
+  observes: [grad]
+  evidence_kind: derived
+- id: PM.C5
+  basis: [PM.SCHEMA, PM.UNIQUE]
+  statement: Missing outputs, malformed options, wrong upstream shape or dtype, ties and undeclared pooling variants cannot receive a value under this profile.
+  observes: [out, indices, grad]
+  evidence_kind: definition
+- id: PA.C1
+  basis: [PA.SCHEMA]
+  statement: Every average-pooling query validates all physical inputs, options, output shape and upstream before returning a result.
+  observes: [out, grad]
+  evidence_kind: definition
+- id: PA.C2
+  basis: [PA.DIVISOR, PA.GRAD]
+  statement: Complete exact forward and VJP use the same explicitly chosen divisor, with all overlapping contributions accumulated.
+  observes: [out, grad]
+  evidence_kind: definition
+- id: P2.C1
+  basis: [P2.SCHEMA, P2.PHYSICAL]
+  statement: In finite_max2d_values, every call has one rank-3 or rank-4 finite physical floating tensor, positive one- or two-component kernel, stride and dilation, zero padding, floor mode and values-only output.
+  observes: [out]
+  evidence_kind: definition
+- id: P2.C2
+  basis: [T_MAXPOOL2D.DEF, P2.WINDOW]
+  statement: Every output coordinate is the exact maximum of all input coordinates in its dilated two-dimensional window; equal maxima still determine the same value.
+  observes: [out]
+  evidence_kind: definition
+- id: P2.C3
+  basis: [T_MAXPOOL2D.PARAMS, T_MAXPOOL2D.SHAPE, P2.WINDOW]
+  statement: Stride defaults to kernel size and the two output lengths use the documented floor formula; a nonpositive output length is invalid input.
+  observes: [out]
+  evidence_kind: definition
+- id: P2.C4
+  basis: [P2.SCHEMA, P2.PHYSICAL]
+  statement: The finite_max2d_values profile rejects padding, ceil mode, indices, backward, average or adaptive pooling, special values, signed-zero distinctions, rank outside three or four and unselected dtypes.
+  observes: [out]
+  evidence_kind: definition
+examples:
+- id: P2.E1
+  profile: finite_max2d_values
+  clauses: [P2.C1, P2.C2, P2.C3]
+  input: {op: aten.max_pool2d, args: [{t: f32, v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}, [2, 2], [2, 2]]}
+  expected: {outcome: value, fields: {out: [[[[6, 8], [14, 16]]]]}}
+- id: P2.E2
+  profile: finite_max2d_values
+  clauses: [P2.C1, P2.C2]
+  input: {op: aten.max_pool2d, args: [{t: f16, v: [[[1, 9, 2, 3], [4, 5, 8, 0], [7, 6, 1, 2]]]}, [2, 3], [1, 1]]}
+  expected: {outcome: value, fields: {out: [[[9, 9], [8, 8]]]}}
+- id: P2.E3
+  profile: finite_max2d_values
+  clauses: [P2.C2, P2.C3]
+  input: {op: aten.max_pool2d, args: [{t: bf16, v: [[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]}, 2, 1, 0, 2]}
+  expected: {outcome: value, fields: {out: [[[11, 12], [15, 16]]]}}
+- {id: P2.E4, profile: finite_max2d_values, clauses: [P2.C2], input: {op: aten.max_pool2d, args: [{t: f64, v: [[[5, 5], [5, 5]]]}, 2]}, expected: {outcome: value, fields: {out: [[[5]]]}}}
+- id: P2.E5
+  profile: finite_max2d_values
+  clauses: [P2.C3]
+  input: {op: torch.nn.functional.max_pool2d, args: [{t: f32, v: [[[[-4, -3, -2, -1], [-8, -7, -6, -5], [1, 2, 3, 4], [5, 6, 7, 8]]]]}, 2]}
+  expected: {outcome: value, fields: {out: [[[[-3, -1], [6, 8]]]]}}
+- id: P2.E6
+  profile: finite_max2d_values
+  clauses: [P2.C1, P2.C2]
+  input: {op: torch.nn.functional.max_pool2d, args: [{t: bf16, v: [[[-4, -2, -3], [-1, -5, -6], [-7, -8, -9]]]}, [2, 2]], kwargs: {stride: [1, 1], return_indices: false}}
+  expected: {outcome: value, fields: {out: [[[-1, -2], [-1, -5]]]}}
+- {id: P2.E7, profile: finite_max2d_values, clauses: [P2.C3], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 3]}, expected: {outcome: invalid_input}}
+- {id: P2.E8, profile: finite_max2d_values, clauses: [P2.C1], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 0]}, expected: {outcome: invalid_input}}
+- {id: P2.E9, profile: finite_max2d_values, clauses: [P2.C1], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 2, 0]}, expected: {outcome: invalid_input}}
+- {id: P2.E10, profile: finite_max2d_values, clauses: [P2.C4], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 2, 1, 1]}, expected: {outcome: unsupported}}
+- {id: P2.E11, profile: finite_max2d_values, clauses: [P2.C4], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 2], kwargs: {ceil_mode: true}}, expected: {outcome: unsupported}}
+- {id: P2.E12, profile: finite_max2d_values, clauses: [P2.C4], input: {op: torch.nn.functional.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 2], kwargs: {return_indices: true}}, expected: {outcome: unsupported}}
+- {id: P2.E13, profile: finite_max2d_values, clauses: [P2.C4], input: {op: aten.max_pool2d, args: [{t: i64, v: [[[1, 2], [3, 4]]]}, 2]}, expected: {outcome: unsupported}}
+- {id: P2.E14, profile: finite_max2d_values, clauses: [P2.C4], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, inf], [3, 4]]]}, 2]}, expected: {outcome: unsupported}}
+- {id: P2.E15, profile: finite_max2d_values, clauses: [P2.C4], input: {op: aten.max_pool2d, args: [{t: f32, v: [[1, 2], [3, 4]]}, 2]}, expected: {outcome: unsupported}}
+- {id: P2.E16, profile: finite_max2d_values, clauses: [P2.C4], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, '1/3'], [3, 4]]]}, 2]}, expected: {outcome: invalid_input}}
+- {id: P2.E17, profile: finite_max2d_values, clauses: [P2.C1], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, [2]]}, expected: {outcome: invalid_input}}
+- {id: P2.E18, profile: finite_max2d_values, clauses: [P2.C1], input: {op: aten.max_pool2d, args: [{t: f32, v: [[[1, 2], [3, 4]]]}, 2], kwargs: {ceil_mode: 1}}, expected: {outcome: invalid_input}}
+- id: PA.E1
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: &id002
+      t: f32
+      shape:
+      - 1
+      - 1
+      - 4
+      - 4
+      v:
+      - - - - 1
+            - 1
+            - 1
+            - 1
+          - - 1
+            - 1
+            - 1
+            - 1
+          - - 1
+            - 1
+            - 1
+            - 1
+          - - 1
+            - 1
+            - 1
+            - 1
+    upstream: &id003
+      t: f32
+      shape:
+      - 1
+      - 1
+      - 2
+      - 2
+      v:
+      - - - - 0
+            - 0
+          - - 0
+            - 1
+    kernel_size: 3
+    stride: 2
+    padding: 0
+    ceil_mode: true
+    count_include_pad: true
+    divisor_override: null
+  expected:
+    outcome: value
+    fields:
+      out:
+      - - - - 1
+            - 1
+          - - 1
+            - 1
+      grad:
+      - - - - 0
+            - 0
+            - 0
+            - 0
+          - - 0
+            - 0
+            - 0
+            - 0
+          - - 0
+            - 0
+            - 1/4
+            - 1/4
+          - - 0
+            - 0
+            - 1/4
+            - 1/4
+- id: PA.E2
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: &id001
+      t: f32
+      shape:
+      - 1
+      - 1
+      - 2
+      - 2
+      v:
+      - - - - 1
+            - 2
+          - - 3
+            - 4
+    upstream: &id004
+      t: f32
+      shape:
+      - 1
+      - 1
+      - 1
+      - 1
+      v:
+      - - - - 2
+    kernel_size: 2
+    stride: null
+    padding: 0
+    ceil_mode: false
+    count_include_pad: true
+    divisor_override: -2
+  expected:
+    outcome: value
+    fields:
+      out:
+      - - - - -5
+      grad:
+      - - - - -1
+            - -1
+          - - -1
+            - -1
+- id: PA.E3
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: *id001
+    upstream:
+      t: f32
+      shape:
+      - 1
+      - 1
+      - 2
+      - 2
+      v:
+      - - - - 1
+            - 1
+          - - 1
+            - 1
+    kernel_size: 3
+    stride: 1
+    padding: 1
+    ceil_mode: false
+    count_include_pad: false
+    divisor_override: null
+  expected:
+    outcome: value
+    fields:
+      out:
+      - - - - 5/2
+            - 5/2
+          - - 5/2
+            - 5/2
+      grad:
+      - - - - 1
+            - 1
+          - - 1
+            - 1
+- id: PA.E4
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: *id002
+    upstream: *id003
+    kernel_size: 3
+    stride: 2
+    padding: 0
+    ceil_mode: true
+    count_include_pad: true
+    divisor_override: 0
+  expected:
+    outcome: invalid_input
+- id: PA.E5
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: *id002
+    upstream: *id003
+    kernel_size: 3
+    stride: 3.9
+    padding: 0
+    ceil_mode: true
+    count_include_pad: true
+    divisor_override: null
+  expected:
+    outcome: invalid_input
+- id: PA.E6
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: *id002
+    upstream: *id003
+    kernel_size: 3
+    stride: 2
+    padding: 2
+    ceil_mode: true
+    count_include_pad: true
+    divisor_override: null
+  expected:
+    outcome: invalid_input
+- id: PA.E7
+  profile: finite_avg2d_autograd
+  clauses:
+  - PA.C1
+  - PA.C2
+  input:
+    op: avg_pool2d
+    x: *id002
+    upstream: *id004
+    kernel_size: 3
+    stride: 2
+    padding: 0
+    ceil_mode: true
+    count_include_pad: true
+    divisor_override: null
+  expected:
+    outcome: invalid_input
+- id: PM.E1
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C1, PM.C2, PM.C3, PM.C4]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 3, 3], v: [[[[1, 9, 3], [4, 5, 6], [7, 8, 2]]]]}
+    upstream: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    kernel_size: 2
+    stride: 1
+    padding: 0
+    dilation: 1
+    ceil_mode: false
+    return_indices: true
+  expected:
+    outcome: value
+    fields:
+      out: [[[[9, 9], [8, 8]]]]
+      indices: [[[[1, 1], [7, 7]]]]
+      grad: [[[[0, 3, 0], [0, 0, 0], [0, 7, 0]]]]
+- id: PM.E2
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C2, PM.C3, PM.C4]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}
+    upstream: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    kernel_size: 3
+    stride: 2
+    padding: 0
+    dilation: 1
+    ceil_mode: true
+    return_indices: true
+  expected:
+    outcome: value
+    fields:
+      out: [[[[11, 12], [15, 16]]]]
+      indices: [[[[10, 11], [14, 15]]]]
+      grad: [[[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 2], [0, 0, 3, 4]]]]
+- id: PM.E3
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C2, PM.C3, PM.C4]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 3, 3], v: [[[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]]}
+    upstream: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    kernel_size: 2
+    stride: 2
+    padding: 1
+    dilation: 1
+    ceil_mode: false
+    return_indices: true
+  expected:
+    outcome: value
+    fields:
+      out: [[[[1, 3], [7, 9]]]]
+      indices: [[[[0, 2], [6, 8]]]]
+      grad: [[[[1, 0, 2], [0, 0, 0], [3, 0, 4]]]]
+- id: PM.E4
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C2, PM.C3, PM.C4]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 3, 4], v: [[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]}
+    upstream: {t: f32, shape: [1, 1, 2], v: [[[2, 3]]]}
+    kernel_size: 2
+    stride: 1
+    padding: 0
+    dilation: 2
+    ceil_mode: false
+    return_indices: true
+  expected:
+    outcome: value
+    fields:
+      out: [[[11, 12]]]
+      indices: [[[10, 11]]]
+      grad: [[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 2, 3]]]
+- id: PM.E5
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C5]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 2, 2], v: [[[[5, 5], [1, 0]]]]}
+    upstream: {t: f32, shape: [1, 1, 1, 1], v: [[[[1]]]]}
+    kernel_size: 2
+    stride: null
+    padding: 0
+    dilation: 1
+    ceil_mode: false
+    return_indices: true
+  expected: {outcome: unsupported}
+- id: PM.E6
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C1, PM.C5]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 3, 3], v: [[[[1, 9, 3], [4, 5, 6], [7, 8, 2]]]]}
+    upstream: {t: f32, shape: [1, 1, 1, 1], v: [[[[1]]]]}
+    kernel_size: 2
+    stride: 1
+    padding: 0
+    dilation: 1
+    ceil_mode: false
+    return_indices: true
+  expected: {outcome: invalid_input}
+- id: PM.E7
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C5]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    upstream: {t: f32, shape: [1, 1, 1, 1], v: [[[[1]]]]}
+    kernel_size: 2
+    stride: null
+    padding: 0
+    dilation: 1
+    ceil_mode: false
+    return_indices: false
+  expected: {outcome: unsupported}
+- id: PM.E8
+  profile: torch210_unique_max2d_autograd
+  clauses: [PM.C1, PM.C5]
+  input:
+    op: torch.nn.functional.max_pool2d
+    x: {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}
+    upstream: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 1], [1, 1]]]]}
+    kernel_size: 3
+    stride: 2
+    padding: 2
+    dilation: 1
+    ceil_mode: false
+    return_indices: true
+  expected: {outcome: invalid_input}
+signature:
+  inputs: [selected pooling profile and exact parameters, one rank-3 or rank-4 physical finite f16/bf16/f32/f64 tensor, complete same-dtype upstream for either autograd profile]
+  pre_state: [the input tensor and any upstream are unchanged]
+  post_state: [complete newly returned values tensor, complete input gradient for either autograd profile, complete int64 indices for unique-max autograd]
+  observation_unit: every returned coordinate together with dtype and shape
+domain:
+  valid: [positive rank-3 or rank-4 physical finite f16/bf16/f32/f64 tensors, profile-specific kernel stride padding dilation and output choices, complete upstream for autograd, explicit divisor or versioned-index task selection where required]
+  invalid_input: [malformed record, unrepresentable value, nonpositive or malformed kernel stride or dilation, output dimension below one, nonboolean options]
+  unsupported: [tied maxima or return_indices=false under unique-max autograd, max padding ceil indices or backward under the older values-only profile, adaptive pooling, special values, signed-zero distinctions, integer or complex data, other ranks or overloads]
+mutation_requirements:
+- {id: PM.M1, misreading: use floor output shape when ceil mode is selected, witnesses: [PM.E2]}
+- {id: PM.M2, misreading: ignore explicit padding when constructing windows, witnesses: [PM.E3]}
+- {id: PM.M3, misreading: encode indices with column-major spatial order, witnesses: [PM.E3]}
+- {id: PM.M4, misreading: overwrite rather than sum gradients from overlapping windows, witnesses: [PM.E1]}
+- {id: PM.M5, misreading: ignore dilation, witnesses: [PM.E4]}
+- {id: PM.M6, misreading: omit the complete indices result, witnesses: [PM.E1]}
+- {id: PA.M1, misreading: use full kernel divisor on ceil overhang, witnesses: [PA.E1]}
+- {id: PA.M2, misreading: only backward uses the full kernel divisor on ceil overhang, witnesses: [PA.E1]}
+- {id: PA.M3, misreading: ignore explicit divisor_override, witnesses: [PA.E2]}
+- {id: PA.M4, misreading: include padding when count_include_pad is false, witnesses: [PA.E3]}
+- {id: PA.M5, misreading: omit the entire input gradient, witnesses: [PA.E1]}
+- {id: P2.M1, misreading: take the minimum of every window, witnesses: [P2.E1]}
+- {id: P2.M2, misreading: take the first value of every window, witnesses: [P2.E1]}
+- {id: P2.M3, misreading: ignore dilation, witnesses: [P2.E3]}
+- {id: P2.M4, misreading: default stride is one instead of kernel size, witnesses: [P2.E5]}
+- {id: P2.M5, misreading: swap the two kernel dimensions, witnesses: [P2.E2]}
+- {id: P2.M6, misreading: omit the final sample in every window, witnesses: [P2.E1]}
+nonclaims:
+- Max indices and VJP are certified only for the explicitly selected PyTorch 2.10 unique-maximum profile. Tied maxima, adaptive pooling, special values, empty dimensions, layouts, aliasing, device placement and other overloads remain outside scope. Average pooling only uses its explicitly selected divisor convention.
+- Exact selected values do not claim a particular device comparison instruction. The versioned flattened index is a declared public-task convention, not a universal tie-breaking or encoding rule.
+changes:
+- date: '2026-10-19'
+  change: Add a separate PyTorch 2.10 unique-max max_pool2d profile with complete values, int64 flattened spatial indices and input VJP over padding, dilation and ceil-mode geometry.
+  trigger: Real public training calls already observed all three results, but the former admitted profile could judge only forward values; ties remain unsupported rather than assigned an undocumented universal derivative.
+- date: '2026-10-19'
+  change: Add explicitly selected finite two-dimensional average-pooling forward and full input VJP; reuse the exact window evaluator after strict physical-input validation.
+  trigger: Real public training calls exposed missing average-pooling reference capability and inconsistent ceil-tail divisors in generated forward/backward implementations.
+- date: '2026-10-19'
+  change: >-
+    Replace the broad average/max/adaptive forward-and-backward draft with a reviewed forward-values max_pool2d profile
+    on physical finite tensors, zero padding and floor output shape. Preserve the former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The broad draft combined disputed average-pooling tail divisors, undocumented NaN behavior, tied-index choices and
+    backward routing. None of those choices is needed to give an exact ground truth for ordinary max-pooling values.

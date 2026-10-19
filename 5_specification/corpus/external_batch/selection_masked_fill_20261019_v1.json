@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 public out-of-place Tensor.masked_fill with a Python scalar and complete input VJP",
+  "reference": "Cross-check the versioned PyTorch 2.10 public call against ARITH.torch210_masked_fill_scalar_autograd, whose broadcast selection and input-gradient reduction are evaluated independently with exact rational values",
+  "limits": "The batch excludes masked_fill_, out overloads, tensor fill values, special values and gradients for the mask or Python scalar. Every execution failure, missing Triton phase and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261701, 20261702],
+    "cases": [
+      {"id": "masked_fill_attention_mask", "input_shape": [2, 4, 7], "mask_shape": [2, 1, 7], "mask": "alternating", "value": -2},
+      {"id": "masked_fill_input_expands", "input_shape": [1, 7], "mask_shape": [3, 7], "mask": "alternating", "value": "-1/2"},
+      {"id": "masked_fill_both_broadcast", "input_shape": [3, 1, 7], "mask_shape": [1, 5, 1], "mask": "alternating", "value": 3},
+      {"id": "masked_fill_all_false", "input_shape": [2, 3, 9], "mask_shape": [1, 3, 1], "mask": "all_false", "value": -4},
+      {"id": "masked_fill_noncontiguous", "input_shape": [2, 5, 7], "mask_shape": [2, 1, 7], "mask": "alternating", "value": 1, "noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "seeds": [20261703, 20261704],
+    "cases": [
+      {"id": "masked_fill_heldout_channel_mask", "input_shape": [3, 5, 11], "mask_shape": [1, 5, 1], "mask": "alternating", "value": "1/4"},
+      {"id": "masked_fill_heldout_input_expands", "input_shape": [1, 1, 11], "mask_shape": [4, 3, 11], "mask": "alternating", "value": -3},
+      {"id": "masked_fill_heldout_rank4", "input_shape": [2, 3, 4, 9], "mask_shape": [2, 1, 4, 9], "mask": "alternating", "value": "-3/4"},
+      {"id": "masked_fill_heldout_all_true", "input_shape": [4, 6], "mask_shape": [1, 6], "mask": "all_true", "value": 2},
+      {"id": "masked_fill_heldout_noncontiguous", "input_shape": [3, 6, 10], "mask_shape": [3, 1, 10], "mask": "alternating", "value": -1, "noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, cases, shapes, masks, scalar values and seeds were fixed before GPU execution. The acceptance split uses another implementation and unseen ranks, dimensions, values and mask patterns."
+}

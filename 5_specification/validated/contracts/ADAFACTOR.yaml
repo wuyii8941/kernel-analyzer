@@ -1,0 +1,276 @@
+schema_version: '1.2'
+id: ADAFACTOR
+role: ADAFACTOR
+title: Strict-real torch.optim.Adafactor transition for one dense parameter tensor
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 public Adafactor, one dense real parameter tensor and one step with complete optimizer state
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.optim.Adafactor]
+profiles:
+  torch210_vector_real:
+    meaning: >-
+      One public PyTorch 2.10 torch.optim.Adafactor step for one nonempty rank-1 dense real parameter. The complete parameter,
+      optional variance and step state, gradient presence, parameter dtype and public scalar and execution choices are
+      inputs. Sparse or complex values, tensor learning rates, internal functional calls and multi-parameter
+      orchestration are outside this profile.
+    outputs: [theta, var, t]
+    task_choice_required: false
+    basis: [AF.TASK, AF.STATE, AF.ORDER, AF.EPS]
+  torch210_factored_real:
+    meaning: >-
+      The same public PyTorch 2.10 task for one dense real parameter of rank at least 2 with every dimension positive. The variance state is factored
+      over the last two dimensions; leading dimensions are batches and the reduced dimensions remain singleton axes.
+    outputs: [theta, row, col, t]
+    task_choice_required: false
+    basis: [AF.TASK, AF.STATE, AF.ORDER, AF.EPS]
+outputs:
+  theta: {shape: complete parameter shape, guarantee: rigorous_enclosure}
+  row: {shape: 'factored profile: parameter shape with last dimension replaced by 1', guarantee: rigorous_enclosure}
+  col: {shape: 'factored profile: parameter shape with penultimate dimension replaced by 1', guarantee: rigorous_enclosure}
+  var: {shape: 'vector profile: complete parameter shape', guarantee: rigorous_enclosure}
+  t: {shape: scalar nonnegative integer or null while state remains uninitialized, guarantee: exact}
+comparison:
+  input_binding: >-
+    Arithmetic inputs are exactly received rationals. dtype selects the public floating parameter type and resolves
+    eps1=null to torch.finfo(dtype).eps. row=col=var=[] and t=null means PyTorch has not lazily initialized state.
+  complete_output: >-
+    The vector profile requires theta, variance and step. The factored profile requires theta, row_var, col_var and
+    step. The state axes and explicit absence are part of the result.
+  quality: >-
+    Rational operations are exact; noninteger step powers and square roots are outward real enclosures. No tolerance
+    participates in a semantic verdict.
+  test_evidence: >-
+    Independent formulas and direct PyTorch 2.10 comparisons cover vector, matrix and batched-matrix states, cold and
+    warm state, dtype-resolved eps1, maximize, decay, clipping and loop/foreach/default execution.
+  error_handling: >-
+    Malformed calls are invalid_input; legal tasks outside these one-parameter dense real profiles receive no answer.
+    Step powers above the declared exact-reference budget return not_established.
+decisions:
+- id: AF.TASK
+  status: reviewed
+  statement: >-
+    Select one public PyTorch 2.10 torch.optim.Adafactor step. The versioned PyTorch task is distinct from the original
+    paper and Transformers variants. Closures, tensor learning rates, sparse or complex values, internal functional
+    calls and multi-parameter orchestration are separate tasks.
+  basis: [T_ADAFACTOR_OPT.PAGE, T_ADAFACTOR_OPT.LR_NOTE, T_ADAFACTOR_OPT.EPS1_NOTE, TS_ADAFACTOR.PAGE]
+- id: AF.STATE
+  status: reviewed
+  statement: >-
+    State is created only for a parameter with a present gradient. A rank-1 parameter stores step and a full variance.
+    A higher-rank parameter stores step, row_var with its last dimension equal to 1, and col_var with its penultimate
+    dimension equal to 1. A null gradient neither creates nor changes state.
+  basis: [T_ADAFACTOR_OPT.INIT, TS_ADAFACTOR.LAZY_STATE, TS_ADAFACTOR.NONE,
+    TS_ADAFACTOR.STATE, TS_ADAFACTOR.STATE_KEYS]
+- id: AF.ORDER
+  status: reviewed
+  statement: >-
+    The selected order is maximize handling, eps1 resolution, step increment, schedule and pre-decay parameter RMS,
+    decoupled parameter decay, variance-state update, stabilized and clipped update, then parameter subtraction.
+    The final subtraction uses the already decayed parameter, resolving the display ambiguity in the algorithm box.
+  basis: [T_ADAFACTOR_OPT.MAXIMIZE, T_ADAFACTOR_OPT.SCHEDULE, T_ADAFACTOR_OPT.DECAY, TS_ADAFACTOR.STEP]
+- id: AF.EPS
+  status: reviewed
+  statement: >-
+    This PyTorch task uses means for row and column state, divides their product by clamp(mean(row), eps1), and divides
+    the gradient by sqrt(clamp(variance_estimate, eps1^2)). eps1=null means finfo(parameter dtype).eps. These choices
+    come from the versioned implementation and are not generalized to other Adafactor implementations.
+  basis: [T_ADAFACTOR_OPT.MEAN_NOTE, T_ADAFACTOR_OPT.EPS1_NOTE, TS_ADAFACTOR.STATE, TS_ADAFACTOR.STEP]
+clauses:
+- {id: AF.C1, basis: [AF.STATE], statement: 'With a present gradient, absent state first initializes step=0 and the profile-appropriate zero variance state; initialized state must contain every public state tensor with its retained singleton dimensions.', observes: [row, col, var, t], evidence_kind: definition}
+- {id: AF.C2, basis: [T_ADAFACTOR_OPT.MAXIMIZE, T_ADAFACTOR_OPT.SCHEDULE, AF.ORDER], statement: 'Let g=-gradient when maximize and g=gradient otherwise; after incrementing the step, c=t_new^beta2_decay, rho=min(lr,1/sqrt(t_new)), and alpha=max(eps2,RMS(theta_old))*rho.', observes: [theta, row, col, var, t], evidence_kind: definition}
+- {id: AF.C3, basis: [T_ADAFACTOR_OPT.FACTORED, AF.EPS], statement: 'For rank at least 2, row_new=lerp(row_old,mean_last(g^2),c), col_new=lerp(col_old,mean_penultimate(g^2),c), and V=(row_new @ col_new)/max(mean_penultimate(row_new),eps1), independently for every leading batch.', observes: [row, col, theta], evidence_kind: definition}
+- {id: AF.C4, basis: [T_ADAFACTOR_OPT.VECTOR, TS_ADAFACTOR.STEP], statement: 'For rank 1, var_new=lerp(var_old,g^2,c) and V=var_new.', observes: [var, theta], evidence_kind: definition}
+- {id: AF.C5, basis: [T_ADAFACTOR_OPT.UPDATE, AF.EPS], statement: 'u=g/sqrt(max(V,eps1^2)) and u_clipped=u/max(1,RMS(u)/d).', observes: [theta], evidence_kind: definition}
+- {id: AF.C6, basis: [T_ADAFACTOR_OPT.DECAY, AF.ORDER], statement: 'theta_new=theta_old*(1-lr*weight_decay)-alpha*u_clipped, where alpha used RMS(theta_old) before decay.', observes: [theta], evidence_kind: definition}
+- {id: AF.C7, basis: [TS_ADAFACTOR.NONE, AF.STATE], statement: 'gradient=null leaves the parameter and all initialized or absent state unchanged; a zero gradient performs a full step.', observes: [theta, row, col, var, t], evidence_kind: definition}
+- {id: AF.C8, basis: [TS_ADAFACTOR.CHECKS, TS_ADAFACTOR.STRATEGIES, AF.TASK], statement: 'lr, eps values and weight_decay are nonnegative, beta2_decay is nonpositive, d is at least 1, and foreach false/true/null selects an implementation of the same transition.', observes: [theta, row, col, var, t], evidence_kind: definition}
+examples:
+- id: AF.E1
+  profile: torch210_vector_real
+  clauses: [AF.C1, AF.C2, AF.C4, AF.C5, AF.C6]
+  input: &vector_cold
+    state: {theta: [3, 4], row: [], col: [], var: [], t: null}
+    gradient: [1, -1]
+    dtype: f32
+    lr: 1/100
+    beta2_decay: -4/5
+    eps1: 0
+    eps2: 1/1000
+    d: 1
+    weight_decay: 0
+    maximize: false
+  expected: {outcome: value, fields: {theta: [3-sqrt(2)/40, 4+sqrt(2)/40], var: [1, 1], t: 1}}
+- id: AF.E2
+  profile: torch210_factored_real
+  clauses: [AF.C1, AF.C2, AF.C3, AF.C5, AF.C6]
+  input: &matrix_cold
+    state: {theta: [[1, 1], [1, 1]], row: [], col: [], var: [], t: null}
+    gradient: [[1, 2], [3, 4]]
+    dtype: f32
+    lr: 1/10
+    beta2_decay: -4/5
+    eps1: 0
+    eps2: 1/1000
+    d: 1
+    weight_decay: 0
+    maximize: false
+  expected: {outcome: value, fields: {theta: [[1-sqrt(15)/50, 1-sqrt(30)/50], [1-3*sqrt(3)/50, 1-sqrt(6)/25]], row: [[5/2], [25/2]], col: [[5, 10]], t: 1}}
+- id: AF.E3
+  profile: torch210_vector_real
+  clauses: [AF.C2, AF.C4, AF.C6]
+  input: &warm_vector
+    state: {theta: [2], row: [], col: [], var: [4], t: 3}
+    gradient: [1]
+    dtype: f32
+    lr: 1/4
+    beta2_decay: -1
+    eps1: 0
+    eps2: 1/1000
+    d: 1
+    weight_decay: 1/2
+    maximize: false
+  expected: {outcome: value, fields: {theta: [7/4-sqrt(13)/13], var: [13/4], t: 4}}
+- id: AF.E4
+  profile: torch210_vector_real
+  clauses: [AF.C5]
+  input: {<<: *warm_vector, state: {theta: [2], row: [], col: [], var: [0], t: 3}, weight_decay: 0}
+  expected: {outcome: value, fields: {theta: [3/2], var: [1/4], t: 4}}
+- id: AF.E5
+  profile: torch210_vector_real
+  clauses: [AF.C5, AF.C8]
+  input: {state: {theta: [1], row: [], col: [], var: [], t: null}, gradient: [1/1000], dtype: f32,
+    lr: 1/100, beta2_decay: -4/5, eps1: 1/100, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [999/1000], var: [1/1000000], t: 1}}
+- id: AF.E6
+  profile: torch210_vector_real
+  clauses: [AF.C2]
+  input: {state: {theta: [1], row: [], col: [], var: [], t: null}, gradient: [2], dtype: f32,
+    lr: 1/10, beta2_decay: -4/5, eps1: 0, eps2: 0, d: 1, weight_decay: 0, maximize: true}
+  expected: {outcome: value, fields: {theta: [11/10], var: [4], t: 1}}
+- id: AF.E7
+  profile: torch210_vector_real
+  clauses: [AF.C1, AF.C7]
+  input: {<<: *vector_cold, state: {theta: [1], row: [], col: [], var: [], t: null}, gradient: null, eps1: 1/4}
+  expected: {outcome: value, fields: {theta: [1], var: [], t: null}}
+- id: AF.E8
+  profile: torch210_factored_real
+  clauses: [AF.C7]
+  input: {<<: *matrix_cold, state: {theta: [[1, 2], [3, 4]], row: [[1], [2]], col: [[3, 4]], var: [], t: 3}, gradient: null}
+  expected: {outcome: value, fields: {theta: [[1, 2], [3, 4]], row: [[1], [2]], col: [[3, 4]], t: 3}}
+- id: AF.E9
+  profile: torch210_vector_real
+  clauses: [AF.C6, AF.C7]
+  input: {<<: *warm_vector, gradient: [0]}
+  expected: {outcome: value, fields: {theta: [7/4], var: [3], t: 4}}
+- id: AF.E10
+  profile: torch210_factored_real
+  clauses: [AF.C3]
+  input: {state: {theta: [[[1, 1]], [[1, 1]]], row: [], col: [], var: [], t: null},
+    gradient: [[[1, 2]], [[3, 4]]], dtype: f32, lr: 1/10, beta2_decay: -4/5, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [[['9/10', '9/10']], [['9/10', '9/10']]],
+    row: [[[5/2]], [[25/2]]], col: [[[1, 4]], [[9, 16]]], t: 1}}
+- id: AF.E11
+  profile: torch210_factored_real
+  clauses: [AF.C3, AF.C5]
+  input: {state: {theta: [[1, 1], [1, 1]], row: [], col: [], var: [], t: null},
+    gradient: [[1/1000, 0], [0, 0]], dtype: f32, lr: 1/10, beta2_decay: -4/5,
+    eps1: 1/1000, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [[9/10, 1], [1, 1]],
+    row: [[1/2000000], [0]], col: [[1/2000000, 0]], t: 1}}
+- id: AF.E12
+  profile: torch210_vector_real
+  clauses: [AF.C2, AF.C4]
+  input: {state: {theta: [1], row: [], col: [], var: [1], t: 1}, gradient: [2], dtype: f32,
+    lr: 1/100, beta2_decay: -4/5, eps1: 0, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [99/100], var: [1+3*2**(-4/5)], t: 2}}
+- id: AF.E13
+  profile: torch210_vector_real
+  clauses: [AF.C5, AF.C8]
+  input: {state: {theta: [1], row: [], col: [], var: [], t: null}, gradient: [1/2048], dtype: f16,
+    lr: 1/10, beta2_decay: -1, eps1: null, eps2: 0, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [19/20], var: [1/4194304], t: 1}}
+- id: AF.E14
+  profile: torch210_factored_real
+  clauses: [AF.C8]
+  input: {<<: *matrix_cold, foreach: true}
+  expected: {outcome: value, fields: {theta: [[1-sqrt(15)/50, 1-sqrt(30)/50], [1-3*sqrt(3)/50, 1-sqrt(6)/25]], row: [[5/2], [25/2]], col: [[5, 10]], t: 1}}
+- id: AF.E15
+  profile: torch210_vector_real
+  clauses: [AF.C5]
+  input: {state: {theta: [1], row: [], col: [], var: [], t: null}, gradient: [0], dtype: f32,
+    lr: 1/10, beta2_decay: -1, eps1: 0, eps2: 0, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: domain_undefined}
+- id: AF.E16
+  profile: torch210_factored_real
+  clauses: [AF.C1]
+  input: {<<: *matrix_cold, state: {theta: [[1, 1], [1, 1]], row: [0, 0], col: [0, 0], var: [], t: 1}}
+  expected: {outcome: invalid_input}
+- id: AF.E17
+  profile: torch210_vector_real
+  clauses: [AF.C1]
+  input: {<<: *warm_vector, state: {theta: [2], row: [], col: [], var: [-1], t: 3}}
+  expected: {outcome: invalid_input}
+- id: AF.E18
+  profile: torch210_vector_real
+  clauses: [AF.C8]
+  input: {<<: *warm_vector, d: 1/2}
+  expected: {outcome: invalid_input}
+- id: AF.E19
+  profile: torch210_vector_real
+  clauses: [AF.C8]
+  input: {<<: *warm_vector, capturable: true}
+  expected: {outcome: unsupported}
+- id: AF.E20
+  profile: torch210_vector_real
+  clauses: [AF.C2]
+  input: {<<: *warm_vector, state: {theta: [2], row: [], col: [], var: [4], t: 10000}}
+  expected: {outcome: not_established}
+- id: AF.E21
+  profile: torch210_factored_real
+  clauses: [AF.C1, AF.C7]
+  input: {<<: *matrix_cold, gradient: null}
+  expected: {outcome: value, fields: {theta: [[1, 1], [1, 1]], row: [], col: [], t: null}}
+signature:
+  inputs: [complete gradient tensor or null, dtype, lr, beta2_decay, eps1 or null, eps2, d, weight_decay,
+    maximize, optional foreach]
+  pre_state: [complete theta, 'profile-appropriate complete variance state and t, or row=col=var=[] and t=null']
+  post_state: [complete theta and profile-appropriate variance state and t including explicit absence]
+  observation_unit: one dense real parameter tensor and all of its optimizer state across one public Adafactor step
+domain:
+  valid: [rank 1 vector profile or rank at least 2 factored profile with every dimension positive, f16/bf16/f32/f64 dtype,
+    finite exact rational values, initialized complete state or explicit absent state, nonnegative variance state,
+    'lr, resolved eps1, eps2 and weight_decay >= 0', beta2_decay <= 0, d >= 1,
+    Boolean maximize, foreach false/true/null]
+  domain_undefined: [zero stabilized variance with eps1=0]
+  invalid_input: [missing fields, incomplete or extra state fields, state shape mismatch, negative variance state,
+    nonfinite values, non-Boolean flags, invalid public scalar hyperparameters]
+  unsupported: [undeclared top-level task fields, sparse or complex gradients, tensor learning rate, closure and loss result,
+    internal functional call, multiple parameters or parameter groups, device rounding and layouts]
+mutation_requirements:
+- {id: AF.M1, misreading: use sums rather than means for stored row and column state, witnesses: [AF.E2]}
+- {id: AF.M2, misreading: compute parameter scaling from the decayed parameter, witnesses: [AF.E3]}
+- {id: AF.M3, misreading: discard decoupled weight decay at final subtraction, witnesses: [AF.E3, AF.E9]}
+- {id: AF.M4, misreading: add eps1 to squared gradients as in another Adafactor task, witnesses: [AF.E5]}
+- {id: AF.M5, misreading: omit update clipping, witnesses: [AF.E4]}
+- {id: AF.M6, misreading: cap the relative step at the paper constant 0.01 instead of public lr, witnesses: [AF.E3]}
+- {id: AF.M7, misreading: use the old step in the second-moment schedule, witnesses: [AF.E3]}
+- {id: AF.M8, misreading: ignore maximize, witnesses: [AF.E6]}
+- {id: AF.M9, misreading: treat a null gradient as a zero gradient and initialize state, witnesses: [AF.E7, AF.E21]}
+- {id: AF.M10, misreading: flatten leading dimensions into the factored row dimension, witnesses: [AF.E10]}
+- {id: AF.M11, misreading: divide factored variance by the sum of row state rather than its mean, witnesses: [AF.E2]}
+- {id: AF.M12, misreading: squeeze retained singleton dimensions out of public state, witnesses: [AF.E2]}
+nonclaims:
+- This contract specifies the versioned public PyTorch task. It does not claim that the original paper or Transformers Adafactor uses the same learning-rate or epsilon rules.
+- Device rounding and reduction order are measured separately as K-f and are not built into the strict-real target.
+- Exact step-power evaluation above step 10000 is refused as not_established; that resource limit is not a mathematical claim about Adafactor.
+- Rejected mutants witness listed mistakes only and do not prove completeness.
+changes: []

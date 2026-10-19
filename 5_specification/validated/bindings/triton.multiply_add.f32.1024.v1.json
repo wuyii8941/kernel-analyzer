@@ -1,0 +1,37 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.multiply_add.f32.1024.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 element-wise multiply-add",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with four Triton programs covering three contiguous 1024-element inputs and one complete output",
+    "measure_call": "../calls/triton_multiply_add.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "multiply_add",
+      "contract": "ARITH",
+      "profile": "real",
+      "task_statement": "For every coordinate, compute the exact real value x*y+z from three received finite float32 tensors and return the complete float32 tensor; floating execution and storage rounding are measured separately.",
+      "input_map": [
+        {"target": "/op", "literal": "prims.fma", "basis": "selected three-input multiply-add task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/y/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/tensor_arguments/z/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "y", "effect": "unchanged"},
+    {"argument": "z", "effect": "unchanged"}
+  ]
+}

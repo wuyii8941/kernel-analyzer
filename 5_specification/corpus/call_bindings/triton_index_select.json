@@ -1,0 +1,36 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.index_select.f32.128x32.64.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 row index-select",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with eight Triton programs selecting 64 rows from one contiguous 128x32 input into the complete contiguous 64x32 output",
+    "measure_call": "../calls/triton_index_select.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "row_index_select",
+      "contract": "INDEX",
+      "profile": "real",
+      "task_statement": "Select the received int64 row list, including repeats, from dimension zero of the received physical finite contiguous float32 matrix and return every logical value in the complete result.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.index_select", "basis": "selected default functional index_select task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": 0, "basis": "the public task selects rows along dimension zero"},
+        {"target": "/args/2", "source": "/tensor_arguments/index/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "index", "effect": "unchanged"}
+  ]
+}

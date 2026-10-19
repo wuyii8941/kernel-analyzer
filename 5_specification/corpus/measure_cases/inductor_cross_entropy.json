@@ -1,0 +1,20 @@
+{
+  "call": "../calls/inductor_cross_entropy.py:call",
+  "inputs": {
+    "logits": {"sampler": {"normal": [0, 1]}, "shape": [8, 23], "dtype": "float32"},
+    "target": {"sampler": {"randint": [0, 23]}, "shape": [8], "dtype": "int64"},
+    "weights": {"const": null},
+    "eps": {"const": 0},
+    "ignore_index": {"const": -100},
+    "reduction": {"const": "mean"},
+    "upstream": {"const": 1}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["loss", "gradient"],
+    "binding_plan": "../call_bindings/inductor_cross_entropy.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "budget": {"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 24}
+}

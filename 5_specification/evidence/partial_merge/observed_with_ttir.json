@@ -1,0 +1,2004 @@
+{
+  "scope": "Selected merge invocation only; no full producer binding or semantic certification",
+  "source_functions": {
+    "cdiv_fn": {
+      "source": "VLLM_HELPERS.py.gz",
+      "lines": [
+        21,
+        24
+      ]
+    },
+    "find_seq_idx": {
+      "source": "VLLM_HELPERS.py.gz",
+      "lines": [
+        82,
+        110
+      ]
+    },
+    "reduce_segments": {
+      "source": "VLLM_UA.py.gz",
+      "lines": [
+        689,
+        776
+      ]
+    }
+  },
+  "dependency_setup": "import torch, triton\nimport triton.language as tl\nfloat8_info = torch.finfo(torch.float8_e4m3fn)\n",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "device": "NVIDIA RTX A6000",
+  "capability": [
+    8,
+    6
+  ],
+  "profile": "scaled_numerator_out",
+  "semantic_verdict": "not_established",
+  "cases": [
+    {
+      "seq_lens": [
+        5,
+        0,
+        3
+      ],
+      "query_offsets": [
+        0,
+        2,
+        2,
+        3
+      ],
+      "grid": [
+        3,
+        2
+      ],
+      "segments": 4,
+      "tile_size": 2,
+      "value_width": 4,
+      "output_strides": [
+        12,
+        4,
+        1
+      ],
+      "output_storage_offset": 1,
+      "inactive_input_slots": "NaN",
+      "received_inputs": {
+        "maxima": [
+          0,
+          0,
+          0,
+          2143289344,
+          -1082130432,
+          -1082130432,
+          -1082130432,
+          2143289344,
+          1065353216,
+          1065353216,
+          1065353216,
+          2143289344,
+          0,
+          0,
+          0,
+          2143289344,
+          1073741824,
+          1073741824,
+          2143289344,
+          2143289344,
+          1065353216,
+          1065353216,
+          2143289344,
+          2143289344
+        ],
+        "masses": [
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          2143289344,
+          2143289344,
+          1065353216,
+          1065353216,
+          2143289344,
+          2143289344
+        ],
+        "numerators": [
+          -1063256064,
+          -1065353216,
+          -1069547520,
+          -1073741824,
+          -1069547520,
+          -1073741824,
+          -1082130432,
+          0,
+          -1073741824,
+          0,
+          1073741824,
+          1082130432,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1077936128,
+          1082130432,
+          1084227584,
+          1086324736,
+          1084227584,
+          1086324736,
+          1088421888,
+          1090519040,
+          1096810496,
+          1098907648,
+          1099956224,
+          1101004800,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1093664768,
+          1094713344,
+          1095761920,
+          1096810496,
+          1095761920,
+          1096810496,
+          1097859072,
+          1098907648,
+          1106247680,
+          1107296256,
+          1107820544,
+          1108344832,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1100480512,
+          1101004800,
+          1101529088,
+          1102053376,
+          1101529088,
+          1102053376,
+          1102577664,
+          1103101952,
+          1110966272,
+          1111490560,
+          1112014848,
+          1112539136,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1104674816,
+          1105199104,
+          1105723392,
+          1106247680,
+          1105723392,
+          1106247680,
+          1106771968,
+          1107296256,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1108082688,
+          1108344832,
+          1108606976,
+          1108869120,
+          1108606976,
+          1108869120,
+          1109131264,
+          1109393408,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344
+        ],
+        "seq_lens": [
+          5,
+          0,
+          3
+        ],
+        "query_offsets": [
+          0,
+          2,
+          2,
+          3
+        ]
+      },
+      "input_encoding": "float32 buffers as signed int32 bits; index buffers as int32 values",
+      "compiled": {
+        "ttir": "#loc = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":40:0)\n#loc5 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":67:65)\n#loc6 = loc(unknown)\n#loc18 = loc(\"left\")\n#loc19 = loc(\"right\")\n#loc45 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":91:25)\n#loc53 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":96:28)\n#loc67 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":112:21)\n#loc78 = loc(\"output_ptr\"(#loc))\n#loc79 = loc(\"segm_output_ptr\"(#loc))\n#loc80 = loc(\"segm_max_ptr\"(#loc))\n#loc81 = loc(\"segm_expsum_ptr\"(#loc))\n#loc82 = loc(\"seq_lens_ptr\"(#loc))\n#loc83 = loc(\"num_seqs\"(#loc))\n#loc84 = loc(\"out_scale_inv\"(#loc))\n#loc85 = loc(\"output_stride_0\"(#loc))\n#loc86 = loc(\"output_stride_1\"(#loc))\n#loc87 = loc(\"block_table_stride\"(#loc))\n#loc88 = loc(\"query_start_len_ptr\"(#loc))\n#loc92 = loc(\"seq_idx\"(#loc5))\n#loc103 = loc(\"left\"(#loc18))\n#loc104 = loc(\"right\"(#loc19))\n#loc123 = loc(\"overall_max\"(#loc45))\n#loc129 = loc(\"overall_expsum\"(#loc53))\n#loc142 = loc(\"acc_sum\"(#loc67))\n#loc154 = loc(callsite(#loc103 at #loc92))\n#loc155 = loc(callsite(#loc104 at #loc92))\n#loc170 = loc(callsite(#loc6 at #loc123))\n#loc172 = loc(callsite(#loc6 at #loc129))\n#loc174 = loc(callsite(#loc6 at #loc142))\nmodule {\n  tt.func public @reduce_segments(%output_ptr: !tt.ptr<f32> loc(\"output_ptr\"(#loc)), %segm_output_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32} loc(\"segm_output_ptr\"(#loc)), %segm_max_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32} loc(\"segm_max_ptr\"(#loc)), %segm_expsum_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32} loc(\"segm_expsum_ptr\"(#loc)), %seq_lens_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32} loc(\"seq_lens_ptr\"(#loc)), %num_seqs: i32 loc(\"num_seqs\"(#loc)), %out_scale_inv: f32 loc(\"out_scale_inv\"(#loc)), %output_stride_0: i64 loc(\"output_stride_0\"(#loc)), %output_stride_1: i64 loc(\"output_stride_1\"(#loc)), %block_table_stride: i64 {tt.divisibility = 16 : i32} loc(\"block_table_stride\"(#loc)), %query_start_len_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32} loc(\"query_start_len_ptr\"(#loc))) attributes {noinline = false} {\n    %tiles_per_segment = arith.constant 7 : i32 loc(#loc175)\n    %left = arith.constant 0 : i32 loc(#loc176)\n    %c1_i32 = arith.constant 1 : i32 loc(#loc6)\n    %tiles_per_segment_0 = arith.constant 8 : i32 loc(#loc90)\n    %segm_output = arith.constant dense<0.000000e+00> : tensor<4x4xf32> loc(#loc93)\n    %segm_output_offset = arith.constant dense<4> : tensor<4x1xi32> loc(#loc94)\n    %c16_i32 = arith.constant 16 : i32 loc(#loc6)\n    %segm_output_offset_1 = arith.constant 32 : i64 loc(#loc95)\n    %cst = arith.constant dense<0.000000e+00> : tensor<4xf32> loc(#loc6)\n    %cst_2 = arith.constant 0.000000e+00 : f32 loc(#loc6)\n    %segm_max = arith.constant dense<0xFF800000> : tensor<4xf32> loc(#loc96)\n    %segm_offset = arith.constant 8 : i64 loc(#loc97)\n    %cst_3 = arith.constant dense<0> : tensor<4xi32> loc(#loc6)\n    %dim_mask = arith.constant dense<1> : tensor<4xi32> loc(#loc98)\n    %dim_mask_4 = arith.constant dense<4> : tensor<4xi32> loc(#loc99)\n    %c2_i32 = arith.constant 2 : i32 loc(#loc6)\n    %c4_i32 = arith.constant 4 : i32 loc(#loc6)\n    %query_token_idx = tt.get_program_id x : i32 loc(#loc100)\n    %query_head_idx = tt.get_program_id y : i32 loc(#loc101)\n    %right:2 = scf.while (%left_69 = %left, %right_70 = %num_seqs) : (i32, i32) -> (i32, i32) {\n      %seq_idx_71 = arith.cmpi slt, %left_69, %right_70 : i32 loc(#loc153)\n      scf.condition(%seq_idx_71) %left_69, %right_70 : i32, i32 loc(#loc153)\n    } do {\n    ^bb0(%left_69: i32 loc(callsite(#loc103 at #loc92)), %right_70: i32 loc(callsite(#loc104 at #loc92))):\n      %mid = arith.addi %left_69, %right_70 : i32 loc(#loc156)\n      %right_71 = arith.divsi %mid, %c2_i32 : i32 loc(#loc178)\n      %val = tt.addptr %query_start_len_ptr, %right_71 : !tt.ptr<i32>, i32 loc(#loc158)\n      %val_72 = tt.load %val : !tt.ptr<i32> loc(#loc159)\n      %seq_idx_73 = arith.cmpi sle, %val_72, %query_token_idx : i32 loc(#loc160)\n      %seq_idx_74 = arith.select %seq_idx_73, %right_70, %right_71 : i32 loc(#loc161)\n      %seq_idx_75 = scf.if %seq_idx_73 -> (i32) {\n        %left_76 = arith.addi %right_71, %c1_i32 : i32 loc(#loc179)\n        scf.yield %left_76 : i32 loc(#loc179)\n      } else {\n        scf.yield %left_69 : i32 loc(#loc161)\n      } loc(#loc161)\n      scf.yield %seq_idx_75, %seq_idx_74 : i32, i32 loc(#loc163)\n    } loc(#loc177)\n    %seq_idx = arith.subi %right#0, %c1_i32 : i32 loc(#loc164)\n    %seq_len = tt.addptr %seq_lens_ptr, %seq_idx : !tt.ptr<i32>, i32 loc(#loc110)\n    %seq_len_5 = tt.load %seq_len : !tt.ptr<i32> loc(#loc111)\n    %tiles_per_segment_6 = arith.addi %seq_len_5, %tiles_per_segment : i32 loc(#loc175)\n    %tiles_per_segment_7 = arith.divsi %tiles_per_segment_6, %tiles_per_segment_0 : i32 loc(#loc165)\n    %act_num_segments = arith.muli %tiles_per_segment_7, %c2_i32 : i32 loc(#loc112)\n    %act_num_segments_8 = arith.addi %seq_len_5, %act_num_segments : i32 loc(#loc166)\n    %act_num_segments_9 = arith.subi %act_num_segments_8, %c1_i32 : i32 loc(#loc167)\n    %act_num_segments_10 = arith.divsi %act_num_segments_9, %act_num_segments : i32 loc(#loc168)\n    %segm_mask = tt.make_range {end = 4 : i32, start = 0 : i32} : tensor<4xi32> loc(#loc114)\n    %segm_mask_11 = tt.splat %act_num_segments_10 : i32 -> tensor<4xi32> loc(#loc115)\n    %segm_mask_12 = arith.cmpi slt, %segm_mask, %segm_mask_11 : tensor<4xi32> loc(#loc116)\n    %dim_mask_13 = arith.cmpi slt, %segm_mask, %dim_mask_4 : tensor<4xi32> loc(#loc99)\n    %dim_mask_14 = arith.select %dim_mask_13, %dim_mask, %cst_3 : tensor<4xi1>, tensor<4xi32> loc(#loc98)\n    %dim_mask_15 = arith.cmpi ne, %dim_mask_14, %cst_3 : tensor<4xi32> loc(#loc117)\n    %segm_offset_16 = arith.extsi %query_token_idx : i32 to i64 loc(#loc118)\n    %segm_offset_17 = arith.muli %segm_offset_16, %segm_offset : i64 loc(#loc97)\n    %segm_offset_18 = arith.muli %query_head_idx, %c4_i32 : i32 loc(#loc119)\n    %segm_offset_19 = arith.extsi %segm_offset_18 : i32 to i64 loc(#loc120)\n    %segm_offset_20 = arith.addi %segm_offset_17, %segm_offset_19 : i64 loc(#loc120)\n    %segm_offset_21 = arith.extsi %segm_mask : tensor<4xi32> to tensor<4xi64> loc(#loc121)\n    %segm_offset_22 = tt.splat %segm_offset_20 : i64 -> tensor<4xi64> loc(#loc121)\n    %segm_offset_23 = arith.addi %segm_offset_22, %segm_offset_21 : tensor<4xi64> loc(#loc121)\n    %segm_max_24 = tt.splat %segm_max_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>> loc(#loc122)\n    %segm_max_25 = tt.addptr %segm_max_24, %segm_offset_23 : tensor<4x!tt.ptr<f32>>, tensor<4xi64> loc(#loc122)\n    %segm_max_26 = tt.load %segm_max_25, %segm_mask_12, %segm_max : tensor<4x!tt.ptr<f32>> loc(#loc96)\n    %overall_max = tt.reshape %segm_max_26 allow_reorder : tensor<4xf32> -> tensor<4xf32> loc(#loc169)\n    %overall_max_27 = \"tt.reduce\"(%overall_max) <{axis = 0 : i32}> ({\n    ^bb0(%overall_max_69: f32 loc(callsite(#loc6 at #loc123)), %overall_max_70: f32 loc(callsite(#loc6 at #loc123))):\n      %overall_max_71 = arith.maxnumf %overall_max_69, %overall_max_70 : f32 loc(#loc180)\n      tt.reduce.return %overall_max_71 : f32 loc(#loc169)\n    }) : (tensor<4xf32>) -> f32 loc(#loc169)\n    %segm_expsum = tt.splat %segm_expsum_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>> loc(#loc124)\n    %segm_expsum_28 = tt.addptr %segm_expsum, %segm_offset_23 : tensor<4x!tt.ptr<f32>>, tensor<4xi64> loc(#loc124)\n    %segm_expsum_29 = tt.load %segm_expsum_28, %segm_mask_12, %cst : tensor<4x!tt.ptr<f32>> loc(#loc125)\n    %segm_expsum_30 = tt.splat %overall_max_27 : f32 -> tensor<4xf32> loc(#loc126)\n    %segm_expsum_31 = arith.subf %segm_max_26, %segm_expsum_30 : tensor<4xf32> loc(#loc126)\n    %segm_expsum_32 = math.exp %segm_expsum_31 : tensor<4xf32> loc(#loc127)\n    %segm_expsum_33 = arith.mulf %segm_expsum_29, %segm_expsum_32 : tensor<4xf32> loc(#loc128)\n    %overall_expsum = tt.reshape %segm_expsum_33 allow_reorder : tensor<4xf32> -> tensor<4xf32> loc(#loc171)\n    %overall_expsum_34 = \"tt.reduce\"(%overall_expsum) <{axis = 0 : i32}> ({\n    ^bb0(%overall_expsum_69: f32 loc(callsite(#loc6 at #loc129)), %overall_expsum_70: f32 loc(callsite(#loc6 at #loc129))):\n      %overall_expsum_71 = arith.addf %overall_expsum_69, %overall_expsum_70 : f32 loc(#loc181)\n      tt.reduce.return %overall_expsum_71 : f32 loc(#loc171)\n    }) : (tensor<4xf32>) -> f32 loc(#loc171)\n    %segm_output_offset_35 = arith.muli %segm_offset_16, %segm_output_offset_1 : i64 loc(#loc95)\n    %segm_output_offset_36 = arith.muli %query_head_idx, %c16_i32 : i32 loc(#loc130)\n    %segm_output_offset_37 = arith.extsi %segm_output_offset_36 : i32 to i64 loc(#loc131)\n    %segm_output_offset_38 = arith.addi %segm_output_offset_35, %segm_output_offset_37 : i64 loc(#loc131)\n    %segm_output_offset_39 = tt.expand_dims %segm_mask {axis = 1 : i32} : tensor<4xi32> -> tensor<4x1xi32> loc(#loc132)\n    %segm_output_offset_40 = arith.muli %segm_output_offset_39, %segm_output_offset : tensor<4x1xi32> loc(#loc94)\n    %segm_output_offset_41 = arith.extsi %segm_output_offset_40 : tensor<4x1xi32> to tensor<4x1xi64> loc(#loc133)\n    %segm_output_offset_42 = tt.splat %segm_output_offset_38 : i64 -> tensor<4x1xi64> loc(#loc133)\n    %segm_output_offset_43 = arith.addi %segm_output_offset_42, %segm_output_offset_41 : tensor<4x1xi64> loc(#loc133)\n    %segm_output_offset_44 = tt.expand_dims %segm_mask {axis = 0 : i32} : tensor<4xi32> -> tensor<1x4xi32> loc(#loc134)\n    %segm_output_offset_45 = arith.extsi %segm_output_offset_44 : tensor<1x4xi32> to tensor<1x4xi64> loc(#loc135)\n    %segm_output_offset_46 = tt.broadcast %segm_output_offset_43 : tensor<4x1xi64> -> tensor<4x4xi64> loc(#loc135)\n    %segm_output_offset_47 = tt.broadcast %segm_output_offset_45 : tensor<1x4xi64> -> tensor<4x4xi64> loc(#loc135)\n    %segm_output_offset_48 = arith.addi %segm_output_offset_46, %segm_output_offset_47 : tensor<4x4xi64> loc(#loc135)\n    %segm_output_49 = tt.expand_dims %segm_mask_12 {axis = 1 : i32} : tensor<4xi1> -> tensor<4x1xi1> loc(#loc136)\n    %segm_output_50 = tt.expand_dims %dim_mask_15 {axis = 0 : i32} : tensor<4xi1> -> tensor<1x4xi1> loc(#loc137)\n    %segm_output_51 = tt.broadcast %segm_output_49 : tensor<4x1xi1> -> tensor<4x4xi1> loc(#loc138)\n    %segm_output_52 = tt.broadcast %segm_output_50 : tensor<1x4xi1> -> tensor<4x4xi1> loc(#loc138)\n    %segm_output_53 = arith.andi %segm_output_51, %segm_output_52 : tensor<4x4xi1> loc(#loc138)\n    %segm_output_54 = tt.splat %segm_output_ptr : !tt.ptr<f32> -> tensor<4x4x!tt.ptr<f32>> loc(#loc139)\n    %segm_output_55 = tt.addptr %segm_output_54, %segm_output_offset_48 : tensor<4x4x!tt.ptr<f32>>, tensor<4x4xi64> loc(#loc139)\n    %segm_output_56 = tt.load %segm_output_55, %segm_output_53, %segm_output : tensor<4x4x!tt.ptr<f32>> loc(#loc93)\n    %segm_output_57 = tt.expand_dims %segm_expsum_32 {axis = 1 : i32} : tensor<4xf32> -> tensor<4x1xf32> loc(#loc140)\n    %segm_output_58 = tt.broadcast %segm_output_57 : tensor<4x1xf32> -> tensor<4x4xf32> loc(#loc141)\n    %segm_output_59 = arith.mulf %segm_output_56, %segm_output_58 : tensor<4x4xf32> loc(#loc141)\n    %acc_sum = \"tt.reduce\"(%segm_output_59) <{axis = 0 : i32}> ({\n    ^bb0(%acc_sum_69: f32 loc(callsite(#loc6 at #loc142)), %acc_sum_70: f32 loc(callsite(#loc6 at #loc142))):\n      %acc_sum_71 = arith.addf %acc_sum_69, %acc_sum_70 : f32 loc(#loc182)\n      tt.reduce.return %acc_sum_71 : f32 loc(#loc173)\n    }) : (tensor<4x4xf32>) -> tensor<4xf32> loc(#loc173)\n    %acc = arith.cmpf oeq, %overall_expsum_34, %cst_2 : f32 loc(#loc143)\n    %acc_60 = tt.splat %overall_expsum_34 : f32 -> tensor<4xf32> loc(#loc144)\n    %acc_61 = arith.divf %acc_sum, %acc_60 : tensor<4xf32> loc(#loc144)\n    %acc_62 = tt.splat %acc : i1 -> tensor<4xi1> loc(#loc145)\n    %acc_63 = arith.select %acc_62, %cst, %acc_61 : tensor<4xi1>, tensor<4xf32> loc(#loc145)\n    %output_offset = arith.muli %segm_offset_16, %output_stride_0 : i64 loc(#loc146)\n    %output_offset_64 = arith.extsi %query_head_idx : i32 to i64 loc(#loc147)\n    %output_offset_65 = arith.muli %output_offset_64, %output_stride_1 : i64 loc(#loc147)\n    %output_offset_66 = arith.addi %output_offset, %output_offset_65 : i64 loc(#loc148)\n    %output_offset_67 = tt.splat %output_offset_66 : i64 -> tensor<4xi64> loc(#loc149)\n    %output_offset_68 = arith.addi %output_offset_67, %segm_offset_21 : tensor<4xi64> loc(#loc149)\n    %0 = tt.splat %output_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>> loc(#loc75)\n    %1 = tt.addptr %0, %output_offset_68 : tensor<4x!tt.ptr<f32>>, tensor<4xi64> loc(#loc75)\n    tt.store %1, %acc_63, %dim_mask_15 : tensor<4x!tt.ptr<f32>> loc(#loc76)\n    tt.return loc(#loc77)\n  } loc(#loc)\n} loc(#loc)\n#loc1 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":7:20)\n#loc2 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":75:41)\n#loc3 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":75:56)\n#loc4 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":25:21)\n#loc7 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":107:8)\n#loc8 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":103:56)\n#loc9 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":101:11)\n#loc10 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":90:23)\n#loc11 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":86:40)\n#loc12 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":82:71)\n#loc13 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":82:57)\n#loc14 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":63:36)\n#loc15 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":64:35)\n#loc16 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":27:4)\n#loc17 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":27:17)\n#loc20 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":28:22)\n#loc21 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":28:32)\n#loc22 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":29:44)\n#loc23 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":29:22)\n#loc24 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":32:22)\n#loc25 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":32:11)\n#loc26 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":33:25)\n#loc27 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":32:8)\n#loc28 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":37:18)\n#loc29 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":71:37)\n#loc30 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":71:22)\n#loc31 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":7:26)\n#loc32 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":78:60)\n#loc33 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":7:16)\n#loc34 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":78:40)\n#loc35 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":79:29)\n#loc36 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":80:32)\n#loc37 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":79:53)\n#loc38 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":82:77)\n#loc39 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":86:27)\n#loc40 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":87:27)\n#loc41 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":87:10)\n#loc42 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":88:10)\n#loc43 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":90:38)\n#loc44 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":191:40)\n#loc46 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":170:27)\n#loc47 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":94:44)\n#loc48 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":94:26)\n#loc49 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":95:50)\n#loc50 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":95:39)\n#loc51 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":95:32)\n#loc52 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":293:36)\n#loc54 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":263:15)\n#loc55 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":102:28)\n#loc56 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":102:10)\n#loc57 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":103:45)\n#loc58 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":103:10)\n#loc59 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":104:41)\n#loc60 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":104:10)\n#loc61 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":108:23)\n#loc62 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":108:43)\n#loc63 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":108:34)\n#loc64 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":107:26)\n#loc65 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":111:50)\n#loc66 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":111:19)\n#loc68 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":114:37)\n#loc69 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":114:57)\n#loc70 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":114:47)\n#loc71 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":122:26)\n#loc72 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":123:27)\n#loc73 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":123:10)\n#loc74 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":124:10)\n#loc75 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":126:26)\n#loc76 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":126:41)\n#loc77 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":126:4)\n#loc89 = loc(\"tiles_per_segment\"(#loc2))\n#loc90 = loc(\"tiles_per_segment\"(#loc3))\n#loc91 = loc(\"left\"(#loc4))\n#loc93 = loc(\"segm_output\"(#loc7))\n#loc94 = loc(\"segm_output_offset\"(#loc8))\n#loc95 = loc(\"segm_output_offset\"(#loc9))\n#loc96 = loc(\"segm_max\"(#loc10))\n#loc97 = loc(\"segm_offset\"(#loc11))\n#loc98 = loc(\"dim_mask\"(#loc12))\n#loc99 = loc(\"dim_mask\"(#loc13))\n#loc100 = loc(\"query_token_idx\"(#loc14))\n#loc101 = loc(\"query_head_idx\"(#loc15))\n#loc102 = loc(\"left\"(#loc16))\n#loc105 = loc(\"mid\"(#loc20))\n#loc106 = loc(\"mid\"(#loc21))\n#loc107 = loc(\"val\"(#loc22))\n#loc108 = loc(\"val\"(#loc23))\n#loc109 = loc(\"left\"(#loc26))\n#loc110 = loc(\"seq_len\"(#loc29))\n#loc111 = loc(\"seq_len\"(#loc30))\n#loc112 = loc(\"act_num_segments\"(#loc32))\n#loc113 = loc(\"act_num_segments\"(#loc34))\n#loc114 = loc(\"segm_mask\"(#loc35))\n#loc115 = loc(\"segm_mask\"(#loc36))\n#loc116 = loc(\"segm_mask\"(#loc37))\n#loc117 = loc(\"dim_mask\"(#loc38))\n#loc118 = loc(\"segm_offset\"(#loc39))\n#loc119 = loc(\"segm_offset\"(#loc40))\n#loc120 = loc(\"segm_offset\"(#loc41))\n#loc121 = loc(\"segm_offset\"(#loc42))\n#loc122 = loc(\"segm_max\"(#loc43))\n#loc124 = loc(\"segm_expsum\"(#loc47))\n#loc125 = loc(\"segm_expsum\"(#loc48))\n#loc126 = loc(\"segm_expsum\"(#loc49))\n#loc127 = loc(\"segm_expsum\"(#loc50))\n#loc128 = loc(\"segm_expsum\"(#loc51))\n#loc130 = loc(\"segm_output_offset\"(#loc55))\n#loc131 = loc(\"segm_output_offset\"(#loc56))\n#loc132 = loc(\"segm_output_offset\"(#loc57))\n#loc133 = loc(\"segm_output_offset\"(#loc58))\n#loc134 = loc(\"segm_output_offset\"(#loc59))\n#loc135 = loc(\"segm_output_offset\"(#loc60))\n#loc136 = loc(\"segm_output\"(#loc61))\n#loc137 = loc(\"segm_output\"(#loc62))\n#loc138 = loc(\"segm_output\"(#loc63))\n#loc139 = loc(\"segm_output\"(#loc64))\n#loc140 = loc(\"segm_output\"(#loc65))\n#loc141 = loc(\"segm_output\"(#loc66))\n#loc143 = loc(\"acc\"(#loc68))\n#loc144 = loc(\"acc\"(#loc69))\n#loc145 = loc(\"acc\"(#loc70))\n#loc146 = loc(\"output_offset\"(#loc71))\n#loc147 = loc(\"output_offset\"(#loc72))\n#loc148 = loc(\"output_offset\"(#loc73))\n#loc149 = loc(\"output_offset\"(#loc74))\n#loc150 = loc(callsite(#loc1 at #loc89))\n#loc151 = loc(\"left\"(#loc91))\n#loc152 = loc(\"right\"(#loc102))\n#loc153 = loc(callsite(#loc17 at #loc92))\n#loc156 = loc(callsite(#loc105 at #loc92))\n#loc157 = loc(\"right\"(#loc106))\n#loc158 = loc(callsite(#loc107 at #loc92))\n#loc159 = loc(callsite(#loc108 at #loc92))\n#loc160 = loc(callsite(#loc24 at #loc92))\n#loc161 = loc(callsite(#loc25 at #loc92))\n#loc162 = loc(\"left\"(#loc109))\n#loc163 = loc(callsite(#loc27 at #loc92))\n#loc164 = loc(callsite(#loc28 at #loc92))\n#loc165 = loc(callsite(#loc31 at #loc89))\n#loc166 = loc(callsite(#loc33 at #loc113))\n#loc167 = loc(callsite(#loc1 at #loc113))\n#loc168 = loc(callsite(#loc31 at #loc113))\n#loc169 = loc(callsite(#loc44 at #loc123))\n#loc171 = loc(callsite(#loc52 at #loc129))\n#loc173 = loc(callsite(#loc52 at #loc142))\n#loc175 = loc(fused[#loc150, #loc90])\n#loc176 = loc(callsite(#loc151 at #loc92))\n#loc177 = loc(callsite(#loc152 at #loc92))\n#loc178 = loc(callsite(#loc157 at #loc92))\n#loc179 = loc(callsite(#loc162 at #loc92))\n#loc180 = loc(callsite(#loc46 at #loc169))\n#loc181 = loc(callsite(#loc54 at #loc171))\n#loc182 = loc(callsite(#loc54 at #loc173))\n",
+        "argument_names": [
+          "output_ptr",
+          "segm_output_ptr",
+          "segm_max_ptr",
+          "segm_expsum_ptr",
+          "seq_lens_ptr",
+          "num_seqs",
+          "num_query_heads",
+          "out_scale_inv",
+          "output_stride_0",
+          "output_stride_1",
+          "block_table_stride",
+          "TILE_SIZE",
+          "HEAD_SIZE",
+          "HEAD_SIZE_PADDED",
+          "query_start_len_ptr",
+          "BLOCK_Q",
+          "NUM_SEGMENTS_PER_SEQ",
+          "USE_FP8",
+          "FP8_MIN",
+          "FP8_MAX"
+        ],
+        "signature": {
+          "output_ptr": "*fp32",
+          "segm_output_ptr": "*fp32",
+          "segm_max_ptr": "*fp32",
+          "segm_expsum_ptr": "*fp32",
+          "seq_lens_ptr": "*i32",
+          "num_seqs": "i32",
+          "num_query_heads": "constexpr",
+          "out_scale_inv": "fp32",
+          "output_stride_0": "i64",
+          "output_stride_1": "i64",
+          "block_table_stride": "i64",
+          "TILE_SIZE": "constexpr",
+          "HEAD_SIZE": "constexpr",
+          "HEAD_SIZE_PADDED": "constexpr",
+          "query_start_len_ptr": "*i32",
+          "BLOCK_Q": "constexpr",
+          "NUM_SEGMENTS_PER_SEQ": "constexpr",
+          "USE_FP8": "constexpr",
+          "FP8_MIN": "constexpr",
+          "FP8_MAX": "constexpr"
+        },
+        "constexprs": [
+          {
+            "index": [
+              6
+            ],
+            "value": 2
+          },
+          {
+            "index": [
+              11
+            ],
+            "value": 2
+          },
+          {
+            "index": [
+              12
+            ],
+            "value": 4
+          },
+          {
+            "index": [
+              13
+            ],
+            "value": 4
+          },
+          {
+            "index": [
+              15
+            ],
+            "value": 1
+          },
+          {
+            "index": [
+              16
+            ],
+            "value": 4
+          },
+          {
+            "index": [
+              17
+            ],
+            "value": false
+          },
+          {
+            "index": [
+              18
+            ],
+            "value": -448.0
+          },
+          {
+            "index": [
+              19
+            ],
+            "value": 448.0
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "token": 0,
+          "head": 0,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  -5,
+                  -4,
+                  -3,
+                  -2
+                ]
+              },
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  -3,
+                  -2,
+                  -1,
+                  0
+                ]
+              },
+              {
+                "shift": 0,
+                "mass": 2,
+                "numerator": [
+                  -2,
+                  0,
+                  2,
+                  4
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "-5/2",
+            "-3/2",
+            "-1/2",
+            "1/2"
+          ]
+        },
+        {
+          "token": 0,
+          "head": 1,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": -1,
+                "mass": 1,
+                "numerator": [
+                  3,
+                  4,
+                  5,
+                  6
+                ]
+              },
+              {
+                "shift": -1,
+                "mass": 1,
+                "numerator": [
+                  5,
+                  6,
+                  7,
+                  8
+                ]
+              },
+              {
+                "shift": -1,
+                "mass": 2,
+                "numerator": [
+                  14,
+                  16,
+                  18,
+                  20
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "11/2",
+            "13/2",
+            "15/2",
+            "17/2"
+          ]
+        },
+        {
+          "token": 1,
+          "head": 0,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  13,
+                  14,
+                  15,
+                  16
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 2,
+                "numerator": [
+                  30,
+                  32,
+                  34,
+                  36
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "27/2",
+            "29/2",
+            "31/2",
+            "33/2"
+          ]
+        },
+        {
+          "token": 1,
+          "head": 1,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  19,
+                  20,
+                  21,
+                  22
+                ]
+              },
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  21,
+                  22,
+                  23,
+                  24
+                ]
+              },
+              {
+                "shift": 0,
+                "mass": 2,
+                "numerator": [
+                  46,
+                  48,
+                  50,
+                  52
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "43/2",
+            "45/2",
+            "47/2",
+            "49/2"
+          ]
+        },
+        {
+          "token": 2,
+          "head": 0,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 2,
+                "mass": 1,
+                "numerator": [
+                  27,
+                  28,
+                  29,
+                  30
+                ]
+              },
+              {
+                "shift": 2,
+                "mass": 1,
+                "numerator": [
+                  29,
+                  30,
+                  31,
+                  32
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "28",
+            "29",
+            "30",
+            "31"
+          ]
+        },
+        {
+          "token": 2,
+          "head": 1,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  35,
+                  36,
+                  37,
+                  38
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  37,
+                  38,
+                  39,
+                  40
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "36",
+            "37",
+            "38",
+            "39"
+          ]
+        }
+      ],
+      "runs": [
+        {
+          "initial_storage": -12345,
+          "complete_storage": [
+            -12345.0,
+            -2.5,
+            -1.5,
+            -0.5,
+            0.5,
+            5.5,
+            6.5,
+            7.5,
+            8.5,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            13.5,
+            14.5,
+            15.5,
+            16.5,
+            21.5,
+            22.5,
+            23.5,
+            24.5,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            28.0,
+            29.0,
+            30.0,
+            31.0,
+            36.0,
+            37.0,
+            38.0,
+            39.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0
+          ],
+          "output_mismatch_addresses": [],
+          "changed_guard_addresses": [],
+          "inputs_after": {
+            "maxima": [
+              0,
+              0,
+              0,
+              2143289344,
+              -1082130432,
+              -1082130432,
+              -1082130432,
+              2143289344,
+              1065353216,
+              1065353216,
+              1065353216,
+              2143289344,
+              0,
+              0,
+              0,
+              2143289344,
+              1073741824,
+              1073741824,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              2143289344,
+              2143289344
+            ],
+            "masses": [
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              2143289344,
+              2143289344
+            ],
+            "numerators": [
+              -1063256064,
+              -1065353216,
+              -1069547520,
+              -1073741824,
+              -1069547520,
+              -1073741824,
+              -1082130432,
+              0,
+              -1073741824,
+              0,
+              1073741824,
+              1082130432,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1077936128,
+              1082130432,
+              1084227584,
+              1086324736,
+              1084227584,
+              1086324736,
+              1088421888,
+              1090519040,
+              1096810496,
+              1098907648,
+              1099956224,
+              1101004800,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1093664768,
+              1094713344,
+              1095761920,
+              1096810496,
+              1095761920,
+              1096810496,
+              1097859072,
+              1098907648,
+              1106247680,
+              1107296256,
+              1107820544,
+              1108344832,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1100480512,
+              1101004800,
+              1101529088,
+              1102053376,
+              1101529088,
+              1102053376,
+              1102577664,
+              1103101952,
+              1110966272,
+              1111490560,
+              1112014848,
+              1112539136,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1104674816,
+              1105199104,
+              1105723392,
+              1106247680,
+              1105723392,
+              1106247680,
+              1106771968,
+              1107296256,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1108082688,
+              1108344832,
+              1108606976,
+              1108869120,
+              1108606976,
+              1108869120,
+              1109131264,
+              1109393408,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344
+            ],
+            "seq_lens": [
+              5,
+              0,
+              3
+            ],
+            "query_offsets": [
+              0,
+              2,
+              2,
+              3
+            ]
+          }
+        },
+        {
+          "initial_storage": 23456,
+          "complete_storage": [
+            23456.0,
+            -2.5,
+            -1.5,
+            -0.5,
+            0.5,
+            5.5,
+            6.5,
+            7.5,
+            8.5,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            13.5,
+            14.5,
+            15.5,
+            16.5,
+            21.5,
+            22.5,
+            23.5,
+            24.5,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            28.0,
+            29.0,
+            30.0,
+            31.0,
+            36.0,
+            37.0,
+            38.0,
+            39.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0
+          ],
+          "output_mismatch_addresses": [],
+          "changed_guard_addresses": [],
+          "inputs_after": {
+            "maxima": [
+              0,
+              0,
+              0,
+              2143289344,
+              -1082130432,
+              -1082130432,
+              -1082130432,
+              2143289344,
+              1065353216,
+              1065353216,
+              1065353216,
+              2143289344,
+              0,
+              0,
+              0,
+              2143289344,
+              1073741824,
+              1073741824,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              2143289344,
+              2143289344
+            ],
+            "masses": [
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              2143289344,
+              2143289344
+            ],
+            "numerators": [
+              -1063256064,
+              -1065353216,
+              -1069547520,
+              -1073741824,
+              -1069547520,
+              -1073741824,
+              -1082130432,
+              0,
+              -1073741824,
+              0,
+              1073741824,
+              1082130432,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1077936128,
+              1082130432,
+              1084227584,
+              1086324736,
+              1084227584,
+              1086324736,
+              1088421888,
+              1090519040,
+              1096810496,
+              1098907648,
+              1099956224,
+              1101004800,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1093664768,
+              1094713344,
+              1095761920,
+              1096810496,
+              1095761920,
+              1096810496,
+              1097859072,
+              1098907648,
+              1106247680,
+              1107296256,
+              1107820544,
+              1108344832,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1100480512,
+              1101004800,
+              1101529088,
+              1102053376,
+              1101529088,
+              1102053376,
+              1102577664,
+              1103101952,
+              1110966272,
+              1111490560,
+              1112014848,
+              1112539136,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1104674816,
+              1105199104,
+              1105723392,
+              1106247680,
+              1105723392,
+              1106247680,
+              1106771968,
+              1107296256,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1108082688,
+              1108344832,
+              1108606976,
+              1108869120,
+              1108606976,
+              1108869120,
+              1109131264,
+              1109393408,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344
+            ],
+            "seq_lens": [
+              5,
+              0,
+              3
+            ],
+            "query_offsets": [
+              0,
+              2,
+              2,
+              3
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seq_lens": [
+        1,
+        9
+      ],
+      "query_offsets": [
+        0,
+        1,
+        3
+      ],
+      "grid": [
+        3,
+        2
+      ],
+      "segments": 4,
+      "tile_size": 2,
+      "value_width": 4,
+      "output_strides": [
+        12,
+        4,
+        1
+      ],
+      "output_storage_offset": 1,
+      "inactive_input_slots": "NaN",
+      "received_inputs": {
+        "maxima": [
+          0,
+          2143289344,
+          2143289344,
+          2143289344,
+          -1082130432,
+          2143289344,
+          2143289344,
+          2143289344,
+          1065353216,
+          1065353216,
+          1065353216,
+          2143289344,
+          0,
+          0,
+          0,
+          2143289344,
+          1073741824,
+          1073741824,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1065353216,
+          2143289344
+        ],
+        "masses": [
+          1065353216,
+          2143289344,
+          2143289344,
+          2143289344,
+          1065353216,
+          2143289344,
+          2143289344,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344,
+          1065353216,
+          1065353216,
+          1073741824,
+          2143289344
+        ],
+        "numerators": [
+          -1063256064,
+          -1065353216,
+          -1069547520,
+          -1073741824,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1077936128,
+          1082130432,
+          1084227584,
+          1086324736,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1093664768,
+          1094713344,
+          1095761920,
+          1096810496,
+          1095761920,
+          1096810496,
+          1097859072,
+          1098907648,
+          1106247680,
+          1107296256,
+          1107820544,
+          1108344832,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1100480512,
+          1101004800,
+          1101529088,
+          1102053376,
+          1101529088,
+          1102053376,
+          1102577664,
+          1103101952,
+          1110966272,
+          1111490560,
+          1112014848,
+          1112539136,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1104674816,
+          1105199104,
+          1105723392,
+          1106247680,
+          1105723392,
+          1106247680,
+          1106771968,
+          1107296256,
+          1115160576,
+          1115684864,
+          1115947008,
+          1116209152,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344,
+          1108082688,
+          1108344832,
+          1108606976,
+          1108869120,
+          1108606976,
+          1108869120,
+          1109131264,
+          1109393408,
+          1117519872,
+          1117782016,
+          1118044160,
+          1118306304,
+          2143289344,
+          2143289344,
+          2143289344,
+          2143289344
+        ],
+        "seq_lens": [
+          1,
+          9
+        ],
+        "query_offsets": [
+          0,
+          1,
+          3
+        ]
+      },
+      "input_encoding": "float32 buffers as signed int32 bits; index buffers as int32 values",
+      "compiled": {
+        "ttir": "#loc = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":40:0)\n#loc5 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":67:65)\n#loc6 = loc(unknown)\n#loc18 = loc(\"left\")\n#loc19 = loc(\"right\")\n#loc45 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":91:25)\n#loc53 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":96:28)\n#loc67 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":112:21)\n#loc78 = loc(\"output_ptr\"(#loc))\n#loc79 = loc(\"segm_output_ptr\"(#loc))\n#loc80 = loc(\"segm_max_ptr\"(#loc))\n#loc81 = loc(\"segm_expsum_ptr\"(#loc))\n#loc82 = loc(\"seq_lens_ptr\"(#loc))\n#loc83 = loc(\"num_seqs\"(#loc))\n#loc84 = loc(\"out_scale_inv\"(#loc))\n#loc85 = loc(\"output_stride_0\"(#loc))\n#loc86 = loc(\"output_stride_1\"(#loc))\n#loc87 = loc(\"block_table_stride\"(#loc))\n#loc88 = loc(\"query_start_len_ptr\"(#loc))\n#loc92 = loc(\"seq_idx\"(#loc5))\n#loc103 = loc(\"left\"(#loc18))\n#loc104 = loc(\"right\"(#loc19))\n#loc123 = loc(\"overall_max\"(#loc45))\n#loc129 = loc(\"overall_expsum\"(#loc53))\n#loc142 = loc(\"acc_sum\"(#loc67))\n#loc154 = loc(callsite(#loc103 at #loc92))\n#loc155 = loc(callsite(#loc104 at #loc92))\n#loc170 = loc(callsite(#loc6 at #loc123))\n#loc172 = loc(callsite(#loc6 at #loc129))\n#loc174 = loc(callsite(#loc6 at #loc142))\nmodule {\n  tt.func public @reduce_segments(%output_ptr: !tt.ptr<f32> loc(\"output_ptr\"(#loc)), %segm_output_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32} loc(\"segm_output_ptr\"(#loc)), %segm_max_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32} loc(\"segm_max_ptr\"(#loc)), %segm_expsum_ptr: !tt.ptr<f32> {tt.divisibility = 16 : i32} loc(\"segm_expsum_ptr\"(#loc)), %seq_lens_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32} loc(\"seq_lens_ptr\"(#loc)), %num_seqs: i32 loc(\"num_seqs\"(#loc)), %out_scale_inv: f32 loc(\"out_scale_inv\"(#loc)), %output_stride_0: i64 loc(\"output_stride_0\"(#loc)), %output_stride_1: i64 loc(\"output_stride_1\"(#loc)), %block_table_stride: i64 {tt.divisibility = 16 : i32} loc(\"block_table_stride\"(#loc)), %query_start_len_ptr: !tt.ptr<i32> {tt.divisibility = 16 : i32} loc(\"query_start_len_ptr\"(#loc))) attributes {noinline = false} {\n    %tiles_per_segment = arith.constant 7 : i32 loc(#loc175)\n    %left = arith.constant 0 : i32 loc(#loc176)\n    %c1_i32 = arith.constant 1 : i32 loc(#loc6)\n    %tiles_per_segment_0 = arith.constant 8 : i32 loc(#loc90)\n    %segm_output = arith.constant dense<0.000000e+00> : tensor<4x4xf32> loc(#loc93)\n    %segm_output_offset = arith.constant dense<4> : tensor<4x1xi32> loc(#loc94)\n    %c16_i32 = arith.constant 16 : i32 loc(#loc6)\n    %segm_output_offset_1 = arith.constant 32 : i64 loc(#loc95)\n    %cst = arith.constant dense<0.000000e+00> : tensor<4xf32> loc(#loc6)\n    %cst_2 = arith.constant 0.000000e+00 : f32 loc(#loc6)\n    %segm_max = arith.constant dense<0xFF800000> : tensor<4xf32> loc(#loc96)\n    %segm_offset = arith.constant 8 : i64 loc(#loc97)\n    %cst_3 = arith.constant dense<0> : tensor<4xi32> loc(#loc6)\n    %dim_mask = arith.constant dense<1> : tensor<4xi32> loc(#loc98)\n    %dim_mask_4 = arith.constant dense<4> : tensor<4xi32> loc(#loc99)\n    %c2_i32 = arith.constant 2 : i32 loc(#loc6)\n    %c4_i32 = arith.constant 4 : i32 loc(#loc6)\n    %query_token_idx = tt.get_program_id x : i32 loc(#loc100)\n    %query_head_idx = tt.get_program_id y : i32 loc(#loc101)\n    %right:2 = scf.while (%left_69 = %left, %right_70 = %num_seqs) : (i32, i32) -> (i32, i32) {\n      %seq_idx_71 = arith.cmpi slt, %left_69, %right_70 : i32 loc(#loc153)\n      scf.condition(%seq_idx_71) %left_69, %right_70 : i32, i32 loc(#loc153)\n    } do {\n    ^bb0(%left_69: i32 loc(callsite(#loc103 at #loc92)), %right_70: i32 loc(callsite(#loc104 at #loc92))):\n      %mid = arith.addi %left_69, %right_70 : i32 loc(#loc156)\n      %right_71 = arith.divsi %mid, %c2_i32 : i32 loc(#loc178)\n      %val = tt.addptr %query_start_len_ptr, %right_71 : !tt.ptr<i32>, i32 loc(#loc158)\n      %val_72 = tt.load %val : !tt.ptr<i32> loc(#loc159)\n      %seq_idx_73 = arith.cmpi sle, %val_72, %query_token_idx : i32 loc(#loc160)\n      %seq_idx_74 = arith.select %seq_idx_73, %right_70, %right_71 : i32 loc(#loc161)\n      %seq_idx_75 = scf.if %seq_idx_73 -> (i32) {\n        %left_76 = arith.addi %right_71, %c1_i32 : i32 loc(#loc179)\n        scf.yield %left_76 : i32 loc(#loc179)\n      } else {\n        scf.yield %left_69 : i32 loc(#loc161)\n      } loc(#loc161)\n      scf.yield %seq_idx_75, %seq_idx_74 : i32, i32 loc(#loc163)\n    } loc(#loc177)\n    %seq_idx = arith.subi %right#0, %c1_i32 : i32 loc(#loc164)\n    %seq_len = tt.addptr %seq_lens_ptr, %seq_idx : !tt.ptr<i32>, i32 loc(#loc110)\n    %seq_len_5 = tt.load %seq_len : !tt.ptr<i32> loc(#loc111)\n    %tiles_per_segment_6 = arith.addi %seq_len_5, %tiles_per_segment : i32 loc(#loc175)\n    %tiles_per_segment_7 = arith.divsi %tiles_per_segment_6, %tiles_per_segment_0 : i32 loc(#loc165)\n    %act_num_segments = arith.muli %tiles_per_segment_7, %c2_i32 : i32 loc(#loc112)\n    %act_num_segments_8 = arith.addi %seq_len_5, %act_num_segments : i32 loc(#loc166)\n    %act_num_segments_9 = arith.subi %act_num_segments_8, %c1_i32 : i32 loc(#loc167)\n    %act_num_segments_10 = arith.divsi %act_num_segments_9, %act_num_segments : i32 loc(#loc168)\n    %segm_mask = tt.make_range {end = 4 : i32, start = 0 : i32} : tensor<4xi32> loc(#loc114)\n    %segm_mask_11 = tt.splat %act_num_segments_10 : i32 -> tensor<4xi32> loc(#loc115)\n    %segm_mask_12 = arith.cmpi slt, %segm_mask, %segm_mask_11 : tensor<4xi32> loc(#loc116)\n    %dim_mask_13 = arith.cmpi slt, %segm_mask, %dim_mask_4 : tensor<4xi32> loc(#loc99)\n    %dim_mask_14 = arith.select %dim_mask_13, %dim_mask, %cst_3 : tensor<4xi1>, tensor<4xi32> loc(#loc98)\n    %dim_mask_15 = arith.cmpi ne, %dim_mask_14, %cst_3 : tensor<4xi32> loc(#loc117)\n    %segm_offset_16 = arith.extsi %query_token_idx : i32 to i64 loc(#loc118)\n    %segm_offset_17 = arith.muli %segm_offset_16, %segm_offset : i64 loc(#loc97)\n    %segm_offset_18 = arith.muli %query_head_idx, %c4_i32 : i32 loc(#loc119)\n    %segm_offset_19 = arith.extsi %segm_offset_18 : i32 to i64 loc(#loc120)\n    %segm_offset_20 = arith.addi %segm_offset_17, %segm_offset_19 : i64 loc(#loc120)\n    %segm_offset_21 = arith.extsi %segm_mask : tensor<4xi32> to tensor<4xi64> loc(#loc121)\n    %segm_offset_22 = tt.splat %segm_offset_20 : i64 -> tensor<4xi64> loc(#loc121)\n    %segm_offset_23 = arith.addi %segm_offset_22, %segm_offset_21 : tensor<4xi64> loc(#loc121)\n    %segm_max_24 = tt.splat %segm_max_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>> loc(#loc122)\n    %segm_max_25 = tt.addptr %segm_max_24, %segm_offset_23 : tensor<4x!tt.ptr<f32>>, tensor<4xi64> loc(#loc122)\n    %segm_max_26 = tt.load %segm_max_25, %segm_mask_12, %segm_max : tensor<4x!tt.ptr<f32>> loc(#loc96)\n    %overall_max = tt.reshape %segm_max_26 allow_reorder : tensor<4xf32> -> tensor<4xf32> loc(#loc169)\n    %overall_max_27 = \"tt.reduce\"(%overall_max) <{axis = 0 : i32}> ({\n    ^bb0(%overall_max_69: f32 loc(callsite(#loc6 at #loc123)), %overall_max_70: f32 loc(callsite(#loc6 at #loc123))):\n      %overall_max_71 = arith.maxnumf %overall_max_69, %overall_max_70 : f32 loc(#loc180)\n      tt.reduce.return %overall_max_71 : f32 loc(#loc169)\n    }) : (tensor<4xf32>) -> f32 loc(#loc169)\n    %segm_expsum = tt.splat %segm_expsum_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>> loc(#loc124)\n    %segm_expsum_28 = tt.addptr %segm_expsum, %segm_offset_23 : tensor<4x!tt.ptr<f32>>, tensor<4xi64> loc(#loc124)\n    %segm_expsum_29 = tt.load %segm_expsum_28, %segm_mask_12, %cst : tensor<4x!tt.ptr<f32>> loc(#loc125)\n    %segm_expsum_30 = tt.splat %overall_max_27 : f32 -> tensor<4xf32> loc(#loc126)\n    %segm_expsum_31 = arith.subf %segm_max_26, %segm_expsum_30 : tensor<4xf32> loc(#loc126)\n    %segm_expsum_32 = math.exp %segm_expsum_31 : tensor<4xf32> loc(#loc127)\n    %segm_expsum_33 = arith.mulf %segm_expsum_29, %segm_expsum_32 : tensor<4xf32> loc(#loc128)\n    %overall_expsum = tt.reshape %segm_expsum_33 allow_reorder : tensor<4xf32> -> tensor<4xf32> loc(#loc171)\n    %overall_expsum_34 = \"tt.reduce\"(%overall_expsum) <{axis = 0 : i32}> ({\n    ^bb0(%overall_expsum_69: f32 loc(callsite(#loc6 at #loc129)), %overall_expsum_70: f32 loc(callsite(#loc6 at #loc129))):\n      %overall_expsum_71 = arith.addf %overall_expsum_69, %overall_expsum_70 : f32 loc(#loc181)\n      tt.reduce.return %overall_expsum_71 : f32 loc(#loc171)\n    }) : (tensor<4xf32>) -> f32 loc(#loc171)\n    %segm_output_offset_35 = arith.muli %segm_offset_16, %segm_output_offset_1 : i64 loc(#loc95)\n    %segm_output_offset_36 = arith.muli %query_head_idx, %c16_i32 : i32 loc(#loc130)\n    %segm_output_offset_37 = arith.extsi %segm_output_offset_36 : i32 to i64 loc(#loc131)\n    %segm_output_offset_38 = arith.addi %segm_output_offset_35, %segm_output_offset_37 : i64 loc(#loc131)\n    %segm_output_offset_39 = tt.expand_dims %segm_mask {axis = 1 : i32} : tensor<4xi32> -> tensor<4x1xi32> loc(#loc132)\n    %segm_output_offset_40 = arith.muli %segm_output_offset_39, %segm_output_offset : tensor<4x1xi32> loc(#loc94)\n    %segm_output_offset_41 = arith.extsi %segm_output_offset_40 : tensor<4x1xi32> to tensor<4x1xi64> loc(#loc133)\n    %segm_output_offset_42 = tt.splat %segm_output_offset_38 : i64 -> tensor<4x1xi64> loc(#loc133)\n    %segm_output_offset_43 = arith.addi %segm_output_offset_42, %segm_output_offset_41 : tensor<4x1xi64> loc(#loc133)\n    %segm_output_offset_44 = tt.expand_dims %segm_mask {axis = 0 : i32} : tensor<4xi32> -> tensor<1x4xi32> loc(#loc134)\n    %segm_output_offset_45 = arith.extsi %segm_output_offset_44 : tensor<1x4xi32> to tensor<1x4xi64> loc(#loc135)\n    %segm_output_offset_46 = tt.broadcast %segm_output_offset_43 : tensor<4x1xi64> -> tensor<4x4xi64> loc(#loc135)\n    %segm_output_offset_47 = tt.broadcast %segm_output_offset_45 : tensor<1x4xi64> -> tensor<4x4xi64> loc(#loc135)\n    %segm_output_offset_48 = arith.addi %segm_output_offset_46, %segm_output_offset_47 : tensor<4x4xi64> loc(#loc135)\n    %segm_output_49 = tt.expand_dims %segm_mask_12 {axis = 1 : i32} : tensor<4xi1> -> tensor<4x1xi1> loc(#loc136)\n    %segm_output_50 = tt.expand_dims %dim_mask_15 {axis = 0 : i32} : tensor<4xi1> -> tensor<1x4xi1> loc(#loc137)\n    %segm_output_51 = tt.broadcast %segm_output_49 : tensor<4x1xi1> -> tensor<4x4xi1> loc(#loc138)\n    %segm_output_52 = tt.broadcast %segm_output_50 : tensor<1x4xi1> -> tensor<4x4xi1> loc(#loc138)\n    %segm_output_53 = arith.andi %segm_output_51, %segm_output_52 : tensor<4x4xi1> loc(#loc138)\n    %segm_output_54 = tt.splat %segm_output_ptr : !tt.ptr<f32> -> tensor<4x4x!tt.ptr<f32>> loc(#loc139)\n    %segm_output_55 = tt.addptr %segm_output_54, %segm_output_offset_48 : tensor<4x4x!tt.ptr<f32>>, tensor<4x4xi64> loc(#loc139)\n    %segm_output_56 = tt.load %segm_output_55, %segm_output_53, %segm_output : tensor<4x4x!tt.ptr<f32>> loc(#loc93)\n    %segm_output_57 = tt.expand_dims %segm_expsum_32 {axis = 1 : i32} : tensor<4xf32> -> tensor<4x1xf32> loc(#loc140)\n    %segm_output_58 = tt.broadcast %segm_output_57 : tensor<4x1xf32> -> tensor<4x4xf32> loc(#loc141)\n    %segm_output_59 = arith.mulf %segm_output_56, %segm_output_58 : tensor<4x4xf32> loc(#loc141)\n    %acc_sum = \"tt.reduce\"(%segm_output_59) <{axis = 0 : i32}> ({\n    ^bb0(%acc_sum_69: f32 loc(callsite(#loc6 at #loc142)), %acc_sum_70: f32 loc(callsite(#loc6 at #loc142))):\n      %acc_sum_71 = arith.addf %acc_sum_69, %acc_sum_70 : f32 loc(#loc182)\n      tt.reduce.return %acc_sum_71 : f32 loc(#loc173)\n    }) : (tensor<4x4xf32>) -> tensor<4xf32> loc(#loc173)\n    %acc = arith.cmpf oeq, %overall_expsum_34, %cst_2 : f32 loc(#loc143)\n    %acc_60 = tt.splat %overall_expsum_34 : f32 -> tensor<4xf32> loc(#loc144)\n    %acc_61 = arith.divf %acc_sum, %acc_60 : tensor<4xf32> loc(#loc144)\n    %acc_62 = tt.splat %acc : i1 -> tensor<4xi1> loc(#loc145)\n    %acc_63 = arith.select %acc_62, %cst, %acc_61 : tensor<4xi1>, tensor<4xf32> loc(#loc145)\n    %output_offset = arith.muli %segm_offset_16, %output_stride_0 : i64 loc(#loc146)\n    %output_offset_64 = arith.extsi %query_head_idx : i32 to i64 loc(#loc147)\n    %output_offset_65 = arith.muli %output_offset_64, %output_stride_1 : i64 loc(#loc147)\n    %output_offset_66 = arith.addi %output_offset, %output_offset_65 : i64 loc(#loc148)\n    %output_offset_67 = tt.splat %output_offset_66 : i64 -> tensor<4xi64> loc(#loc149)\n    %output_offset_68 = arith.addi %output_offset_67, %segm_offset_21 : tensor<4xi64> loc(#loc149)\n    %0 = tt.splat %output_ptr : !tt.ptr<f32> -> tensor<4x!tt.ptr<f32>> loc(#loc75)\n    %1 = tt.addptr %0, %output_offset_68 : tensor<4x!tt.ptr<f32>>, tensor<4xi64> loc(#loc75)\n    tt.store %1, %acc_63, %dim_mask_15 : tensor<4x!tt.ptr<f32>> loc(#loc76)\n    tt.return loc(#loc77)\n  } loc(#loc)\n} loc(#loc)\n#loc1 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":7:20)\n#loc2 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":75:41)\n#loc3 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":75:56)\n#loc4 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":25:21)\n#loc7 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":107:8)\n#loc8 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":103:56)\n#loc9 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":101:11)\n#loc10 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":90:23)\n#loc11 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":86:40)\n#loc12 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":82:71)\n#loc13 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":82:57)\n#loc14 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":63:36)\n#loc15 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":64:35)\n#loc16 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":27:4)\n#loc17 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":27:17)\n#loc20 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":28:22)\n#loc21 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":28:32)\n#loc22 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":29:44)\n#loc23 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":29:22)\n#loc24 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":32:22)\n#loc25 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":32:11)\n#loc26 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":33:25)\n#loc27 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":32:8)\n#loc28 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":37:18)\n#loc29 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":71:37)\n#loc30 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":71:22)\n#loc31 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":7:26)\n#loc32 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":78:60)\n#loc33 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":7:16)\n#loc34 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":78:40)\n#loc35 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":79:29)\n#loc36 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":80:32)\n#loc37 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":79:53)\n#loc38 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":82:77)\n#loc39 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":86:27)\n#loc40 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":87:27)\n#loc41 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":87:10)\n#loc42 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":88:10)\n#loc43 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":90:38)\n#loc44 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":191:40)\n#loc46 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":170:27)\n#loc47 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":94:44)\n#loc48 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":94:26)\n#loc49 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":95:50)\n#loc50 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":95:39)\n#loc51 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":95:32)\n#loc52 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":293:36)\n#loc54 = loc(\"/data1/tzh/envs/liger/lib/python3.10/site-packages/triton/language/standard.py\":263:15)\n#loc55 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":102:28)\n#loc56 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":102:10)\n#loc57 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":103:45)\n#loc58 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":103:10)\n#loc59 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":104:41)\n#loc60 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":104:10)\n#loc61 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":108:23)\n#loc62 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":108:43)\n#loc63 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":108:34)\n#loc64 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":107:26)\n#loc65 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":111:50)\n#loc66 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":111:19)\n#loc68 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":114:37)\n#loc69 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":114:57)\n#loc70 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":114:47)\n#loc71 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":122:26)\n#loc72 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":123:27)\n#loc73 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":123:10)\n#loc74 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":124:10)\n#loc75 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":126:26)\n#loc76 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":126:41)\n#loc77 = loc(\"/data1/tzh/kernel-analyzer/.cache/tmp/partial-merge-y5ysho6x/retained_merge.py\":126:4)\n#loc89 = loc(\"tiles_per_segment\"(#loc2))\n#loc90 = loc(\"tiles_per_segment\"(#loc3))\n#loc91 = loc(\"left\"(#loc4))\n#loc93 = loc(\"segm_output\"(#loc7))\n#loc94 = loc(\"segm_output_offset\"(#loc8))\n#loc95 = loc(\"segm_output_offset\"(#loc9))\n#loc96 = loc(\"segm_max\"(#loc10))\n#loc97 = loc(\"segm_offset\"(#loc11))\n#loc98 = loc(\"dim_mask\"(#loc12))\n#loc99 = loc(\"dim_mask\"(#loc13))\n#loc100 = loc(\"query_token_idx\"(#loc14))\n#loc101 = loc(\"query_head_idx\"(#loc15))\n#loc102 = loc(\"left\"(#loc16))\n#loc105 = loc(\"mid\"(#loc20))\n#loc106 = loc(\"mid\"(#loc21))\n#loc107 = loc(\"val\"(#loc22))\n#loc108 = loc(\"val\"(#loc23))\n#loc109 = loc(\"left\"(#loc26))\n#loc110 = loc(\"seq_len\"(#loc29))\n#loc111 = loc(\"seq_len\"(#loc30))\n#loc112 = loc(\"act_num_segments\"(#loc32))\n#loc113 = loc(\"act_num_segments\"(#loc34))\n#loc114 = loc(\"segm_mask\"(#loc35))\n#loc115 = loc(\"segm_mask\"(#loc36))\n#loc116 = loc(\"segm_mask\"(#loc37))\n#loc117 = loc(\"dim_mask\"(#loc38))\n#loc118 = loc(\"segm_offset\"(#loc39))\n#loc119 = loc(\"segm_offset\"(#loc40))\n#loc120 = loc(\"segm_offset\"(#loc41))\n#loc121 = loc(\"segm_offset\"(#loc42))\n#loc122 = loc(\"segm_max\"(#loc43))\n#loc124 = loc(\"segm_expsum\"(#loc47))\n#loc125 = loc(\"segm_expsum\"(#loc48))\n#loc126 = loc(\"segm_expsum\"(#loc49))\n#loc127 = loc(\"segm_expsum\"(#loc50))\n#loc128 = loc(\"segm_expsum\"(#loc51))\n#loc130 = loc(\"segm_output_offset\"(#loc55))\n#loc131 = loc(\"segm_output_offset\"(#loc56))\n#loc132 = loc(\"segm_output_offset\"(#loc57))\n#loc133 = loc(\"segm_output_offset\"(#loc58))\n#loc134 = loc(\"segm_output_offset\"(#loc59))\n#loc135 = loc(\"segm_output_offset\"(#loc60))\n#loc136 = loc(\"segm_output\"(#loc61))\n#loc137 = loc(\"segm_output\"(#loc62))\n#loc138 = loc(\"segm_output\"(#loc63))\n#loc139 = loc(\"segm_output\"(#loc64))\n#loc140 = loc(\"segm_output\"(#loc65))\n#loc141 = loc(\"segm_output\"(#loc66))\n#loc143 = loc(\"acc\"(#loc68))\n#loc144 = loc(\"acc\"(#loc69))\n#loc145 = loc(\"acc\"(#loc70))\n#loc146 = loc(\"output_offset\"(#loc71))\n#loc147 = loc(\"output_offset\"(#loc72))\n#loc148 = loc(\"output_offset\"(#loc73))\n#loc149 = loc(\"output_offset\"(#loc74))\n#loc150 = loc(callsite(#loc1 at #loc89))\n#loc151 = loc(\"left\"(#loc91))\n#loc152 = loc(\"right\"(#loc102))\n#loc153 = loc(callsite(#loc17 at #loc92))\n#loc156 = loc(callsite(#loc105 at #loc92))\n#loc157 = loc(\"right\"(#loc106))\n#loc158 = loc(callsite(#loc107 at #loc92))\n#loc159 = loc(callsite(#loc108 at #loc92))\n#loc160 = loc(callsite(#loc24 at #loc92))\n#loc161 = loc(callsite(#loc25 at #loc92))\n#loc162 = loc(\"left\"(#loc109))\n#loc163 = loc(callsite(#loc27 at #loc92))\n#loc164 = loc(callsite(#loc28 at #loc92))\n#loc165 = loc(callsite(#loc31 at #loc89))\n#loc166 = loc(callsite(#loc33 at #loc113))\n#loc167 = loc(callsite(#loc1 at #loc113))\n#loc168 = loc(callsite(#loc31 at #loc113))\n#loc169 = loc(callsite(#loc44 at #loc123))\n#loc171 = loc(callsite(#loc52 at #loc129))\n#loc173 = loc(callsite(#loc52 at #loc142))\n#loc175 = loc(fused[#loc150, #loc90])\n#loc176 = loc(callsite(#loc151 at #loc92))\n#loc177 = loc(callsite(#loc152 at #loc92))\n#loc178 = loc(callsite(#loc157 at #loc92))\n#loc179 = loc(callsite(#loc162 at #loc92))\n#loc180 = loc(callsite(#loc46 at #loc169))\n#loc181 = loc(callsite(#loc54 at #loc171))\n#loc182 = loc(callsite(#loc54 at #loc173))\n",
+        "argument_names": [
+          "output_ptr",
+          "segm_output_ptr",
+          "segm_max_ptr",
+          "segm_expsum_ptr",
+          "seq_lens_ptr",
+          "num_seqs",
+          "num_query_heads",
+          "out_scale_inv",
+          "output_stride_0",
+          "output_stride_1",
+          "block_table_stride",
+          "TILE_SIZE",
+          "HEAD_SIZE",
+          "HEAD_SIZE_PADDED",
+          "query_start_len_ptr",
+          "BLOCK_Q",
+          "NUM_SEGMENTS_PER_SEQ",
+          "USE_FP8",
+          "FP8_MIN",
+          "FP8_MAX"
+        ],
+        "signature": {
+          "output_ptr": "*fp32",
+          "segm_output_ptr": "*fp32",
+          "segm_max_ptr": "*fp32",
+          "segm_expsum_ptr": "*fp32",
+          "seq_lens_ptr": "*i32",
+          "num_seqs": "i32",
+          "num_query_heads": "constexpr",
+          "out_scale_inv": "fp32",
+          "output_stride_0": "i64",
+          "output_stride_1": "i64",
+          "block_table_stride": "i64",
+          "TILE_SIZE": "constexpr",
+          "HEAD_SIZE": "constexpr",
+          "HEAD_SIZE_PADDED": "constexpr",
+          "query_start_len_ptr": "*i32",
+          "BLOCK_Q": "constexpr",
+          "NUM_SEGMENTS_PER_SEQ": "constexpr",
+          "USE_FP8": "constexpr",
+          "FP8_MIN": "constexpr",
+          "FP8_MAX": "constexpr"
+        },
+        "constexprs": [
+          {
+            "index": [
+              6
+            ],
+            "value": 2
+          },
+          {
+            "index": [
+              11
+            ],
+            "value": 2
+          },
+          {
+            "index": [
+              12
+            ],
+            "value": 4
+          },
+          {
+            "index": [
+              13
+            ],
+            "value": 4
+          },
+          {
+            "index": [
+              15
+            ],
+            "value": 1
+          },
+          {
+            "index": [
+              16
+            ],
+            "value": 4
+          },
+          {
+            "index": [
+              17
+            ],
+            "value": false
+          },
+          {
+            "index": [
+              18
+            ],
+            "value": -448.0
+          },
+          {
+            "index": [
+              19
+            ],
+            "value": 448.0
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "token": 0,
+          "head": 0,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  -5,
+                  -4,
+                  -3,
+                  -2
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "-5",
+            "-4",
+            "-3",
+            "-2"
+          ]
+        },
+        {
+          "token": 0,
+          "head": 1,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": -1,
+                "mass": 1,
+                "numerator": [
+                  3,
+                  4,
+                  5,
+                  6
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        {
+          "token": 1,
+          "head": 0,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  13,
+                  14,
+                  15,
+                  16
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 2,
+                "numerator": [
+                  30,
+                  32,
+                  34,
+                  36
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "27/2",
+            "29/2",
+            "31/2",
+            "33/2"
+          ]
+        },
+        {
+          "token": 1,
+          "head": 1,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  19,
+                  20,
+                  21,
+                  22
+                ]
+              },
+              {
+                "shift": 0,
+                "mass": 1,
+                "numerator": [
+                  21,
+                  22,
+                  23,
+                  24
+                ]
+              },
+              {
+                "shift": 0,
+                "mass": 2,
+                "numerator": [
+                  46,
+                  48,
+                  50,
+                  52
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "43/2",
+            "45/2",
+            "47/2",
+            "49/2"
+          ]
+        },
+        {
+          "token": 2,
+          "head": 0,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 2,
+                "mass": 1,
+                "numerator": [
+                  27,
+                  28,
+                  29,
+                  30
+                ]
+              },
+              {
+                "shift": 2,
+                "mass": 1,
+                "numerator": [
+                  29,
+                  30,
+                  31,
+                  32
+                ]
+              },
+              {
+                "shift": 2,
+                "mass": 2,
+                "numerator": [
+                  62,
+                  64,
+                  66,
+                  68
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "59/2",
+            "61/2",
+            "63/2",
+            "65/2"
+          ]
+        },
+        {
+          "token": 2,
+          "head": 1,
+          "input": {
+            "operation": "merge",
+            "participant_ids": [
+              "segment-0",
+              "segment-1",
+              "segment-2"
+            ],
+            "empty_policy": "undefined",
+            "parts": [
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  35,
+                  36,
+                  37,
+                  38
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 1,
+                "numerator": [
+                  37,
+                  38,
+                  39,
+                  40
+                ]
+              },
+              {
+                "shift": 1,
+                "mass": 2,
+                "numerator": [
+                  78,
+                  80,
+                  82,
+                  84
+                ]
+              }
+            ]
+          },
+          "expected": [
+            "75/2",
+            "77/2",
+            "79/2",
+            "81/2"
+          ]
+        }
+      ],
+      "runs": [
+        {
+          "initial_storage": -12345,
+          "complete_storage": [
+            -12345.0,
+            -5.0,
+            -4.0,
+            -3.0,
+            -2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            13.5,
+            14.5,
+            15.5,
+            16.5,
+            21.5,
+            22.5,
+            23.5,
+            24.5,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            29.5,
+            30.5,
+            31.5,
+            32.5,
+            37.5,
+            38.5,
+            39.5,
+            40.5,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0,
+            -12345.0
+          ],
+          "output_mismatch_addresses": [],
+          "changed_guard_addresses": [],
+          "inputs_after": {
+            "maxima": [
+              0,
+              2143289344,
+              2143289344,
+              2143289344,
+              -1082130432,
+              2143289344,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              1065353216,
+              2143289344,
+              0,
+              0,
+              0,
+              2143289344,
+              1073741824,
+              1073741824,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1065353216,
+              2143289344
+            ],
+            "masses": [
+              1065353216,
+              2143289344,
+              2143289344,
+              2143289344,
+              1065353216,
+              2143289344,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344
+            ],
+            "numerators": [
+              -1063256064,
+              -1065353216,
+              -1069547520,
+              -1073741824,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1077936128,
+              1082130432,
+              1084227584,
+              1086324736,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1093664768,
+              1094713344,
+              1095761920,
+              1096810496,
+              1095761920,
+              1096810496,
+              1097859072,
+              1098907648,
+              1106247680,
+              1107296256,
+              1107820544,
+              1108344832,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1100480512,
+              1101004800,
+              1101529088,
+              1102053376,
+              1101529088,
+              1102053376,
+              1102577664,
+              1103101952,
+              1110966272,
+              1111490560,
+              1112014848,
+              1112539136,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1104674816,
+              1105199104,
+              1105723392,
+              1106247680,
+              1105723392,
+              1106247680,
+              1106771968,
+              1107296256,
+              1115160576,
+              1115684864,
+              1115947008,
+              1116209152,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1108082688,
+              1108344832,
+              1108606976,
+              1108869120,
+              1108606976,
+              1108869120,
+              1109131264,
+              1109393408,
+              1117519872,
+              1117782016,
+              1118044160,
+              1118306304,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344
+            ],
+            "seq_lens": [
+              1,
+              9
+            ],
+            "query_offsets": [
+              0,
+              1,
+              3
+            ]
+          }
+        },
+        {
+          "initial_storage": 23456,
+          "complete_storage": [
+            23456.0,
+            -5.0,
+            -4.0,
+            -3.0,
+            -2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            13.5,
+            14.5,
+            15.5,
+            16.5,
+            21.5,
+            22.5,
+            23.5,
+            24.5,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            29.5,
+            30.5,
+            31.5,
+            32.5,
+            37.5,
+            38.5,
+            39.5,
+            40.5,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0,
+            23456.0
+          ],
+          "output_mismatch_addresses": [],
+          "changed_guard_addresses": [],
+          "inputs_after": {
+            "maxima": [
+              0,
+              2143289344,
+              2143289344,
+              2143289344,
+              -1082130432,
+              2143289344,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              1065353216,
+              2143289344,
+              0,
+              0,
+              0,
+              2143289344,
+              1073741824,
+              1073741824,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1065353216,
+              2143289344
+            ],
+            "masses": [
+              1065353216,
+              2143289344,
+              2143289344,
+              2143289344,
+              1065353216,
+              2143289344,
+              2143289344,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344,
+              1065353216,
+              1065353216,
+              1073741824,
+              2143289344
+            ],
+            "numerators": [
+              -1063256064,
+              -1065353216,
+              -1069547520,
+              -1073741824,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1077936128,
+              1082130432,
+              1084227584,
+              1086324736,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1093664768,
+              1094713344,
+              1095761920,
+              1096810496,
+              1095761920,
+              1096810496,
+              1097859072,
+              1098907648,
+              1106247680,
+              1107296256,
+              1107820544,
+              1108344832,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1100480512,
+              1101004800,
+              1101529088,
+              1102053376,
+              1101529088,
+              1102053376,
+              1102577664,
+              1103101952,
+              1110966272,
+              1111490560,
+              1112014848,
+              1112539136,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1104674816,
+              1105199104,
+              1105723392,
+              1106247680,
+              1105723392,
+              1106247680,
+              1106771968,
+              1107296256,
+              1115160576,
+              1115684864,
+              1115947008,
+              1116209152,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344,
+              1108082688,
+              1108344832,
+              1108606976,
+              1108869120,
+              1108606976,
+              1108869120,
+              1109131264,
+              1109393408,
+              1117519872,
+              1117782016,
+              1118044160,
+              1118306304,
+              2143289344,
+              2143289344,
+              2143289344,
+              2143289344
+            ],
+            "seq_lens": [
+              1,
+              9
+            ],
+            "query_offsets": [
+              0,
+              1,
+              3
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

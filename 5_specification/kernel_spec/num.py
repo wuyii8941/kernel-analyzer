@@ -71,6 +71,16 @@ def evaluate(fn, *args, **kw) -> Result:
 _RAT = re.compile(r"^\s*-?\d+(\s*/\s*\d+)?\s*$")
 
 
+def require_fields(value, fields, what="input"):
+    """Validate a complete named input record before any field lookup or computation."""
+    if not isinstance(value, dict) or any(not isinstance(key, str) for key in value):
+        raise Invalid(f"{what}: expected a mapping with string field names")
+    missing = set(fields) - set(value)
+    if missing:
+        raise Invalid(f"{what}: missing required fields {sorted(missing)}")
+    return value
+
+
 def rational(x, what="value") -> Fraction:
     """The exactly received rational value. Ints, Fractions, 'p/q' strings and finite floats (their exact binary
     value) are accepted; bools, decimals-as-strings, NaN and infinities are invalid."""
@@ -167,7 +177,8 @@ def _exact_or_widened(e, side):
         if side == "lo":
             return -Fraction(1, 1 << (1 << 20)) if neg else Fraction(0)
         return Fraction(0) if neg else Fraction(1, 1 << (1 << 20))
-    return Fraction(*libmp.to_rational(e))
+    p, q = libmp.to_rational(e)
+    return Fraction(int(p), int(q))     # int(): under the gmpy2 backend these are gmpy2.mpz, which Fraction keeps as is
 
 
 def hull(lo, hi) -> IV:

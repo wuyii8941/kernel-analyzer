@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 rank-4 float32 functional interpolate with explicit size, legacy mode='nearest', and complete input VJP",
+  "reference": "Cross-check the versioned native PyTorch 2.10 public call against INTERP.torch210_nearest2d_size_autograd, whose coordinate gather and transpose accumulation are computed independently with exact integers and rational values",
+  "limits": "This selects legacy nearest coordinates, not nearest-exact, scale-factor calls, other ranks or other interpolation modes. Every missing Triton phase, execution failure and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "dimensions": [2, 3, 5, 7],
+    "seeds": [20261501, 20261502],
+    "cases": [
+      {"id": "nearest_upsample_rectangular", "size": [8, 11]},
+      {"id": "nearest_downsample_rectangular", "size": [3, 4]},
+      {"id": "nearest_same_height", "size": [5, 10]},
+      {"id": "nearest_noncontiguous_mixed", "size": [9, 3], "noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "dimensions": [1, 4, 6, 9],
+    "seeds": [20261503, 20261504],
+    "cases": [
+      {"id": "nearest_heldout_upsample", "size": [11, 13]},
+      {"id": "nearest_heldout_downsample", "size": [4, 5]},
+      {"id": "nearest_heldout_same_height", "size": [6, 4]},
+      {"id": "nearest_heldout_noncontiguous_mixed", "size": [3, 14], "noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, dimensions, seeds, layouts and sizes were fixed before either GPU split ran. The Inductor split uses unseen shapes, seeds and size combinations. This tests transfer within one operator family and does not claim unseen-family coverage."
+}

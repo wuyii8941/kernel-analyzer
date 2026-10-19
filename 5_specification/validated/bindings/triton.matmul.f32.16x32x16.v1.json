@@ -1,0 +1,38 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.matmul.f32.16x32x16.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton matrix multiplication with IEEE float32 inputs",
+    "runtime_package": {
+      "distribution": "triton",
+      "version": "3.6.0"
+    },
+    "boundary": "one 16x32 by 32x16 matrix multiplication launch",
+    "measure_call": "../calls/triton_matmul.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "matmul",
+      "contract": "MATMUL",
+      "profile": "real",
+      "task_statement": "Exact finite-real product of the received contiguous float32 matrices with shapes 16x32 and 32x16.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.mm", "basis": "selected matrix-product task"},
+        {"target": "/args/0", "source": "/tensor_arguments/a/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/b/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "a", "effect": "unchanged"},
+    {"argument": "b", "effect": "unchanged"}
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.paged_attention.f32.t5.hq4.hkv2.d16.bs8.window4.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 causal paged GQA attention",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch of twenty programs writes the complete 5x4x16 public output",
+    "measure_call": "../calls/triton_paged_attention.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "complete_paged_attention",
+      "contract": "PAGEDATTN",
+      "profile": "vllm016_causal_2d_real",
+      "task_statement": "Compute complete float32 causal paged GQA attention for query lengths 3 and 2, KV lengths 13 and 10, block size 8, supplied physical block tables, scale 0.25, inclusive left window 4 and no softcap.",
+      "input_map": [
+        {"target": "/query", "source": "/tensor_arguments/query/before", "conversion": "tensor_values"},
+        {"target": "/cu_seqlens_q", "literal": [0, 3, 5], "basis": "tokens 0..2 and 3..4 form the two packed query sequences"},
+        {"target": "/seq_lens", "literal": [13, 10], "basis": "the kernel fixes the logical KV lengths for its two sequences"},
+        {"target": "/key_cache", "source": "/tensor_arguments/key_cache/before", "conversion": "tensor_values"},
+        {"target": "/value_cache", "source": "/tensor_arguments/value_cache/before", "conversion": "tensor_values"},
+        {"target": "/block_table", "source": "/tensor_arguments/block_table/before", "conversion": "tensor_values"},
+        {"target": "/scale", "literal": 0.25, "basis": "the kernel multiplies every QK score by exact binary 0.25"},
+        {"target": "/causal", "literal": true, "basis": "the mask requires source position at or before the absolute query position"},
+        {"target": "/window", "literal": [4, -1], "basis": "the mask includes keys with position-source <= 4; causal masking makes the right side unbounded"},
+        {"target": "/softcap", "literal": 0, "basis": "the kernel does not apply score softcap"},
+        {"target": "/dtype", "literal": "f32", "basis": "query, caches and output are contiguous float32 tensors"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "query", "effect": "unchanged"},
+    {"argument": "key_cache", "effect": "unchanged"},
+    {"argument": "value_cache", "effect": "unchanged"},
+    {"argument": "block_table", "effect": "unchanged"}
+  ]
+}

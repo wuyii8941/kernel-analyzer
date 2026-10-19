@@ -1,0 +1,22 @@
+{
+  "call": "../calls/triton_lora_shrink.py:call",
+  "inputs": {
+    "x": {"sampler": {"normal": [0, 0.5]}, "shape": [64, 32], "dtype": "float16"},
+    "weights": {"sampler": {"normal": [0, 0.5]}, "shape": [2, 4, 8, 32], "dtype": "float16"},
+    "mapping": {"state": "../calls/triton_lora_shrink.py:make_mapping", "shape": [64], "dtype": "int32"},
+    "out_before": {"sampler": {"normal": [0, 1]}, "shape": [2, 64, 8], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["y"],
+    "binding_plan": "../call_bindings/triton_lora_shrink.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

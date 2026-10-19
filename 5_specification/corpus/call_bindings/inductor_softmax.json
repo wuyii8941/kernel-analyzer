@@ -1,0 +1,38 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.softmax.lastdim.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.softmax)",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "compiled rank-2 last-dimension softmax",
+    "measure_call": "../calls/inductor_softmax.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "softmax",
+      "contract": "SOFTMAX",
+      "profile": "real",
+      "task_statement": "Softmax of a rank-2 floating tensor along its last dimension, with half_to_float false.",
+      "input_map": [
+        {"target": "/op", "literal": "aten._softmax", "basis": "PyTorch internal operation selected by the public call"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/scalars/dim"},
+        {"target": "/args/2", "source": "/scalars/half_to_float"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

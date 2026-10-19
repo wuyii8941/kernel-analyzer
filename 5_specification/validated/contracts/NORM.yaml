@@ -1,0 +1,391 @@
+schema_version: '1.2'
+id: NORM
+role: NORM
+title: LayerNorm, RMSNorm (and the x_hat (offset + w) variant) and GroupNorm with their statistics and VJPs, real-number
+  semantics
+review:
+  status: reviewed_for_implementation
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-18'
+  reviewer: Codex independent source, formula, domain and implementation review
+  scope: Forward values, returned statistics and VJPs in the declared profiles; device rounding and concrete kernel
+    binding remain separate
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/norm_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.LayerNorm, torch.nn.functional.layer_norm, aten.native_layer_norm, aten.native_layer_norm_backward,
+  torch.nn.RMSNorm, torch.nn.functional.rms_norm, torch.nn.GroupNorm, torch.nn.functional.group_norm,
+  aten.native_group_norm, aten.native_group_norm_backward, liger.LigerLayerNormFunction, liger.LigerRMSNormFunction,
+  liger.LigerGroupNormFunction, transformers.GemmaRMSNorm, transformers.Qwen3NextRMSNorm]
+profiles:
+  torch:
+    meaning: The full/native LayerNorm, RMSNorm or GroupNorm real-number task (eps inside the square root, biased
+      variance, contiguous channel groups), including returned statistics and the VJP against an explicit upstream.
+      A public-call binding must use torch_autograd because torch.nn.functional.group_norm has an additional input
+      rejection before the native operation.
+    task_choice_required: false
+  torch_autograd:
+    meaning: The same real-number LayerNorm, RMSNorm or GroupNorm task observed through a public forward-and-backward
+      call. The complete external result is y and the VJP; saved mean/rstd used only inside backward are not public
+      outputs of this profile. The public PyTorch GroupNorm batch-size rejection is part of this profile.
+    task_choice_required: false
+    outputs: [y, grad]
+  rms_offset:
+    meaning: The RMSNorm variant y = x * rstd * (offset + w) declared by Gemma / Qwen3-Next (offset 1) and Liger's offset
+      argument; a different declared function, not a reading of torch.nn.RMSNorm (decision NM.OFFSET).
+    task_choice_required: true
+outputs:
+  y:
+    shape: the input's shape
+    guarantee: rigorous_enclosure
+  saved:
+    shape: 'dict: mean and rstd per normalisation set (layer_norm: the outer shape; group_norm: (N, num_groups));
+      rstd only for rms_norm'
+    guarantee: rigorous_enclosure
+  grad:
+    shape: 'dict: x (input shape), weight / bias (parameter shape) when they are given'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Values are the exact rationals received; eps is the exact value passed (1e-5 as a binary double is its
+    exact binary value).
+  quality: No tolerance; statistics are exact rationals, 1/sqrt(var + eps) exact when rational and otherwise a rigorous
+    enclosure.
+  test_evidence: Hand / sympy derivations (forward from the documented formula, VJP by symbolic differentiation).
+  error_handling: Shape and public-interface violations are invalid_input; a normalisation radicand that is not
+    positive is domain_undefined.
+decisions:
+- id: NM.VJP
+  status: reviewed
+  statement: 'grad is the VJP of y with respect to x, weight and bias against the explicit upstream g (y''s shape):
+    for one normalisation set of n values with x_hat = (x - mean) r, r = 1/sqrt(var + eps), h = g w: dx = r (h -
+    mean(h) - x_hat mean(h x_hat)); RMSNorm (x_hat = x r): dx = r (h - x_hat mean(h x_hat)); dweight = sum over the
+    sets of g x_hat, dbias = sum of g, per parameter element (LayerNorm / RMSNorm) or per channel (GroupNorm). Derived
+    by differentiating the documented forward; agrees with torch''s native_layer_norm_backward decomposition.'
+  basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF, NORM_TS_DECOMP.LN_BWD,
+    NORM_TS_DECOMP.RMS_BWD, NORM_LIGER_LN.BWD, NORM_LIGER_RMS.BWD, NORM_LIGER_GN.BWD]
+- id: NM.SAVED
+  status: reviewed
+  statement: The pages document only y. The statistics the operations return (aten.native_layer_norm /
+    native_group_norm return (y, mean, rstd); Liger stores Mean / RSTD; RMSNorm kernels store rstd) are reported in
+    saved as mean and rstd = 1/sqrt(var + eps) per set (RMSNorm - rstd = 1/sqrt(mean(x^2) + eps)). This rests on the
+    torch sources and the Liger reference program, not on the pages. Alternatives (report the standard deviation, or
+    omit the statistics) rejected because the tested kernels write mean / rstd.
+  basis: [NORM_TS_REFS.NORMALIZE, NORM_TS_REFS.GROUP, NORM_LIGER_LN.DEF, NORM_LIGER_RMS.DEF]
+- id: NM.RMS_EPS
+  status: reviewed
+  statement: eps is an explicit input of every query. For RMSNorm eps=None means torch.finfo(x.dtype).eps; which dtype
+    (the input's, or an upcast compute dtype) is a fact of the call that the binding states (v2.4 NORM-A1); e.g. the
+    FlagGems rms_norm call passes no eps, so the binding uses 2^-23 / 2^-10 / 2^-7 for float32 / float16 / bfloat16
+    inputs. No default is guessed by the reference.
+  basis: [T_RMSNORM.EPS, T_RMSNORM_F.DEF]
+- id: NM.OFFSET
+  status: reviewed
+  statement: The (offset + w) form (Gemma and Qwen3-Next HF modules use 1.0 + weight with the weight initialised to
+    zero; Liger's offset argument) is a different declared function, kept in its own profile rms_offset with the offset
+    as an explicit input; the model definition selects it (task binding). Bug B004 - Liger 0.7.0's instance patch for
+    Qwen3-Next used offset 0, which contradicts y of this profile for offset 1. Liger with offset 0.0 is the torch
+    profile.
+  basis: [NORM_HF_QWEN3NEXT.OFFSET, NORM_HF_GEMMA.OFFSET, NORM_LIGER_RMS.OFFSET, NORM_LIGER_RMS.DEF]
+- id: NM.GN_GROUPS
+  status: reviewed
+  statement: Group k holds the contiguous channels k C/G ... (k+1) C/G - 1. The page says the channels are separated
+    into num_groups groups of C/G channels without naming the assignment; torch's reference (reshape to [N, G, C/G,
+    inner]) and Liger (view(batch, G, -1)) both use contiguous blocks. Alternative (channel c in group c mod G) has no
+    source and is mutant NM.M6.
+  basis: [T_GROUPNORM.DEF, NORM_TS_REFS.GROUP, NORM_LIGER_GN.DEF]
+- id: NM.ZERO_VAR
+  status: reviewed
+  statement: A constant normalisation set has var = 0; with eps > 0 the result is finite (x_hat = 0, y = bias, finite
+    VJP). A nonpositive variance/second-moment plus eps has no real reciprocal square root and is domain_undefined,
+    with no requirement on the device output. An empty normalisation set has no mean and is also domain_undefined.
+  basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF]
+- id: NM.EPS_DOMAIN
+  status: reviewed
+  statement: eps is the exact value added inside the square root. The documented formula and the PyTorch public
+    wrappers do not impose eps >= 0; a negative eps is therefore in the real task domain when every resulting
+    variance/second-moment plus eps is positive. Zero or a negative radicand is domain_undefined.
+  basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF, NORM_TS_FUNC.NORM_CALLS]
+- id: NM.GROUP_PUBLIC
+  status: reviewed
+  statement: The torch_autograd profile follows the public torch.nn.functional.group_norm boundary, which rejects
+    exactly when (N*C/num_groups)*product(spatial dimensions) equals one before invoking the native operation. The
+    full torch profile represents the native task and does not add this public-wrapper rejection.
+  basis: [NORM_TS_FUNC.GROUP_PUBLIC, NORM_TS_REFS.GROUP]
+- id: NM.CASTS
+  status: reviewed
+  statement: Precision choices of implementations (Liger casting_mode llama / gemma / none, the HF modules' float32
+    computation and cast back) are rounding steps of the program, not part of the real target; every casting mode
+    binds to the same profile.
+  basis: [NORM_LIGER_RMS.CAST, NORM_HF_QWEN3NEXT.OFFSET]
+clauses:
+- {id: NM.C1, basis: [T_LAYERNORM.DEF, T_LAYERNORM.VAR, T_LAYERNORM.AFFINE, T_LAYERNORM_F.DEF], statement: 'layer_norm
+    - per set of the last D = len(normalized_shape) dims, mean, biased variance, y = (x - mean)/sqrt(var + eps) * w +
+    b (w, b optional, of shape normalized_shape)', observes: [y], evidence_kind: definition}
+- {id: NM.C2, basis: [NM.SAVED], statement: 'saved mean and rstd = 1/sqrt(var + eps) per set, of the outer shape',
+  observes: [saved], evidence_kind: definition}
+- {id: NM.C3, basis: [NM.VJP, NORM_TS_DECOMP.LN_BWD], statement: 'layer_norm VJP - dx = r (h - mean(h) - x_hat mean(h
+    x_hat)), h = g w; dweight = sum over sets of g x_hat; dbias = sum of g', observes: [grad], evidence_kind: derived}
+- {id: NM.C4, basis: [T_RMSNORM.DEF, T_RMSNORM.AFFINE, T_RMSNORM_F.DEF, NM.SAVED], statement: 'rms_norm - y = x /
+    sqrt(eps + mean(x^2)) * w over the last D dims; saved rstd', observes: [y, saved], evidence_kind: definition}
+- {id: NM.C5, basis: [NM.VJP], statement: 'rms_norm VJP - dx = r (h - x_hat mean(h x_hat)), h = g w; dweight = sum of
+    g x_hat', observes: [grad], evidence_kind: derived}
+- {id: NM.C6, basis: [NM.RMS_EPS, T_RMSNORM.EPS], statement: 'eps is the explicit value given (eps=None resolved by the
+    binding to torch.finfo(dtype).eps)', observes: [y, saved], evidence_kind: definition}
+- {id: NM.C7, basis: [NM.OFFSET, NORM_LIGER_RMS.DEF, NORM_HF_QWEN3NEXT.OFFSET], statement: 'profile rms_offset - y = x
+    r (offset + w); dx uses h = g (offset + w); dweight = sum of g x_hat', observes: [y, grad], evidence_kind:
+    definition}
+- {id: NM.C8, basis: [T_GROUPNORM.DEF, T_GROUPNORM.VAR, T_GROUPNORM.SHAPE, NM.GN_GROUPS], statement: 'group_norm - x
+    (N, C, *), contiguous groups of C/G channels, mean and biased variance per (sample, group), per-channel w, b; saved
+    of shape (N, G)', observes: [y, saved], evidence_kind: definition}
+- {id: NM.C9, basis: [NM.VJP], statement: 'group_norm VJP - per (sample, group) dx = r (h - mean(h) - x_hat mean(h
+    x_hat)), h = g w_c; dweight_c, dbias_c summed over samples and positions of channel c', observes: [grad],
+  evidence_kind: derived}
+- {id: NM.C10, basis: [NM.ZERO_VAR], statement: 'constant set with eps > 0 gives x_hat = 0; a nonpositive
+    variance/second-moment plus eps is domain_undefined', observes: [y, saved, grad], evidence_kind: definition}
+- {id: NM.C11, basis: [T_LAYERNORM.DEF, T_GROUPNORM.DEF, T_GROUPNORM.SHAPE], statement: 'normalized_shape that is not
+    the trailing shape, C not divisible by num_groups, parameter shapes that do not match are invalid_input',
+  observes: [y], evidence_kind: definition}
+- {id: NM.C12, basis: [NM.EPS_DOMAIN], statement: 'negative eps remains valid when every normalisation radicand is
+    positive; a nonpositive radicand is domain_undefined', observes: [y, saved, grad], evidence_kind: definition}
+- {id: NM.C13, basis: [NM.GROUP_PUBLIC], statement: 'torch_autograd group_norm applies the public PyTorch batch-size
+    rejection; the full/native torch profile does not', observes: [y, grad], evidence_kind: definition}
+examples:
+- id: NM.E1
+  profile: torch
+  clauses: [NM.C1, NM.C2, NM.C3]
+  input: {op: layer_norm, x: [[1, 3], [5, 7]], normalized_shape: [2], weight: [2, -1], bias: ['1/2', 0], eps: '9/16',
+    upstream: [[1, 2], [3, -1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-11/10', '-4/5'], ['-11/10', '-4/5']]
+      saved: {mean: [2, 6], rstd: ['4/5', '4/5']}
+      grad: {x: [['72/125', '-72/125'], ['18/25', '-18/25']], weight: ['-16/5', '4/5'], bias: [4, 1]}
+- id: NM.E2
+  profile: torch
+  clauses: [NM.C1, NM.C2, NM.C3]
+  input: {op: layer_norm, x: [[[0, 2], [4, 6]]], normalized_shape: [2, 2], weight: null, bias: null, eps: 4,
+    upstream: [[[1, 0], [0, 0]]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[[-1, '-1/3'], ['1/3', 1]]]
+      saved: {mean: [3], rstd: ['1/3']}
+      grad: {x: [[['1/6', '-1/9'], ['-1/18', 0]]]}
+  note: two-dimensional normalized_shape, no affine parameters
+- id: NM.E3
+  profile: torch
+  clauses: [NM.C1, NM.C3, NM.C10]
+  input: {op: layer_norm, x: [[2, 2]], normalized_shape: [2], weight: [3, 5], bias: [1, -1], eps: '1/4', upstream: [[
+        1, 3]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[1, -1]]
+      saved: {mean: [2], rstd: [2]}
+      grad: {x: [[-12, 12]], weight: [0, 0], bias: [1, 3]}
+  note: phase-2b constant_rows
+- {id: NM.E4, profile: torch, clauses: [NM.C10], input: {op: layer_norm, x: [[2, 2]], normalized_shape: [2], weight: null,
+    bias: null, eps: 0, upstream: [[1, 0]]}, expected: {outcome: domain_undefined}}
+- id: NM.E5
+  profile: torch
+  clauses: [NM.C1, NM.C3]
+  input: {op: layer_norm, x: [[0, '1/100000000000000000000']], normalized_shape: [2], weight: null, bias: null, eps: '1/100000',
+    upstream: [[1, 0]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-sqrt(400000000000000000000000000000000001)/400000000000000000000000000000000001', 'sqrt(400000000000000000000000000000000001)/400000000000000000000000000000000001']]
+      saved: {mean: ['1/200000000000000000000'], rstd: ['200000000000000000000*sqrt(400000000000000000000000000000000001)/400000000000000000000000000000000001']}
+      grad: {x: [['40000000000000000000000000000000000000000000000000000000*sqrt(400000000000000000000000000000000001)/160000000000000000000000000000000000800000000000000000000000000000000001',
+            '-40000000000000000000000000000000000000000000000000000000*sqrt(400000000000000000000000000000000001)/160000000000000000000000000000000000800000000000000000000000000000000001']]}
+  note: phase-2b tiny (variance far below eps)
+- id: NM.E6
+  profile: torch
+  clauses: [NM.C1, NM.C3]
+  input: {op: layer_norm, x: [[10000, 10002]], normalized_shape: [2], weight: [1, 1], bias: [0, 0], eps: '9/16', upstream: [
+      [0, 1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['-4/5', '4/5']]
+      saved: {mean: [10001], rstd: ['4/5']}
+      grad: {x: [['-18/125', '18/125']], weight: [0, '4/5'], bias: [0, 1]}
+  note: phase-2b huge_offset
+- id: NM.E7
+  profile: torch
+  clauses: [NM.C4, NM.C5]
+  input: {op: rms_norm, x: [[2, 4]], normalized_shape: [2], weight: [1, 3], eps: 6, upstream: [[2, -1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['1/2', 3]]
+      saved: {rstd: ['1/4']}
+      grad: {x: [['5/8', '-1/2']], weight: [1, -1]}
+- id: NM.E8
+  profile: rms_offset
+  clauses: [NM.C7]
+  input: {op: rms_norm, x: [[2, 4]], normalized_shape: [2], weight: [1, 3], eps: 6, upstream: [[2, -1]], offset: 1}
+  expected:
+    outcome: value
+    fields:
+      y: [[1, 4]]
+      saved: {rstd: ['1/4']}
+      grad: {x: [['9/8', '-3/4']], weight: [1, -1]}
+  note: Qwen3-Next / Gemma form (bug B004)
+- id: NM.E9
+  profile: torch
+  clauses: [NM.C4, NM.C5, NM.C10]
+  input: {op: rms_norm, x: [[0, 0]], normalized_shape: [2], weight: null, eps: '1/4', upstream: [[1, 1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[0, 0]]
+      saved: {rstd: [2]}
+      grad: {x: [[2, 2]]}
+- {id: NM.E10, profile: torch, clauses: [NM.C10], input: {op: rms_norm, x: [[0, 0]], normalized_shape: [2], weight: null,
+    eps: 0, upstream: [[1, 1]]}, expected: {outcome: domain_undefined}}
+- id: NM.E11
+  profile: torch
+  clauses: [NM.C8, NM.C9]
+  input: {op: group_norm, x: [[[0, 2], [0, 2], [4, 6], [4, 6]]], num_groups: 2, weight: [1, 2, -1, '1/2'], bias: [0, 1, 0,
+      -1], eps: '9/16', upstream: [[[1, 0], [0, 1], [2, 0], [0, 0]]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[['-4/5', '4/5'], ['-3/5', '13/5'], ['4/5', '-4/5'], ['-7/5', '-3/5']]]
+      saved: {mean: [[1, 5]], rstd: [['4/5', '4/5']]}
+      grad: {x: [[['41/125', '-91/125'], ['-59/125', '109/125'], ['-118/125', '18/125'], ['82/125', '18/125']]], weight: [
+          '-4/5', '4/5', '-8/5', 0], bias: [1, 1, 2, 0]}
+- id: NM.E12
+  profile: torch
+  clauses: [NM.C8, NM.C9]
+  input: {op: group_norm, x: [[[1], [3]], [[5], [7]]], num_groups: 1, weight: null, bias: null, eps: 3, upstream: [[[1], [
+          0]], [[0], [0]]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[['-1/2'], ['1/2']], [['-1/2'], ['1/2']]]
+      saved: {mean: [[2], [6]], rstd: [['1/2'], ['1/2']]}
+      grad: {x: [[['3/16'], ['-3/16']], [[0], [0]]]}
+- {id: NM.E13, profile: torch, clauses: [NM.C11], input: {op: group_norm, x: [[[1], [2], [3]]], num_groups: 2, weight: null,
+    bias: null, eps: 1, upstream: [[[1], [0], [0]]]}, expected: {outcome: invalid_input}}
+- {id: NM.E14, profile: torch, clauses: [NM.C11], input: {op: layer_norm, x: [[1, 2, 3]], normalized_shape: [2], weight: null,
+    bias: null, eps: 1, upstream: [[1, 0, 0]]}, expected: {outcome: invalid_input}}
+- id: NM.E15
+  profile: torch
+  clauses: [NM.C4, NM.C5]
+  input: {op: rms_norm, x: [[3, 4], [0, 5]], normalized_shape: [2], weight: null, eps: '1/2', upstream: [[1, 0], [0, 1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['3*sqrt(13)/13', '4*sqrt(13)/13'], [0, '5*sqrt(13)/13']]
+      saved: {rstd: ['sqrt(13)/13', 'sqrt(13)/13']}
+      grad: {x: [['17*sqrt(13)/338', '-6*sqrt(13)/169'], [0, 'sqrt(13)/338']]}
+- id: NM.E16
+  profile: torch
+  clauses: [NM.C4, NM.C5, NM.C6]
+  input: {op: rms_norm, x: [[1, -1]], normalized_shape: [2], weight: null, eps: '1/8388608', upstream: [[1, 0]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['2048*sqrt(16777218)/8388609', '-2048*sqrt(16777218)/8388609']]
+      saved: {rstd: ['2048*sqrt(16777218)/8388609']}
+      grad: {x: [['8589936640*sqrt(16777218)/70368760954881', '8589934592*sqrt(16777218)/70368760954881']]}
+  note: eps = 2^-23 = torch.finfo(float32).eps, the value eps=None resolves to for a float32 input
+- id: NM.E17
+  profile: torch
+  clauses: [NM.C1, NM.C2, NM.C3]
+  input: {op: layer_norm, x: [[[1, 2, 3], [0, 0, 3], [4, 4, 1]]], normalized_shape: [3], weight: [1, 1, 2], bias: null,
+    eps: '1/3', upstream: [[[0, 1, 0], [1, 0, 0], [0, 0, 2]]]}
+  expected:
+    outcome: value
+    fields:
+      y: [[[-1, 0, 2], ['-sqrt(21)/7', '-sqrt(21)/7', '4*sqrt(21)/7'], ['sqrt(21)/7', 'sqrt(21)/7', '-4*sqrt(21)/7']]]
+      saved: {mean: [[2, 1, 3]], rstd: [[1, 'sqrt(21)/7', 'sqrt(21)/7']]}
+      grad: {x: [[['-1/3', '2/3', '-1/3'], ['11*sqrt(21)/147', '-10*sqrt(21)/147', '-sqrt(21)/147'], ['-4*sqrt(21)/147',
+            '-4*sqrt(21)/147', '8*sqrt(21)/147']]], weight: ['-sqrt(21)/7', 0, '-4*sqrt(21)/7']}
+  note: (batch, seq, hidden) input as in the tested calls; weight without bias
+- id: NM.E18
+  profile: torch_autograd
+  clauses: [NM.C4, NM.C5]
+  input: {op: rms_norm, x: [[2, 4]], normalized_shape: [2], weight: [1, 3], eps: 6, upstream: [[2, -1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['1/2', 3]]
+      grad: {x: [['5/8', '-1/2']], weight: [1, -1]}
+  note: Public autograd boundary; rstd is internal saved data and is not an external output.
+- id: NM.E19
+  profile: torch
+  clauses: [NM.C1, NM.C3, NM.C12]
+  input: {op: layer_norm, x: [[-1, 1]], normalized_shape: [2], weight: null, bias: null, eps: '-3/4', upstream: [[1, 0]]}
+  expected:
+    outcome: value
+    fields: {y: [[-2, 2]], saved: {mean: [0], rstd: [2]}, grad: {x: [[-3, 3]]}}
+  note: Negative eps is valid here because the biased variance is 1 and the radicand is 1/4.
+- {id: NM.E20, profile: torch, clauses: [NM.C12], input: {op: layer_norm, x: [[-1, 1]], normalized_shape: [2],
+    weight: null, bias: null, eps: -1, upstream: [[1, 0]]}, expected: {outcome: domain_undefined}}
+- id: NM.E21
+  profile: torch
+  clauses: [NM.C8, NM.C9, NM.C13]
+  input: {op: group_norm, x: [[1]], num_groups: 1, weight: null, bias: null, eps: '1/4', upstream: [[1]]}
+  expected:
+    outcome: value
+    fields: {y: [[0]], saved: {mean: [[1]], rstd: [[2]]}, grad: {x: [[0]]}}
+  note: The native operation has a defined single-value result.
+- {id: NM.E22, profile: torch_autograd, clauses: [NM.C13], input: {op: group_norm, x: [[1]], num_groups: 1,
+    weight: null, bias: null, eps: '1/4', upstream: [[1]]}, expected: {outcome: invalid_input},
+    note: The public wrapper rejects before calling the native operation.}
+signature:
+  inputs: ['op: layer_norm | rms_norm | group_norm', 'x: nested list (layer/rms: (*, normalized_shape); group: (N, C,
+      *))', 'normalized_shape (layer/rms) or num_groups (group)', 'weight, bias: nested lists or null (rms_norm has no
+      bias)', 'eps: exact rational, explicit', 'upstream: nested list of the shape of x', 'offset (profile rms_offset)']
+  pre_state: []
+  post_state: []
+  observation_unit: 'one normalisation call: y, saved statistics and the complete VJP. aten.native_layer_norm(x,
+    normalized_shape, w, b, eps) = (y, mean, rstd) and aten.native_group_norm(x, w, b, N, C, HxW, G, eps) = (y, mean,
+    rstd) map to y and saved; their backward ops (with output_mask) map to grad. Profile torch_autograd observes the
+    public y and VJP boundary and does not expose saved statistics.'
+domain:
+  valid: [exact rational inputs of consistent shapes for which every variance/second-moment plus eps is positive]
+  domain_undefined: [nonpositive variance/second-moment plus eps, empty normalisation set]
+  invalid_input: [normalized_shape that is not the trailing shape of x, num_channels not divisible by num_groups,
+    parameter shapes that do not match, the public GroupNorm batch-size rejection in torch_autograd, missing or extra
+    fields]
+  unsupported: [ops outside the profile (rms_offset has rms_norm only), infinite or NaN values]
+mutation_requirements:
+- {id: NM.M1, misreading: unbiased variance (n - 1) in the normalisation, witnesses: [NM.E1]}
+- {id: NM.M2, misreading: 'eps outside the square root, 1/(sqrt(var) + eps)', witnesses: [NM.E1]}
+- {id: NM.M3, misreading: 'offset ignored in profile rms_offset (bug B004: x_hat w instead of x_hat (1 + w))',
+  witnesses: [NM.E8]}
+- {id: NM.M4, misreading: offset form used for torch.nn.RMSNorm, witnesses: [NM.E7]}
+- {id: NM.M5, misreading: RMSNorm subtracts the mean (LayerNorm used for RMSNorm), witnesses: [NM.E7]}
+- {id: NM.M6, misreading: 'interleaved groups (channel c in group c mod G)', witnesses: [NM.E11]}
+- {id: NM.M7, misreading: dx without the mean(h) term, witnesses: [NM.E3]}
+- {id: NM.M8, misreading: dx without the x_hat mean(h x_hat) term, witnesses: [NM.E1]}
+- {id: NM.M9, misreading: RMSNorm eps outside the square root, witnesses: [NM.E7]}
+- {id: NM.M10, misreading: statistics over the last axis only for a multi-dimensional normalized_shape, witnesses: [NM.E2]}
+- {id: NM.M11, misreading: GroupNorm affine parameters per group instead of per channel, witnesses: [NM.E11]}
+- {id: NM.M12, misreading: dweight from the first normalisation set only, witnesses: [NM.E1]}
+- {id: NM.M13, misreading: constant set treated as undefined although eps > 0, witnesses: [NM.E3]}
+- {id: NM.M14, misreading: negative eps rejected even when every radicand is positive, witnesses: [NM.E19]}
+nonclaims:
+- Floating-point rounding, including the casts of Liger's casting modes and of the HF modules, is the numerical question
+  K - G (decision NM.CASTS).
+- The saved statistics and the offset variant rest on torch sources and reference programs (Liger, HF transformers),
+  not on the documentation pages; agreement with them is agreement with those programs.
+changes:
+- date: '2026-10-18'
+  change: Added torch_autograd with the complete public output y and VJP while retaining saved statistics in the
+    native/full profile.
+  trigger: A real Liger RMSNorm forward/backward call exposed y and parameter/input gradients but kept rstd internal;
+    requiring rstd at that public boundary incorrectly rejected an otherwise complete binding.
+- date: '2026-10-18'
+  change: Separated the public GroupNorm input rejection from the native/full profile and replaced the unsupported
+    eps >= 0 restriction with the real formula's positive-radicand domain.
+  trigger: PyTorch 2.10 accepts negative eps when the radicand remains positive, while public group_norm and
+    aten.native_group_norm differ on the single-value configuration.

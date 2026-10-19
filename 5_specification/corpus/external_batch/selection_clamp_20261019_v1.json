@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 public scalar-bound torch.clamp with complete input VJP",
+  "reference": "Cross-check the versioned PyTorch 2.10 public call against ARITH.torch210_clamp_scalar_autograd, whose exact coordinate formula independently applies lower then upper clipping and PyTorch's documented inclusive boundary subgradient",
+  "limits": "The batch excludes tensor bounds, in-place and out overloads, mixed dtypes, special values, bound gradients and storage or aliasing claims. Every execution failure, missing input gradient, missing Triton phase and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261921, 20261922],
+    "cases": [
+      {"id": "clamp_both_bounds", "shape": [3, 17], "min": -1.0, "max": 1.0},
+      {"id": "clamp_min_only", "shape": [2, 5, 11], "min": -0.5, "max": null},
+      {"id": "clamp_max_only", "shape": [4, 13], "min": null, "max": 0.5},
+      {"id": "clamp_reversed_bounds", "shape": [2, 3, 7], "min": 1.0, "max": -1.0},
+      {"id": "clamp_noncontiguous", "shape": [2, 5, 9], "min": -0.25, "max": 0.75, "noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "seeds": [20261923, 20261924],
+    "cases": [
+      {"id": "clamp_heldout_rank4", "shape": [2, 3, 4, 11], "min": -1.5, "max": 0.5},
+      {"id": "clamp_heldout_equal_bounds", "shape": [3, 19], "min": 0.25, "max": 0.25, "boundary_heavy": true},
+      {"id": "clamp_heldout_fractional", "shape": [5, 23], "min": -0.75, "max": 1.25},
+      {"id": "clamp_heldout_min_only", "shape": [2, 7, 13], "min": 1.5, "max": null, "boundary_heavy": true},
+      {"id": "clamp_heldout_noncontiguous", "shape": [3, 4, 10], "min": -2.0, "max": 0.0, "noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, all cases, shapes, scalar bounds, layouts and seeds were fixed before candidate execution. Every case forces exact bound coordinates with nonzero upstream values. The acceptance split uses another implementation and unseen ranks, sizes, bounds, boundary density and noncontiguous layout."
+}

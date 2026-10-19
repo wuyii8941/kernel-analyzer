@@ -1,0 +1,170 @@
+schema_version: '1.2'
+id: PACK
+role: PACK
+title: FlashAttention v2.8.3 packed variable-length attention forward, complete output
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite physical f16 or bf16 CUDA inputs; nonpaged varlen forward; complete output
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- flash_attn_varlen_func from FlashAttention v2.8.3 for packed positive-length sequences, without optional features
+profiles:
+  flashattn283_varlen_causal_real:
+    meaning: Each packed query sequence attends only its matching packed K/V sequence with bottom-right causal alignment.
+    task_choice_required: false
+    basis: [PK.TASK, PK.PACK, PK.CAUSAL, PK.GQA, PK.DTYPE]
+  flashattn283_varlen_bidirectional_real:
+    meaning: Each packed query sequence attends every key in its matching packed K/V sequence.
+    task_choice_required: false
+    basis: [PK.TASK, PK.PACK, PK.GQA, PK.DTYPE]
+outputs:
+  out: {shape: '[total_q,nheads_q,headdim]', guarantee: rigorous_enclosure}
+comparison:
+  input_binding: >-
+    Complete q, k and v are exact physical finite values of one declared f16 or bf16 dtype. cu_seqlens_q and
+    cu_seqlens_k are complete signed-int32 cumulative arrays. Explicit scale is an exact physical finite f32;
+    null selects the documented 1/sqrt(headdim) default.
+  complete_output: Every output coordinate, the full shape and the common q/k/v dtype are required.
+  quality: Exact rational dot products surround exp and division with rigorous intervals; comparison uses no tolerance.
+  test_evidence: >-
+    Independent high-precision element loops, dense per-sequence PyTorch formulas, installed vLLM 0.16 vendored
+    FlashAttention GPU calls for f16 and bf16, complete-output checks, unequal q/k lengths, GQA and rejected paths.
+  error_handling: >-
+    Missing fields, malformed shapes, nonphysical values, bad cumulative lengths or incorrect maxima are invalid_input.
+    Other legal FlashAttention features outside this profile are unsupported.
+decisions:
+- id: PK.TASK
+  status: reviewed
+  statement: >-
+    The public operator returns the packed attention output. It does not return a document mask or position_ids.
+    The former mixed document-construction draft is archived and cannot be used as a runtime fallback.
+  basis: [FA_IFACE.VARLEN, T_SDPA.REFERENCE]
+- id: PK.PACK
+  status: reviewed
+  statement: >-
+    cu_seqlens_q and cu_seqlens_k partition q and k/v into the same number of independent sequences. No score or
+    value crosses a cumulative-length boundary. This profile conservatively requires every represented sequence to
+    have positive q and k length and requires max_seqlen_q/k to equal the represented maxima.
+  basis: [FA_IFACE.VARLEN]
+- id: PK.CAUSAL
+  status: reviewed
+  statement: >-
+    For sequence-local query i and key j, the causal profile admits j <= i + seqlen_k - seqlen_q. This is the
+    documented bottom-right alignment. A row with no admitted key returns zero. The bidirectional profile admits all
+    keys in the matching sequence.
+  basis: [FA_IFACE.CAUSAL_BR, FA_IFACE.EMPTY_ROW]
+- id: PK.GQA
+  status: reviewed
+  statement: >-
+    Query heads are divided into contiguous equal groups: query head h uses KV head floor(h/(Hq/Hkv)). Scores are
+    softmax_scale times QK, with the documented default 1/sqrt(headdim), followed by softmax and multiplication by V.
+  basis: [FA_IFACE.GQA, FA_IFACE.SCALE, T_SDPA.REFERENCE]
+- id: PK.PATH
+  status: reviewed
+  statement: >-
+    The active range fixes dropout_p=0, window_size=(-1,-1), softcap=0, alibi_slopes=None,
+    return_attn_probs=False and block_table=None. deterministic may be either Boolean because the documented forward
+    is deterministic; backward and all optional outputs are outside this contract.
+  basis: [FA_IFACE.WINDOW, FA_IFACE.SOFTCAP]
+- id: PK.DTYPE
+  status: reviewed
+  statement: >-
+    The certified CUDA range is finite physical f16 and bf16 q/k/v/out. This deliberately narrow range was checked
+    against the installed vLLM 0.16 vendored FlashAttention wrapper; that cross-check is separate from the v2.8.3
+    semantic source. Device accumulation, exponential approximation and output stores remain measured K-f effects.
+  basis: [PK.TASK]
+clauses:
+- {id: PK.C1, basis: [PK.PACK], statement: 'Only q and k/v slices with the same cumulative sequence index interact.', observes: [out], evidence_kind: definition}
+- {id: PK.C2, basis: [PK.CAUSAL], statement: 'Causal masking is bottom-right aligned and an empty causal row returns zero.', observes: [out], evidence_kind: definition}
+- {id: PK.C3, basis: [PK.GQA], statement: 'GQA maps contiguous query-head groups to one KV head.', observes: [out], evidence_kind: definition}
+- {id: PK.C4, basis: [PK.GQA], statement: 'Scores use the explicit scale or the documented 1/sqrt(headdim) default before softmax.', observes: [out], evidence_kind: definition}
+- {id: PK.C5, basis: [PK.PATH], statement: 'Only the declared feature-free forward path is admitted.', observes: [out], evidence_kind: definition}
+- {id: PK.C6, basis: [PK.DTYPE], statement: 'The complete output has shape [total_q,Hq,D] and the declared common dtype.', observes: [out], evidence_kind: definition}
+examples:
+- id: PK.E1
+  profile: flashattn283_varlen_causal_real
+  clauses: [PK.C1, PK.C2]
+  input: &causal_base {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[1]], [[2]], [[4]]], cu_seqlens_q: [0, 1, 3], cu_seqlens_k: [0, 1, 3], max_seqlen_q: 2, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: true, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[1]], [[2]], [[3]]]}}
+- id: PK.E2
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C1]
+  input: {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[1]], [[2]], [[4]]], cu_seqlens_q: [0, 1, 3], cu_seqlens_k: [0, 1, 3], max_seqlen_q: 2, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: true, return_attn_probs: false, block_table: null, dtype: bf16}
+  expected: {outcome: value, fields: {out: [[[1]], [[3]], [[3]]]}}
+- id: PK.E3
+  profile: flashattn283_varlen_causal_real
+  clauses: [PK.C2]
+  input: {q: [[[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[1]], [[2]], [[4]]], cu_seqlens_q: [0, 2], cu_seqlens_k: [0, 3], max_seqlen_q: 2, max_seqlen_k: 3, dropout_p: 0, softmax_scale: 1, causal: true, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[3/2]], [[7/3]]]}}
+- id: PK.E4
+  profile: flashattn283_varlen_causal_real
+  clauses: [PK.C2]
+  input: {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[2]], [[4]]], cu_seqlens_q: [0, 3], cu_seqlens_k: [0, 2], max_seqlen_q: 3, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: true, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[0]], [[2]], [[3]]]}}
+- id: PK.E5
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C3]
+  input: {q: [[[0], [0], [0], [0]]], k: [[[0], [0]]], v: [[[1], [2]]], cu_seqlens_q: [0, 1], cu_seqlens_k: [0, 1], max_seqlen_q: 1, max_seqlen_k: 1, dropout_p: 0, softmax_scale: 1, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[1], [1], [2], [2]]]}}
+- id: PK.E6
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C4]
+  input: {q: [[[1]]], k: [[[0]], [[1]]], v: [[[0]], [[1]]], cu_seqlens_q: [0, 1], cu_seqlens_k: [0, 2], max_seqlen_q: 1, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 2, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[exp(2)/(1+exp(2))]]]}}
+- id: PK.E7
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C4]
+  input: {q: [[[1, 1, 1, 1]]], k: [[[0, 0, 0, 0]], [[1, 1, 1, 1]]], v: [[[0, 0, 0, 0]], [[1, 1, 1, 1]]], cu_seqlens_q: [0, 1], cu_seqlens_k: [0, 2], max_seqlen_q: 1, max_seqlen_k: 2, dropout_p: 0, softmax_scale: null, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[exp(2)/(1+exp(2)), exp(2)/(1+exp(2)), exp(2)/(1+exp(2)), exp(2)/(1+exp(2))]]]}}
+- id: PK.E8
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C1]
+  input: {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[2]], [[4]], [[9]]], cu_seqlens_q: [0, 1, 3], cu_seqlens_k: [0, 2, 3], max_seqlen_q: 2, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[3]], [[9]], [[9]]]}}
+- {id: PK.E9, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, cu_seqlens_q: [0, 1, 2]}, expected: {outcome: invalid_input}}
+- {id: PK.E10, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, max_seqlen_q: 3}, expected: {outcome: invalid_input}}
+- {id: PK.E11, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, window_size: [1, -1]}, expected: {outcome: unsupported}}
+- {id: PK.E12, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, dropout_p: 1/10}, expected: {outcome: unsupported}}
+- {id: PK.E13, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, return_attn_probs: true}, expected: {outcome: unsupported}}
+- {id: PK.E14, profile: flashattn283_varlen_causal_real, clauses: [PK.C6], input: {<<: *causal_base, q: [[[1/3]], [[0]], [[0]]]}, expected: {outcome: invalid_input}}
+- {id: PK.E15, profile: flashattn283_varlen_causal_real, clauses: [PK.C3], input: {<<: *causal_base, q: [[[0], [0], [0]], [[0], [0], [0]], [[0], [0], [0]]], k: [[[0], [0]], [[0], [0]], [[0], [0]]], v: [[[1], [1]], [[2], [2]], [[4], [4]]]}, expected: {outcome: invalid_input}}
+signature:
+  inputs: [complete q, complete k, complete v, cu_seqlens_q, cu_seqlens_k, max_seqlen_q,
+    max_seqlen_k, dropout_p, softmax_scale, causal, window_size, softcap, alibi_slopes,
+    deterministic, return_attn_probs, block_table, common dtype]
+  pre_state: []
+  post_state: [complete packed output]
+  observation_unit: one complete FlashAttention v2.8.3 flash_attn_varlen_func forward call
+domain:
+  valid: [positive rank-3 packed q/k/v, f16 or bf16 common dtype, finite exactly represented values,
+    positive sequences, matching q/k batch count, exact cumulative int32 arrays, exact represented maxima,
+    divisible GQA head count, dropout_p=0, no local window, no softcap, no ALiBi, no paging,
+    no optional testing outputs]
+  domain_undefined: []
+  invalid_input: [missing field, malformed or incompatible shape, bad cumulative endpoint or order,
+    incorrect max_seqlen, nonphysical value, invalid Boolean or probability, nondivisible GQA]
+  unsupported: [dtype outside f16/bf16, dropout, local window, softcap, ALiBi, block table,
+    optional attention probabilities, empty represented sequence, special values, gradients]
+mutation_requirements:
+- {id: PK.M1, misreading: allow attention across packed sequence boundaries, witnesses: [PK.E1]}
+- {id: PK.M2, misreading: align unequal causal masks to the upper left, witnesses: [PK.E3]}
+- {id: PK.M3, misreading: replace a fully masked causal row by a uniform row, witnesses: [PK.E4]}
+- {id: PK.M4, misreading: assign GQA heads to KV heads round-robin, witnesses: [PK.E5]}
+- {id: PK.M5, misreading: use 1/headdim instead of 1/sqrt(headdim) for default scale, witnesses: [PK.E7]}
+- {id: PK.M6, misreading: ignore an explicit scale and use the default, witnesses: [PK.E6]}
+- {id: PK.M7, misreading: ignore causal masking, witnesses: [PK.E1]}
+- {id: PK.M8, misreading: use q cumulative boundaries for k/v, witnesses: [PK.E8]}
+nonclaims:
+- Position IDs, document masks and sequence-index arrays are preprocessing outputs of other APIs and are not outputs of flash_attn_varlen_func.
+- The contract does not define dropout, local windows, softcap, ALiBi, paged K/V, optional probability/LSE outputs or backward.
+- Rigorous real arithmetic defines f. CUDA accumulation and storage rounding are measured separately as K-f.
+- GPU agreement and rejected mutants support only the stated range and do not prove other FlashAttention versions or devices.
+changes:
+- '2026-10-19: replaced the mixed document-construction draft with the versioned FlashAttention varlen operator task.'

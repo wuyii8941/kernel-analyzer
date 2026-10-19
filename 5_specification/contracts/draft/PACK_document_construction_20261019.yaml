@@ -1,0 +1,131 @@
+schema_version: '1.2'
+id: PACK
+role: PACK
+title: Packed-sequence (document) attention mask, position ids and packed attention output (task definition)
+review:
+  status: drafted
+  author: Claude (spec v3 author, group D1_attention), 2026-10-17
+  date: '2026-10-17'
+  scope: Task-defined semantics of packing several documents into one sequence; awaiting a review by someone who did not
+    write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - reviewed_contract_and_adapter_match_current
+covers:
+- block-diagonal document mask for SDPA (boolean attn_mask) and flex attention (document mask_mod)
+- position_ids reset per document (transformers DataCollatorWithFlattening)
+- flash_attn varlen cu_seqlens packing
+profiles:
+  packed_causal:
+    basis: [PK.TASK]
+    meaning: Token i attends token j iff both belong to the same document and j <= i; position ids restart at 0 in every
+      document. A task choice (no external authority fixes it).
+    task_choice_required: true
+  packed_bidirectional:
+    basis: [PK.TASK]
+    meaning: Token i attends every token of its own document; position ids restart at 0 in every document. A task choice.
+    task_choice_required: true
+outputs:
+  mask:
+    shape: '[L][L] booleans (True = may attend)'
+    guarantee: exact
+    kind: boolean
+  position_ids:
+    shape: '[L] integers'
+    guarantee: exact
+  out:
+    shape: '[H][L][Ev]: attention of the packed q, k, v under the mask (SDPA semantics)'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: document lengths are exact positive integers; q, k, v are the exact values received.
+  quality: No tolerance; mask and positions are exact, the attention output is a rigorous enclosure.
+  test_evidence: Exact equality or containment of the expected formula's enclosure.
+  error_handling: Lengths that do not cover the packed sequence, or a document of length 0, are invalid_input.
+decisions:
+- id: PK.TASK
+  status: needs_binding
+  statement: 'Packing is a task definition, not a documented operator: the documents are independent sequences that share
+    one buffer. The reference programs agree that each document is a separate sequence (flash_attn varlen indexes q and
+    kv by cu_seqlens; DataCollatorWithFlattening restarts position_ids at 0 and records seq_idx). Within a document the
+    task chooses causal (language-model training, the tested essential-round construction) or bidirectional attention: two
+    profiles, bound by the task. A token never attends a token of another document. Documents have at least one token (a
+    zero-length document is invalid_input: it has no tokens to place). The attention output is the ATTN contract''s sdpa
+    semantics with this boolean mask (every row keeps at least its own token, so no row is empty).'
+  basis:
+  - FA_IFACE.VARLEN
+  - HF_COLLATOR.FLATTEN
+  - T_SDPA.BOOL_MASK
+clauses:
+- {id: PK.C1, basis: [PK.TASK, FA_IFACE.VARLEN], statement: 'token t belongs to document d iff start_d <= t < start_d + n_d,
+      start_d = n_0 + ... + n_(d-1)', observes: [mask], evidence_kind: definition}
+- {id: PK.C2, basis: [PK.TASK], statement: 'mask[i][j] = same document and (j <= i in packed_causal)', observes: [mask, out],
+    evidence_kind: definition}
+- {id: PK.C3, basis: [HF_COLLATOR.FLATTEN, PK.TASK], statement: 'position_ids[t] = t - start_d (restart at 0 in every document)',
+    observes: [position_ids], evidence_kind: definition}
+- {id: PK.C4, basis: [PK.TASK, T_SDPA.BOOL_MASK, T_SDPA.REFERENCE], statement: 'out = SDPA of the packed q, k, v with the
+      boolean mask; no weight crosses a document boundary', observes: [out], evidence_kind: definition}
+- {id: PK.C5, basis: [PK.TASK], statement: lengths not summing to L or a zero-length document are invalid_input, observes: [
+      mask], evidence_kind: definition}
+examples:
+- {id: PK.E1, profile: packed_causal, clauses: [PK.C1, PK.C2, PK.C3, PK.C4], input: {doc_lengths: [1, 2], q: [[[0], [0], [
+            0]]], k: [[[0], [0], [0]]], v: [[[1], [2], [4]]], scale: null}, expected: {outcome: value, fields: {mask: [[true,
+            false, false], [false, true, false], [false, true, true]], position_ids: [0, 0, 1], out: [[[1], [2], [3]]]}}}
+- {id: PK.E2, profile: packed_bidirectional, clauses: [PK.C2, PK.C3, PK.C4], input: {doc_lengths: [2, 1], q: [[[0], [0], [
+            0]]], k: [[[0], [0], [0]]], v: [[[1], [3], [5]]], scale: null}, expected: {outcome: value, fields: {mask: [[true,
+            true, false], [true, true, false], [false, false, true]], position_ids: [0, 1, 0], out: [[[2], [2], [5]]]}}}
+- {id: PK.E3, profile: packed_causal, clauses: [PK.C2, PK.C3], input: {doc_lengths: [3], q: [[[0], [0], [0]]], k: [[[0], [
+            0], [0]]], v: [[[1], [2], [3]]], scale: null}, expected: {outcome: value, fields: {mask: [[true, false, false],
+          [true, true, false], [true, true, true]], position_ids: [0, 1, 2], out: [[[1], [3/2], [2]]]}}, note: 'one document:
+      plain causal attention'}
+- {id: PK.E4, profile: packed_causal, clauses: [PK.C1, PK.C3], input: {doc_lengths: [1, 1, 2], q: [[[0], [0], [0], [0]]],
+      k: [[[0], [0], [0], [0]]], v: [[[2], [4], [6], [8]]], scale: null}, expected: {outcome: value, fields: {mask: [[true,
+            false, false, false], [false, true, false, false], [false, false, true, false], [false, false, true, true]], position_ids: [
+          0, 0, 0, 1], out: [[[2], [4], [6], [7]]]}}, note: one-token documents}
+- {id: PK.E5, profile: packed_causal, clauses: [PK.C5], input: {doc_lengths: [1, 1], q: [[[0], [0], [0]]], k: [[[0], [0],
+          [0]]], v: [[[1], [2], [3]]], scale: null}, expected: {outcome: invalid_input}, note: lengths do not cover the packed
+      sequence}
+- {id: PK.E6, profile: packed_causal, clauses: [PK.C5], input: {doc_lengths: [2, 0, 1], q: [[[0], [0], [0]]], k: [[[0], [
+            0], [0]]], v: [[[1], [2], [3]]], scale: null}, expected: {outcome: invalid_input}, note: a document of length
+      0}
+- {id: PK.E7, profile: packed_causal, clauses: [PK.C4], input: {doc_lengths: [2, 1], q: [[[1], [1], [1]]], k: [[[1], [0],
+          [2]]], v: [[[1], [0], [3]]], scale: null}, expected: {outcome: value, fields: {mask: [[true, false, false], [true,
+            true, false], [false, false, true]], position_ids: [0, 1, 0], out: [[[1], [exp(1)/(1 + exp(1))], [3]]]}}, note: token
+      2 must not see the first document}
+signature:
+  inputs:
+  - 'doc_lengths: positive integers'
+  - q, k [H][L][E], v [H][L][Ev] of the packed sequence
+  - scale (null = 1/sqrt(E))
+  pre_state: []
+  post_state: []
+  observation_unit: mask, position ids and attention output of one packed sequence
+domain:
+  valid:
+  - doc_lengths >= 1 summing to L
+  - rational q
+  - k
+  - v
+  domain_undefined: []
+  invalid_input:
+  - lengths not summing to L
+  - zero-length documents
+  - shape mismatches
+  unsupported:
+  - cross-document attention patterns other than the two profiles
+mutation_requirements:
+- {id: PK.M1, misreading: mask ignores document boundaries (plain causal over the pack), witnesses: [PK.E1, PK.E7]}
+- {id: PK.M2, misreading: position ids not reset per document, witnesses: [PK.E1]}
+- {id: PK.M3, misreading: position ids restart at 1, witnesses: [PK.E1]}
+- {id: PK.M4, misreading: bidirectional attention inside documents under packed_causal, witnesses: [PK.E1]}
+- {id: PK.M5, misreading: the first token of a document assigned to the previous document, witnesses: [PK.E1]}
+nonclaims:
+- The choice between the two profiles belongs to the task; neither is a documented property of an operator.
+- Gradients of the packed attention are those of the ATTN contract with the mask given here.
+changes: []

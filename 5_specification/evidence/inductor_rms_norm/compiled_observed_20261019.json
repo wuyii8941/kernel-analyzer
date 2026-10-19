@@ -1,0 +1,43 @@
+{
+  "task": "PyTorch public RMSNorm forward and complete x/weight VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_per_fused__fused_rms_norm_div_expand_mul_ones_like_pow_sub_sum_0",
+    "triton_per_fused__fused_rms_norm_expand_mul_ones_like_sum_1"
+  ],
+  "generated_triton_kernel_count": 2,
+  "rows": [
+    {
+      "name": "y",
+      "shape": [
+        16,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 4.76837158203125e-07
+    },
+    {
+      "name": "dx",
+      "shape": [
+        16,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 4.76837158203125e-07
+    },
+    {
+      "name": "dweight",
+      "shape": [
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 1.3113021850585938e-06
+    }
+  ],
+  "inputs_unchanged": true,
+  "inspection_passed": true
+}

@@ -60,6 +60,21 @@ def test_elementary_bounds_are_rigorous(name):
             assert h - l <= 4 * math.ulp(abs(float(truth))) + 1e-300
 
 
+def test_erf_plus_one_uses_the_erfc_tail_without_losing_rigorous_bounds():
+    xs = np.array([-3.0, -4.0, -5.0, -6.0, -8.0], dtype=np.float64)
+    lo, hi, ok = iv.erf_plus_one_bounds(xs, xs)
+    assert ok.all()
+    with gmpy2.context(precision=300):
+        for x, l, h in zip(xs, lo, hi):
+            truth = mpq(gmpy2.erfc(-gmpy2.mpfr(float(x))))
+            assert mpq(l) <= truth <= mpq(h)
+            assert h - l <= 4 * math.ulp(float(truth))
+    naive_lo, naive_hi, _ = iv.elementary_bounds("erf", xs, xs)
+    naive_width = iv.iadd(np.ones_like(xs), np.ones_like(xs), naive_lo, naive_hi)[1] - \
+        iv.iadd(np.ones_like(xs), np.ones_like(xs), naive_lo, naive_hi)[0]
+    assert (hi - lo < naive_width).all()
+
+
 def test_sum_and_dot_enclose_exact():
     rng = np.random.default_rng(4)
     x = _samples(rng, 512).reshape(4, 128)

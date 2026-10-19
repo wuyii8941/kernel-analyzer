@@ -1,0 +1,50 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.pack_varlen.f16.tq5.tk7.hq4.hkv2.d16.causal.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float16 causal packed variable-length GQA attention",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch of twenty programs writes the complete 5x4x16 public output",
+    "measure_call": "../calls/triton_pack_varlen.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "complete_varlen_attention",
+      "contract": "PACK",
+      "profile": "flashattn283_varlen_causal_real",
+      "task_statement": "Compute complete float16 packed causal GQA attention for q lengths [2,3], k/v lengths [4,3], explicit scale 0.25 and no optional features.",
+      "input_map": [
+        {"target": "/q", "source": "/tensor_arguments/q/before", "conversion": "tensor_values"},
+        {"target": "/k", "source": "/tensor_arguments/k/before", "conversion": "tensor_values"},
+        {"target": "/v", "source": "/tensor_arguments/v/before", "conversion": "tensor_values"},
+        {"target": "/cu_seqlens_q", "literal": [0, 2, 5], "basis": "tokens 0..1 and 2..4 form the two packed query sequences"},
+        {"target": "/cu_seqlens_k", "literal": [0, 4, 7], "basis": "tokens 0..3 and 4..6 form the two packed key/value sequences"},
+        {"target": "/max_seqlen_q", "literal": 3, "basis": "the maximum represented query length is 3"},
+        {"target": "/max_seqlen_k", "literal": 4, "basis": "the maximum represented key/value length is 4"},
+        {"target": "/dropout_p", "literal": 0, "basis": "the kernel has no dropout"},
+        {"target": "/softmax_scale", "literal": 0.25, "basis": "the kernel multiplies each QK score by exact binary 0.25"},
+        {"target": "/causal", "literal": true, "basis": "the kernel applies bottom-right causal masking within each sequence"},
+        {"target": "/window_size", "literal": [-1, -1], "basis": "the kernel has no local window"},
+        {"target": "/softcap", "literal": 0, "basis": "the kernel has no score softcap"},
+        {"target": "/alibi_slopes", "literal": null, "basis": "the kernel has no ALiBi score term"},
+        {"target": "/deterministic", "literal": false, "basis": "the contract observes forward only and the kernel has no backward selector"},
+        {"target": "/return_attn_probs", "literal": false, "basis": "the kernel returns only the complete attention output"},
+        {"target": "/block_table", "literal": null, "basis": "K and V are contiguous packed tensors rather than paged caches"},
+        {"target": "/dtype", "literal": "f16", "basis": "q, k, v and out are contiguous float16 tensors"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "q", "effect": "unchanged"},
+    {"argument": "k", "effect": "unchanged"},
+    {"argument": "v", "effect": "unchanged"}
+  ]
+}

@@ -1,0 +1,258 @@
+schema_version: '1.2'
+id: REDUCE
+role: REDUCE
+title: Common finite floating reductions and their vector-Jacobian products
+review:
+  status: reviewed_for_implementation
+  author: Claude (original broad draft) and Codex (finite common-operation revision), 2026-10-18
+  date: '2026-10-19'
+  reviewer: Codex independent source, formula, domain and complete-output review
+  scope: Finite floating default functional reductions, including selected variance, standard-deviation, var-mean and vector 2-norm forward/VJP tasks; device rounding and concrete kernel binding remain separate
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/reduce_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.sum, aten.mean, aten.prod, aten.amax, aten.amin, aten.argmax, aten.argmin, aten.max, aten.min,
+  aten.cumsum, aten.logsumexp, aten.var, aten.std, aten.var_mean, vjp.aten.sum, vjp.aten.mean, vjp.aten.prod,
+  vjp.aten.amax, vjp.aten.amin, vjp.aten.max, vjp.aten.min, vjp.aten.logsumexp, vjp.aten.cumsum,
+  vjp.aten.var, vjp.aten.std, vjp.aten.var_mean, aten.linalg_vector_norm, vjp.aten.linalg_vector_norm]
+profiles:
+  real:
+    meaning: >-
+      Exact real reductions of finite f16, bf16, f32 or f64 tensor values in the selected default functional
+      interfaces. An explicit floating dtype converts the input first. VJP operations differentiate the selected
+      forward task against an explicit upstream tensor of the same dtype, with the documented extrema tie rules.
+      Variance, standard deviation and var-mean are restricted to their correction overloads with correction 0 or 1 and
+      positive degrees of freedom. Standard-deviation VJPs additionally require a positive standard deviation unless
+      the reduced slice contains one element, where the selected correction-zero function is identically zero.
+      The public linalg vector-norm task is restricted to real f32/f64, order two, no explicit dtype conversion and
+      a nonzero norm in every reduced slice for VJP queries.
+    task_choice_required: false
+    basis: [RD.SCHEMA, RD.VJP, RD.VAR]
+outputs:
+  out:
+    shape: Per operation; max/min along a dimension return value and index tensors, and VJPs return the input gradient.
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Tensor values are the exact finite values received; explicit dtype conversion occurs before reduction.
+  complete_output: >-
+    check_output requires out to contain complete tensor records with t, v and shape. Structured max/min and var-mean
+    outputs require both ordered records. Shape, dtype and every coordinate are checked, including empty tensors.
+  equality: Exact values compare exactly; a point merely lying inside a nonpoint enclosure does not establish equality.
+  quality: No tolerance.
+  test_evidence: Exact equality or containment of an independently calculated exact value in the reference enclosure.
+  error_handling: Empty means and variance with non-positive degrees of freedom are domain_undefined; empty extrema are invalid_input; unsupported types and nonfinite inputs are refused.
+decisions:
+- id: RD.SCHEMA
+  status: reviewed
+  statement: >-
+    The selected interfaces are the PyTorch 2.10 default functional overloads. sum/mean may reduce an integer list of
+    dimensions; prod reduces one integer dimension or all elements; cumsum uses one integer dimension; logsumexp
+    requires one or more dimensions. The selected var/std/var_mean correction overloads use an optional integer dimension list,
+    keyword-only correction and keepdim; this profile selects only correction 0 or 1 and does not select the older
+    unbiased overloads. dtype for sum/mean/prod/cumsum is keyword-only. Out, named-dimension and complex overloads are
+    outside this profile. The selected linalg_vector_norm functional schema uses scalar order, an optional integer
+    dimension list, Boolean keepdim and keyword-only dtype; only order two with dtype omitted is selected here.
+  basis: [TS_NATIVE_FUNCTIONS.REDUCE_SCHEMAS, T_SUM.DEF, T_MEAN.DEF, T_PROD.DEF, T_CUMSUM.DEF, T_LOGSUMEXP.DEF, T_VAR.DEF, T_STD.DEF, T_VAR_MEAN.DEF, T_VECTOR_NORM.DEF]
+- id: RD.EMPTY
+  status: reviewed
+  statement: >-
+    Over an empty reduced set, sum is 0 and prod is 1; mean is undefined; extrema and arg-extrema are invalid because
+    they have no identity; cumsum preserves the empty input; logsumexp is -inf because it is log(0).
+  basis: [T_SUM.DEF, T_PROD.DEF, T_MEAN.EMPTY, T_AMAX.DEF, T_CUMSUM.DEF, T_LOGSUMEXP.DEF]
+- id: RD.VJP
+  status: reviewed
+  statement: >-
+    VJPs are derivatives of the selected real forward tasks. amax/amin divide the upstream gradient equally among
+    tied extreme values; max/min along one dimension send it to the documented first index. Product differentiation
+    multiplies the other elements and therefore remains defined in the presence of zeros. Variance differentiation
+    gives 2(x-mean)/(N-correction) times the broadcast upstream when the denominator is positive. For a positive
+    standard deviation, its VJP is upstream times (x-mean)/((N-correction) std). A zero standard deviation has no
+    unique real derivative for slices with more than one element; a one-element correction-zero slice is the constant
+    zero function and has zero VJP.
+  basis: [T_SUM.DEF, T_MEAN.DEF, T_PROD.DEF, T_AMAX.GRAD, T_MAX.DIM, T_MIN.DIM, T_CUMSUM.DEF, T_LOGSUMEXP.DEF, T_VAR.DEF, T_STD.DEF]
+- id: RD.VAR
+  status: reviewed
+  statement: >-
+    The selected variance task is torch.var's correction overload on finite floating tensors, with dim None, one
+    integer dimension, or a nonempty list of distinct integer dimensions; correction is omitted/None (meaning 1), 0,
+    or 1. For N reduced elements it returns sum((x-mean)^2)/(N-correction). N-correction must be positive; otherwise
+    the real task is domain_undefined. Constant slices with a positive denominator have variance and VJP equal to zero.
+    Empty-dimension spelling, other corrections, legacy unbiased overloads and out forms are not selected.
+  basis: [T_VAR.DEF, TS_NATIVE_FUNCTIONS.REDUCE_SCHEMAS]
+- id: RD.STD
+  status: reviewed
+  statement: >-
+    The selected standard-deviation task is torch.std's correction overload on the same finite floating inputs,
+    dimension forms and corrections as RD.VAR. Forward std is the nonnegative square root of the selected variance,
+    including zero for a constant slice. Its VJP is admitted for positive std, and also for a one-element
+    correction-zero slice where the complete function is identically zero. For a zero-variance slice with more than
+    one element the real derivative is not unique, so that VJP query is domain_undefined rather than assigned a
+    framework-specific subgradient.
+  basis: [T_STD.DEF, T_VAR.DEF, TS_NATIVE_FUNCTIONS.REDUCE_SCHEMAS]
+- id: RD.VAR_MEAN
+  status: reviewed
+  statement: >-
+    The selected var-mean task is torch.var_mean's correction overload on the same finite floating inputs, dimension
+    forms and corrections as RD.VAR. It returns the complete ordered pair (variance, mean). Its input VJP accepts two
+    complete same-dtype upstream tensors and is the sum of their VJPs:
+    upstream_var * 2(x-mean)/(N-correction) + upstream_mean/N.
+  basis: [T_VAR_MEAN.DEF, T_VAR.DEF, T_MEAN.DEF, TS_NATIVE_FUNCTIONS.REDUCE_SCHEMAS]
+- id: RD.VECTOR_NORM
+  status: reviewed
+  statement: >-
+    The selected task is public torch.linalg.vector_norm on a finite real f32 or f64 tensor with order two, dim None,
+    one integer dimension, or a nonempty sequence of distinct integer dimensions, Boolean keepdim and no explicit
+    dtype conversion. Forward returns the nonnegative square root of the sum of squares. Its VJP is admitted only
+    when every reduced slice has positive norm and equals broadcast(upstream) * x / norm. At a zero vector the real
+    2-norm has no unique derivative, so that VJP is domain_undefined rather than assigned PyTorch's zero convention.
+  basis: [T_VECTOR_NORM.DEF, TS_NATIVE_FUNCTIONS.REDUCE_SCHEMAS]
+clauses:
+- {id: RD.C1, basis: [T_SUM.DEF, T_MEAN.DEF, T_MEAN.EMPTY, RD.SCHEMA, RD.EMPTY], statement: 'sum and mean over the selected dimensions, including input conversion and empty domains', observes: [out], evidence_kind: definition}
+- {id: RD.C2, basis: [T_PROD.DEF, RD.SCHEMA, RD.EMPTY], statement: 'product over one dimension or all elements, with empty product 1', observes: [out], evidence_kind: definition}
+- {id: RD.C3, basis: [T_AMAX.DEF, T_AMIN.DEF, RD.EMPTY], statement: 'amax and amin over one or more dimensions; an empty reduced axis is invalid', observes: [out], evidence_kind: definition}
+- {id: RD.C4, basis: [T_ARGMAX.DEF, T_ARGMIN.DEF, T_MAX.DIM, T_MIN.DIM], statement: 'argmax/argmin and max/min along one dimension return the first extreme index', observes: [out], evidence_kind: definition}
+- {id: RD.C5, basis: [T_CUMSUM.DEF, RD.SCHEMA, RD.EMPTY], statement: 'cumsum along one dimension, after any explicit input conversion', observes: [out], evidence_kind: definition}
+- {id: RD.C6, basis: [T_LOGSUMEXP.DEF, RD.SCHEMA, RD.EMPTY], statement: 'logsumexp is log of the sum of exponentials over one or more dimensions; an empty reduced set gives -inf', observes: [out], evidence_kind: definition}
+- {id: RD.C7, basis: [RD.VJP, T_SUM.DEF, T_MEAN.DEF, T_PROD.DEF], statement: 'sum, mean and product VJPs are the derivatives of their selected forward tasks', observes: [out], evidence_kind: derived}
+- {id: RD.C8, basis: [RD.VJP, T_AMAX.GRAD, T_MAX.DIM, T_MIN.DIM], statement: 'amax/amin VJPs split ties evenly; max/min dimension VJPs select the returned first index', observes: [out], evidence_kind: derived}
+- {id: RD.C9, basis: [RD.VJP, T_LOGSUMEXP.DEF, T_CUMSUM.DEF], statement: 'logsumexp VJP is the softmax over the reduced slice; cumsum VJP is the reverse cumulative sum', observes: [out], evidence_kind: derived}
+- {id: RD.C10, basis: [RD.SCHEMA], statement: 'only finite f16/bf16/f32/f64 default functional calls and matching-dtype VJPs are admitted', observes: [out], evidence_kind: definition}
+- {id: RD.C11, basis: [RD.VAR, T_VAR.DEF], statement: 'selected variance is the exact corrected sum of squared deviations for correction 0 or 1 and positive degrees of freedom', observes: [out], evidence_kind: definition}
+- {id: RD.C12, basis: [RD.VAR, RD.VJP, T_VAR.DEF], statement: 'variance VJP is upstream times 2(x-mean)/(N-correction), including zero for a constant slice when the denominator is positive', observes: [out], evidence_kind: derived}
+- {id: RD.C13, basis: [RD.STD, T_STD.DEF], statement: 'selected standard deviation is the nonnegative square root of selected variance for correction 0 or 1 and positive degrees of freedom', observes: [out], evidence_kind: definition}
+- {id: RD.C14, basis: [RD.STD, RD.VJP, T_STD.DEF], statement: 'standard-deviation VJP is upstream times (x-mean)/((N-correction) std) for positive std; a one-element correction-zero slice has zero VJP and a larger zero-variance slice is undefined', observes: [out], evidence_kind: derived}
+- {id: RD.C15, basis: [RD.VAR_MEAN, T_VAR_MEAN.DEF], statement: 'selected var-mean returns the complete ordered pair of corrected variance and mean', observes: [out], evidence_kind: definition}
+- {id: RD.C16, basis: [RD.VAR_MEAN, RD.VJP, T_VAR.DEF, T_MEAN.DEF], statement: 'var-mean input VJP is the sum of the variance and mean VJPs for the two explicit upstream tensors', observes: [out], evidence_kind: derived}
+- {id: RD.C17, basis: [RD.VECTOR_NORM, T_VECTOR_NORM.DEF], statement: 'selected public linalg vector 2-norm is the nonnegative square root of the sum of squares over the selected dimensions', observes: [out], evidence_kind: definition}
+- {id: RD.C18, basis: [RD.VECTOR_NORM, RD.VJP, T_VECTOR_NORM.DEF], statement: 'at positive norm, the vector 2-norm input VJP is broadcast(upstream) times x divided by norm; a zero-norm slice is undefined', observes: [out], evidence_kind: derived}
+examples:
+- {id: RD.E1, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[1, 2], [3, 4]]}, [1]]}, expected: {outcome: value, fields: {out: [3, 7]}}}
+- {id: RD.E2, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[1, 2], [3, 4]]}, [1], true]}, expected: {outcome: value, fields: {out: [[3], [7]]}}}
+- {id: RD.E3, profile: real, clauses: [RD.C1], input: {op: aten.sum, args: [{t: f32, v: [[], []]}, [1]]}, expected: {outcome: value, fields: {out: [0, 0]}}}
+- {id: RD.E4, profile: real, clauses: [RD.C1], input: {op: aten.mean, args: [{t: f32, v: [[1, 2], [3, 5]]}, [1]]}, expected: {outcome: value, fields: {out: ['3/2', 4]}}}
+- {id: RD.E5, profile: real, clauses: [RD.C1], input: {op: aten.mean, args: [{t: f32, v: [[], []]}, [1]]}, expected: {outcome: domain_undefined}}
+- {id: RD.E6, profile: real, clauses: [RD.C2], input: {op: aten.prod, args: [{t: f32, v: [[2, 3], [0, 5]]}, 1]}, expected: {outcome: value, fields: {out: [6, 0]}}}
+- {id: RD.E7, profile: real, clauses: [RD.C2], input: {op: aten.prod, args: [{t: f32, v: [[], []]}, 1]}, expected: {outcome: value, fields: {out: [1, 1]}}}
+- {id: RD.E8, profile: real, clauses: [RD.C3], input: {op: aten.amax, args: [{t: f32, v: [[1, 3], [-4, 2]]}, [1]]}, expected: {outcome: value, fields: {out: [3, 2]}}}
+- {id: RD.E9, profile: real, clauses: [RD.C3], input: {op: aten.amin, args: [{t: f32, v: [[], []]}, [1]]}, expected: {outcome: invalid_input}}
+- {id: RD.E10, profile: real, clauses: [RD.C4], input: {op: aten.argmax, args: [{t: f32, v: [[1, 3, 3]]}, 1]}, expected: {outcome: value, fields: {out: [1]}}}
+- {id: RD.E11, profile: real, clauses: [RD.C4], input: {op: aten.max, args: [{t: f32, v: [[1, 3, 3], [5, 4, 5]]}, 1]}, expected: {outcome: value, fields: {out: [[3, 5], [1, 0]]}}}
+- {id: RD.E12, profile: real, clauses: [RD.C4], input: {op: aten.min, args: [{t: f32, v: [[2, 1, 1]]}, 1]}, expected: {outcome: value, fields: {out: [[1], [1]]}}}
+- {id: RD.E13, profile: real, clauses: [RD.C5], input: {op: aten.cumsum, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, 1]}, expected: {outcome: value, fields: {out: [[1, 3, 6], [4, 9, 15]]}}}
+- {id: RD.E14, profile: real, clauses: [RD.C6], input: {op: aten.logsumexp, args: [{t: f32, v: [0, 0]}, 0]}, expected: {outcome: value, fields: {out: log(2)}}}
+- {id: RD.E15, profile: real, clauses: [RD.C6], input: {op: aten.logsumexp, args: [{t: f32, v: [[], []]}, 1]}, expected: {outcome: value, fields: {out: [-inf, -inf]}}}
+- {id: RD.E16, profile: real, clauses: [RD.C7], input: {op: vjp.aten.sum, args: [{t: f32, v: [1, 2]}, {t: f32, v: [[5, 6], [7, 8]]}, [1]]}, expected: {outcome: value, fields: {out: [[1, 1], [2, 2]]}}}
+- {id: RD.E17, profile: real, clauses: [RD.C7], input: {op: vjp.aten.mean, args: [{t: f32, v: [1, 2]}, {t: f32, v: [[5, 6], [7, 8]]}, [1]]}, expected: {outcome: value, fields: {out: [['1/2', '1/2'], [1, 1]]}}}
+- {id: RD.E18, profile: real, clauses: [RD.C7], input: {op: vjp.aten.prod, args: [{t: f32, v: [1, 1, 1]}, {t: f32, v: [[2, 3, 4], [2, 0, 4], [0, 0, 4]]}, 1]}, expected: {outcome: value, fields: {out: [[12, 8, 6], [0, 8, 0], [0, 0, 0]]}}}
+- {id: RD.E19, profile: real, clauses: [RD.C8], input: {op: vjp.aten.amax, args: [{t: f32, v: [1]}, {t: f32, v: [[1, 3, 3]]}, [1]]}, expected: {outcome: value, fields: {out: [[0, '1/2', '1/2']]}}}
+- {id: RD.E20, profile: real, clauses: [RD.C8], input: {op: vjp.aten.max, args: [{t: f32, v: [1]}, {t: f32, v: [[1, 3, 3]]}, 1]}, expected: {outcome: value, fields: {out: [[0, 1, 0]]}}}
+- {id: RD.E21, profile: real, clauses: [RD.C9], input: {op: vjp.aten.logsumexp, args: [{t: f32, v: [1]}, {t: f32, v: [[0, 0]]}, 1]}, expected: {outcome: value, fields: {out: [['1/2', '1/2']]}}}
+- {id: RD.E22, profile: real, clauses: [RD.C9], input: {op: vjp.aten.cumsum, args: [{t: f32, v: [1, 1, 1]}, {t: f32, v: [5, 6, 7]}, 0]}, expected: {outcome: value, fields: {out: [3, 2, 1]}}}
+- {id: RD.E23, profile: real, clauses: [RD.C9], input: {op: vjp.aten.logsumexp, args: [{t: f32, v: [1]}, {t: f32, v: [[[0, 0], [0, 0]]]}, [1, 2]]}, expected: {outcome: value, fields: {out: [[['1/4', '1/4'], ['1/4', '1/4']]]}}}
+- {id: RD.E24, profile: real, clauses: [RD.C10], input: {op: aten.sum, args: [{t: i32, v: [1, 2]}]}, expected: {outcome: unsupported}}
+- {id: RD.E25, profile: real, clauses: [RD.C10], input: {op: aten.sum, args: [{t: f32, v: [1, inf]}]}, expected: {outcome: unsupported}}
+- {id: RD.E26, profile: real, clauses: [RD.C10], input: {op: aten.sum, args: [{t: f32, v: [1, 2]}, [0], false, f64]}, expected: {outcome: invalid_input}}
+- {id: RD.E27, profile: real, clauses: [RD.C2, RD.C10], input: {op: aten.prod, args: [{t: f32, v: [[1, 2], [3, 4]]}, [0, 1]]}, expected: {outcome: invalid_input}}
+- {id: RD.E28, profile: real, clauses: [RD.C6, RD.C10], input: {op: aten.logsumexp, args: [{t: f32, v: [[1, 2]]}, []]}, expected: {outcome: invalid_input}}
+- {id: RD.E29, profile: real, clauses: [RD.C7, RD.C10], input: {op: vjp.aten.sum, args: [{t: f64, v: [1]}, {t: f32, v: [[1, 2]]}, 1]}, expected: {outcome: invalid_input}}
+- {id: RD.E30, profile: real, clauses: [RD.C1, RD.C10], input: {op: aten.sum, args: [{t: f32, v: [4097/4096, 4097/4096]}], kwargs: {dtype: f16}}, expected: {outcome: value, fields: {out: 2}}}
+- {id: RD.E31, profile: real, clauses: [RD.C11], input: {op: aten.var, args: [{t: f32, v: [[1, 3], [2, 6]]}, 1], kwargs: {correction: 0}}, expected: {outcome: value, fields: {out: [1, 4]}}}
+- {id: RD.E32, profile: real, clauses: [RD.C11], input: {op: aten.var, args: [{t: f32, v: [[1, 3], [2, 6]]}, 1], kwargs: {correction: 1}}, expected: {outcome: value, fields: {out: [2, 8]}}}
+- {id: RD.E33, profile: real, clauses: [RD.C12], input: {op: vjp.aten.var, args: [{t: f32, v: [3, -2]}, {t: f32, v: [[1, 3], [2, 6]]}, 1], kwargs: {correction: 1}}, expected: {outcome: value, fields: {out: [[-6, 6], [8, -8]]}}}
+- {id: RD.E34, profile: real, clauses: [RD.C11, RD.C12], input: {op: vjp.aten.var, args: [{t: f32, v: [7]}, {t: f32, v: [[2]]}, 1], kwargs: {correction: 0}}, expected: {outcome: value, fields: {out: [[0]]}}}
+- {id: RD.E35, profile: real, clauses: [RD.C11], input: {op: aten.var, args: [{t: f32, v: [[2]]}, 1], kwargs: {correction: 1}}, expected: {outcome: domain_undefined}}
+- {id: RD.E36, profile: real, clauses: [RD.C10, RD.C11], input: {op: aten.var, args: [{t: f32, v: [[1, 2, 3]]}, 1], kwargs: {correction: '1/2'}}, expected: {outcome: unsupported}}
+- {id: RD.E37, profile: real, clauses: [RD.C10, RD.C11], input: {op: aten.var, args: [{t: f32, v: [[1, 2, 3]]}, []], kwargs: {correction: 0}}, expected: {outcome: unsupported}}
+- {id: RD.E38, profile: real, clauses: [RD.C13], input: {op: aten.std, args: [{t: f32, v: [1, 3]}], kwargs: {correction: 1}}, expected: {outcome: value, fields: {out: sqrt(2)}}}
+- {id: RD.E39, profile: real, clauses: [RD.C13], input: {op: aten.std, args: [{t: f32, v: [1, 3]}], kwargs: {correction: 0}}, expected: {outcome: value, fields: {out: 1}}}
+- {id: RD.E40, profile: real, clauses: [RD.C14], input: {op: vjp.aten.std, args: [{t: f32, v: 1}, {t: f32, v: [1, 3]}], kwargs: {correction: 1}}, expected: {outcome: value, fields: {out: [-1/sqrt(2), 1/sqrt(2)]}}}
+- {id: RD.E41, profile: real, clauses: [RD.C13], input: {op: aten.std, args: [{t: f32, v: [2, 2]}], kwargs: {correction: 0}}, expected: {outcome: value, fields: {out: 0}}}
+- {id: RD.E42, profile: real, clauses: [RD.C14], input: {op: vjp.aten.std, args: [{t: f32, v: 1}, {t: f32, v: [2, 2]}], kwargs: {correction: 0}}, expected: {outcome: domain_undefined}}
+- {id: RD.E43, profile: real, clauses: [RD.C14], input: {op: vjp.aten.std, args: [{t: f32, v: 7}, {t: f32, v: [2]}], kwargs: {correction: 0}}, expected: {outcome: value, fields: {out: [0]}}}
+- {id: RD.E44, profile: real, clauses: [RD.C13], input: {op: aten.std, args: [{t: f32, v: [2]}], kwargs: {correction: 1}}, expected: {outcome: domain_undefined}}
+- {id: RD.E45, profile: real, clauses: [RD.C15], input: {op: aten.var_mean, args: [{t: f32, v: [[1, 3], [2, 6]]}, 1], kwargs: {correction: 1}}, expected: {outcome: value, fields: {out: [[2, 8], [2, 4]]}}}
+- {id: RD.E46, profile: real, clauses: [RD.C15], input: {op: aten.var_mean, args: [{t: f32, v: [[1, 3], [2, 6]]}, 1], kwargs: {correction: 0}}, expected: {outcome: value, fields: {out: [[1, 4], [2, 4]]}}}
+- {id: RD.E47, profile: real, clauses: [RD.C16], input: {op: vjp.aten.var_mean, args: [{t: f32, v: [3, -2]}, {t: f32, v: [5, 7]}, {t: f32, v: [[1, 3], [2, 6]]}, 1], kwargs: {correction: 1}}, expected: {outcome: value, fields: {out: [['-7/2', '17/2'], ['23/2', '-9/2']]}}}
+- {id: RD.E48, profile: real, clauses: [RD.C10, RD.C15], input: {op: aten.var_mean, args: [{t: f32, v: [[1, 2, 3]]}, []], kwargs: {correction: 0}}, expected: {outcome: unsupported}}
+- {id: RD.E49, profile: real, clauses: [RD.C17], input: {op: aten.linalg_vector_norm, args: [{t: f32, v: [[3, 4], [5, 12]]}, 2, 1]}, expected: {outcome: value, fields: {out: [5, 13]}}}
+- {id: RD.E50, profile: real, clauses: [RD.C17], input: {op: aten.linalg_vector_norm, args: [{t: f64, v: [[3, 4], [5, 12]]}, 2, 1, true]}, expected: {outcome: value, fields: {out: [[5], [13]]}}}
+- {id: RD.E51, profile: real, clauses: [RD.C18], input: {op: vjp.aten.linalg_vector_norm, args: [{t: f64, v: [2, -3]}, {t: f64, v: [[3, 4], [5, 12]]}, 2, 1]}, expected: {outcome: value, fields: {out: [['6/5', '8/5'], ['-15/13', '-36/13']]}}}
+- {id: RD.E52, profile: real, clauses: [RD.C18], input: {op: vjp.aten.linalg_vector_norm, args: [{t: f32, v: [1]}, {t: f32, v: [[0, 0]]}, 2, 1]}, expected: {outcome: domain_undefined}}
+- {id: RD.E53, profile: real, clauses: [RD.C10, RD.C17], input: {op: aten.linalg_vector_norm, args: [{t: f32, v: [3, 4]}, 1]}, expected: {outcome: unsupported}}
+- {id: RD.E54, profile: real, clauses: [RD.C10, RD.C17], input: {op: aten.linalg_vector_norm, args: [{t: bf16, v: [3, 4]}, 2]}, expected: {outcome: unsupported}}
+- {id: RD.E55, profile: real, clauses: [RD.C10, RD.C17], input: {op: aten.linalg_vector_norm, args: [{t: f32, v: [3, 4]}, 2], kwargs: {dtype: f64}}, expected: {outcome: unsupported}}
+signature:
+  inputs: ['op: one of the selected default functional names', 'args as in the retained PyTorch 2.10 schemas; VJP operations take (upstream, input, forward arguments)']
+  pre_state: []
+  post_state: []
+  observation_unit: the complete reduction result or complete input gradient
+domain:
+  valid: [finite f16/bf16/f32/f64 tensors; valid integer dimensions; optional explicit floating dtype where declared; selected variance, standard-deviation and var-mean correction 0 or 1 with positive degrees of freedom; standard-deviation VJP with positive std or a one-element correction-zero slice; public f32/f64 linalg vector 2-norm with omitted dtype and positive norm for VJP]
+  domain_undefined: [mean over an empty reduced set; variance or standard deviation with N minus correction non-positive; standard-deviation VJP on a zero-variance slice containing more than one element; vector 2-norm VJP on a zero-norm slice]
+  invalid_input: [dimensions out of range or repeated; empty extrema; malformed or nonboolean keepdim; prod with multiple dimensions; logsumexp with no dimensions; VJP upstream shape or dtype different from the forward output]
+  unsupported: [integer, boolean, float8, complex or nonfinite tensors; out and named-dimension overloads; unselected variance, standard-deviation or var-mean corrections and overloads; deprecated torch.norm; vector-norm orders other than two, f16/bf16 vector-norm inputs and explicit vector-norm dtype conversion]
+mutation_requirements:
+- {id: RD.M1, misreading: argmax returns the last maximal index, witnesses: [RD.E10]}
+- {id: RD.M2, misreading: amax gradient goes entirely to the first maximal element, witnesses: [RD.E19]}
+- {id: RD.M3, misreading: max-along-dim gradient splits evenly among ties, witnesses: [RD.E20]}
+- {id: RD.M4, misreading: product gradient is computed as product divided by the selected element, witnesses: [RD.E18]}
+- {id: RD.M5, misreading: mean of an empty set is zero, witnesses: [RD.E5]}
+- {id: RD.M6, misreading: cumsum gradient is the forward cumulative sum, witnesses: [RD.E22]}
+- {id: RD.M7, misreading: logsumexp returns the sum of exponentials without taking log, witnesses: [RD.E14]}
+- {id: RD.M8, misreading: the finite floating profile silently accepts integer tensors, witnesses: [RD.E24]}
+- {id: RD.M9, misreading: prod accepts a list of dimensions in the selected default overload, witnesses: [RD.E27]}
+- {id: RD.M10, misreading: a VJP accepts an upstream tensor with a different dtype, witnesses: [RD.E29]}
+- {id: RD.M11, misreading: variance always divides by N and ignores correction, witnesses: [RD.E32]}
+- {id: RD.M12, misreading: variance VJP omits the factor 2, witnesses: [RD.E33]}
+- {id: RD.M13, misreading: standard deviation returns variance without the square root, witnesses: [RD.E38]}
+- {id: RD.M14, misreading: standard-deviation VJP omits division by std, witnesses: [RD.E40]}
+- {id: RD.M15, misreading: standard deviation ignores correction and always uses Bessel correction, witnesses: [RD.E39]}
+- {id: RD.M16, misreading: var-mean returns mean before variance, witnesses: [RD.E45]}
+- {id: RD.M17, misreading: var-mean VJP ignores the mean upstream, witnesses: [RD.E47]}
+- {id: RD.M18, misreading: var-mean VJP ignores the variance upstream, witnesses: [RD.E47]}
+- {id: RD.M19, misreading: vector 2-norm returns the sum of squares without the square root, witnesses: [RD.E49]}
+- {id: RD.M20, misreading: vector 2-norm VJP omits division by the norm, witnesses: [RD.E51]}
+nonclaims:
+- Accumulation order, intermediate rounding, output rounding and device reduction strategy are numerical effects in K - G.
+- Deprecated torch.norm, other vector-norm orders and dtype conversions, unselected variance/standard-deviation/var-mean corrections and overloads, integer overflow, nonfinite arithmetic, named dimensions and out buffers remain outside this reviewed profile.
+changes:
+- date: '2026-10-18'
+  change: >-
+    The runtime contract was narrowed from a single broad draft spanning statistics and norm edge conventions to the
+    common finite floating reductions that can be sourced and independently checked now. The previous full draft is
+    retained under contracts/draft and is never loaded by the runtime registry.
+  trigger: >-
+    A contract-wide admission result could not honestly certify routine sum/mean/cumsum while unresolved zero-norm and
+    zero-variance derivative choices remained in the same profile. PyTorch 2.10 schemas also exposed keyword-only dtype,
+    single-dimension prod and required-dimension logsumexp boundaries that the former executable interface accepted too broadly.
+- date: '2026-10-19'
+  change: >-
+    Admit only torch.var's finite correction overload and its complete input VJP for correction 0 or 1 with positive
+    degrees of freedom. Keep std, var_mean, norm, other corrections and legacy overloads outside the profile.
+  trigger: >-
+    The former rejection grouped variance with the genuinely singular zero-standard-deviation gradient. Re-reading
+    the PyTorch 2.10 formula and schema shows that variance itself has an unambiguous polynomial VJP on this range.
+- date: '2026-10-19'
+  change: >-
+    Admit torch.std's matching correction overload and forward value, plus its VJP only where the exact real derivative
+    is unique: positive std, or the one-element correction-zero constant function.
+  trigger: >-
+    The official formula and schema make the forward task precise. Restricting the VJP domain avoids treating PyTorch's
+    zero gradient convention for larger constant slices as a generally valid derivative of the real standard deviation.
+- date: '2026-10-19'
+  change: >-
+    Admit torch.var_mean's matching correction overload, its complete ordered pair and a combined input VJP with
+    separate variance and mean upstream tensors.
+  trigger: >-
+    The official documentation and schema specify both outputs. Treating either output or either upstream as optional
+    would let a partial reference pass a fused multi-output implementation.
+- date: '2026-10-19'
+  change: >-
+    Admit public torch.linalg.vector_norm only for real f32/f64 order-two calls without explicit dtype conversion, and
+    admit its input VJP only on positive-norm slices.
+  trigger: >-
+    The official PyTorch 2.10 definition and native schema fix this public task. Restricting the VJP excludes the
+    zero-vector kink instead of turning PyTorch's implementation convention into a universal derivative.

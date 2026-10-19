@@ -1,0 +1,57 @@
+{
+  "task": "PyTorch public sigmoid forward and complete input VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_poi_fused_expand_mul_ones_like_sigmoid_sigmoid_backward_0"
+  ],
+  "generated_triton_kernel_count": 1,
+  "generated_operation_lines": [
+    "tmp1 = tl.sigmoid(tmp0)"
+  ],
+  "outputs": {
+    "y": {
+      "shape": [
+        32,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 1.1920928955078125e-07
+    },
+    "dx": {
+      "shape": [
+        32,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 2.086162567138672e-07
+    }
+  },
+  "inputs_unchanged": true,
+  "explicit_boundary_inputs": [
+    -2.0,
+    -0.0,
+    0.0,
+    0.5,
+    2.0
+  ],
+  "explicit_boundary_outputs": {
+    "y": [
+      0.11920292675495148,
+      0.5,
+      0.5,
+      0.622459352016449,
+      0.8807970881462097
+    ],
+    "dx": [
+      -0.057019032537937164,
+      0.285949170589447,
+      0.3078804910182953,
+      0.006317500490695238,
+      -0.11184042692184448
+    ]
+  },
+  "inspection_passed": true
+}

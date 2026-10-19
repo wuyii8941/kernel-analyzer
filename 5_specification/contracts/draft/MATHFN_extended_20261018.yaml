@@ -1,0 +1,105 @@
+schema_version: '1.2'
+id: MATHFN
+role: ATEN_MATHFN
+title: Element-wise elementary functions (exp, log, log1p, expm1, sqrt, rsqrt, sin, cos, tanh, sigmoid, erf), real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Real-number semantics of the documented functions; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.exp, aten.log, aten.log1p, aten.expm1, aten.sqrt, aten.rsqrt, aten.sin, aten.cos, aten.tanh, aten.sigmoid,
+  aten.erf]
+profiles:
+  real:
+    meaning: The mathematical function of the exact input value; integer inputs are promoted to floating point
+      (exact); results are rigorous enclosures (exact where the value is rational, e.g. exp(0) = 1).
+    task_choice_required: false
+outputs:
+  out:
+    shape: the input shape
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Tensor values are the exact values received.
+  quality: No tolerance; an exact expected value must lie inside the reference enclosure.
+  test_evidence: Containment of the exact expected value (or of its 512-bit enclosure) in the 256-bit reference enclosure.
+  error_handling: Values outside a function's real domain are domain_undefined.
+decisions:
+- id: MF.EDGE
+  status: drafted
+  statement: 'Infinite inputs and domain endpoints take the one-sided limit inside the real domain: exp(-inf) = 0,
+    exp(inf) = inf, log(0) = -inf, log1p(-1) = -inf, rsqrt(0) = inf, tanh(+-inf) = +-1, sigmoid(-inf) = 0, sigmoid(inf)
+    = 1, erf(+-inf) = +-1; sin and cos of an infinity have no limit and are domain_undefined. Values outside the domain
+    (log of a negative number, sqrt of a negative number) are domain_undefined. Alternative (treat every endpoint as
+    undefined) rejected: these limits are the values the documented formulas tend to, and IEEE 754 gives the same.'
+  basis: [T_LOG.DEF, T_SQRT.DEF, T_RSQRT.DEF, IEEE754.RNE]
+clauses:
+- {id: MF.C1, basis: [T_EXP.DEF, T_LOG.DEF, MF.EDGE], statement: 'exp(x) = e**x; log(x) = natural logarithm, x > 0',
+  observes: [out], evidence_kind: definition}
+- {id: MF.C2, basis: [T_LOG1P.DEF, T_EXPM1.DEF, T_SPECIAL.EXPM1], statement: 'log1p(x) = log(1 + x); expm1(x) = e**x - 1',
+  observes: [out], evidence_kind: definition}
+- {id: MF.C3, basis: [T_SQRT.DEF, T_RSQRT.DEF, MF.EDGE], statement: 'sqrt(x) for x >= 0; rsqrt(x) = 1/sqrt(x)',
+  observes: [out], evidence_kind: definition}
+- {id: MF.C4, basis: [T_SIN.DEF, T_COS.DEF], statement: sin and cos of radians, observes: [out], evidence_kind: definition}
+- {id: MF.C5, basis: [T_TANH.DEF, T_SIGMOID.DEF, T_SPECIAL.EXPIT], statement: 'tanh(x); sigmoid(x) = 1/(1 + e**-x)',
+  observes: [out], evidence_kind: definition}
+- {id: MF.C6, basis: [T_ERF.DEF, T_SPECIAL.ERF], statement: 'erf(x) = 2/sqrt(pi) * integral_0^x exp(-t**2) dt',
+  observes: [out], evidence_kind: definition}
+- {id: MF.C7, basis: [MF.EDGE], statement: infinities and domain endpoints as decided in MF.EDGE, observes: [out],
+  evidence_kind: definition}
+examples:
+- {id: MF.E1, profile: real, clauses: [MF.C1, MF.C7], input: {op: aten.exp, args: [{t: f32, v: [0, 1, -inf, inf]}]},
+  expected: {outcome: value, fields: {out: [1, exp(1), 0, inf]}}}
+- {id: MF.E2, profile: real, clauses: [MF.C1, MF.C7], input: {op: aten.log, args: [{t: f32, v: [1, 2, '1/2', 0]}]},
+  expected: {outcome: value, fields: {out: [0, log(2), -log(2), -inf]}}}
+- {id: MF.E3, profile: real, clauses: [MF.C1], input: {op: aten.log, args: [{t: f32, v: [-1]}]}, expected: {outcome: domain_undefined}}
+- {id: MF.E4, profile: real, clauses: [MF.C2, MF.C7], input: {op: aten.log1p, args: [{t: f32, v: [0, 1, -1]}]},
+  expected: {outcome: value, fields: {out: [0, log(2), -inf]}}}
+- {id: MF.E5, profile: real, clauses: [MF.C2], input: {op: aten.expm1, args: [{t: f32, v: [0, 1, '-1/2']}]}, expected: {
+    outcome: value, fields: {out: [0, exp(1)-1, exp(-1/2)-1]}}}
+- {id: MF.E6, profile: real, clauses: [MF.C3], input: {op: aten.sqrt, args: [{t: f32, v: [4, 2, 0, '1/4']}]}, expected: {
+    outcome: value, fields: {out: [2, sqrt(2), 0, '1/2']}}}
+- {id: MF.E7, profile: real, clauses: [MF.C3], input: {op: aten.sqrt, args: [{t: f32, v: [-1]}]}, expected: {outcome: domain_undefined}}
+- {id: MF.E8, profile: real, clauses: [MF.C3, MF.C7], input: {op: aten.rsqrt, args: [{t: f32, v: [4, 2, 0]}]}, expected: {
+    outcome: value, fields: {out: ['1/2', 1/sqrt(2), inf]}}}
+- {id: MF.E9, profile: real, clauses: [MF.C4], input: {op: aten.sin, args: [{t: f32, v: [0, 1, -2]}]}, expected: {outcome: value,
+    fields: {out: [0, sin(1), -sin(2)]}}}
+- {id: MF.E10, profile: real, clauses: [MF.C4], input: {op: aten.cos, args: [{t: f32, v: [0, 1, -2]}]}, expected: {outcome: value,
+    fields: {out: [1, cos(1), cos(2)]}}}
+- {id: MF.E11, profile: real, clauses: [MF.C4, MF.C7], input: {op: aten.sin, args: [{t: f32, v: [inf]}]}, expected: {
+    outcome: domain_undefined}}
+- {id: MF.E12, profile: real, clauses: [MF.C5, MF.C7], input: {op: aten.tanh, args: [{t: f32, v: [0, 1, -inf]}]}, expected: {
+    outcome: value, fields: {out: [0, (exp(2)-1)/(exp(2)+1), -1]}}}
+- {id: MF.E13, profile: real, clauses: [MF.C5, MF.C7], input: {op: aten.sigmoid, args: [{t: f32, v: [0, 1, inf, -inf]}]},
+  expected: {outcome: value, fields: {out: ['1/2', 1/(1+exp(-1)), 1, 0]}}}
+- {id: MF.E14, profile: real, clauses: [MF.C6, MF.C7], input: {op: aten.erf, args: [{t: f32, v: [0, 1, -inf]}]}, expected: {
+    outcome: value, fields: {out: [0, erf(1), -1]}}}
+- {id: MF.E15, profile: real, clauses: [MF.C1], input: {op: aten.exp, args: [{t: i64, v: [0, 2]}]}, expected: {outcome: value,
+    fields: {out: [1, exp(2)]}}, note: Integer input promoted to floating point.}
+signature:
+  inputs: ['op: one of the covered ATen names', 'args: one tensor {t: dtype, v: values}']
+  pre_state: []
+  post_state: []
+  observation_unit: the result tensor of one operation
+domain:
+  valid: [real values and +-inf, integer tensors (promoted)]
+  domain_undefined: [log of a negative value, sqrt / rsqrt of a negative value, log1p below -1, sin / cos of an infinity]
+  invalid_input: [NaN values]
+  unsupported: [complex dtypes]
+mutation_requirements:
+- {id: MF.M1, misreading: log1p computed as log, witnesses: [MF.E4]}
+- {id: MF.M2, misreading: expm1 computed as exp, witnesses: [MF.E5]}
+- {id: MF.M3, misreading: rsqrt computed as sqrt, witnesses: [MF.E8]}
+- {id: MF.M4, misreading: "sigmoid(x) computed as (1 + tanh(x))/2, which is sigmoid(2x)",
+  witnesses: [MF.E13]}
+- {id: MF.M5, misreading: erf(x) computed as erf(x/sqrt(2)) (the normal CDF scaling), witnesses: [MF.E14]}
+- {id: MF.M6, misreading: log in base 2, witnesses: [MF.E2]}
+- {id: MF.M7, misreading: sin of degrees, witnesses: [MF.E9]}
+- {id: MF.M8, misreading: infinite inputs rejected as undefined, witnesses: [MF.E1]}
+nonclaims:
+- Accuracy of device approximations (e.g. ex2.approx) is the numerical question K - G, not this contract.
+changes: []

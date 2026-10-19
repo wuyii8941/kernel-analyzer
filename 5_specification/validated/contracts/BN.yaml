@@ -1,0 +1,239 @@
+schema_version: '1.2'
+id: BN
+role: BN
+title: BatchNorm evaluation forward values with explicit running statistics on finite physical tensors
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 functional BatchNorm evaluation values with explicit running mean and variance
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.functional.batch_norm, aten.batch_norm]
+profiles:
+  finite_eval_values:
+    meaning: >-
+      Complete evaluation-mode BatchNorm values for positive rank-2, rank-3 or rank-4 physical finite f16, bf16,
+      f32 or f64 tensors, with explicit nonnegative running variance, positive eps, and optional same-dtype weight and
+      bias. Every input tensor is unchanged.
+    task_choice_required: false
+outputs:
+  out:
+    shape: the input shape
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: >-
+    The tensor records contain the exact physical values received in their declared dtype. Running mean, running
+    variance, optional affine parameters, evaluation mode, momentum, eps and the ATen backend flag are explicit call
+    arguments.
+  complete_output: The complete returned tensor is observed with dtype, explicit shape and every value.
+  quality: Exact rational arithmetic and rigorous outward enclosure of reciprocal square roots; no tolerance.
+  test_evidence: Independent coordinate evaluation and PyTorch 2.10 comparisons over all selected dtypes and ranks.
+  error_handling: >-
+    Malformed calls and inconsistent shapes are invalid_input; training, missing statistics, nonpositive eps,
+    negative running variance, special values, other dtypes/ranks and native multi-output or backward calls are
+    unsupported.
+decisions:
+- id: BN2.SCHEMA
+  status: reviewed
+  statement: >-
+    Select only the one-output functional BatchNorm task in evaluation mode. The public functional call and
+    aten.batch_norm return the complete values tensor. native_batch_norm, its legit variants, out forms and backward
+    are different schemas and are outside this profile.
+  basis: [T_BATCHNORM_F.DEF, TS_NATIVE_FUNCTIONS.BN_SCHEMAS]
+- id: BN2.EVAL
+  status: reviewed
+  statement: >-
+    For input coordinate (n,c,*), evaluation uses the explicit running statistics and returns
+    ((x-running_mean[c])/sqrt(running_var[c]+eps))*weight[c]+bias[c], omitting either affine term when its tensor is
+    null. It does not recompute batch statistics or update any input.
+  basis: [T_BATCHNORM2D.DEF, T_BATCHNORM2D.RUNNING, NORM_TS_DECOMP.BN_HELPER]
+- id: BN2.PHYSICAL
+  status: reviewed
+  statement: >-
+    Inputs are positive rank-2, rank-3 or rank-4 physical finite f16, bf16, f32 or f64 tensors. Running statistics and
+    present affine tensors have shape [C], use the same dtype and contain exactly representable finite values.
+    Running variance is nonnegative and eps is positive. Special values, signed-zero distinctions, integer or complex
+    data and unrepresentable mathematical literals are outside this profile.
+  basis: [T_BATCHNORM_F.DEF, T_BATCHNORM2D.DEF]
+clauses:
+- id: BN2.C1
+  basis: [BN2.SCHEMA, BN2.PHYSICAL]
+  statement: >-
+    Every selected call has one positive rank-2, rank-3 or rank-4 physical finite floating input, explicit same-dtype
+    running statistics of shape [C], optional same-dtype affine tensors of shape [C], evaluation mode and positive eps.
+  observes: [out]
+  evidence_kind: definition
+- id: BN2.C2
+  basis: [BN2.EVAL]
+  statement: >-
+    Every output coordinate uses its channel's running mean and variance in
+    ((x-mean)/sqrt(variance+eps))*weight+bias, with absent affine terms acting as one and zero.
+  observes: [out]
+  evidence_kind: definition
+- id: BN2.C3
+  basis: [BN2.SCHEMA, BN2.EVAL]
+  statement: The result has the input dtype and shape, and input, statistics and affine tensors remain unchanged.
+  observes: [out]
+  evidence_kind: definition
+- id: BN2.C4
+  basis: [BN2.SCHEMA, BN2.PHYSICAL]
+  statement: >-
+    Training, missing running statistics, nonpositive eps, negative running variance, special values, signed-zero
+    distinctions, unselected ranks/dtypes and native multi-output or backward schemas receive no reference answer.
+  observes: [out]
+  evidence_kind: definition
+examples:
+- id: BN2.E1
+  profile: finite_eval_values
+  clauses: [BN2.C1, BN2.C2, BN2.C3]
+  input:
+    op: torch.nn.functional.batch_norm
+    args:
+    - {t: f32, v: [[1, 2], [5, 8]]}
+    - {t: f32, v: [1, 2]}
+    - {t: f32, v: [3, 8]}
+    - {t: f32, v: [2, -1]}
+    - {t: f32, v: [0, 5]}
+    - false
+    - '1/10'
+    - 1
+  expected: {outcome: value, fields: {out: [[0, 5], [4, 3]]}}
+- id: BN2.E2
+  profile: finite_eval_values
+  clauses: [BN2.C1, BN2.C2]
+  input:
+    op: aten.batch_norm
+    args:
+    - {t: f16, v: [[[1, 3], [2, 6]]]}
+    - null
+    - null
+    - {t: f16, v: [1, 2]}
+    - {t: f16, v: [0, 3]}
+    - false
+    - '1/10'
+    - 1
+    - true
+  expected: {outcome: value, fields: {out: [[[0, 2], [0, 2]]]}}
+- id: BN2.E3
+  profile: finite_eval_values
+  clauses: [BN2.C2, BN2.C3]
+  input:
+    op: torch.nn.functional.batch_norm
+    args:
+    - {t: bf16, v: [[[[1, 5]], [[2, 10]]]]}
+    - {t: bf16, v: [1, 2]}
+    - {t: bf16, v: [3, 15]}
+    - {t: bf16, v: [2, '1/2']}
+    - {t: bf16, v: [-1, 1]}
+    - false
+    - 0
+    - 1
+  expected: {outcome: value, fields: {out: [[[[-1, 3]], [[1, 2]]]]}}
+- id: BN2.E4
+  profile: finite_eval_values
+  clauses: [BN2.C2]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f64, v: [[2], [5]]}, {t: f64, v: [2]}, {t: f64, v: [0]}, null, null, false, '1/10', 4]}
+  expected: {outcome: value, fields: {out: [[0], ['3/2']]}}
+- id: BN2.E5
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2], [3, 4]]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, true, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E6
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2]]}, null, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E7
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 0]}
+  expected: {outcome: unsupported}
+- id: BN2.E8
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, -1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E9
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: i64, v: [[1, 2]]}, {t: i64, v: [0, 0]}, {t: i64, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E10
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [1, 2]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E11
+  profile: finite_eval_values
+  clauses: [BN2.C1]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: invalid_input}
+- id: BN2.E12
+  profile: finite_eval_values
+  clauses: [BN2.C1]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2]]}, {t: f64, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E13
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, inf]]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E14
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, '-0.0']]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+- id: BN2.E15
+  profile: finite_eval_values
+  clauses: [BN2.C1]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, '1/3']]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, false, '1/10', 1]}
+  expected: {outcome: invalid_input}
+- id: BN2.E16
+  profile: finite_eval_values
+  clauses: [BN2.C1]
+  input: {op: torch.nn.functional.batch_norm, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, null, null, 0, '1/10', 1]}
+  expected: {outcome: invalid_input}
+- id: BN2.E17
+  profile: finite_eval_values
+  clauses: [BN2.C1]
+  input: {op: aten.batch_norm, args: [{t: f32, v: [[1, 2]]}, null, null, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, false, '1/10', 1, 1]}
+  expected: {outcome: invalid_input}
+- id: BN2.E18
+  profile: finite_eval_values
+  clauses: [BN2.C4]
+  input: {op: aten.native_batch_norm, args: [{t: f32, v: [[1, 2]]}, null, null, {t: f32, v: [0, 0]}, {t: f32, v: [1, 1]}, false, '1/10', 1]}
+  expected: {outcome: unsupported}
+signature:
+  inputs: [selected functional evaluation BatchNorm operation and exact parameters, positive rank-2/rank-3/rank-4 physical finite f16/bf16/f32/f64 input, same-dtype running statistics and optional affine tensors]
+  pre_state: [input, running_mean, running_var, optional weight and bias are unchanged]
+  post_state: [one complete newly returned values tensor]
+  observation_unit: every returned coordinate together with dtype and shape
+domain:
+  valid: [positive rank-2/rank-3/rank-4 physical finite f16/bf16/f32/f64 tensors, explicit same-dtype running statistics, nonnegative running variance, positive eps, evaluation mode]
+  invalid_input: [malformed call, inconsistent vector shape, unrepresentable value, nonboolean options]
+  unsupported: [training, missing running statistics, nonpositive eps, negative running variance, special values, signed-zero distinctions, integer or complex data, native multi-output and backward schemas, other ranks or overloads]
+mutation_requirements:
+- {id: BN2.M1, misreading: recompute batch statistics in evaluation, witnesses: [BN2.E1]}
+- {id: BN2.M2, misreading: omit eps from the square root, witnesses: [BN2.E1]}
+- {id: BN2.M3, misreading: add eps outside the square root, witnesses: [BN2.E1]}
+- {id: BN2.M4, misreading: omit the affine weight, witnesses: [BN2.E1]}
+- {id: BN2.M5, misreading: omit the affine bias, witnesses: [BN2.E1]}
+- {id: BN2.M6, misreading: use channel zero statistics and affine values for every channel, witnesses: [BN2.E1]}
+nonclaims:
+- No result is certified for training, state updates, saved statistics, gradients, native multi-output calls, special values, nonpositive eps, negative running variance, other ranks/dtypes/layouts, device placement or backend selection behavior.
+- The real-number target does not claim a particular device rsqrt instruction or intermediate precision.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the broad training/evaluation/state/VJP draft with a reviewed one-output evaluation-values profile on
+    physical finite tensors and explicit running statistics. Preserve the former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The broad draft mixed public module state, native saved-output differences, training variance updates and
+    backward formulas. None is needed to give a reliable ground truth for ordinary inference BatchNorm values.

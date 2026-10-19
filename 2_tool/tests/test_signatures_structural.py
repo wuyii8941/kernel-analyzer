@@ -33,7 +33,7 @@ def _kernel(name, body, params):
     return mod
 
 
-def _run(name, body, bufs, out_name="out", grid=(1, 1, 1), scalars=None, drop_ttgir=False, full=False):
+def _run(name, body, bufs, out_name="out", grid=(1, 1, 1), scalars=None, drop_ttgir=False, full=False, arch=86):
     """bufs: ordered {name: (dtype, array)}; returns the reference (lo, hi, st) of ``out_name`` (``full``: the
     launch's KernelReference and the storage identity of every buffer instead)."""
     from triton.backends.compiler import GPUTarget
@@ -47,9 +47,10 @@ def _run(name, body, bufs, out_name="out", grid=(1, 1, 1), scalars=None, drop_tt
     sig = {k: H.SIG[d] for k, (d, _) in bufs.items()}
     sig.update({k: t for k, (t, _) in scalars.items()})
     sig["N"] = "constexpr"
-    key = (name, body, tuple(sig.items()))
+    key = (name, body, tuple(sig.items()), arch)
     if key not in _CACHE:
-        ck = triton.compile(ASTSource(fn=mod.kernel, signature=sig, constexprs={"N": C}), target=GPUTarget("cuda", 86, 32),
+        ck = triton.compile(ASTSource(fn=mod.kernel, signature=sig, constexprs={"N": C}),
+                            target=GPUTarget("cuda", arch, 32),
                             options={"num_warps": 1})
         _CACHE[key] = {k: ck.asm[k] for k in ("ttir", "ttgir", "ptx")}
     asm = dict(_CACHE[key])
@@ -297,7 +298,7 @@ def test_clamp_and_fp8_signature(category):
     _check(category, lo, hi, st, exact)
     body = ("    i = tl.arange(0, N)\n    x = tl.load(x_ptr + i)\n"
             "    tl.store(out + i, x.to(tl.float8e5).to(tl.float32))\n")
-    lo, hi, st = _run("fp8", body, {"x_ptr": ("fp32", x), "out": ("fp32", np.zeros(C))})
+    lo, hi, st = _run("fp8", body, {"x_ptr": ("fp32", x), "out": ("fp32", np.zeros(C))}, arch=89)
     exact = [mp.mpf(float(v)) if np.isfinite(v) else (mp.nan if np.isnan(v) else (mp.inf if v > 0 else -mp.inf))
              for v in x]
     _check("boundary" if category == "positive" else category, lo, hi, st, exact)  # conversions are identity on reals

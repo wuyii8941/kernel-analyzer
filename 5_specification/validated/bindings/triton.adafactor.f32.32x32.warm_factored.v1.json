@@ -1,0 +1,53 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.adafactor.f32.32x32.warm_factored.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 warm-state factored Adafactor transition",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one Triton program updates every parameter, row-factor and column-factor coordinate and the scalar step",
+    "measure_call": "../calls/triton_adafactor.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "one_parameter_adafactor_step",
+      "contract": "ADAFACTOR",
+      "profile": "torch210_factored_real",
+      "task_statement": "Perform one complete public torch.optim.Adafactor transition on one received dense 32x32 float32 parameter with existing factored variance state at step 3, using maximize and decoupled weight decay, and return every public post-state at step 4.",
+      "input_map": [
+        {"target": "/state/theta", "source": "/tensor_arguments/theta/before", "conversion": "tensor_values"},
+        {"target": "/state/row", "source": "/tensor_arguments/row/before", "conversion": "tensor_values"},
+        {"target": "/state/col", "source": "/tensor_arguments/col/before", "conversion": "tensor_values"},
+        {"target": "/state/var", "literal": [], "basis": "the selected rank-2 public state uses row_var and col_var rather than variance"},
+        {"target": "/state/t", "source": "/tensor_arguments/t/before", "conversion": "tensor_values"},
+        {"target": "/gradient", "source": "/tensor_arguments/gradient/before", "conversion": "tensor_values"},
+        {"target": "/dtype", "literal": "f32", "basis": "all parameter, gradient and variance-state tensors are float32"},
+        {"target": "/lr", "literal": 0.125, "basis": "the kernel uses the exact binary learning rate 0.125"},
+        {"target": "/beta2_decay", "literal": -1, "basis": "the kernel computes t_new^-1 inside the program graph"},
+        {"target": "/eps1", "literal": 0.25, "basis": "the kernel applies the exact binary value 0.25 to both documented clamps"},
+        {"target": "/eps2", "literal": 0.25, "basis": "the kernel uses the exact binary parameter-scale floor 0.25"},
+        {"target": "/d", "literal": 1, "basis": "the kernel uses clipping threshold 1"},
+        {"target": "/weight_decay", "literal": 0.25, "basis": "the kernel applies decoupled factor 1-lr*0.25"},
+        {"target": "/maximize", "literal": true, "basis": "the kernel negates the received gradient before variance and update calculations"},
+        {"target": "/foreach", "literal": false, "basis": "the bound task is one complete parameter transition"}
+      ],
+      "output_map": [
+        {"target": "/theta", "source": "/tensor_arguments/theta/after", "conversion": "tensor_values", "measure_output": "theta"},
+        {"target": "/row", "source": "/tensor_arguments/row/after", "conversion": "tensor_values", "measure_output": "row"},
+        {"target": "/col", "source": "/tensor_arguments/col/after", "conversion": "tensor_values", "measure_output": "col"},
+        {"target": "/t", "source": "/tensor_arguments/t/after", "conversion": "tensor_values", "measure_output": "t"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "theta", "effect": "output", "task": "one_parameter_adafactor_step", "target": "/theta"},
+    {"argument": "gradient", "effect": "unchanged"},
+    {"argument": "row", "effect": "output", "task": "one_parameter_adafactor_step", "target": "/row"},
+    {"argument": "col", "effect": "output", "task": "one_parameter_adafactor_step", "target": "/col"},
+    {"argument": "t", "effect": "output", "task": "one_parameter_adafactor_step", "target": "/t"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "task": "Additional finite float32 public avg_pool2d calls with complete input VJP, fixed after mathematical implementation review and before execution",
+  "reference": "Native PyTorch 2.10.0+cu128 CUDA plus explicitly selected POOL.finite_avg2d_autograd exact real semantics",
+  "limits": "New parameter/shape/seed acceptance on an already observed implementation family, not unseen-family generalization; preserve all unknowns and differences",
+  "development": {"implementation": "flag_gems", "dimensions": [2, 3, 5, 7], "seeds": [20261221, 20261222]},
+  "acceptance": {"implementation": "inductor", "dimensions": [2, 2, 7, 9], "seeds": [20261223, 20261224]},
+  "cases": [
+    {"id": "avg_rectangular_padded_ceil", "kind": "avg", "options": {"kernel_size": [4, 3], "stride": [3, 2], "padding": [2, 1], "ceil_mode": true, "count_include_pad": true}},
+    {"id": "avg_rectangular_exclude_noncontiguous", "kind": "avg", "noncontiguous": true, "options": {"kernel_size": [4, 3], "stride": [3, 2], "padding": [2, 1], "ceil_mode": true, "count_include_pad": false}},
+    {"id": "avg_negative_override_unbatched", "kind": "avg", "unbatched": true, "options": {"kernel_size": [3, 4], "stride": [2, 3], "padding": [1, 2], "ceil_mode": true, "divisor_override": -5}},
+    {"id": "avg_single_parameter_defaults", "kind": "avg", "options": {"kernel_size": [3]}}
+  ]
+}

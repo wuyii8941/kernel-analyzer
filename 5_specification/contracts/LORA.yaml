@@ -1,80 +1,97 @@
 schema_version: '1.2'
 id: LORA
 role: LORA_SHRINK
-title: vLLM multi-LoRA shrink (y_s = scaling * A_s[lora(t)] x_t per slice), exact semantics
+title: vLLM 0.16.0 multi-LoRA A-projection with complete output state
 review:
-  status: drafted
-  author: Claude (spec v3 author, group D2_special), 2026-10-17
-  date: '2026-10-17'
-  scope: The output tensor of one _lora_shrink call; awaiting a review by someone who did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Physical finite f16/bf16 input and A weights, supplied physical f32 output buffer, complete shrink output
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers:
-- vllm.lora.ops.triton_ops.lora_shrink_op._lora_shrink (one or several slices, token-to-LoRA mapping with -1 for no LoRA)
+- The complete output state of installed vLLM 0.16.0 _lora_shrink for the reviewed dtype and logical-shape subset
 profiles:
-  vllm_shrink:
-    meaning: 'The shrink half of LoRA (A x of the paper''s B A x) for a batch of tokens served by several adapters: token t
-      with LoRA index m_t >= 0 gets y[s][t] = scaling * A_s[m_t] x_t for every slice s; tokens with m_t = -1 get 0; a call in
-      which no token has a LoRA writes nothing.'
+  vllm016_shrink_f32out_real:
+    meaning: >-
+      With at least one active token, zero the output and set y[s,t,r] to scaling times the A projection selected by
+      token t's LoRA id; a -1 row stays zero. When every token maps to -1, preserve the complete output pre-state.
     task_choice_required: false
+    basis: [LR.TASK, LR.MAPPING, LR.STATE, LR.DTYPE]
 outputs:
-  y:
-    shape: '[num_slices][num_tokens][rank]'
-    guarantee: exact
+  y: {shape: '[slices,tokens,rank]', guarantee: exact}
 comparison:
-  input_binding: x, the weights and scaling are the exact values received (fp16 / bf16 inputs are their exact values).
-  quality: Exact rational equality.
-  test_evidence: Exact equality.
-  error_handling: Shape and mapping violations are invalid_input; a call with no LoRA token needs the prior buffer (pre-state);
-    without it no value can be stated (unsupported, missing observation, as for unconditioned random operations).
+  input_binding: >-
+    x and weights are exact physical finite f16 or bf16 values of one common dtype; scaling is a physical finite f32
+    value; out_before is the complete physical finite f32 output pre-state; mapping and both dtype choices are explicit.
+  complete_output: Every float32 output coordinate is required, including -1 rows and the all-no-LoRA early-return state.
+  quality: The selected LoRA A-projection task is exact real multiplication and addition; no tolerance.
+  test_evidence: >-
+    Independent rational element loops, public PyTorch formulas, installed vLLM 0.16.0 official Triton calls,
+    complete-output checks and rejected dtype, shape, mapping and physical-value inputs.
+  error_handling: >-
+    Missing fields, malformed shapes, nonphysical values and invalid mapping entries are invalid_input. Special values,
+    other input dtypes and non-float32 output buffers are unsupported.
 decisions:
+- id: LR.TASK
+  status: reviewed
+  statement: >-
+    The task is the shrink half A*x of the LoRA update B*A*x. vLLM receives a generic scaling scalar and multiplies
+    this A projection by it exactly once; alpha/r is a caller choice and is not silently imposed.
+  basis: [LORA_PAPER.DECOMP, LORA_PAPER.FWD, LORA_PAPER.SCALE, VLLM016_LORA_KERNEL_UTILS.SHRINK,
+    VLLM016_LORA_TORCH.BGMV_SHRINK]
 - id: LR.VERSION
-  status: drafted
-  statement: The general-round vLLM cases ran vLLM main of 2026-10-05; the contract cites commit 51eeb0c (the same snapshot
-    the attention group used for that date).
-  basis: [VLLM_LORA_SHRINK.ARGS]
-- id: LR.SCALE
-  status: drafted
-  statement: The LoRA paper scales Delta W x by alpha / r; vLLM's shrink takes a generic `scaling` argument and multiplies the
-    shrink result by it once. f multiplies by the scaling the caller passes (alpha / r is one caller choice, not imposed).
-  basis: [LORA_PAPER.SCALE, VLLM_LORA_SHRINK.ARGS, VLLM_LORA_KUTILS.SHRINK, VLLM_LORA_TORCH.BGMV_SHRINK]
-- id: LR.NO_LORA
-  status: drafted
-  statement: 'Tokens mapped to -1 get no LoRA term. The entry point zeroes the whole output before the launch, so their rows
-    are 0 (the general-round record described them as "untouched"; the program writes 0 through output_tensor.zero_(), and
-    the contract follows the program). When no token has a LoRA the entry point returns before zeroing: the output keeps its
-    prior content, which is then a pre-state input of the observation.'
-  basis: [VLLM_LORA_SHRINK.ZERO, VLLM_LORA_SHRINK.EARLY, VLLM_LORA_SHRINK.KERNEL]
-- id: LR.METADATA
-  status: drafted
-  statement: The kernel reads the grouping metadata (tokens sorted by LoRA id, counts, start offsets, lora_ids), not the mapping
-    itself. The contract takes the mapping as the semantic input and assumes the metadata is the grouping of that mapping, as
-    vLLM's wrapper builds it; inconsistent metadata is outside the contract (not judged).
-  basis: [VLLM_LORA_SHRINK.ARGS, VLLM_LORA_SHRINK.KERNEL]
+  status: reviewed
+  statement: >-
+    Runtime choices follow the installed vLLM 0.16.0 distribution retained under versioned source ids. The former
+    unverified-main contract is archived and is not a fallback.
+  basis: [VLLM016_LORA_SHRINK.ARGS, VLLM016_LORA_KERNEL_UTILS.SHRINK]
+- id: LR.MAPPING
+  status: reviewed
+  statement: >-
+    The semantic input is the complete token-to-LoRA mapping. For a vLLM wrapper binding, sorted token indices, active
+    ids, counts, starts and the no-LoRA flag must be the metadata produced from that same mapping; inconsistent
+    metadata cannot be ignored or inferred from a kernel name.
+  basis: [VLLM016_LORA_METADATA.GROUPING, VLLM016_LORA_SHRINK.ARGS]
+- id: LR.STATE
+  status: reviewed
+  statement: >-
+    An active call zeroes the complete output before writing mapped rows, so -1 rows are zero and the old buffer does
+    not affect the result. An all--1 mapping returns before zeroing and preserves every output pre-state coordinate.
+  basis: [VLLM016_LORA_SHRINK.ACTIVE, VLLM016_LORA_SHRINK.NO_LORA, VLLM016_LORA_SHRINK.STATE]
+- id: LR.DTYPE
+  status: reviewed
+  statement: >-
+    This profile accepts physical finite f16 or bf16 x/weights of one dtype and fixes the common float32 output buffer.
+    Dot accumulation, split-K atomics and the final float32 store are measured execution effects, not changes to the
+    exact-real LoRA task.
+  basis: [VLLM016_LORA_SHRINK.CHECKS, VLLM016_LORA_KERNEL_UTILS.SHRINK]
 clauses:
-- {id: LR.C1, basis: [LORA_PAPER.FWD, LORA_PAPER.DECOMP, VLLM_LORA_KUTILS.SHRINK, VLLM_LORA_TORCH.BGMV_SHRINK], statement: 'y[s][t][r]
-    = scaling * sum_k A_s[m_t][r][k] x[t][k]', observes: [y], evidence_kind: definition}
-- {id: LR.C2, basis: [LR.SCALE], statement: the scaling factor multiplies the product once, observes: [y], evidence_kind: definition}
-- {id: LR.C3, basis: [LR.NO_LORA], statement: 'tokens with m_t = -1 give 0 rows when some token has a LoRA', observes: [y],
-  evidence_kind: definition}
-- {id: LR.C4, basis: [VLLM_LORA_KUTILS.SHRINK, VLLM_LORA_UTILS.PTR], statement: 'slice s uses its own weight tensor A_s; all
-    slices have the same shape', observes: [y], evidence_kind: definition}
-- {id: LR.C5, basis: [LR.NO_LORA, VLLM_LORA_SHRINK.EARLY], statement: 'no token with a LoRA: y is the prior buffer content
-    (needed as out_before)', observes: [y], evidence_kind: definition}
-- {id: LR.C6, basis: [VLLM_LORA_SHRINK.CHECKS, VLLM_LORA_SHRINK.ARGS], statement: 'hidden size mismatch, wrong mapping length or
-    a mapping entry outside [-1, num_loras) is invalid_input', observes: [y], evidence_kind: definition}
+- {id: LR.C1, basis: [LR.TASK], statement: 'For mapping[t]>=0, y[s,t,r]=scaling*sum_k weights[s,mapping[t],r,k]*x[t,k].', observes: [y], evidence_kind: definition}
+- {id: LR.C2, basis: [LR.TASK], statement: 'The supplied scaling multiplies the A projection exactly once.', observes: [y], evidence_kind: definition}
+- {id: LR.C3, basis: [LR.STATE], statement: 'When any token is active, every mapping -1 row is zero regardless of output pre-state.', observes: [y], evidence_kind: definition}
+- {id: LR.C4, basis: [LR.TASK], statement: 'Every slice uses its own complete A-weight tensor.', observes: [y], evidence_kind: definition}
+- {id: LR.C5, basis: [LR.STATE], statement: 'When every mapping entry is -1, y equals the complete supplied out_before state.', observes: [y], evidence_kind: definition}
+- {id: LR.C6, basis: [LR.MAPPING, LR.DTYPE], statement: 'Mapping, shapes, physical values and selected dtypes satisfy the complete reviewed call boundary.', observes: [y], evidence_kind: definition}
 examples:
 - id: LR.E1
-  profile: vllm_shrink
+  profile: vllm016_shrink_f32out_real
   clauses: [LR.C1, LR.C2]
-  input: {x: [[1, 2], [3, 4]], weights: [[[[1, 1]], [[1, -2]]]], mapping: [1, 0], scaling: '1/2'}
+  input: &full
+    x: [[1, 2], [3, 4]]
+    weights: [[[[1, 1]], [[1, -2]]]]
+    mapping: [1, 0]
+    scaling: '1/2'
+    out_before: [[[9], [8]]]
+    input_dtype: f16
+    output_dtype: f32
   expected: {outcome: value, fields: {y: [[['-3/2'], ['7/2']]]}}
-  note: 'token 0 uses LoRA 1: (1 - 4)/2; token 1 uses LoRA 0: (3 + 4)/2'
 - id: LR.E2
-  profile: vllm_shrink
+  profile: vllm016_shrink_f32out_real
   clauses: [LR.C1, LR.C3, LR.C4]
   input:
     x: [[1, 0], [0, 1], [1, 1]]
@@ -84,48 +101,126 @@ examples:
     - [[[-1, 0], [0, 0]], [[0, 0], [5, 5]]]
     mapping: [0, -1, 1]
     scaling: 1
+    out_before: [[[9, 9], [9, 9], [9, 9]], [[8, 8], [8, 8], [8, 8]], [[7, 7], [7, 7], [7, 7]]]
+    input_dtype: f16
+    output_dtype: f32
   expected: {outcome: value, fields: {y: [[[1, 3], [0, 0], [1, 1]], [[2, 0], [0, 0], [2, 0]], [[-1, 0], [0, 0], [0, 10]]]}}
-  note: three slices (as v2_lora_shrink_3slice), token 1 without LoRA
 - id: LR.E3
-  profile: vllm_shrink
+  profile: vllm016_shrink_f32out_real
   clauses: [LR.C5]
-  input: {x: [[5]], weights: [[[[1], [1]]]], mapping: [-1], scaling: 1, out_before: [[[7, 8]]]}
+  input:
+    x: [[5]]
+    weights: [[[[1], [1]]]]
+    mapping: [-1]
+    scaling: 1
+    out_before: [[[7, 8]]]
+    input_dtype: bf16
+    output_dtype: f32
   expected: {outcome: value, fields: {y: [[[7, 8]]]}}
 - id: LR.E4
-  profile: vllm_shrink
-  clauses: [LR.C5]
-  input: {x: [[5]], weights: [[[[1], [1]]]], mapping: [-1], scaling: 1}
-  expected: {outcome: unsupported}
-  note: the observation lacks the pre-state; not a missing definition
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C3]
+  input:
+    x: [[1], [2]]
+    weights: [[[[3]]]]
+    mapping: [0, -1]
+    scaling: 1
+    out_before: [[[7], [8]]]
+    input_dtype: f16
+    output_dtype: f32
+  expected: {outcome: value, fields: {y: [[[3], [0]]]}}
 - id: LR.E5
-  profile: vllm_shrink
-  clauses: [LR.C6]
-  input: {x: [[1, 2]], weights: [[[[1, 1]]]], mapping: [1], scaling: 1}
-  expected: {outcome: invalid_input}
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C2]
+  input: {<<: *full, scaling: -1}
+  expected: {outcome: value, fields: {y: [[[3], [-7]]]}}
 - id: LR.E6
-  profile: vllm_shrink
+  profile: vllm016_shrink_f32out_real
   clauses: [LR.C6]
-  input: {x: [[1, 2, 3]], weights: [[[[1, 1]]]], mapping: [0], scaling: 1}
+  input: {<<: *full, input_dtype: bf16}
+  expected: {outcome: value, fields: {y: [[['-3/2'], ['7/2']]]}}
+- id: LR.E7
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, mapping: [2, 0]}
+  expected: {outcome: invalid_input}
+- id: LR.E8
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, x: [[1], [2]]}
+  expected: {outcome: invalid_input}
+- id: LR.E9
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, out_before: [[[1, 2]]]}
+  expected: {outcome: invalid_input}
+- id: LR.E10
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, input_dtype: f32}
+  expected: {outcome: unsupported}
+- id: LR.E11
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, output_dtype: f16}
+  expected: {outcome: unsupported}
+- id: LR.E12
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, x: [['1/3', 2], [3, 4]]}
+  expected: {outcome: invalid_input}
+- id: LR.E13
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, x: [['inf', 2], [3, 4]]}
+  expected: {outcome: unsupported}
+- id: LR.E14
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, scaling: '1/3'}
+  expected: {outcome: invalid_input}
+- id: LR.E15
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, mapping: [true, 0]}
+  expected: {outcome: invalid_input}
+- id: LR.E16
+  profile: vllm016_shrink_f32out_real
+  clauses: [LR.C6]
+  input: {<<: *full, q: [[1]]}
   expected: {outcome: invalid_input}
 signature:
-  inputs: ['x [num_tokens][hidden]', 'weights: list of [num_loras][rank][hidden], one per slice', 'mapping [num_tokens] (-1 or
-      a LoRA index)', scaling, 'out_before [num_slices][num_tokens][rank] (prior buffer, used only when no token has a LoRA)']
-  pre_state: [out_before]
-  post_state: []
-  observation_unit: the output tensor of one call
+  inputs:
+  - 'x [tokens,hidden] and weights [slices,loras,rank,hidden], physical finite f16 or bf16 of one input_dtype'
+  - 'mapping [tokens] with -1 or a LoRA id; physical finite f32 scaling and out_before [slices,tokens,rank]'
+  - 'explicit input_dtype in {f16,bf16} and output_dtype=f32'
+  pre_state: [complete out_before and every other received tensor]
+  post_state: [complete float32 y; every read-only tensor unchanged]
+  observation_unit: Every y coordinate together with shape and dtype
 domain:
-  valid: [rational inputs, mapping entries in -1 .. num_loras - 1, equal slice shapes]
-  domain_undefined: []
-  invalid_input: [hidden size mismatch, mapping length mismatch, mapping entries out of range, slices of different shapes]
-  unsupported: [a call without LoRA tokens observed without its prior buffer]
+  valid:
+  - Positive logical dimensions, consistent hidden size and one mapping entry per token
+  - Physical finite f16 or bf16 x/weights, physical finite f32 scaling/out_before, float32 output
+  - Mapping entries in [-1,num_loras)
+  invalid_input: [missing or extra fields, malformed shapes, nonphysical values, Boolean or out-of-range mappings]
+  unsupported: [other dtypes, special values, 4-D singleton-slice weight form, gradients, layout and alias effects]
 mutation_requirements:
-- {id: LR.M1, misreading: scaling ignored, witnesses: [LR.E1]}
-- {id: LR.M2, misreading: 'mapping -1 used as a Python index (the last LoRA)', witnesses: [LR.E2]}
-- {id: LR.M3, misreading: every slice uses the first slice's weights (pointer table ignored), witnesses: [LR.E2]}
-- {id: LR.M4, misreading: 'weight read transposed ([hidden][rank])', witnesses: [LR.E2]}
-- {id: LR.M5, misreading: output zeroed even when no token has a LoRA, witnesses: [LR.E3]}
+- {id: LR.M1, misreading: ignore scaling, witnesses: [LR.E1]}
+- {id: LR.M2, misreading: use mapping -1 as the last LoRA index, witnesses: [LR.E2]}
+- {id: LR.M3, misreading: use the first slice weights for every slice, witnesses: [LR.E2]}
+- {id: LR.M4, misreading: read each A weight as hidden by rank, witnesses: [LR.E2]}
+- {id: LR.M5, misreading: zero the output even when every token has no LoRA, witnesses: [LR.E3]}
 nonclaims:
-- The slice layout, the zeroing and the early return are those of the vLLM program at 51eeb0c (agreement with it); the
-  product itself is the paper's A x.
-- fp16 / bf16 inputs and float32 accumulation with split-K atomics are the numerical question (K - G).
-changes: []
+- The profile specifies one installed vLLM 0.16.0 logical call subset. It does not cover expand, fused-MoE LoRA,
+  embeddings, logits processing or the complete B*A update.
+- A real vLLM wrapper binding must prove that all grouping metadata comes from the bound mapping. This contract does
+  not accept arbitrary inconsistent metadata.
+- Float32 dot accumulation, split-K atomics, final stores, layout, aliasing and gradients remain execution questions.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the unverified-main draft with one installed vLLM 0.16.0 profile, physical dtype/value checks, explicit
+    output pre-state, exact no-LoRA early-return state and complete float32 output comparison.
+  trigger: >-
+    The old contract did not identify an installed release, omitted dtype and physical-value inputs, and could not
+    compare the complete output with dtype and shape.

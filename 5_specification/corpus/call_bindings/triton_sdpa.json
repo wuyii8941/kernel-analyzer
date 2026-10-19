@@ -1,0 +1,43 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.sdpa.f32.b2.hq4.hkv2.l16.s32.e16.causal.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 causal GQA SDPA forward",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch of 128 Triton programs writes the complete 2x4x16x16 public output",
+    "measure_call": "../calls/triton_sdpa.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_sdpa_forward",
+      "contract": "ATTN",
+      "profile": "torch210_sdpa_defined_real",
+      "task_statement": "Compute one complete public PyTorch 2.10 dropout-free upper-left causal GQA SDPA forward on dense float32 tensors.",
+      "input_map": [
+        {"target": "/q", "source": "/tensor_arguments/q/before", "conversion": "tensor_values"},
+        {"target": "/k", "source": "/tensor_arguments/k/before", "conversion": "tensor_values"},
+        {"target": "/v", "source": "/tensor_arguments/v/before", "conversion": "tensor_values"},
+        {"target": "/dtype", "literal": "f32", "basis": "q, k and v are float32"},
+        {"target": "/attn_mask", "literal": null, "basis": "the call has no explicit attention mask"},
+        {"target": "/attn_mask_dtype", "literal": null, "basis": "there is no explicit attention mask"},
+        {"target": "/is_causal", "literal": true, "basis": "the kernel applies j <= i upper-left causal masking"},
+        {"target": "/scale", "literal": 0.25, "basis": "head dimension is 16 and the kernel uses the public default 1/sqrt(16)"},
+        {"target": "/enable_gqa", "literal": true, "basis": "four query heads share two key/value heads in contiguous groups"},
+        {"target": "/dropout_p", "literal": 0, "basis": "the kernel does not apply dropout"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_values", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "q", "effect": "unchanged"},
+    {"argument": "k", "effect": "unchanged"},
+    {"argument": "v", "effect": "unchanged"}
+  ]
+}

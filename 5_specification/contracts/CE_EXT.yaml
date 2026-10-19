@@ -13,27 +13,39 @@ activation:
   implementation_status: pending
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
-covers: [torch.nn.CrossEntropyLoss, torch.nn.functional.cross_entropy]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.CrossEntropyLoss, torch.nn.functional.cross_entropy, liger.LigerCrossEntropyFunction]
 profiles:
   index_single_class:
     meaning: Class-index targets with C = 1 (input (N, 1, d..)); any eps in [0, 1]; optional non-negative weight;
       declared ignore_index.
     task_choice_required: false
+    outputs: [loss, gradient]
   index_kdim:
     meaning: Class-index targets, C >= 2, K-dimensional input (N, C, d_1..d_K), K >= 1; eps = 0 with or without weights,
       or eps > 0 without weights.
     task_choice_required: false
+    outputs: [loss, gradient]
   probability:
     meaning: Probability targets of the input's shape ((N, C) or (N, C, d_1..d_K)), entries in [0, 1] as received (rows
       need not sum to exactly 1, decision CEX.PROB_ROWS); eps in [0, 1]; optional non-negative weight.
     task_choice_required: false
+    outputs: [loss, gradient]
+  liger_inplace_index_unsmoothed:
+    meaning: LigerCrossEntropyFunction on two-dimensional logits with class-index targets and eps=0. Besides loss and
+      the explicit VJP, the public logits storage post-state is part of the task because the forward kernel overwrites
+      it with the derivative and backward may scale that storage in place.
+    task_choice_required: true
+    basis: [CE_LIGER_CE.DEFAULTS, CE_LIGER_CE.POSTSTATE, CE_LIGER_CE.BACKWARD]
 outputs:
   loss:
     shape: scalar for sum / mean; (N, d_1..d_K) for none
     guarantee: rigorous_enclosure
   gradient:
     shape: VJP against the explicit upstream, shape of the logits
+    guarantee: rigorous_enclosure
+  post_logits:
+    shape: shape of logits; public input-storage value after the selected forward/backward boundary
     guarantee: rigorous_enclosure
 comparison:
   input_binding: All values are the exactly received rationals (label_smoothing 0.1 as a binary double is its exact
@@ -100,6 +112,10 @@ clauses:
     positions (index - weight mass of the non-ignored positions)', observes: [loss, gradient], evidence_kind: definition}
 - {id: CEX.C5, basis: [CEX.VJP, CEX.REUSE], statement: 'gradient = (A p - a) times the upstream of the position, divided by
     the mean denominator for mean; ignored positions have zero gradient', observes: [gradient], evidence_kind: derived}
+- {id: CEX.C6, basis: [CE_LIGER_CE.POSTSTATE, CE_LIGER_CE.BACKWARD], statement: 'Liger in-place profile: forward writes
+    the derivative into logits storage; scalar sum/mean backward scales that storage by upstream, while none-reduction
+    backward forms a separately scaled VJP and leaves logits storage at the unscaled per-row derivative', observes:
+    [post_logits, gradient], evidence_kind: reference_program}
 examples:
 - {id: CEX.E1, profile: index_single_class, clauses: [CEX.C1], input: {logits: [[3]], target: [0], weights: null, eps: 0,
     ignore_index: -100, reduction: mean, upstream: 1}, expected: {outcome: value, fields: {loss: 0, gradient: [[0]]}}}
@@ -165,13 +181,28 @@ examples:
     fields:
       loss: [log(2), log(2)]
       gradient: [[-1, 1], ['-1/2', '1/2']]
+- id: CEX.E15
+  profile: liger_inplace_index_unsmoothed
+  clauses: [CEX.C5, CEX.C6]
+  input: {logits: [[0, 0]], target: [0], weights: null, eps: 0, ignore_index: -100, reduction: sum, upstream: 2}
+  expected:
+    outcome: value
+    fields: {loss: log(2), gradient: [[-1, 1]], post_logits: [[-1, 1]]}
+- id: CEX.E16
+  profile: liger_inplace_index_unsmoothed
+  clauses: [CEX.C5, CEX.C6]
+  input: {logits: [[0, 0]], target: [0], weights: null, eps: 0, ignore_index: -100, reduction: none, upstream: [2]}
+  expected:
+    outcome: value
+    fields: {loss: [log(2)], gradient: [[-1, 1]], post_logits: [['-1/2', '1/2']]}
+  note: none-reduction backward returns the scaled VJP without scaling the original logits storage again.
 signature:
   inputs: ['logits (N, C) or (N, C, d_1..d_K)', 'target - class indices (N, d..) or probabilities of the logits'' shape',
     'weights [C] or null', 'eps (label_smoothing) in [0, 1]', 'ignore_index (index profiles; accepted and unused for
       probabilities)', 'reduction sum / mean / none', 'upstream - scalar for sum / mean, loss-shaped for none']
   pre_state: []
-  post_state: []
-  observation_unit: loss and the complete VJP
+  post_state: [liger_inplace_index_unsmoothed additionally observes the complete logits storage after forward/backward]
+  observation_unit: loss and the complete VJP; the Liger in-place profile also includes its observable logits post-state
 domain:
   valid:
   - finite rational logits of rank >= 2
@@ -191,6 +222,7 @@ domain:
   - negative weights
   - weighted label smoothing with K-dimensional class-index input
   - C >= 2 two-dimensional class-index input (the pilot's profiles)
+  - Liger in-place pilot with smoothing or non-2-D logits
 mutation_requirements:
 - {id: CEX.M1, misreading: probability smoothing over C - 1 classes, witnesses: [CEX.E5]}
 - {id: CEX.M2, misreading: 'smoothing as (1 - eps) y without the uniform term', witnesses: [CEX.E5]}
@@ -205,4 +237,9 @@ mutation_requirements:
 nonclaims:
 - The reviewed pilot contracts/CE.yaml is unchanged; for 2-D class-index inputs with C >= 2 its profiles apply.
 - These formulas do not choose a task-quality delta; rounding of the received values is the numerical question K - G.
-changes: []
+changes:
+- date: '2026-10-18'
+  change: Added a task-selected Liger in-place profile that retains the public logits-storage post-state instead of
+    silently treating the fused kernel as a functional cross-entropy call.
+  trigger: A real LigerCrossEntropyFunction run changed every logits element; the retained Liger source stores the
+    derivative to X_ptr and its backward distinguishes scalar from none-reduction upstream scaling.

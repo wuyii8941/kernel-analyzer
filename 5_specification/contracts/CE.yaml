@@ -6,10 +6,9 @@ review:
   status: reviewed_for_implementation
   date: '2026-10-15'
   reviewer: ChatGPT review of uploaded contract draft
-  input_package_sha256: a9a2a9123c2f39f5f76d1c82d61d70869bc0ec8236cce16d978f9556293d15a3
   scope: Contract content and explicit profiles, not all-domain oracle certification
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires:
   - source_profile_matched
@@ -17,7 +16,7 @@ activation:
   - all_required_outputs_bound
   - reference_semantics_and_guarantees_validated
   - no_unresolved_contradiction
-  - contract_and_implementation_hashes_bound
+  - reviewed_contract_and_adapter_match_current
 profiles:
   index_unsmoothed:
     meaning: Class-index target, eps=0; arbitrary declared ignore_index.
@@ -26,6 +25,7 @@ profiles:
     meaning: Class-index target, weights absent, 0<=eps<=1.
     task_choice_required: false
   index_smoothing_R_A:
+    basis: [CE.R_A]
     meaning: Per-class weighted smoothing; selected R_A interpretation; not a universally forced reading of incomplete
       prose.
     task_choice_required: true
@@ -450,10 +450,12 @@ domain:
   - negative class weights for this pilot
   - probability-target smoothing
   - deprecated size_average/reduce overrides
+  - input options outside the selected profile; diagnostic readings must use their own entry
   - unselected R_B or R_C diagnostic conventions
   domain_undefined:
   - mean normalization mass D=0, including but not limited to all-ignored rows
   invalid_input:
+  - missing required profile inputs or non-mapping input
   - ragged shapes or nonmatching weights
   - nonintegral or out-of-range nonignored index
   - invalid probability row
@@ -497,3 +499,14 @@ nonclaims:
 - R_A versus diagnostic R_B alone is not evidence that an implementation violates explicit PyTorch wording.
 - These formulas do not choose a task-quality delta.
 - An unimplemented profile is unsupported, not an illegal API input.
+
+changes:
+- date: '2026-10-18'
+  change: Complete scoped implementation review for the four profiles; distinguish valid unbatched/higher-rank inputs outside this profile from malformed inputs.
+  trigger: evidence/ce_implementation.md; retained PCE source; independent rational-series and Arb logistic verification.
+- date: '2026-10-18'
+  change: Decide zero index-mean normalization mass after full input validation and before transcendental evaluation, for the reference and R_B diagnostic reading.
+  trigger: CE.C3 and CE.C5; tests/test_ce_independent.py also checks probability mean and sum with zero weights, and independent Arb binary-logistic loss/VJP enclosures.
+- date: '2026-10-18'
+  change: Validate all required profile inputs and reject undeclared options instead of silently ignoring reduction overrides or diagnostic-reading requests.
+  trigger: tests/test_ce_independent.py; independent uniform-logit loss bounds from a rational log series and exact complete VJP values for all four profiles.

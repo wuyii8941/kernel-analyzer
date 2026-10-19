@@ -1,46 +1,66 @@
 schema_version: '1.2'
 id: CONV
 role: CONV
-title: Convolution (aten.convolution, non-transposed, 1-D to 3-D) and its backward (aten.convolution_backward)
+title: Batched non-transposed 1-D and 2-D convolution (aten.convolution) and its backward (aten.convolution_backward)
 review:
-  status: drafted
+  status: reviewed_for_implementation
   author: Claude (spec v3 author), 2026-10-16
-  date: '2026-10-16'
-  scope: Real-number values of the documented cross-correlation and its VJP; awaiting a review by someone who did not write it
+  date: '2026-10-18'
+  reviewer: Codex independent source, schema, domain and implementation review
+  scope: Exact finite floating values and VJPs for the selected batched non-transposed 1-D/2-D default ATen operations; concrete kernel binding remains separate
 activation:
-  implementation_status: pending
+  implementation_status: validated
+  implementation_evidence: evidence/conv_implementation.md
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [aten.convolution, aten.convolution_backward]
 profiles:
   real:
-    meaning: Exact cross-correlation with zero padding on both sides, stride, dilation and groups (padding_mode zeros);
-      the backward returns (grad_input, grad_weight, grad_bias) as the VJP against an explicit upstream gradient.
+    meaning: Exact cross-correlation of finite f16, bf16, f32 or f64 values with zero padding on both sides, positive
+      stride and dilation, and groups. Inputs and weights are batched 1-D or 2-D tensors. The backward takes an explicit
+      upstream gradient and explicit three-boolean output_mask, and returns all three positions in
+      (grad_input, grad_weight, grad_bias), using null for each unrequested gradient.
     task_choice_required: false
 outputs:
   out:
-    shape: (N, C_out, L_out...) for the forward; a list of three gradients for the backward
+    shape: (N, C_out, L_out...) for the forward; a list of exactly three tensor-or-null gradient positions for the backward
     guarantee: exact
 comparison:
   input_binding: Tensor values are the exact values received.
-  quality: Exact equality.
-  test_evidence: Exact equality.
-  error_handling: Channel counts not divisible by groups and mismatched shapes are invalid_input.
+  complete_output: Observed tensors use records with exactly t, v and shape. All coordinates, dtypes and explicit
+    shapes are checked, including empty outputs. Backward always supplies three positions and preserves null positions
+    selected by output_mask.
+  quality: Exact equality of finite real values.
+  test_evidence: Independent direct enumeration and PyTorch float64 autograd on exactly representable values.
+  error_handling: Shape and parameter mismatches are invalid_input. Operations outside the selected rank, dtype or
+    finite-value scope are unsupported; unresolved native edge domains are not_established.
 decisions:
 - id: CV.VJP
-  status: drafted
+  status: reviewed
   statement: 'convolution_backward is the VJP of the defined cross-correlation: grad_input[n, c, p] = sum over (co, o, k)
     with p = o * stride + k * dilation - padding of g[n, co, o] * w[co, c, k] (within the channel''s group); grad_weight[co,
     c, k] = sum over (n, o) of g[n, co, o] * x_padded[n, c, o * stride + k * dilation]; grad_bias[co] = sum over (n, o) of
     g[n, co, o].'
   basis: [T_CONV1D.DEF, T_CONV2D.DEF]
+- id: CV.SCHEMA_DOMAIN
+  status: reviewed
+  statement: The selected low-level operations are the installed PyTorch 2.10 default functional ATen schemas.
+    convolution_backward requires bias_sizes and an explicit bool[3] output_mask; every call returns three positional
+    results, with an unrequested result represented as null at the Python boundary. This profile selects batched
+    one- and two-spatial-dimensional finite floating tensors of one dtype. It does not infer a default output_mask,
+    integer overflow semantics, unbatched public-module convenience, 3-D/transposed convolution, or dtype conversion.
+  basis: [TS_NATIVE_FUNCTIONS.CONV_SCHEMAS, T_CONV1D.DEF, T_CONV2D.DEF]
 clauses:
 - {id: CV.C1, basis: [T_CONV1D.DEF, T_CONV2D.DEF], statement: 'out = bias + sum_k w * x (valid cross-correlation of the
     zero-padded input) with stride and dilation', observes: [out], evidence_kind: definition}
 - {id: CV.C2, basis: [T_CONV1D.DEF], statement: 'groups: each output channel sees only the input channels of its group',
   observes: [out], evidence_kind: definition}
-- {id: CV.C3, basis: [CV.VJP], statement: convolution_backward per CV.VJP, observes: [out], evidence_kind: derived}
+- {id: CV.C3, basis: [CV.VJP, CV.SCHEMA_DOMAIN], statement: 'convolution_backward per CV.VJP; output_mask is explicit
+    and the result retains all three positional entries, with null in unrequested positions', observes: [out], evidence_kind: derived}
+- {id: CV.C4, basis: [CV.SCHEMA_DOMAIN], statement: 'the real profile accepts only finite f16/bf16/f32/f64 tensors of
+    one dtype in batched 1-D or 2-D form; stride and dilation are positive; transposed convolution is outside the profile',
+  observes: [out], evidence_kind: definition}
 examples:
 - {id: CV.E1, profile: real, clauses: [CV.C1], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2, 3, 4]]]}, {t: f32, v: [
           [[1, -1]]]}, null, [1], [0], [1], false, [0], 1]}, expected: {outcome: value, fields: {out: [[[-1, -1, -1]]]}}}
@@ -58,23 +78,39 @@ examples:
         v: [[[1, 1]]]}, null, [1], [1], [1], false, [0], 1]}, expected: {outcome: value, fields: {out: [[[1, 3, 5, 3]]]}}, note: The
     depthwise causal pattern (padding K - 1); the trailing output is removed by a later slice in such models.}
 - {id: CV.E7, profile: real, clauses: [CV.C3], input: {op: aten.convolution_backward, args: [{t: f32, v: [[[1, 1, 1]]]}, {t: f32,
-        v: [[[1, 2, 3, 4]]]}, {t: f32, v: [[[1, -1]]]}, [1], [1], [0], [1], false, [0], 1]}, expected: {outcome: value, fields: {
+        v: [[[1, 2, 3, 4]]]}, {t: f32, v: [[[1, -1]]]}, [1], [1], [0], [1], false, [0], 1, [true, true, true]]}, expected: {outcome: value, fields: {
       out: [[[[1, 0, 0, -1]]], [[[6, 9]]], [3]]}}}
 - {id: CV.E8, profile: real, clauses: [CV.C3], input: {op: aten.convolution_backward, args: [{t: f32, v: [[[1, 1, 1, 1, 1]]]}, {
-        t: f32, v: [[[1, 2, 3, 4]]]}, {t: f32, v: [[[1, -1]]]}, [1], [1], [1], [1], false, [0], 1]}, expected: {outcome: value,
+        t: f32, v: [[[1, 2, 3, 4]]]}, {t: f32, v: [[[1, -1]]]}, [1], [1], [1], [1], false, [0], 1,
+        [true, true, true]]}, expected: {outcome: value,
     fields: {out: [[[[0, 0, 0, 0]]], [[[10, 10]]], [5]]}}}
 - {id: CV.E9, profile: real, clauses: [CV.C2], input: {op: aten.convolution, args: [{t: f32, v: [[[1, 2], [3, 4], [5, 6]]]}, {t: f32,
         v: [[[1]], [[1]]]}, null, [1], [0], [1], false, [0], 2]}, expected: {outcome: invalid_input}}
+- {id: CV.E10, profile: real, clauses: [CV.C3], input: {op: aten.convolution_backward, args: [{t: f32, v: [[[1, 1, 1]]]},
+      {t: f32, v: [[[1, 2, 3]]]}, {t: f32, v: [[[2]]]}, null, [1], [0], [1], false, [0], 1,
+      [true, false, true]]}, expected: {outcome: value, fields: {out: [[[[2, 2, 2]]], null, [3]]}}}
+- {id: CV.E11, profile: real, clauses: [CV.C4], input: {op: aten.convolution, args: [{t: i64, v: [[[2]]]},
+      {t: i64, v: [[[3]]]}, null, [1], [0], [1], false, [0], 1]}, expected: {outcome: unsupported}}
+- {id: CV.E12, profile: real, clauses: [CV.C4], input: {op: aten.convolution, args: [{t: f32, v: [[[[[2]]]]]},
+      {t: f32, v: [[[[[3]]]]]}, null, [1, 1, 1], [0, 0, 0], [1, 1, 1], false, [0, 0, 0], 1]},
+  expected: {outcome: unsupported}}
+- {id: CV.E13, profile: real, clauses: [CV.C4], input: {op: aten.convolution, args: [{t: f32, v: [[[inf]]]},
+      {t: f32, v: [[[1]]]}, null, [1], [0], [1], false, [0], 1]}, expected: {outcome: unsupported}}
 signature:
   inputs: ['aten.convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups)',
-    'aten.convolution_backward(grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed, output_padding, groups)']
+    'aten.convolution_backward(grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask)']
   pre_state: []
   post_state: []
   observation_unit: the convolution output or its three gradients
 domain:
-  valid: [exact values; channels divisible by groups; non-negative padding]
-  invalid_input: [channel counts not matching groups, shape mismatches]
-  unsupported: [transposed convolution, non-zero padding modes]
+  valid: [finite f16/bf16/f32/f64 tensors of one dtype; batched 1-D or 2-D shapes; channels divisible by groups;
+      positive stride and dilation; non-negative symmetric zero padding]
+  invalid_input: [unbatched or mismatched ranks, channel counts not matching groups, mismatched upstream shape,
+    wrong bias shape, nonpositive stride, negative padding, invalid kernel/output shape, output_mask not exactly three booleans]
+  not_established: [zero dilation; zero input channels; bias_sizes inconsistent with the per-output-channel bias shape;
+      mixed tensor dtypes]
+  unsupported: [integer, boolean, complex or float8 tensors; infinite values or NaN; 3-D convolution; transposed convolution;
+      asymmetric or non-zero padding modes; dtype/out overloads]
 mutation_requirements:
 - {id: CV.M1, misreading: true convolution (flipped kernel) instead of cross-correlation, witnesses: [CV.E1]}
 - {id: CV.M2, misreading: padding applied on the left only, witnesses: [CV.E2]}
@@ -83,4 +119,14 @@ mutation_requirements:
 - {id: CV.M5, misreading: bias gradient not summed over output positions (first position only), witnesses: [CV.E7]}
 nonclaims:
 - TF32 or reduced-precision convolution arithmetic is numerical (K - G).
-changes: []
+- Integer overflow, complex arithmetic, 3-D and transposed convolution are not supplied by this profile.
+- Public nn.Conv modules may accept unbatched inputs or padding strings before lowering; this contract selects the
+  installed low-level ATen schemas with explicit integer parameter lists.
+changes:
+- date: '2026-10-18'
+  change: >-
+    Independent review restricted admission to batched non-transposed 1-D/2-D finite f16/bf16/f32/f64 operations,
+    made output_mask mandatory, and required complete dtype/shape/value comparison of all forward or backward outputs.
+  trigger: >-
+    Retained PyTorch 2.10 Conv1d/Conv2d definitions and installed native_functions schemas, independent direct and
+    autograd reconstruction, domain cross-checks, and complete-output negative tests. This does not bind a concrete kernel.

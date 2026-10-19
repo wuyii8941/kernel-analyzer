@@ -104,7 +104,8 @@ export HOME=/data1/tzh/kernel-analyzer/.cache TMPDIR=/data1/tzh/kernel-analyzer/
 ```
 
 - 退出 0 才算完成。
-- 不要运行 `--lock`。
+- `--record-checks` 只更新不含文件指纹的开发检查数量；它不会批准合同或实现。
+- 不要把开发中的文件复制到 `validated/`。该目录只接收独立实现复核确认过的原文件。
 
 ## 9 覆盖说明
 

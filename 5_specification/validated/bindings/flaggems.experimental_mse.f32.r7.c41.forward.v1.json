@@ -1,0 +1,65 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "flaggems.experimental_mse.f32.r7.c41.forward.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "FlagGems",
+    "version": "5.0.2",
+    "callable": "flag_gems.experimental_ops.mse_loss.mse_loss",
+    "runtime_package": {
+      "distribution": "flag_gems",
+      "version": "5.0.2"
+    },
+    "boundary": "complete forward call on two finite contiguous CUDA float32[7,41] tensors, with explicit none/sum/mean reduction and unchanged inputs",
+    "measure_call": "../calls/flaggems_mse.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_mse_forward",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "task_statement": "Compute all unreduced squared differences or their selected sum/mean, matching PyTorch 2.10 unweighted same-shape MSE; no gradients or out variant are promised by this forward entry point.",
+      "input_map": [
+        {
+          "target": "/op",
+          "literal": "aten.mse_loss",
+          "basis": "the original public wrapper explicitly implements MSE and normalizes the selected reduction"
+        },
+        {
+          "target": "/args/0",
+          "source": "/tensor_arguments/x/before",
+          "conversion": "tensor_record"
+        },
+        {
+          "target": "/args/1",
+          "source": "/tensor_arguments/target/before",
+          "conversion": "tensor_record"
+        },
+        {
+          "target": "/kwargs/reduction",
+          "source": "/scalars/reduction"
+        }
+      ],
+      "output_map": [
+        {
+          "target": "/out",
+          "source": "/returns/loss",
+          "conversion": "tensor_record",
+          "measure_output": "loss"
+        }
+      ]
+    }
+  ],
+  "state_map": [
+    {
+      "argument": "x",
+      "effect": "unchanged"
+    },
+    {
+      "argument": "target",
+      "effect": "unchanged"
+    }
+  ]
+}

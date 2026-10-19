@@ -1,133 +1,179 @@
-"""Adapter for contracts/OPT4BIT.yaml: torchao 0.16 AdamW4bit, one step from an explicit pre-state whose moments are
-given as their dequantised values, to the full post-state (theta, stored dequantised m and v, t).
-
-The quantisation maps are the binary32 constants of the torchao source (create_dynamic_map(True, 3, 4) and
-linspace(0, 1, 17)[1:]); block-wise absmax scaling and nearest-code rounding with ties up are the source's rules,
-evaluated in exact arithmetic. Mutants are separate code."""
+"""torchao 0.16 OptimState4bit float32 copy, including its physical state."""
 from __future__ import annotations
 
 from fractions import Fraction
 
-from kernel_spec import v24
-from kernel_spec.e1_optim import flag, grad_or_none, hyper, state_dict, vec
-from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer
-from kernel_spec.real import R, sqrt
+from kernel_spec import ieee
+from kernel_spec.num import Invalid, Result, Unsupported, integer, rational, require_fields
+from kernel_spec.real import R
 
-opt = v24.module("spec_optimizers")
+
+PROFILE = "torchao016_state_copy_f32"
+REQUIRED = {"src", "input_dtype", "signed", "block_size", "qmap"}
+SCALE_MIN = Fraction(2305843, 2305843009213693952)  # float32(1e-12)
+MIN_NORMAL_F32 = Fraction(1, 1 << 126)
 
 QMAP_SIGNED = [Fraction(float.fromhex(h)) for h in (
     "-0x1.c666660000000p-1", "-0x1.5333340000000p-1", "-0x1.c000000000000p-2", "-0x1.b333320000000p-3",
-    "-0x1.3d70a40000000p-4", "-0x1.0a3d720000000p-5", "-0x1.6872b00000000p-8", "0x0.0p+0", "0x1.6872b00000000p-8",
-    "0x1.0a3d720000000p-5", "0x1.3d70a40000000p-4", "0x1.b333320000000p-3", "0x1.c000000000000p-2",
-    "0x1.5333340000000p-1", "0x1.c666660000000p-1", "0x1.0000000000000p+0")]
+    "-0x1.3d70a40000000p-4", "-0x1.0a3d720000000p-5", "-0x1.6872b00000000p-8", "0x0.0p+0",
+    "0x1.6872b00000000p-8", "0x1.0a3d720000000p-5", "0x1.3d70a40000000p-4", "0x1.b333320000000p-3",
+    "0x1.c000000000000p-2", "0x1.5333340000000p-1", "0x1.c666660000000p-1", "0x1.0000000000000p+0",
+)]
 QMAP_UNSIGNED = [Fraction(k, 16) for k in range(1, 17)]
-SCALE_MIN = Fraction(2305843, 2305843009213693952)   # binary32 nearest to 1e-12 (clip of a float32 tensor)
 
 
-def _inputs(profile, inp):
-    if profile != "torchao016":
+def _f32(value, name):
+    if isinstance(value, bool):
+        raise Invalid(f"{name}: Boolean is not a float32 value")
+    value = rational(value, name)
+    rounded = ieee.round_to(R(value), "f32")
+    if not rounded.finite:
+        raise Unsupported(f"{name}: special or overflowing values are outside this profile")
+    if not rounded.exact or rounded.v != value:
+        raise Invalid(f"{name}: value is not exactly representable as float32")
+    return value
+
+
+def _round_f32(value, name="float32 operation"):
+    rounded = ieee.round_to(R(value), "f32")
+    if not rounded.finite:
+        raise Unsupported(f"{name} overflowed the reviewed finite profile")
+    if not rounded.exact:
+        raise Unsupported(f"{name} could not be resolved to one float32 value")
+    return rounded.v
+
+
+def _parse(profile, inp):
+    if profile != PROFILE:
         raise Unsupported(f"profile {profile!r}")
-    if flag(inp, "amsgrad", default=False):
-        raise Unsupported("amsgrad=True was not tested")
-    st = state_dict(inp, {"theta", "m", "v", "t"})
-    theta = vec(st["theta"], "theta")
-    d = len(theta)
-    m, v = vec(st["m"], "m", d), vec(st["v"], "v", d)
-    if any(x < 0 for x in v):
-        raise Invalid("negative second moment")
-    t = integer(st["t"], "t", lo=0)
-    g = grad_or_none(inp, d)
-    bs = integer(inp.get("block_size", 128), "block_size", lo=1)
-    nmin = integer(inp.get("min_quant_numel", 4096), "min_quant_numel", lo=1)
-    hp = hyper(inp, ("lr", "beta1", "beta2", "eps", "weight_decay"), nonneg=("lr", "eps", "weight_decay"))
-    if not (0 <= hp["beta1"] < 1 and 0 <= hp["beta2"] < 1):
-        raise Invalid("betas outside [0, 1)")
-    return theta, m, v, t, g, bs, nmin, hp
+    require_fields(inp, REQUIRED, "OPT4BIT")
+    extra = set(inp) - REQUIRED
+    if extra:
+        raise Unsupported(f"fields outside the reviewed state-copy task: {sorted(extra)}")
+    if inp["input_dtype"] != "f32":
+        raise Unsupported("the reviewed state-copy profile fixes the source dtype at float32")
+    if type(inp["signed"]) is not bool:
+        raise Invalid("signed must be a Boolean")
+    if not isinstance(inp["src"], (list, tuple)):
+        raise Invalid("src must be a one-dimensional float32 tensor")
+    src = [_f32(value, f"src[{i}]") for i, value in enumerate(inp["src"])]
+    if any(value and abs(value) < MIN_NORMAL_F32 for value in src):
+        raise Unsupported("float32 subnormal source values are outside this device-portable profile")
+    block_size = integer(inp["block_size"], "block_size", lo=1)
+    if block_size % 2:
+        raise Unsupported("this reviewed physical packing profile requires an even block_size")
+    if not src or len(src) % block_size or len(src) % 2:
+        raise Invalid("src length must be positive and divisible by block_size and two")
+    if not inp["signed"] and any(value < 0 for value in src):
+        raise Unsupported("the unsigned optimizer-state profile is limited to nonnegative second moments")
+    if not isinstance(inp["qmap"], (list, tuple)) or len(inp["qmap"]) != 16:
+        raise Invalid("qmap must be a one-dimensional float32 tensor of length16")
+    qmap = [_f32(value, f"qmap[{i}]") for i, value in enumerate(inp["qmap"])]
+    canonical = QMAP_SIGNED if inp["signed"] else QMAP_UNSIGNED
+    if qmap != canonical:
+        raise Unsupported("a mutated or replacement qmap is a different state-copy task")
+    return src, inp["signed"], block_size
 
 
-def quantize(xs, block, qmap):
-    """Stored (dequantised) values: per block scale = max(absmax, SCALE_MIN), code = largest index with
-    qmap[code] <= x/scale (0 if none), moved up iff the residual reaches half the gap to the next code."""
-    out = []
-    for k in range(0, len(xs), block):
-        blk = xs[k:k + block]
-        scale = max(max(abs(x) for x in blk), SCALE_MIN)
-        for x in blk:
-            y = x / scale
-            c = max([i for i, q in enumerate(qmap) if q <= y], default=0)
-            up = min(c + 1, len(qmap) - 1)
-            if y - qmap[c] >= (qmap[up] - qmap[c]) / 2:
-                c = up
-            out.append(qmap[c] * scale)
-    return out
+def _scale_and_normalize(src, block_size):
+    scales, normalized = [], []
+    for offset in range(0, len(src), block_size):
+        block = src[offset:offset + block_size]
+        scale = max(max(abs(value) for value in block), SCALE_MIN)
+        scales.append(scale)
+        for value in block:
+            scaled = _round_f32(value / scale, "block normalization")
+            # CUDA may flush subnormal arithmetic. Excluding it makes the exact code result portable across the
+            # retained CPU and CUDA executions.
+            if scaled and abs(scaled) < MIN_NORMAL_F32:
+                raise Unsupported("a normalized value is float32 subnormal")
+            normalized.append(scaled)
+    return scales, normalized
+
+
+def _code(value, qmap, *, floor=False):
+    code = max((i for i, mapped in enumerate(qmap) if value >= mapped), default=0)
+    if floor:
+        return code
+    up = min(code + 1, 15)
+    residual = _round_f32(value - qmap[code], "quantization residual")
+    gap = _round_f32(qmap[up] - qmap[code], "quantization gap")
+    threshold = _round_f32(gap * Fraction(1, 2), "quantization midpoint")
+    return up if residual >= threshold else code
+
+
+def _state(src, signed, block_size, mode=None):
+    qmap = list(QMAP_SIGNED if signed else QMAP_UNSIGNED)
+    if mode == "unsigned_zero_map" and not signed:
+        qmap = [Fraction(k, 15) for k in range(16)]
+    scales, normalized = _scale_and_normalize(src, len(src) if mode == "one_scale" else block_size)
+    unpacked = [_code(value, qmap, floor=(mode == "floor")) for value in normalized]
+    if mode == "swap_nibbles":
+        codes = [(lo << 4) | hi for hi, lo in zip(unpacked[::2], unpacked[1::2])]
+    else:
+        codes = [(hi << 4) | lo for hi, lo in zip(unpacked[::2], unpacked[1::2])]
+    result = {
+        "codes": codes,
+        "scale": scales,
+    }
+    if mode == "reverse_bytes":
+        result["codes"] = list(reversed(result["codes"]))
+    if mode == "zero_scale":
+        result["scale"] = [Fraction(0) for _ in result["scale"]]
+    return result
 
 
 def reference(profile, inp):
-    theta, m, v, t, g, bs, nmin, hp = _inputs(profile, inp)
-    if g is None:
-        return Result("value", {"theta": theta, "m": m, "v": v, "t": t})
-    b2, eps = hp["beta2"], hp["eps"]
-    if eps == 0 and any(b2 * vi + (1 - b2) * gi * gi == 0 for vi, gi in zip(v, g)):
-        raise Undefined("sqrt(v_hat) + eps = 0")
-    state = opt.AdamState(len(theta))
-    state.m, state.v, state.t = list(m), list(v), t
-    out = opt.adam_step(theta, g, state, hp["lr"], hp["beta1"], b2, eps, hp["weight_decay"], amsgrad=False,
-                        maximize=False, decoupled=True)
-    m1, v1 = list(state.m), list(state.v)
-    if len(theta) >= nmin and len(theta) % bs == 0:  # quantised states (torchao _new_buffer gate)
-        m1, v1 = quantize(m1, bs, QMAP_SIGNED), quantize(v1, bs, QMAP_UNSIGNED)
-    return Result("value", {"theta": v24.tree(out), "m": m1, "v": v1, "t": state.t})
+    src, signed, block_size = _parse(profile, inp)
+    return Result("value", _state(src, signed, block_size))
 
 
-# ------------------------------------------------------------------ independent mutants
-def _q(xs, block, qmap, mis):
-    out = []
-    blocks = [xs] if mis == "per_tensor_scale" else [xs[k:k + block] for k in range(0, len(xs), block)]
-    for blk in blocks:
-        s = max(max(abs(x) for x in blk), SCALE_MIN)
-        for x in blk:
-            y = x / s
-            best = min(range(len(qmap)), key=lambda i: (abs(qmap[i] - y), -qmap[i]))   # nearest, ties up
-            if mis == "round_down":
-                best = max([i for i, q in enumerate(qmap) if q <= y], default=0)
-            out.append(qmap[best] * s)
-    return out
+def _tensor_record(value, *, dtype, length, name, discrete=False):
+    if isinstance(value, dict):
+        if set(value) != {"t", "shape", "v"}:
+            raise Invalid(f"observed {name} tensor record is incomplete")
+        if value["t"] != dtype or value["shape"] != [length]:
+            raise Invalid(f"observed {name} has the wrong dtype or shape")
+        value = value["v"]
+    if not isinstance(value, (list, tuple)) or len(value) != length:
+        raise Invalid(f"observed {name} has the wrong length")
+    if discrete:
+        out = [integer(item, f"observed {name}", lo=0) for item in value]
+        if any(item > 255 for item in out):
+            raise Invalid(f"observed {name} is outside uint8")
+        return out
+    return [_f32(item, f"observed {name}") for item in value]
 
 
-def _mut(profile, inp, mis):
-    theta, m, v, t, g, bs, nmin, hp = _inputs(profile, inp)
-    lr, b1, b2, eps, wd = (hp[k] for k in ("lr", "beta1", "beta2", "eps", "weight_decay"))
-    if g is None:
-        return Result("value", {"theta": theta, "m": m, "v": v, "t": t})
-    t1 = t + 1
-    mf = [b1 * a + (1 - b1) * x for a, x in zip(m, g)]
-    vf = [b2 * a + (1 - b2) * x * x for a, x in zip(v, g)]
-    quant = mis == "gate_ignored" or (len(theta) >= nmin and len(theta) % bs == 0)
-    if mis == "no_quantization":
-        quant = False
-    signed = QMAP_SIGNED
-    unsigned = [Fraction(k, 15) for k in range(16)] if mis == "unsigned_with_zero" else QMAP_UNSIGNED
-    mq = _q(mf, bs, signed, mis) if quant else mf
-    vq = _q(vf, bs, unsigned, mis) if quant else vf
-    mu, vu = (mq, vq) if mis == "update_from_stored" else (mf, vf)
-    th = []
-    for x, a, b in zip(theta, mu, vu):
-        if eps == 0 and b == 0:
-            raise Undefined("zero denominator")
-        th.append(R(x * (1 - lr * wd)) - R(lr * a / (1 - b1 ** t1)) / (sqrt(R(b / (1 - b2 ** t1))) + R(eps)))
-    return Result("value", {"theta": th, "m": mq, "v": vq, "t": t1})
+def check_output(profile, inp, observed):
+    try:
+        src, signed, block_size = _parse(profile, inp)
+        if not isinstance(observed, dict) or set(observed) != {"codes", "scale"}:
+            return False
+        candidate = {
+            "codes": _tensor_record(observed["codes"], dtype="u8", length=len(src) // 2,
+                                    name="codes", discrete=True),
+            "scale": _tensor_record(observed["scale"], dtype="f32", length=len(src) // block_size,
+                                    name="scale"),
+        }
+    except (Invalid, Unsupported):
+        return False
+    return candidate == reference(profile, inp).fields
 
 
-def _m(kind):
-    return lambda profile, inp: _mut(profile, inp, kind)
+def _mutant(mode):
+    def run(profile, inp):
+        src, signed, block_size = _parse(profile, inp)
+        return Result("value", _state(src, signed, block_size, mode))
+    return run
 
 
 MUTANTS = {
-    "Q4.M1": _m("update_from_stored"),
-    "Q4.M2": _m("per_tensor_scale"),
-    "Q4.M3": _m("round_down"),
-    "Q4.M4": _m("unsigned_with_zero"),
-    "Q4.M5": _m("no_quantization"),
-    "Q4.M6": _m("gate_ignored"),
+    "Q4.M1": _mutant("swap_nibbles"),
+    "Q4.M2": _mutant("one_scale"),
+    "Q4.M3": _mutant("floor"),
+    "Q4.M4": _mutant("unsigned_zero_map"),
+    "Q4.M5": _mutant("reverse_bytes"),
+    "Q4.M6": _mutant("zero_scale"),
 }
 READINGS = {}

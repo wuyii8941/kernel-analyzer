@@ -1,0 +1,512 @@
+schema_version: '1.1'
+id: CE
+role: CE
+title: Cross entropy with explicit target, reduction and cotangent profiles
+review:
+  status: reviewed_for_implementation
+  date: '2026-10-15'
+  reviewer: ChatGPT review of uploaded contract draft
+  scope: Contract content and explicit profiles, not all-domain oracle certification
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - reviewed_contract_and_adapter_match_current
+profiles:
+  index_unsmoothed:
+    meaning: Class-index target, eps=0; arbitrary declared ignore_index.
+    task_choice_required: false
+  index_smoothing_unweighted:
+    meaning: Class-index target, weights absent, 0<=eps<=1.
+    task_choice_required: false
+  index_smoothing_R_A:
+    basis: [CE.R_A]
+    meaning: Per-class weighted smoothing; selected R_A interpretation; not a universally forced reading of incomplete
+      prose.
+    task_choice_required: true
+  probability_unsmoothed:
+    meaning: Valid probability rows, eps=0; no ignored probability rows.
+    task_choice_required: false
+outputs:
+  loss:
+    shape: scalar for sum/mean; [N] for none
+    guarantee: rigorous_enclosure
+  gradient:
+    shape: '[N,C] VJP against explicit upstream'
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: All arithmetic values are the exactly received rational values; published decimal constants are
+    a separate interface query, not silently substituted.
+  quality: No default semantic tolerance is inferred from these examples. Numerical resolution and application delta
+    are separate declarations.
+  test_evidence: Exact rational equality or certified relation when available; numerical enclosure compatibility
+    is not a proof of equality.
+  error_handling: No dropped outputs, silently truncated lists, coerced counts, or exceptions converted by message
+    text.
+decisions:
+- id: CE.R_A
+  status: needs_binding
+  statement: Use per-class weights a_nc=w_c*((1-eps)onehot(y)_c+eps/C) for this selected profile. Requires explicit
+    profile choice; R_B remains a diagnostic alternative, not automatic acceptance of every implementation.
+  basis:
+  - PCE.SMOOTH
+  - PCE.PROB
+- id: CE.FINITE_TARGET
+  status: reviewed
+  statement: When mean denominator is zero, finite-real loss and gradient are undefined. Does not impose a NaN/zero
+    device-output convention.
+  basis:
+  - PCE.REDUCE
+- id: CE.VJP
+  status: reviewed
+  statement: Gradient means VJP of the selected loss against the explicitly supplied upstream. This follows by differentiating
+    the declared loss on finite logits.
+  basis:
+  - PCE.INDEX
+  - PCE.PROB
+  - PCE.REDUCE
+clauses:
+- id: CE.C1
+  basis:
+  - PCE.INDEX
+  statement: p_nc=exp(x_nc)/sum_j exp(x_nj); unsmoothed row ell_n=-w_y*log(p_ny); ignored row ell=0
+  observes:
+  - loss
+  evidence_kind: definition
+- id: CE.C2
+  basis:
+  - PCE.IGNORE
+  - PCE.REDUCE
+  statement: Ignored index rows contribute zero loss, zero gradient, zero class-weight mass; ignore_index is an
+    input, not hard-coded -100
+  observes:
+  - loss
+  - gradient
+  evidence_kind: definition
+- id: CE.C3
+  basis:
+  - PCE.REDUCE
+  statement: Index mean D=sum_nonignored w_y; sum and none use no normalization; weights default to one
+  observes:
+  - loss
+  - gradient
+  evidence_kind: definition
+- id: CE.C4
+  basis:
+  - PCE.SMOOTH
+  - CE.R_A
+  statement: For selected R_A, a_nc=w_c*((1-eps)onehot(y)_c+eps/C); ell_n=-sum_c a_nc*log(p_nc)
+  observes:
+  - loss
+  - gradient
+  evidence_kind: definition
+- id: CE.C5
+  basis:
+  - CE.FINITE_TARGET
+  statement: D=0 for mean yields domain_undefined, not an allowed_set and not a required NaN; all-ignored sum/none
+    return zero with zero VJP
+  observes:
+  - loss
+  - gradient
+  evidence_kind: definition
+- id: CE.C6
+  basis:
+  - CE.VJP
+  statement: A_n=sum_c a_nc; grad_nc=u_n*(A_n*p_nc-a_nc) for sum/none; divide additionally by D for mean. For scalar
+    reduction the single upstream is reused on each row.
+  observes:
+  - gradient
+  evidence_kind: derived
+- id: CE.C7
+  basis:
+  - PCE.PROB
+  - PCE.SHAPE
+  statement: 'Probability profile: a_nc=w_c*y_nc; mean D=N (not class-weight mass); target rows match logits shape'
+  observes:
+  - loss
+  - gradient
+  evidence_kind: definition
+examples:
+- id: CE.E1
+  profile: index_unsmoothed
+  clauses:
+  - CE.C1
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 0
+    target:
+    - 0
+    weights: null
+    eps: 0
+    ignore_index: -100
+    reduction: sum
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: log(2)
+      gradient:
+      - - -1/2
+        - 1/2
+- id: CE.E2
+  profile: index_unsmoothed
+  clauses:
+  - CE.C1
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 1
+    target:
+    - 1
+    weights: null
+    eps: 0
+    ignore_index: -100
+    reduction: sum
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: log(1+exp(1))-1
+      gradient:
+      - - 1/(1+exp(1))
+        - -1/(1+exp(1))
+- id: CE.E3
+  profile: index_unsmoothed
+  clauses:
+  - CE.C2
+  - CE.C3
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 0
+    - - 0
+      - 0
+    - - 1
+      - 0
+    target:
+    - 0
+    - 1
+    - -100
+    weights:
+    - 1
+    - 3
+    eps: 0
+    ignore_index: -100
+    reduction: mean
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: log(2)
+      gradient:
+      - - -1/8
+        - 1/8
+      - - 3/8
+        - -3/8
+      - - 0
+        - 0
+- id: CE.E4
+  profile: index_smoothing_unweighted
+  clauses:
+  - CE.C4
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 1
+    target:
+    - 0
+    weights: null
+    eps: 1/2
+    ignore_index: -100
+    reduction: sum
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: log(1+exp(1))-1/4
+      gradient:
+      - - 1/(1+exp(1))-3/4
+        - exp(1)/(1+exp(1))-1/4
+- id: CE.E5
+  profile: index_smoothing_R_A
+  clauses:
+  - CE.C4
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 1
+    target:
+    - 0
+    weights:
+    - 1
+    - 3
+    eps: 1/2
+    ignore_index: -100
+    reduction: sum
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: 3*log(1+exp(1))/2-3/4
+      gradient:
+      - - 3/(2*(1+exp(1)))-3/4
+        - 3*exp(1)/(2*(1+exp(1)))-3/4
+- id: CE.E6
+  profile: index_unsmoothed
+  clauses:
+  - CE.C5
+  input:
+    logits:
+    - - 0
+      - 0
+    target:
+    - -100
+    weights: null
+    eps: 0
+    ignore_index: -100
+    reduction: mean
+    upstream: 1
+  expected:
+    outcome: domain_undefined
+- id: CE.E7
+  profile: index_unsmoothed
+  clauses:
+  - CE.C2
+  - CE.C5
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 1
+    target:
+    - -7
+    weights: null
+    eps: 0
+    ignore_index: -7
+    reduction: sum
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: 0
+      gradient:
+      - - 0
+        - 0
+- id: CE.E8
+  profile: index_unsmoothed
+  clauses:
+  - CE.C3
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 0
+    - - 0
+      - 0
+    target:
+    - 0
+    - 1
+    weights: null
+    eps: 0
+    ignore_index: -100
+    reduction: none
+    upstream:
+    - 2
+    - -1
+  expected:
+    outcome: value
+    fields:
+      loss:
+      - log(2)
+      - log(2)
+      gradient:
+      - - -1
+        - 1
+      - - -1/2
+        - 1/2
+- id: CE.E9
+  profile: probability_unsmoothed
+  clauses:
+  - CE.C7
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 0
+    target:
+    - - 1/4
+      - 3/4
+    weights: null
+    eps: 0
+    ignore_index: -100
+    reduction: mean
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: log(2)
+      gradient:
+      - - 1/4
+        - -1/4
+- id: CE.E10
+  profile: index_smoothing_R_A
+  clauses:
+  - CE.C4
+  - CE.C5
+  input:
+    logits:
+    - - 0
+      - 0
+    target:
+    - 0
+    weights:
+    - 0
+    - 1
+    eps: 1/2
+    ignore_index: -100
+    reduction: mean
+    upstream: 1
+  expected:
+    outcome: domain_undefined
+  note: Numerator is log(2)/4, not zero; a zero denominator is not always 0/0.
+- id: CE.N1
+  profile: index_unsmoothed
+  clauses:
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 0
+    target:
+    - 0
+    weights: null
+    eps: 0
+    ignore_index: -100
+    reduction: none
+    upstream:
+    - 1
+    - 1
+  expected:
+    outcome: invalid_input
+- id: CE.E11
+  profile: probability_unsmoothed
+  clauses:
+  - CE.C7
+  - CE.C6
+  input:
+    logits:
+    - - 0
+      - 0
+    target:
+    - - 1/4
+      - 3/4
+    weights:
+    - 2
+    - 4
+    eps: 0
+    ignore_index: -100
+    reduction: mean
+    upstream: 1
+  expected:
+    outcome: value
+    fields:
+      loss: 7*log(2)/2
+      gradient:
+      - - 5/4
+        - -5/4
+signature:
+  inputs:
+  - logits [N,C]
+  - target [N] or [N,C] selected by profile
+  - weights [C] or None
+  - ignore_index integer for index profiles
+  - eps
+  - reduction sum/mean/none
+  - upstream scalar for sum/mean; [N] for none
+  pre_state: []
+  post_state: []
+  observation_unit: loss and complete VJP, not loss-only
+domain:
+  valid:
+  - N >= 1, C >= 2 in this pilot; finite rectangular rational logits
+  - index targets are integers in [0,C) or equal to the declared ignore_index
+  - weights absent or finite nonnegative [C]; eps in [0,1]
+  - probability rows finite, nonnegative, sum to one; probability profile eps=0
+  - upstream has the exact reduction-dependent shape
+  unsupported:
+  - C=1 is an API-valid case outside this pilot, not an API violation
+  - unbatched and higher-rank flattening until mapping validated
+  - negative class weights for this pilot
+  - probability-target smoothing
+  - deprecated size_average/reduce overrides
+  - input options outside the selected profile; diagnostic readings must use their own entry
+  - unselected R_B or R_C diagnostic conventions
+  domain_undefined:
+  - mean normalization mass D=0, including but not limited to all-ignored rows
+  invalid_input:
+  - missing required profile inputs or non-mapping input
+  - ragged shapes or nonmatching weights
+  - nonintegral or out-of-range nonignored index
+  - invalid probability row
+  - invalid upstream shape
+  - nonfinite logits in this finite-real profile
+mutation_requirements:
+- id: CE.M1
+  misreading: mean by N instead of target-class weight mass
+  witnesses:
+  - CE.E3
+- id: CE.M2
+  misreading: mean by nonignored row count
+  witnesses:
+  - CE.E3
+- id: CE.M3
+  misreading: smoothing over C-1 alternatives
+  witnesses:
+  - CE.E4
+- id: CE.M4
+  misreading: ignored rows counted in denominator
+  witnesses:
+  - CE.E3
+- id: CE.M5
+  misreading: loss correct but gradient all zero
+  witnesses:
+  - CE.E1
+  - CE.E2
+- id: CE.M6
+  misreading: hard-coded ignore_index
+  witnesses:
+  - CE.E7
+- id: CE.M7
+  misreading: none output collapsed to scalar, dropped row, or upstream ignored
+  witnesses:
+  - CE.E8
+- id: CE.M8
+  misreading: probability-target mean by sum of target weights
+  witnesses:
+  - CE.E11
+nonclaims:
+- R_A versus diagnostic R_B alone is not evidence that an implementation violates explicit PyTorch wording.
+- These formulas do not choose a task-quality delta.
+- An unimplemented profile is unsupported, not an illegal API input.
+
+changes:
+- date: '2026-10-18'
+  change: Complete scoped implementation review for the four profiles; distinguish valid unbatched/higher-rank inputs outside this profile from malformed inputs.
+  trigger: evidence/ce_implementation.md; retained PCE source; independent rational-series and Arb logistic verification.
+- date: '2026-10-18'
+  change: Decide zero index-mean normalization mass after full input validation and before transcendental evaluation, for the reference and R_B diagnostic reading.
+  trigger: CE.C3 and CE.C5; tests/test_ce_independent.py also checks probability mean and sum with zero weights, and independent Arb binary-logistic loss/VJP enclosures.
+- date: '2026-10-18'
+  change: Validate all required profile inputs and reject undeclared options instead of silently ignoring reduction overrides or diagnostic-reading requests.
+  trigger: tests/test_ce_independent.py; independent uniform-logit loss bounds from a rational log series and exact complete VJP values for all four profiles.

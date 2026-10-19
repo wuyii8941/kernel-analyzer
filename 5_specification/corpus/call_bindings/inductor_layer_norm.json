@@ -1,0 +1,47 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.layer_norm.f32.b16.d128.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.nn.functional.layer_norm))",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "two generated Triton launches return the complete float32[16,128] LayerNorm forward and complete x/weight/bias VJP",
+    "measure_call": "../calls/inductor_layer_norm.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_layer_norm_forward_and_vjp",
+      "contract": "NORM",
+      "profile": "torch_autograd",
+      "task_statement": "Compute public PyTorch 2.10 LayerNorm over the final dimension with affine weight and bias, and its complete VJP against an explicit upstream tensor.",
+      "input_map": [
+        {"target": "/op", "literal": "layer_norm", "basis": "the public callable is torch.nn.functional.layer_norm"},
+        {"target": "/x", "source": "/tensor_arguments/x/before", "conversion": "tensor_values"},
+        {"target": "/normalized_shape", "source": "/scalars/normalized_shape"},
+        {"target": "/weight", "source": "/tensor_arguments/weight/before", "conversion": "tensor_values"},
+        {"target": "/bias", "source": "/tensor_arguments/bias/before", "conversion": "tensor_values"},
+        {"target": "/eps", "source": "/scalars/eps"},
+        {"target": "/upstream", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_values"}
+      ],
+      "output_map": [
+        {"target": "/y", "source": "/returns/y", "conversion": "tensor_values", "measure_output": "y"},
+        {"target": "/grad/x", "source": "/returns/dx", "conversion": "tensor_values", "measure_output": "dx"},
+        {"target": "/grad/weight", "source": "/returns/dweight", "conversion": "tensor_values", "measure_output": "dweight"},
+        {"target": "/grad/bias", "source": "/returns/dbias", "conversion": "tensor_values", "measure_output": "dbias"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "weight", "effect": "unchanged"},
+    {"argument": "bias", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

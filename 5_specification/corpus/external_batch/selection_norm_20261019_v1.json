@@ -1,0 +1,17 @@
+{
+  "task": "Public float32 layer_norm, rms_norm and group_norm forward with all present operand VJPs, optional operands explicit and input values unchanged",
+  "references": "Native PyTorch 2.10.0+cu128 CUDA and existing NORM.torch_autograd mathematics; public RMSNorm eps=None resolved from the actual input dtype",
+  "development": {"implementation": "flag_gems", "dimensions": [2, 5, 7], "seeds": [20261207, 20261208]},
+  "acceptance": {"implementation": "inductor", "dimensions": [3, 3, 11], "seeds": [20261209, 20261210]},
+  "cases": [
+    {"id": "layer_affine", "op": "layer_norm", "weight": true, "bias": true, "eps": 0.00001},
+    {"id": "layer_multi_axis_bias_only", "op": "layer_norm", "weight": false, "bias": true, "multi_axis": true, "eps": 0.125},
+    {"id": "layer_constant_noncontiguous", "op": "layer_norm", "weight": false, "bias": false, "constant": true, "noncontiguous": true, "eps": 0.00001},
+    {"id": "rms_default_eps", "op": "rms_norm", "weight": true, "bias": false, "eps": null},
+    {"id": "rms_multi_axis", "op": "rms_norm", "weight": true, "bias": false, "multi_axis": true, "eps": 0.125},
+    {"id": "rms_no_weight", "op": "rms_norm", "weight": false, "bias": false, "eps": 0.125},
+    {"id": "group_affine_noncontiguous", "op": "group_norm", "weight": true, "bias": true, "noncontiguous": true, "groups": 3, "eps": 0.00001},
+    {"id": "group_no_affine", "op": "group_norm", "weight": false, "bias": false, "groups": 3, "eps": 0.125}
+  ],
+  "selection_note": "Fixed before execution. Separate implementation, dimensions and seeds support limited acceptance, not blind generalization. Keep candidate errors and missing Triton execution."
+}

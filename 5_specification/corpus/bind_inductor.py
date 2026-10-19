@@ -8,14 +8,17 @@ For every unit of 1_experiments/three_way/results/units.jsonl:
   2. the graph fragment written above that block is parsed (kernel_spec/fx_text.py);
   3. every node's operation and overload is checked against the operations covered by the base contracts (GRAPH).
 
-    python 5_specification/corpus/bind_inductor.py      -> corpus/bindings/three_way.json.gz and a summary on stdout
+    python 5_specification/corpus/bind_inductor.py --out NEW.json.gz
+
+The output must not already exist. Static matches are candidate evidence only, not complete task binding.
 """
 from __future__ import annotations
 
+import argparse
+import ast
 import collections
 import glob
 import gzip
-import hashlib
 import json
 import re
 import sys
@@ -38,10 +41,11 @@ def norm_template(body):
     return "\n".join(l.rstrip() for l in body.splitlines() if l.strip() and not CONFIG.search(l))
 
 
-def index_output_code():
+def index_output_code(code_dir=None):
     exact, templ = {}, {}
-    for f in sorted(glob.glob(str(REPO / ".cache/inductor/*/*.py"))):
-        t = open(f, errors="ignore").read()
+    code_dir = Path(code_dir).resolve() if code_dir is not None else REPO / ".cache/inductor"
+    for f in sorted(glob.glob(str(code_dir / "*/*.py"))):
+        t = Path(f).read_text(errors="ignore")
         if "Graph fragment" not in t:
             continue
         for m in KC.finditer(t):
@@ -52,35 +56,102 @@ def index_output_code():
             comment = t[head:m.start()]
             frag = comment.split("# Graph fragment:", 1)[1].splitlines() if "# Graph fragment:" in comment else []
             orig = re.search(r"Original ATen: \[(.*?)\]", comment)
-            rec = {"kernel": m.group(2), "file": str(Path(f).relative_to(REPO)), "original_aten": orig.group(1) if orig else "",
+            rec = {"kernel": m.group(2), "launcher": m.group(1), "file": str(Path(f).relative_to(REPO)), "original_aten": orig.group(1) if orig else "",
                    "fragment": [l for l in frag if l.startswith("#   %")]}
             body = t[m.end():end]
-            exact.setdefault(hashlib.sha256(body.strip().encode()).hexdigest(), rec)
+            matches = exact.setdefault(body.strip(), [])
+            if rec not in matches:
+                matches.append(rec)
             if "_tem_" in m.group(2):
-                templ.setdefault((m.group(2), hashlib.sha256(norm_template(body).encode()).hexdigest()), rec)
+                matches = templ.setdefault((m.group(2), norm_template(body)), [])
+                if rec not in matches:
+                    matches.append(rec)
     return exact, templ
 
 
-def main():
-    exact, templ = index_output_code()
+def candidates_at_call_site(candidates, frames):
+    """Candidates whose launcher call contains an actually recorded Python location.
+
+    Source matching has already happened. This only selects a caller, not a
+    mathematical task or complete parameter mapping. Ambiguity is retained.
+    """
+    if not isinstance(frames, list):
+        return []
+    selected = []
+    for candidate in candidates:
+        path = (REPO / candidate["file"]).resolve()
+        locations = [frame["line"] for frame in frames if isinstance(frame, dict)
+                     and isinstance(frame.get("file"), str) and type(frame.get("line")) is int
+                     and Path(frame["file"]).resolve() == path]
+        if not locations or not path.is_file():
+            continue
+        try:
+            tree = ast.parse(path.read_text())
+        except (SyntaxError, UnicodeError):
+            continue
+        launcher = candidate.get("launcher", candidate["kernel"])
+        calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute) and node.func.attr == "run"
+                 and isinstance(node.func.value, ast.Name) and node.func.value.id == launcher]
+        if any(node.lineno <= line <= node.end_lineno for node in calls for line in locations):
+            selected.append(candidate)
+    return selected
+
+
+def write_results(path, rows):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("xb") as raw:
+        with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as fh:
+            fh.write(json.dumps(rows, indent=0, ensure_ascii=False).encode())
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", required=True, type=Path, help="new gzip JSON result file; existing files are refused")
+    parser.add_argument("--units", type=Path, help="explicit inventory for a new capture run")
+    parser.add_argument("--capture-root", type=Path, help="capture directory containing model/config/unit")
+    parser.add_argument("--code-dir", type=Path, help="Inductor code directory for this capture run")
+    args = parser.parse_args(argv)
+    if args.out.exists():
+        parser.error("--out must be a new file; existing records are never overwritten")
+    with (args.units or REPO / "1_experiments/three_way/results/units.jsonl").open() as source:
+        units = [json.loads(line) for line in source]
+    if not units:
+        parser.error("the unit inventory is empty")
+    exact, templ = index_output_code(args.code_dir)
     ops = covered_ops()
-    units = [json.loads(l) for l in open(REPO / "1_experiments/three_way/results/units.jsonl")]
     out, uncovered, status = [], collections.Counter(), collections.Counter()
     for u in units:
         unit = u["unit"].rstrip("/")
         model, config, name = unit.split("/")[-3:]
-        rec, method, problems = None, None, []
+        rec, method, problems, candidates = None, None, [], []
+        source_candidates, candidate_selection = [], None
         cap = REPO / ".cache/three_way" / "/".join(unit.split("/")[-4:])
+        if args.capture_root is not None:
+            cap = args.capture_root / model / config / name
         srcs = list((cap / "compiled").glob("*.source")) if cap.is_dir() else []
         loc = re.search(r'#loc = loc\("([^"]+\.py)"', srcs[0].read_text(errors="ignore")) if srcs else None
         kfile = Path(loc.group(1)) if loc else None
         if kfile and kfile.is_file():
             body = kfile.read_text()
-            rec = exact.get(hashlib.sha256(body.strip().encode()).hexdigest())
-            method = "exact kernel source" if rec else None
-            if rec is None and "_tem_" in u.get("kernel", ""):
-                rec = templ.get((u["kernel"], hashlib.sha256(norm_template(body).encode()).hexdigest()))
-                method = "template source without autotuning configuration" if rec else None
+            candidates = exact.get(body.strip(), [])
+            method = "exact kernel source" if candidates else None
+            if not candidates and "_tem_" in u.get("kernel", ""):
+                candidates = templ.get((u["kernel"], norm_template(body)), [])
+                method = "template source without autotuning configuration" if candidates else None
+            source_candidates = candidates
+            manifest = cap / "launch.json"
+            if len(candidates) > 1 and manifest.is_file():
+                frames = json.loads(manifest.read_text()).get("call_stack")
+                selected = candidates_at_call_site(candidates, frames)
+                if len(selected) == 1:
+                    candidates = selected
+                    candidate_selection = "recorded Python launcher call"
+            if len(candidates) == 1:
+                rec = candidates[0]
+            elif len(candidates) > 1:
+                problems.append("multiple graph origins match this source; no task was selected")
         elif kfile:
             problems.append(f"kernel file missing: {kfile}")
         nodes_ops, bad = [], []
@@ -97,7 +168,8 @@ def main():
         # what this checks: the kernel source matches an output-code block, its graph fragment parses, and every
         # operation is covered by a base contract. It does NOT bind inputs, outputs, state or profile (see
         # dynamic_three_way.py for that); hence the status names below.
-        st = ("fragment matched, operations covered" if rec and not bad and not problems
+        st = ("multiple matching graph fragments" if len(candidates) > 1
+              else "fragment matched, operations covered" if rec and not bad and not problems
               else "fragment matched, uncovered operations" if rec and bad
               else "fragment matched, not parsed" if rec else "no fragment")
         status[st] += 1
@@ -105,10 +177,12 @@ def main():
         out.append({"unit": f"{model}/{config}/{name}", "kernel": u.get("kernel"), "verify": u.get("verify"), "status": st,
                     "method": method, "output_code": rec and rec["file"], "original_aten": rec and rec["original_aten"],
                     "graph_ops": sorted(set(nodes_ops)), "nodes": len(nodes_ops), "uncovered": sorted(set(bad)),
-                    "problems": problems})
-    (HERE / "bindings").mkdir(exist_ok=True)
-    with gzip.GzipFile(HERE / "bindings/three_way.json.gz", "wb", mtime=0) as fh:
-        fh.write(json.dumps(out, indent=0, ensure_ascii=False).encode())
+                    "problems": problems, "candidates": candidates,
+                    "source_candidates": source_candidates, "candidate_selection": candidate_selection,
+                    "candidate_status": "ambiguous" if len(candidates) > 1 else "matched" if rec else "not_matched",
+                    "binding_status": "not_established", "reference_status": "not_evaluated",
+                    "semantic_verdict": "not_established"})
+    write_results(args.out, out)
     print("units", len(out), dict(status))
     print("uncovered operations", dict(uncovered))
     print("binding methods", dict(collections.Counter(r["method"] for r in out)))

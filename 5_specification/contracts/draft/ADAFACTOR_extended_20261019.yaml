@@ -1,0 +1,257 @@
+schema_version: '1.2'
+id: ADAFACTOR
+role: ADAFACTOR
+title: Adafactor step - torch.optim.Adafactor (PyTorch 2.10 box) and transformers Adafactor 4.57.3 with a manual
+  learning rate - from an explicit pre-state
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E1_optim), 2026-10-17
+  date: '2026-10-17'
+  scope: One optimizer step on one parameter tensor of rank >= 1, real arithmetic; awaiting a review by someone who did
+    not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [torch.optim.Adafactor, 'transformers.optimization.Adafactor(scale_parameter=False, relative_step=False,
+    warmup_init=False, beta1=None)']
+profiles:
+  torch210:
+    meaning: torch.optim.Adafactor as its 2.10 algorithm box and notes state (decisions AF.MEAN, AF.CLAMP, AF.DECAY,
+      AF.ND, AF.EPS1); maximize either value.
+    task_choice_required: false
+  hf_manual_lr:
+    meaning: 'transformers 4.57.3 Adafactor with a manual learning rate (scale_parameter=False, relative_step=False,
+      warmup_init=False, beta1=None), the configuration of the essential-round HF candidate. A different algorithm from
+      torch.optim.Adafactor (eps1 added to G.G, no parameter scale, no relative step); reference program only.'
+    task_choice_required: false
+outputs:
+  theta:
+    shape: the parameter's shape
+    guarantee: rigorous_enclosure
+  row:
+    shape: 'rank >= 2: the parameter shape without its last dimension (torch row_var without the kept unit dimension;
+      transformers exp_avg_sq_row); rank 1: []'
+    guarantee: rigorous_enclosure
+  col:
+    shape: 'rank >= 2: the parameter shape without its penultimate dimension; rank 1: []'
+    guarantee: rigorous_enclosure
+  var:
+    shape: 'rank 1: the parameter shape (torch variance; transformers exp_avg_sq); rank >= 2: []'
+    guarantee: rigorous_enclosure
+  t:
+    shape: scalar integer
+    guarantee: exact
+comparison:
+  input_binding: All values are the exactly received rationals; eps1 is an explicit number (decision AF.EPS1).
+  quality: No tolerance; enclosures (square roots, non-integer powers t**tau).
+  test_evidence: Containment of the expected value in the enclosure.
+  error_handling: Inputs validated before evaluation.
+decisions:
+- id: AF.MEAN
+  status: drafted
+  statement: 'State convention: the box writes R_t, C_t with sums ((G.G) 1_m, 1_n^T (G.G)) and V_hat = R C/max(1_n^T R,
+    eps1); the documentation notes that the implementation uses means instead. The contract''s row / col states are the
+    row and column MEANS of G.G (torch row_var / col_var), V_hat = R_i C_j / max(mean_i R_i, eps1); this equals the box
+    value whenever the eps1 clamp is inactive (decision AF.CLAMP covers the rest). Alternative (states as sums) is the
+    same algorithm with states scaled by m and n; it is recorded as mutant AF.M1 because the documented state of the
+    implementation is the mean.'
+  basis: [T_ADAFACTOR_OPT.FACTORED, T_ADAFACTOR_OPT.MEAN_NOTE, TS_ADAFACTOR.STEP]
+- id: AF.CLAMP
+  status: drafted
+  statement: 'With sums the clamp is max(sum_i R^sum_i, eps1) = max(n m mean(R), eps1); with means it is max(mean(R),
+    eps1). They give different V_hat when mean(R) < eps1 and some R_i C_j != 0. There the documents disagree and the
+    contract has no requirement (domain_undefined). For eps1 = finfo(float32).eps and the tested Gaussian gradients the
+    clamp is never active.'
+  basis: [T_ADAFACTOR_OPT.FACTORED, T_ADAFACTOR_OPT.MEAN_NOTE, TS_ADAFACTOR.STEP]
+- id: AF.DECAY
+  status: drafted
+  statement: 'The box''s last line reads theta_t <- theta_{t-1} - alpha_t U_hat_t, which taken literally discards the
+    decay line theta_t <- theta_{t-1} - gamma lambda theta_{t-1}. The contract reads it as theta_t <- theta_t - alpha_t
+    U_hat_t (decayed parameter): the text says lr is used as the coefficient of decoupled weight decay (with the literal
+    reading weight_decay would have no effect), and the reference program does so. The literal reading is mutant
+    AF.M3. alpha_t uses RMS(theta_{t-1}) before the decay (box and reference program).'
+  basis: [T_ADAFACTOR_OPT.DECAY, T_ADAFACTOR_OPT.SCHEDULE, TS_ADAFACTOR.STEP]
+- id: AF.ND
+  status: drafted
+  statement: 'The box speaks of dim(G) > 1 and an n x m matrix. For rank > 2 the reference program factors over the
+    last two dimensions with the leading dimensions batched (one R, C pair per trailing matrix); RMS(theta) and RMS(U)
+    are taken over the whole tensor. Rank 1 is the vector branch. Claim for rank > 2: consistent with the reference
+    program. Alternative (flatten the leading dimensions into the rows) is mutant AF.M10.'
+  basis: [T_ADAFACTOR_OPT.FACTORED, TS_ADAFACTOR.STATE, TS_ADAFACTOR.STEP]
+- id: AF.EPS1
+  status: drafted
+  statement: 'The documented default eps = (None, 1e-3) does not say what None means; the reference program uses
+    eps1 = torch.finfo(param.dtype).eps (2^-23 for float32, 2^-52 for float64). The contract takes eps1 as an explicit
+    input; a binding of a run with eps1=None supplies finfo(dtype).eps of the parameter dtype (consistent with the
+    reference program).'
+  basis: [T_ADAFACTOR_OPT.LR_NOTE, TS_ADAFACTOR.STEP]
+- id: AF.HF
+  status: drafted
+  statement: 'Profile hf_manual_lr is defined by the transformers source only: beta2t = 1 - t^decay_rate; G.G + eps1 in
+    both factors (means over the last / penultimate dimension); U_ij = G_ij / sqrt(R_i/mean(R) * C_j); vector branch
+    V = beta2t V + (1-beta2t)(G.G + eps1), U = G/sqrt(V); U / max(RMS(U)/clip_threshold, 1); theta <- theta -
+    weight_decay*lr*theta - lr*U_hat. A zero factor (possible only with eps1 = 0) is domain_undefined. maximize does
+    not exist there (invalid input). Other option combinations (relative_step, scale_parameter, beta1) were not tested
+    and are outside the profile.'
+  basis: [HF_ADAFACTOR_SRC.OPTIONS, HF_ADAFACTOR_SRC.LR, HF_ADAFACTOR_SRC.STEP]
+clauses:
+- {id: AF.C1, basis: [T_ADAFACTOR_OPT.MAXIMIZE, T_ADAFACTOR_OPT.INIT], statement: 'torch210: G = -grad if maximize else
+    grad; t_new = t_old + 1', observes: [theta, t], evidence_kind: definition}
+- {id: AF.C2, basis: [T_ADAFACTOR_OPT.SCHEDULE, T_ADAFACTOR_OPT.LR_NOTE], statement: 'torch210: c = t_new**tau
+    (= 1 - beta2_hat); rho = min(lr, 1/sqrt(t_new)); alpha = max(eps2, RMS(theta_old))*rho', observes: [theta, var, row,
+    col], evidence_kind: definition}
+- {id: AF.C3, basis: [T_ADAFACTOR_OPT.FACTORED, AF.MEAN, AF.CLAMP, AF.ND], statement: 'torch210, rank >= 2: R = (1-c)R +
+    c*rowmean(G.G), C = (1-c)C + c*colmean(G.G), V_ij = R_i C_j / max(mean(R), eps1)', observes: [row, col, theta],
+  evidence_kind: definition}
+- {id: AF.C4, basis: [T_ADAFACTOR_OPT.VECTOR], statement: 'torch210, rank 1: V = (1-c)V + c*G.G', observes: [var, theta],
+  evidence_kind: definition}
+- {id: AF.C5, basis: [T_ADAFACTOR_OPT.UPDATE, T_ADAFACTOR_OPT.EPS1_NOTE], statement: 'torch210: U = G/max(sqrt(V), eps1);
+    U_hat = U/max(1, RMS(U)/d)', observes: [theta], evidence_kind: definition}
+- {id: AF.C6, basis: [T_ADAFACTOR_OPT.DECAY, AF.DECAY], statement: 'torch210: theta_new = theta_old*(1 - lr*weight_decay)
+    - alpha*U_hat', observes: [theta], evidence_kind: definition}
+- {id: AF.C7, basis: [AF.HF, HF_ADAFACTOR_SRC.STEP], statement: 'hf_manual_lr: the transformers step of decision AF.HF',
+  observes: [theta, row, col, var, t], evidence_kind: definition}
+- {id: AF.C8, basis: [T_ZERO_GRAD.SKIP], statement: 'gradient None leaves the state unchanged; a zero gradient is a full
+    step', observes: [theta, row, col, var, t], evidence_kind: definition}
+examples:
+- id: AF.E1
+  profile: torch210
+  clauses: [AF.C1, AF.C2, AF.C4, AF.C5, AF.C6]
+  input: {state: {theta: [3, 4], row: [], col: [], var: [0, 0], t: 0}, gradient: [1, -1], lr: 1/100, beta2_decay: -4/5,
+    eps1: 0, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [3-sqrt(2)/40, 4+sqrt(2)/40], row: [], col: [], var: [1, 1], t: 1}}
+  note: c = 1 at t = 1; U = sign(G); alpha = sqrt(25/2)/100.
+- id: AF.E2
+  profile: torch210
+  clauses: [AF.C2, AF.C3, AF.C5, AF.C6]
+  input: {state: {theta: [[1, 1], [1, 1]], row: [0, 0], col: [0, 0], var: [], t: 0}, gradient: [[1, 2], [3, 4]],
+    lr: 1/10, beta2_decay: -4/5, eps1: 0, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: [[1-sqrt(15)/50, 1-sqrt(30)/50], [1-3*sqrt(3)/50, 1-sqrt(6)/25]],
+      row: ['5/2', '25/2'], col: [5, 10], var: [], t: 1}}
+  note: V = R_i C_j/(15/2) = [[5/3, 10/3], [25/3, 50/3]]; RMS(U) = sqrt(24/25) < 1.
+- id: AF.E3
+  profile: torch210
+  clauses: [AF.C2, AF.C4, AF.C5, AF.C6]
+  input: {state: {theta: [2], row: [], col: [], var: [4], t: 3}, gradient: [1], lr: 1/4, beta2_decay: -1, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 1/2, maximize: false}
+  expected: {outcome: value, fields: {theta: [7/4-sqrt(13)/13], row: [], col: [], var: ['13/4'], t: 4}}
+  note: c = 1/4, rho = min(1/4, 1/2), alpha = 2/4; theta_dec = 7/4; U = 2/sqrt(13).
+- id: AF.E4
+  profile: torch210
+  clauses: [AF.C5]
+  input: {state: {theta: [2], row: [], col: [], var: [0], t: 3}, gradient: [1], lr: 1/4, beta2_decay: -1, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: ['3/2'], row: [], col: [], var: ['1/4'], t: 4}}
+  note: U = 2, RMS(U)/d = 2 clips the update to 1.
+- id: AF.E5
+  profile: torch210
+  clauses: [AF.C5]
+  input: {state: {theta: [1], row: [], col: [], var: [0], t: 0}, gradient: [1/1000], lr: 1/100, beta2_decay: -4/5,
+    eps1: 1/100, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: ['999/1000'], row: [], col: [], var: ['1/1000000'], t: 1}}
+  note: eps1 bounds the denominator, U = (1/1000)/(1/100).
+- id: AF.E6
+  profile: torch210
+  clauses: [AF.C1, AF.C5]
+  input: {state: {theta: [1], row: [], col: [], var: [0], t: 0}, gradient: [2], lr: 1/10, beta2_decay: -4/5, eps1: 0,
+    eps2: 0, d: 1, weight_decay: 0, maximize: true}
+  expected: {outcome: value, fields: {theta: ['11/10'], row: [], col: [], var: [4], t: 1}}
+- id: AF.E7
+  profile: torch210
+  clauses: [AF.C8]
+  input: {state: {theta: [2], row: [], col: [], var: [4], t: 3}, gradient: null, lr: 1/4, beta2_decay: -1, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 1/2, maximize: false}
+  expected: {outcome: value, fields: {theta: [2], row: [], col: [], var: [4], t: 3}}
+- id: AF.E8
+  profile: torch210
+  clauses: [AF.C6, AF.C8]
+  input: {state: {theta: [2], row: [], col: [], var: [4], t: 3}, gradient: [0], lr: 1/4, beta2_decay: -1, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 1/2, maximize: false}
+  expected: {outcome: value, fields: {theta: ['7/4'], row: [], col: [], var: [3], t: 4}}
+- id: AF.E9
+  profile: torch210
+  clauses: [AF.C3]
+  input: {state: {theta: [[[1, 1]], [[1, 1]]], row: [[0], [0]], col: [[0, 0], [0, 0]], var: [], t: 0},
+    gradient: [[[1, 2]], [[3, 4]]], lr: 1/10, beta2_decay: -4/5, eps1: 0, eps2: 1/1000, d: 1, weight_decay: 0,
+    maximize: false}
+  expected: {outcome: value, fields: {theta: [[['9/10', '9/10']], [['9/10', '9/10']]], row: [['5/2'], ['25/2']],
+      col: [[1, 4], [9, 16]], var: [], t: 1}}
+  note: Shape (2, 1, 2) factored per trailing 1 x 2 matrix; with n = 1, V = C = G.G and U = sign(G).
+- id: AF.E10
+  profile: torch210
+  clauses: [AF.C3]
+  input: {state: {theta: [[1, 1], [1, 1]], row: [0, 0], col: [0, 0], var: [], t: 0}, gradient: [[1/1000, 0], [0, 0]],
+    lr: 1/10, beta2_decay: -4/5, eps1: 1/1000, eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: domain_undefined}
+  note: mean(R) = 1/4000000 < eps1 while R_1 C_1 != 0 (decision AF.CLAMP).
+- id: AF.E11
+  profile: torch210
+  clauses: [AF.C2, AF.C4]
+  input: {state: {theta: [1], row: [], col: [], var: [1], t: 1}, gradient: [2], lr: 1/100, beta2_decay: -4/5, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: value, fields: {theta: ['99/100'], row: [], col: [], var: [1+3*2**(-4/5)], t: 2}}
+  note: Default beta2_decay at t = 2 (irrational c = 2^(-4/5)); the update is clipped to sign(G).
+- id: AF.E12
+  profile: hf_manual_lr
+  clauses: [AF.C7]
+  input: {state: {theta: [[2, 2], [2, 2]], row: [0, 0], col: [0, 0], var: [], t: 0}, gradient: [[1, 2], [3, 4]],
+    lr: 1/10, decay_rate: -4/5, eps1: 0, eps2: 1/1000, clip_threshold: 1, weight_decay: 1/10}
+  expected: {outcome: value, fields: {theta: [[99/50-sqrt(15)/50, 99/50-sqrt(30)/50], [99/50-3*sqrt(3)/50,
+          99/50-sqrt(6)/25]], row: ['5/2', '25/2'], col: [5, 10], var: [], t: 1}}
+  note: Step size lr (no parameter scale); theta - (1/100)*theta - U/10.
+- id: AF.E13
+  profile: hf_manual_lr
+  clauses: [AF.C7]
+  input: {state: {theta: [1], row: [], col: [], var: [0], t: 0}, gradient: [2], lr: 1/100, decay_rate: -4/5,
+    eps1: 1/1000000000000000000000000000000, eps2: 1/1000, clip_threshold: 1, weight_decay: 0}
+  expected: {outcome: value, fields: {theta: [1-2/(100*sqrt(4+1/10**30))], row: [], col: [], var: [4+1/10**30], t: 1}}
+  note: eps1 = 1e-30 is added to G.G (default of the HF class).
+- id: AF.N1
+  profile: hf_manual_lr
+  clauses: [AF.C7]
+  input: {state: {theta: [1], row: [], col: [], var: [0], t: 0}, gradient: [2], lr: 1/100, decay_rate: -4/5, eps1: 0,
+    eps2: 1/1000, clip_threshold: 1, weight_decay: 0, maximize: true}
+  expected: {outcome: invalid_input}
+- id: AF.N2
+  profile: torch210
+  clauses: [AF.C2]
+  input: {state: {theta: [1], row: [], col: [], var: [0], t: 0}, gradient: [2], lr: 1/100, beta2_decay: 1/2, eps1: 0,
+    eps2: 1/1000, d: 1, weight_decay: 0, maximize: false}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['gradient (parameter shape) or None', 'torch210: lr, beta2_decay, eps1, eps2, d, weight_decay, maximize',
+    'hf_manual_lr: lr, decay_rate, eps1, eps2 (unused with scale_parameter=False), clip_threshold, weight_decay']
+  pre_state: [theta, row, col, var, t nonnegative integer]
+  post_state: [theta, row, col, var, t]
+  observation_unit: one parameter tensor, one optimizer step (RMS and factors are per tensor, not element-wise)
+domain:
+  valid: ['rank >= 1, consistent state shapes', finite rationals, nonnegative factors, 'torch210: beta2_decay <= 0, d
+      >= 1, lr, eps1, eps2, weight_decay >= 0', 'hf_manual_lr: decay_rate <= 0, clip_threshold > 0']
+  domain_undefined: ['torch210: eps1 clamp of mean(R) active with some R_i C_j != 0 (AF.CLAMP); max(sqrt(V), eps1) = 0
+      with G != 0 or V = 0/0', 'hf_manual_lr: a zero factor or second moment (rsqrt of 0)']
+  invalid_input: [shape mismatch, negative factors, NaN or infinite values, options out of range, maximize in
+      hf_manual_lr]
+  unsupported: ['transformers Adafactor with relative_step, scale_parameter, warmup_init or beta1', rank-0 parameters,
+    complex parameters]
+mutation_requirements:
+- {id: AF.M1, misreading: 'row / col states as sums (box literal) instead of the documented means', witnesses: [AF.E2]}
+- {id: AF.M2, misreading: alpha from the RMS of the decayed parameter, witnesses: [AF.E3]}
+- {id: AF.M3, misreading: 'box last line taken literally (weight decay discarded)', witnesses: [AF.E3, AF.E8]}
+- {id: AF.M4, misreading: 'eps1 added to G.G (paper / transformers style) instead of bounding sqrt(V)', witnesses: [AF.E5]}
+- {id: AF.M5, misreading: update clipping omitted, witnesses: [AF.E4]}
+- {id: AF.M6, misreading: 'relative step capped by the paper constant 0.01 instead of lr', witnesses: [AF.E3]}
+- {id: AF.M7, misreading: beta2_hat computed from the old step count, witnesses: [AF.E3]}
+- {id: AF.M8, misreading: maximize ignored, witnesses: [AF.E6]}
+- {id: AF.M9, misreading: None gradient treated as zero, witnesses: [AF.E7]}
+- {id: AF.M10, misreading: 'rank > 2 factored by flattening the leading dimensions into the rows', witnesses: [AF.E9]}
+- {id: AF.M11, misreading: 'hf_manual_lr: row factor not normalised by its mean', witnesses: [AF.E12]}
+- {id: AF.M12, misreading: 'hf_manual_lr: weight decay applied after the update (product form)', witnesses: [AF.E12]}
+nonclaims:
+- 'torch.optim.Adafactor and transformers Adafactor are different tasks; a run is judged under the profile of the class
+  it used. The essential round marked Adafactor "outside the contract"; both are now covered.'
+- The profile hf_manual_lr rests on the reference program only; agreement means agreement with that program.
+- Device rounding (including the float32 casts of transformers for bf16 parameters) is not judged here (K - f).
+- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+changes: []

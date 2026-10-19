@@ -1,0 +1,25 @@
+{
+  "task": "Finite float32 scaled dot-product attention with dropout disabled, defined rows, complete forward and q/k/v VJP",
+  "reference": "PyTorch 2.10.0+cu128 forced math backend plus reviewed ATTN.torch210_sdpa_defined_real_vjp exact-real profile",
+  "frozen_before_gpu_execution": true,
+  "limits": "Development uses FlagGems 5.0.2 exported autograd function. Acceptance uses the retained Triton 3.6 official fused-attention tutorial and only its promised square, equal-head, no-mask interface. These implementations were read while choosing cases, so this is held-out input and implementation checking, not blind family discovery or a statistical bias verdict.",
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261311, 20261312],
+    "cases": [
+      {"id": "default_rectangular", "shape": [1, 1, 1, 9, 11, 16]},
+      {"id": "causal_rectangular", "shape": [1, 2, 2, 9, 13, 16], "is_causal": true},
+      {"id": "boolean_mask", "shape": [1, 1, 1, 7, 9, 16], "mask": "boolean"},
+      {"id": "additive_mask_explicit_scale", "shape": [1, 2, 2, 8, 10, 16], "mask": "additive", "scale": 0.25},
+      {"id": "grouped_query", "shape": [1, 4, 2, 8, 10, 16], "enable_gqa": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "triton_tutorial_3_6",
+    "seeds": [20261313, 20261314],
+    "cases": [
+      {"id": "tutorial_causal_explicit_scale", "shape": [1, 2, 2, 128, 128, 16], "is_causal": true, "scale": 0.25},
+      {"id": "tutorial_noncausal_default_scale", "shape": [1, 1, 1, 128, 128, 32]}
+    ]
+  }
+}

@@ -1,164 +1,237 @@
 schema_version: '1.2'
 id: RPROP
 role: RPROP
-title: torch.optim.Rprop (etas, step-size bounds, sign logic, maximize), one step from an explicit pre-state, PyTorch
-  2.10 algorithm box
+title: Exact torch.optim.Rprop transition for one dense real parameter tensor
 review:
-  status: drafted
-  author: Claude (spec v3 author, group E1_optim), 2026-10-17
-  date: '2026-10-17'
-  scope: One optimizer step on one parameter tensor (flattened), exact rational arithmetic; awaiting a review by
-    someone who did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 public Rprop, one dense real parameter tensor and one step with complete optimizer state
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers: [torch.optim.Rprop]
 profiles:
-  torch210:
-    meaning: torch.optim.Rprop as its 2.10 algorithm box states, maximize per decision RP.MAXIMIZE. A cold pre-state is
-      prev = 0, eta = lr in every coordinate, t = 0.
+  torch210_dense_real:
+    meaning: >-
+      One public PyTorch 2.10 torch.optim.Rprop step for one nonempty dense real parameter tensor with positive
+      dimensions and conventional ordered nonnegative step-size bounds. The complete parameter and optional optimizer
+      state, gradient presence, dtype and public execution choices are inputs. Capturable or differentiable execution,
+      complex or sparse values, tensor learning rates, unusual unordered or negative bounds, internal functional calls
+      and multi-parameter orchestration are outside this profile.
     task_choice_required: false
-readings:
-  program_clamp:
-    meaning: 'Diagnostic: the reference program clamps the step size into [step_min, step_max] also where the sign
-      product is zero (decision RP.CLAMP).'
-    basis: [TS_RPROP.STEP]
-  box_literal:
-    meaning: 'Diagnostic: the box keeps eta unchanged where the sign product is zero, even outside [step_min, step_max]
-      (decision RP.CLAMP).'
-    basis: [T_RPROP_OPT.SIGN_LOGIC]
+    basis: [RP.TASK, RP.STATE, RP.ORDER, RP.ZERO_CLAMP]
 outputs:
-  theta:
-    shape: '[d]'
-    guarantee: exact
-  prev:
-    shape: '[d] previous (processed) gradient'
-    guarantee: exact
-  eta:
-    shape: '[d] per-coordinate step size'
-    guarantee: exact
-  t:
-    shape: scalar integer (torch state step)
-    guarantee: exact
+  theta: {shape: 'complete parameter shape', guarantee: exact}
+  prev: {shape: 'complete processed-gradient state, or [] while state remains uninitialized', guarantee: exact}
+  eta: {shape: 'complete step-size state, or [] while state remains uninitialized', guarantee: exact}
+  t: {shape: 'scalar nonnegative integer or null while state remains uninitialized', guarantee: exact}
 comparison:
-  input_binding: All values are the exactly received rationals.
-  quality: Exact; only products, comparisons, min, max and sign occur.
-  test_evidence: Exact equality.
-  error_handling: Inputs validated before evaluation.
+  input_binding: >-
+    All arithmetic values are exactly received rationals. state is the complete per-parameter pre-state; prev=eta=[]
+    and t=null means PyTorch has not lazily initialized state for this parameter.
+  complete_output: The complete parameter, processed previous gradient, per-coordinate step size and step are required.
+  quality: Exact products, order comparisons, clamps and signs; no tolerance or transcendental enclosure is used.
+  test_evidence: >-
+    Independent coordinate checks and public PyTorch 2.10 comparisons cover cold and warm state, every sign branch,
+    both clamps, maximize, null and zero gradients, tensor ranks and loop/foreach/default execution.
+  error_handling: >-
+    Malformed calls are invalid_input; legal tasks outside this dense real noncapturable and nondifferentiable profile
+    receive no answer.
 decisions:
-- id: RP.MAXIMIZE
-  status: drafted
-  statement: 'The 2.10 Rprop box has no maximize line. The contract negates the gradient first (Rprop applied to -f):
-    the sign logic and g_prev use the negated gradient. Basis: the sibling boxes of the release define maximize by
-    g_t <- -grad f_t, and the reference program does the same. Alternative (ascent at the update, prev from +grad)
-    gives the same trajectory from a cold start but a different stored prev; recorded as mutant RP.M6 because it
-    stores the other sign in the state that the next step reads with the opposite convention.'
-  basis: [T_RPROP_OPT.MAXIMIZE, T_ADAM_OPT.MAXIMIZE, TS_RPROP.STEP]
-- id: RP.CLAMP
-  status: drafted
-  statement: 'Where g_prev*g_t = 0 the box keeps eta^i_{t-1}; the reference program multiplies by 1 and clamps into
-    [step_min, step_max]. They differ only when the pre-state step size lies outside the bounds (e.g. lr > step_max,
-    since eta_0 = lr). There the contract has no requirement (domain_undefined); both values are recorded as the
-    diagnostic readings box_literal and program_clamp. Inside the bounds (all tested conditions: lr = 0.01 within
-    [1e-6, 50]) both agree.'
+- id: RP.TASK
+  status: reviewed
+  statement: >-
+    Select one public PyTorch 2.10 torch.optim.Rprop step with ordered nonnegative minimum and maximum step sizes.
+    Sparse or complex values, tensor learning rates, closures, capturable or differentiable execution, internal
+    functional calls, unconventional bounds and multi-parameter orchestration are separate tasks.
+  basis: [T_RPROP_OPT.PAGE, T_RPROP_OPT.PARAMS, TS_RPROP.PAGE, TS_RPROP.ETAS_CHECK]
+- id: RP.STATE
+  status: reviewed
+  statement: >-
+    State is initialized only for a parameter with a present gradient and then contains scalar step, complete prev and
+    complete step_size. prev starts at zero and step_size starts at lr. A null gradient neither creates nor changes state.
+  basis: [T_RPROP_OPT.INIT, TS_RPROP.LAZY_STATE, TS_RPROP.NONE, TS_RPROP.STATE, TS_RPROP.STATE_KEYS]
+- id: RP.ORDER
+  status: reviewed
+  statement: >-
+    Negate the current gradient first when maximize=true, increment the step, choose a multiplicative factor from the
+    sign of prev times the processed gradient, clamp the multiplied step size, zero a sign-change gradient, update the
+    parameter by the sign only, then store the possibly zeroed processed gradient.
+  basis: [T_RPROP_OPT.SIGN_LOGIC, T_RPROP_OPT.UPDATE, T_RPROP_OPT.MAXIMIZE, TS_RPROP.STEP, TS_RPROP.STRATEGIES]
+- id: RP.ZERO_CLAMP
+  status: reviewed
+  statement: >-
+    In this versioned PyTorch execution task, every coordinate is clamped after multiplication, including a zero sign
+    product whose factor is one. This differs from the algorithm box when a loaded or newly initialized step size lies
+    outside the bounds. The profile follows the retained versioned source for the public class execution and does not
+    generalize this boundary behavior to every Rprop algorithm.
   basis: [T_RPROP_OPT.SIGN_LOGIC, TS_RPROP.STEP]
-- id: RP.ETAS
-  status: drafted
-  statement: 'etas must satisfy 0 < etaminus < 1 < etaplus (the documentation calls them decrease and increase factors;
-    the reference program raises ValueError otherwise): invalid input outside.'
-  basis: [T_RPROP_OPT.PARAMS, TS_RPROP.ETAS_CHECK]
 clauses:
-- {id: RP.C1, basis: [RP.MAXIMIZE], statement: g = -grad if maximize else grad, observes: [theta, prev, eta],
-  evidence_kind: definition}
-- {id: RP.C2, basis: [T_RPROP_OPT.SIGN_LOGIC, RP.CLAMP, RP.ETAS], statement: 'per coordinate: prev*g > 0 -> eta_new =
-    min(eta*etaplus, step_max); prev*g < 0 -> eta_new = max(eta*etaminus, step_min) and g <- 0; prev*g = 0 -> eta_new =
-    eta (inside the bounds)', observes: [eta, theta, prev], evidence_kind: definition}
-- {id: RP.C3, basis: [T_RPROP_OPT.UPDATE], statement: 'theta_new = theta_old - eta_new*sign(g); prev_new = g (zeroed
-    where the sign changed); t_new = t_old + 1', observes: [theta, prev, t], evidence_kind: definition}
-- {id: RP.C4, basis: [T_RPROP_OPT.INIT, TS_RPROP.STATE], statement: 'cold pre-state: prev = 0, eta = lr, t = 0, so the
-    first step moves every coordinate with nonzero gradient by lr', observes: [theta, eta], evidence_kind: definition}
-- {id: RP.C5, basis: [T_ZERO_GRAD.SKIP], statement: 'gradient None leaves the state unchanged; a zero gradient is a full
-    step (theta unchanged, prev set to 0, t advanced)', observes: [theta, prev, eta, t], evidence_kind: definition}
+- {id: RP.C1, basis: [RP.STATE], statement: 'With a present gradient, absent state first initializes prev_old=0, eta_old=lr and t_old=0; initialized state must contain complete prev and eta tensors and a nonnegative step.', observes: [prev, eta, t], evidence_kind: definition}
+- {id: RP.C2, basis: [T_RPROP_OPT.MAXIMIZE, RP.ORDER], statement: 'The processed current gradient is -gradient when maximize=true and gradient otherwise; this processed sign participates in both the transition and stored prev.', observes: [theta, prev, eta], evidence_kind: definition}
+- {id: RP.C3, basis: [T_RPROP_OPT.SIGN_LOGIC, RP.ORDER], statement: 'Per coordinate choose factor=etaplus when prev*g>0, etaminus when prev*g<0 and 1 when prev*g=0, then eta_new=clamp(eta_old*factor,step_min,step_max).', observes: [eta, theta, prev], evidence_kind: definition}
+- {id: RP.C4, basis: [T_RPROP_OPT.UPDATE, RP.ORDER], statement: 'When prev*g<0 set g to zero; then theta_new=theta_old-eta_new*sign(g), prev_new=g and t_new=t_old+1.', observes: [theta, prev, t], evidence_kind: definition}
+- {id: RP.C5, basis: [RP.ZERO_CLAMP], statement: 'The factor-one branch still clamps eta, including cold state with lr outside the selected bounds and loaded eta outside those bounds.', observes: [theta, eta], evidence_kind: definition}
+- {id: RP.C6, basis: [TS_RPROP.NONE, RP.STATE], statement: 'gradient=null leaves every field unchanged and does not initialize absent state; a zero gradient performs a full step, clamps eta, stores zero in prev and advances t.', observes: [theta, prev, eta, t], evidence_kind: definition}
+- {id: RP.C7, basis: [TS_RPROP.ETAS_CHECK, TS_RPROP.STRATEGIES, RP.TASK], statement: 'lr is nonnegative, 0<etaminus<1<etaplus, and foreach false/true/null selects an implementation of the same reviewed transition; this profile additionally requires ordered nonnegative step-size bounds.', observes: [theta, prev, eta, t], evidence_kind: definition}
 examples:
 - id: RP.E1
-  profile: torch210
-  clauses: [RP.C3, RP.C4]
-  input: {state: {theta: [1, 1, 1], prev: [0, 0, 0], eta: [1/100, 1/100, 1/100], t: 0}, gradient: [2, -3, 0],
-    etaminus: 1/2, etaplus: 6/5, step_min: 1/1000000, step_max: 50, maximize: false}
-  expected: {outcome: value, fields: {theta: ['99/100', '101/100', 1], prev: [2, -3, 0], eta: ['1/100', '1/100', '1/100'],
-      t: 1}}
+  profile: torch210_dense_real
+  clauses: [RP.C1, RP.C3, RP.C4]
+  input: &cold
+    state: {theta: [1, 1, 1], prev: [], eta: [], t: null}
+    gradient: [2, -3, 0]
+    dtype: f32
+    lr: 1/100
+    etaminus: 1/2
+    etaplus: 6/5
+    step_min: 1/1000000
+    step_max: 50
+    maximize: false
+  expected: {outcome: value, fields: {theta: [99/100, 101/100, 1], prev: [2, -3, 0], eta: [1/100, 1/100, 1/100], t: 1}}
 - id: RP.E2
-  profile: torch210
-  clauses: [RP.C2, RP.C3]
-  input: {state: {theta: [0, 0, 0], prev: [1, 1, 0], eta: [1/10, 1/10, 1/10], t: 3}, gradient: [2, -2, 5],
-    etaminus: 1/2, etaplus: 6/5, step_min: 1/100, step_max: 1, maximize: false}
-  expected: {outcome: value, fields: {theta: ['-3/25', 0, '-1/10'], prev: [2, 0, 5], eta: ['3/25', '1/20', '1/10'],
-      t: 4}}
-  note: Increase, decrease (gradient zeroed, no move), zero product (unchanged eta).
+  profile: torch210_dense_real
+  clauses: [RP.C3, RP.C4]
+  input: &warm
+    state: {theta: [0, 0, 0], prev: [1, 1, 0], eta: [1/10, 1/10, 1/10], t: 3}
+    gradient: [2, -2, 5]
+    dtype: f32
+    lr: 1/100
+    etaminus: 1/2
+    etaplus: 6/5
+    step_min: 1/100
+    step_max: 1
+    maximize: false
+  expected: {outcome: value, fields: {theta: [-3/25, 0, -1/10], prev: [2, 0, 5], eta: [3/25, 1/20, 1/10], t: 4}}
 - id: RP.E3
-  profile: torch210
-  clauses: [RP.C2]
-  input: {state: {theta: [0, 0], prev: [1, 1], eta: [1, 1/50], t: 1}, gradient: [1, -1], etaminus: 1/2, etaplus: 2,
-    step_min: 1/25, step_max: 3/2, maximize: false}
-  expected: {outcome: value, fields: {theta: ['-3/2', 0], prev: [1, 0], eta: ['3/2', '1/25'], t: 2}}
-  note: Both bounds bind.
+  profile: torch210_dense_real
+  clauses: [RP.C3]
+  input: {state: {theta: [0, 0], prev: [1, 1], eta: [1, 1/50], t: 1}, gradient: [1, -1], dtype: f32,
+    lr: 1/100, etaminus: 1/2, etaplus: 2, step_min: 1/25, step_max: 3/2, maximize: false}
+  expected: {outcome: value, fields: {theta: [-3/2, 0], prev: [1, 0], eta: [3/2, 1/25], t: 2}}
 - id: RP.E4
-  profile: torch210
-  clauses: [RP.C1, RP.C2, RP.C3]
-  input: {state: {theta: [0], prev: [-1], eta: [1/10], t: 2}, gradient: [1], etaminus: 1/2, etaplus: 6/5,
-    step_min: 1/1000000, step_max: 50, maximize: true}
-  expected: {outcome: value, fields: {theta: ['3/25'], prev: [-1], eta: ['3/25'], t: 3}}
+  profile: torch210_dense_real
+  clauses: [RP.C2, RP.C3, RP.C4]
+  input: {state: {theta: [0], prev: [-1], eta: [1/10], t: 2}, gradient: [1], dtype: f32,
+    lr: 1/100, etaminus: 1/2, etaplus: 6/5, step_min: 1/1000000, step_max: 50, maximize: true}
+  expected: {outcome: value, fields: {theta: [3/25], prev: [-1], eta: [3/25], t: 3}}
 - id: RP.E5
-  profile: torch210
-  clauses: [RP.C5]
-  input: {state: {theta: [1], prev: [3], eta: [1/10], t: 2}, gradient: null, etaminus: 1/2, etaplus: 6/5,
-    step_min: 1/1000000, step_max: 50, maximize: false}
-  expected: {outcome: value, fields: {theta: [1], prev: [3], eta: ['1/10'], t: 2}}
+  profile: torch210_dense_real
+  clauses: [RP.C1, RP.C6]
+  input: {<<: *cold, state: {theta: [1], prev: [], eta: [], t: null}, gradient: null}
+  expected: {outcome: value, fields: {theta: [1], prev: [], eta: [], t: null}}
 - id: RP.E6
-  profile: torch210
-  clauses: [RP.C5, RP.C2]
-  input: {state: {theta: [1], prev: [3], eta: [1/10], t: 2}, gradient: [0], etaminus: 1/2, etaplus: 6/5,
-    step_min: 1/1000000, step_max: 50, maximize: false}
-  expected: {outcome: value, fields: {theta: [1], prev: [0], eta: ['1/10'], t: 3}}
+  profile: torch210_dense_real
+  clauses: [RP.C6]
+  input: {<<: *cold, state: {theta: [1], prev: [3], eta: [1/10], t: 2}, gradient: null}
+  expected: {outcome: value, fields: {theta: [1], prev: [3], eta: [1/10], t: 2}}
 - id: RP.E7
-  profile: torch210
-  clauses: [RP.C2]
-  input: {state: {theta: [0], prev: [0], eta: [100], t: 0}, gradient: [1], etaminus: 1/2, etaplus: 6/5,
-    step_min: 1/1000000, step_max: 50, maximize: false}
-  expected: {outcome: domain_undefined}
-  readings:
-    program_clamp: {outcome: value, fields: {theta: [-50], prev: [1], eta: [50], t: 1}}
-    box_literal: {outcome: value, fields: {theta: [-100], prev: [1], eta: [100], t: 1}}
-- id: RP.N1
-  profile: torch210
-  clauses: [RP.C2]
-  input: {state: {theta: [0], prev: [0], eta: [1/100], t: 0}, gradient: [1], etaminus: 1, etaplus: 6/5,
-    step_min: 1/1000000, step_max: 50, maximize: false}
+  profile: torch210_dense_real
+  clauses: [RP.C5, RP.C6]
+  input: {<<: *cold, state: {theta: [1], prev: [3], eta: [100], t: 2}, gradient: [0], step_max: 50}
+  expected: {outcome: value, fields: {theta: [1], prev: [0], eta: [50], t: 3}}
+- id: RP.E8
+  profile: torch210_dense_real
+  clauses: [RP.C5]
+  input: {<<: *cold, state: {theta: [0], prev: [0], eta: [100], t: 0}, gradient: [1], step_max: 50}
+  expected: {outcome: value, fields: {theta: [-50], prev: [1], eta: [50], t: 1}}
+- id: RP.E9
+  profile: torch210_dense_real
+  clauses: [RP.C1, RP.C5]
+  input: {<<: *cold, state: {theta: [0], prev: [], eta: [], t: null}, gradient: [1], lr: 100, step_max: 50}
+  expected: {outcome: value, fields: {theta: [-50], prev: [1], eta: [50], t: 1}}
+- id: RP.E10
+  profile: torch210_dense_real
+  clauses: [RP.C3, RP.C4]
+  input: {state: {theta: [[1, 2], [3, 4]], prev: [[1, -1], [0, 2]], eta: [[1/10, 1/10], [1/10, 1/10]], t: 2},
+    gradient: [[2, 2], [-3, -1]], dtype: f64, lr: 1/100, etaminus: 1/2, etaplus: 3/2,
+    step_min: 1/100, step_max: 1, maximize: false}
+  expected: {outcome: value, fields: {theta: [[17/20, 2], [31/10, 4]], prev: [[2, 0], [-3, 0]], eta: [[3/20, 1/20], [1/10, 1/20]], t: 3}}
+- id: RP.E11
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *warm, foreach: true}
+  expected: {outcome: value, fields: {theta: [-3/25, 0, -1/10], prev: [2, 0, 5], eta: [3/25, 1/20, 1/10], t: 4}}
+- id: RP.E12
+  profile: torch210_dense_real
+  clauses: [RP.C1]
+  input: {<<: *cold, state: {theta: [1], prev: [], eta: [1/10], t: null}, gradient: [1]}
   expected: {outcome: invalid_input}
+- id: RP.E13
+  profile: torch210_dense_real
+  clauses: [RP.C1]
+  input: {<<: *cold, state: {theta: [1], prev: [0], eta: [-1/10], t: 0}, gradient: [1]}
+  expected: {outcome: invalid_input}
+- id: RP.E14
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, etaminus: 1}
+  expected: {outcome: invalid_input}
+- id: RP.E15
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, step_min: -1}
+  expected: {outcome: unsupported}
+- id: RP.E16
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, step_min: 2, step_max: 1}
+  expected: {outcome: unsupported}
+- id: RP.E17
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, capturable: true}
+  expected: {outcome: unsupported}
+- id: RP.E18
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, differentiable: true}
+  expected: {outcome: unsupported}
+- id: RP.E19
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, sparse: true}
+  expected: {outcome: unsupported}
+- id: RP.E20
+  profile: torch210_dense_real
+  clauses: [RP.C7]
+  input: {<<: *cold, dtype: i32}
+  expected: {outcome: unsupported}
 signature:
-  inputs: ['gradient [d] or None', etaminus, etaplus, step_min, step_max, maximize (boolean)]
-  pre_state: ['theta [d]', 'prev [d]', 'eta [d] (>= 0)', t nonnegative integer]
-  post_state: ['theta [d]', 'prev [d]', 'eta [d]', t]
-  observation_unit: one parameter tensor (flattened; element-wise update), one optimizer step
+  inputs: [complete gradient tensor or null, dtype, lr, etaminus, etaplus, step_min, step_max, maximize,
+    optional foreach/capturable/differentiable]
+  pre_state: [complete theta, 'complete prev/eta and t, or prev=eta=[] and t=null for absent state']
+  post_state: [complete theta, prev, eta and t including explicit absence]
+  observation_unit: one dense real parameter tensor and all of its optimizer state across one public Rprop step
 domain:
-  valid: [d >= 1, finite rationals, eta >= 0, '0 < etaminus < 1 < etaplus', 'step_min, step_max >= 0']
-  domain_undefined: ['zero sign product at a coordinate whose step size lies outside [step_min, step_max]']
-  invalid_input: [length mismatch, negative step size, etas out of range, NaN or infinite values, non-boolean maximize]
-  unsupported: [complex parameters, differentiable=True]
+  valid: [nonempty tensor with positive dimensions, f16/bf16/f32/f64 dtype, finite exact rational values,
+    initialized complete state or explicit absent state, lr and eta state nonnegative,
+    '0 < etaminus < 1 < etaplus', '0 <= step_min <= step_max', Boolean maximize,
+    foreach false/true/null, capturable=false, differentiable=false]
+  domain_undefined: []
+  invalid_input: [missing fields, incomplete or extra state fields, state shape mismatch, negative eta state,
+    nonfinite values, non-Boolean flags, negative lr, invalid eta multipliers]
+  unsupported: [negative or unordered step-size bounds, undeclared top-level task fields, sparse or complex gradients,
+    tensor learning rate, capturable or differentiable execution, closure and loss result, internal functional call,
+    multiple parameters or parameter groups, device rounding and layouts]
 mutation_requirements:
-- {id: RP.M1, misreading: 'g_prev stores the original gradient after a sign change (not the zeroed one)', witnesses: [
-    RP.E2]}
-- {id: RP.M2, misreading: the parameter still moves after a sign change (gradient not zeroed), witnesses: [RP.E2]}
-- {id: RP.M3, misreading: zero sign product treated as an increase, witnesses: [RP.E1, RP.E2]}
-- {id: RP.M4, misreading: step-size bounds ignored, witnesses: [RP.E3]}
-- {id: RP.M5, misreading: 'update by eta*g instead of eta*sign(g)', witnesses: [RP.E1]}
-- {id: RP.M6, misreading: 'maximize as an ascent at the update (sign logic on +grad)', witnesses: [RP.E4]}
-- {id: RP.M7, misreading: None gradient treated as zero, witnesses: [RP.E5]}
-- {id: RP.M8, misreading: step counter not advanced, witnesses: [RP.E1]}
+- {id: RP.M1, misreading: store the original processed gradient after a sign change instead of the zeroed gradient, witnesses: [RP.E2]}
+- {id: RP.M2, misreading: move the parameter after a sign change instead of zeroing the gradient, witnesses: [RP.E2]}
+- {id: RP.M3, misreading: treat a zero sign product as an increase, witnesses: [RP.E1, RP.E2]}
+- {id: RP.M4, misreading: ignore the step-size bounds, witnesses: [RP.E3]}
+- {id: RP.M5, misreading: update by eta times gradient magnitude instead of eta times its sign, witnesses: [RP.E1]}
+- {id: RP.M6, misreading: implement maximize only as ascent at the final update and store the opposite prev convention, witnesses: [RP.E4]}
+- {id: RP.M7, misreading: treat a null gradient as zero and initialize or advance state, witnesses: [RP.E5, RP.E6]}
+- {id: RP.M8, misreading: do not advance the step counter, witnesses: [RP.E1]}
+- {id: RP.M9, misreading: follow the box literally and skip clamp on a zero sign product, witnesses: [RP.E7, RP.E8]}
+- {id: RP.M10, misreading: initialize step_size to zero rather than lr, witnesses: [RP.E1, RP.E9]}
 nonclaims:
-- Device rounding is not judged here (K - f); the step is exact in rationals, so any difference of a device step on
-  exactly representable inputs is a rounding of the products eta*etaplus / eta*etaminus or a semantic difference.
-- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+- The zero-product clamp is a versioned PyTorch execution choice. The contract does not claim every Rprop description or implementation makes the same choice.
+- Public PyTorch accepts some negative or unordered step-size bound tuples; their resulting clamp behavior is outside this reviewed conventional profile rather than silently normalized.
+- Device rounding is measured separately as K-f and is not built into the exact-real task.
+- Rejected mutants witness listed mistakes only and do not prove completeness.
 changes: []

@@ -1,0 +1,225 @@
+schema_version: '1.2'
+id: ROPE
+role: ROPE
+title: Exact Transformers 4.57.3 Llama rotate-half application and q/k VJP
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Versioned Llama apply_rotary_pos_emb on complete rank-4 q/k tensors with supplied tables and q/k VJPs
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [transformers.models.llama.modeling_llama.apply_rotary_pos_emb]
+profiles:
+  hf4573_llama_tables_real:
+    meaning: >-
+      Transformers 4.57.3 Llama apply_rotary_pos_emb for finite nonempty q [B,Hq,L,D] and k [B,Hk,L,D], supplied
+      finite cos/sin [B,L,D], unsqueeze_dim=1 and deprecated position_ids=null, together with the complete VJP with
+      respect to q and k for explicit same-shape upstream tensors. D is even and all tensors share one of
+      f16, bf16, f32 or f64. The tables are received inputs and need not have equal halves or lie on the unit circle.
+    task_choice_required: false
+    basis: [RO.TASK, RO.FORWARD, RO.VJP]
+outputs:
+  q_out: {shape: 'complete q shape [B,Hq,L,D]', guarantee: exact}
+  k_out: {shape: 'complete k shape [B,Hk,L,D]', guarantee: exact}
+  dq: {shape: 'complete q shape [B,Hq,L,D]', guarantee: exact}
+  dk: {shape: 'complete k shape [B,Hk,L,D]', guarantee: exact}
+comparison:
+  input_binding: >-
+    q, k, cos, sin and both upstream tensors are the exact finite physical values received in their declared common
+    dtype. The selected public arguments position_ids=null and unsqueeze_dim=1 are explicit.
+  complete_output: Both complete returned tensors and both complete q/k VJPs are required.
+  quality: Exact real products and sums on supplied table values; no tolerance and no trigonometric reconstruction.
+  test_evidence: >-
+    Independent coordinate construction, PyTorch autograd checks and the installed Transformers 4.57.6 implementation
+    cover all four dtypes, different q/k head counts, multiple batches and tokens, unequal table halves and complete
+    output checking. The retained 4.57.3 and installed 4.57.6 function bodies are the same for this selected task.
+  error_handling: >-
+    Malformed records, odd width and incompatible shapes are invalid_input. Other RoPE layouts, table generation,
+    partial rotation and other broadcast axes receive no answer.
+decisions:
+- id: RO.TASK
+  status: reviewed
+  statement: >-
+    Select only the versioned Llama apply_rotary_pos_emb function with supplied tables, rank-4 [B,H,L,D] q/k and
+    unsqueeze_dim=1. RoPE table generation, position-id lookup, partial rotation, interleaved layouts, other model
+    families and optimized implementations with extra table assumptions are separate tasks.
+  basis: [HF_LLAMA.APPLY, HF_LLAMA.ROTATE_HALF]
+- id: RO.FORWARD
+  status: reviewed
+  statement: >-
+    Split the last dimension into equal first and second halves. For each pair p=i and s=i+D/2, the source formula
+    gives out[p]=x[p]*cos[p]-x[s]*sin[p] and out[s]=x[s]*cos[s]+x[p]*sin[s]. Tables [B,L,D] broadcast across every
+    q or k head after unsqueeze at dimension 1. The same rule is applied independently to q and k.
+  basis: [HF_LLAMA.ROTATE_HALF, HF_LLAMA.APPLY]
+- id: RO.TABLES
+  status: reviewed
+  statement: >-
+    apply_rotary_pos_emb consumes the supplied cos and sin tensors directly. Equal table halves follow from the
+    usual LlamaRotaryEmbedding producer, but are not a precondition of this function. The selected task therefore
+    preserves every received table coordinate and does not replace the second half by the first.
+  basis: [HF_LLAMA.APPLY, HF_LLAMA.TABLES]
+- id: RO.VJP
+  status: reviewed
+  statement: >-
+    Tables are constants in this selected VJP. For each pair, dq[p]=g[p]*cos[p]+g[s]*sin[s] and
+    dq[s]=-g[p]*sin[p]+g[s]*cos[s], with the same formula for dk. This is the transpose of the exact linear map even
+    when the received table halves differ.
+  basis: [HF_LLAMA.ROTATE_HALF, HF_LLAMA.APPLY]
+clauses:
+- {id: RO.C1, basis: [RO.TASK], statement: 'The task receives complete finite same-dtype q, k, cos, sin and q/k upstream tensors, position_ids=null and unsqueeze_dim=1.', observes: [q_out, k_out, dq, dk], evidence_kind: definition}
+- {id: RO.C2, basis: [RO.FORWARD], statement: 'rotate_half pairs i with i+D/2 and q_out=q*cos+rotate_half(q)*sin at every complete coordinate.', observes: [q_out], evidence_kind: definition}
+- {id: RO.C3, basis: [RO.FORWARD], statement: 'The same complete formula is applied independently to k, including when Hk differs from Hq.', observes: [k_out], evidence_kind: definition}
+- {id: RO.C4, basis: [RO.FORWARD], statement: 'cos/sin [B,L,D] use the corresponding batch and token and broadcast across every head.', observes: [q_out, k_out], evidence_kind: definition}
+- {id: RO.C5, basis: [RO.TABLES], statement: 'Every supplied table coordinate is used; unequal first and second table halves remain valid and observable.', observes: [q_out, k_out, dq, dk], evidence_kind: definition}
+- {id: RO.C6, basis: [RO.VJP], statement: 'dq and dk are the complete transpose-map VJPs for the explicit upstream_q and upstream_k, with cos/sin treated as constants.', observes: [dq, dk], evidence_kind: derived}
+- {id: RO.C7, basis: [RO.TASK], statement: 'All six tensor inputs are read-only and all four promised outputs are complete.', observes: [q_out, k_out, dq, dk], evidence_kind: definition}
+examples:
+- id: RO.E1
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1, RO.C2, RO.C3, RO.C5, RO.C6, RO.C7]
+  input: &base
+    q: [[[[1, 2, 3, 4]]]]
+    k: [[[[5, 6, 7, 8]]]]
+    cos: [[[1, 2, 3, 4]]]
+    sin: [[[5, 6, 7, 8]]]
+    upstream_q: [[[[1, 2, 3, 4]]]]
+    upstream_k: [[[[4, 3, 2, 1]]]]
+    dtype: f64
+    position_ids: null
+    unsqueeze_dim: 1
+  expected:
+    outcome: value
+    fields:
+      q_out: [[[[-14, -20, 16, 32]]]]
+      k_out: [[[[-30, -36, 56, 80]]]]
+      dq: [[[[22, 36, 4, 4]]]]
+      dk: [[[[18, 14, -14, -14]]]]
+- id: RO.E2
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C2, RO.C3, RO.C6]
+  input: {<<: *base, cos: [[[0, 0, 0, 0]]], sin: [[[1, 1, 1, 1]]]}
+  expected: {outcome: value, fields: {q_out: [[[[-3, -4, 1, 2]]]], k_out: [[[[-7, -8, 5, 6]]]], dq: [[[[3, 4, -1, -2]]]], dk: [[[[2, 1, -4, -3]]]]}}
+- id: RO.E3
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C3, RO.C4]
+  input:
+    <<: *base
+    q: [[[[1, 2]], [[3, 4]]]]
+    k: [[[[5, 6]]]]
+    cos: [[[1, 1]]]
+    sin: [[[0, 0]]]
+    upstream_q: [[[[7, 8]], [[9, 10]]]]
+    upstream_k: [[[[11, 12]]]]
+  expected: {outcome: value, fields: {q_out: [[[[1, 2]], [[3, 4]]]], k_out: [[[[5, 6]]]], dq: [[[[7, 8]], [[9, 10]]]], dk: [[[[11, 12]]]]}}
+- id: RO.E4
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C4]
+  input:
+    <<: *base
+    q: [[[[1, 2]]], [[[3, 4]]]]
+    k: [[[[5, 6]]], [[[7, 8]]]]
+    cos: [[[1, 1]], [[0, 0]]]
+    sin: [[[0, 0]], [[1, 1]]]
+    upstream_q: [[[[5, 6]]], [[[7, 8]]]]
+    upstream_k: [[[[9, 10]]], [[[11, 12]]]]
+  expected: {outcome: value, fields: {q_out: [[[[1, 2]]], [[[-4, 3]]]], k_out: [[[[5, 6]]], [[[-8, 7]]]], dq: [[[[5, 6]]], [[[8, -7]]]], dk: [[[[9, 10]]], [[[12, -11]]]]}}
+- id: RO.E5
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, q: [[[[1/2, -1/4]]]], k: [[[[1/4, 1/2]]]], cos: [[[1/2, 1/4]]], sin: [[[1/4, 1/2]]], upstream_q: [[[[1/2, 1/4]]]], upstream_k: [[[[1/4, 1/2]]]], dtype: f16}
+  expected: {outcome: value, fields: {q_out: [[[[5/16, 3/16]]]], k_out: [[[[0, 1/4]]]], dq: [[[[3/8, -1/16]]]], dk: [[[[3/8, 1/16]]]]}}
+- id: RO.E6
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C4]
+  input:
+    <<: *base
+    q: [[[[1, 0], [2, 0]]]]
+    k: [[[[0, 1], [0, 2]]]]
+    cos: [[[1, 1], [0, 0]]]
+    sin: [[[0, 0], [1, 1]]]
+    upstream_q: [[[[1, 1], [2, 3]]]]
+    upstream_k: [[[[4, 5], [6, 7]]]]
+  expected: {outcome: value, fields: {q_out: [[[[1, 0], [0, 2]]]], k_out: [[[[0, 1], [-2, 0]]]], dq: [[[[1, 1], [3, -2]]]], dk: [[[[4, 5], [7, -6]]]]}}
+- id: RO.E7
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, q: [[[[1, 2, 3]]]], k: [[[[4, 5, 6]]]], cos: [[[1, 1, 1]]], sin: [[[0, 0, 0]]], upstream_q: [[[[1, 1, 1]]]], upstream_k: [[[[1, 1, 1]]]]}
+  expected: {outcome: invalid_input}
+- id: RO.E8
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, k: [[[[5, 6, 7, 8]]], [[[1, 2, 3, 4]]]]}
+  expected: {outcome: invalid_input}
+- id: RO.E9
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, cos: [[[1, 2]]]}
+  expected: {outcome: invalid_input}
+- id: RO.E10
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, upstream_q: [[[[1, 2]]]]}
+  expected: {outcome: invalid_input}
+- id: RO.E11
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, q: [[[['1/3', 2, 3, 4]]]], dtype: f32}
+  expected: {outcome: invalid_input}
+- id: RO.E12
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, sin: [[[inf, 6, 7, 8]]]}
+  expected: {outcome: unsupported}
+- id: RO.E13
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, dtype: i32}
+  expected: {outcome: unsupported}
+- id: RO.E14
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, unsqueeze_dim: 2}
+  expected: {outcome: unsupported}
+- id: RO.E15
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, position_ids: [[0]]}
+  expected: {outcome: unsupported}
+- id: RO.E16
+  profile: hf4573_llama_tables_real
+  clauses: [RO.C1]
+  input: {<<: *base, rotary_dim: 2}
+  expected: {outcome: unsupported}
+signature:
+  inputs: [complete physical q, k, cos, sin, upstream_q and upstream_k, common dtype, null position_ids, unsqueeze_dim 1]
+  pre_state: [all six tensor inputs are unchanged]
+  post_state: [complete q_out, k_out, dq and dk]
+  observation_unit: every coordinate of all four outputs together with dtype and shape
+domain:
+  valid: [finite physical f16/bf16/f32/f64 tensors, positive rank-4 dimensions, even head dimension, compatible q/k and table shapes, null position_ids, unsqueeze_dim 1]
+  invalid_input: [malformed records, ragged or incompatible shapes, odd head dimension, values not exactly represented by the declared dtype]
+  unsupported: [table generation, nonnull position_ids, another broadcast axis, partial rotation, interleaved or other model layouts, special or complex values, integer tensors, gradients for cos/sin, layout and alias effects]
+mutation_requirements:
+- {id: RO.M1, misreading: use adjacent interleaved pairs instead of first-half to second-half pairs, witnesses: [RO.E1]}
+- {id: RO.M2, misreading: replace the received second table half by the first half, witnesses: [RO.E1]}
+- {id: RO.M3, misreading: apply the forward map instead of its transpose in the q/k VJP, witnesses: [RO.E2]}
+- {id: RO.M4, misreading: use the opposite sine sign in the forward map, witnesses: [RO.E2]}
+- {id: RO.M5, misreading: rotate q but leave k and its gradient unchanged, witnesses: [RO.E2]}
+- {id: RO.M6, misreading: broadcast batch zero tables to every batch, witnesses: [RO.E4]}
+nonclaims:
+- The profile defines exactly the retained Transformers 4.57.3 Llama table-application function, not every operation called RoPE.
+- It makes no claim about how cos/sin were generated, their numerical accuracy, partial dimensions, cache positions, interleaved layouts or optimized kernels with stricter table assumptions.
+- Exact real arithmetic is the task target; device rounding and fused multiply-add behavior are measured separately.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace five mixed model, layout and table-generation profiles with one reviewed versioned Llama supplied-table
+    application and complete q/k VJP. Preserve the broader former contract and adapter under contracts/draft.
+  trigger: >-
+    The former draft treated an optimized implementation's equal-half table requirement as if it were a precondition
+    of the Transformers function and combined several different tasks under one role name.

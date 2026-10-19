@@ -1,156 +1,192 @@
 schema_version: '1.2'
 id: BSR
 role: SPARSE_BSR
-title: Block-sparse (BSR) matrix product, softmax and sampled addmm (torch.sparse Triton operations), real-number semantics
+title: PyTorch 2.10 Triton BSR softmax value core
 review:
-  status: drafted
-  author: Claude (spec v3 author, group D2_special), 2026-10-17
-  date: '2026-10-17'
-  scope: Results of one bsr_dense_mm, bsr_softmax or sampled_addmm call on a 2-D BSR matrix; awaiting a review by someone who
-    did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Two-dimensional finite BSR value softmax with a canonical fixed pattern and no batch or hybrid dimensions
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers:
-- torch.sparse._triton_ops.bsr_dense_mm (2-D, no batch dimensions)
-- torch.sparse._triton_ops.bsr_softmax (2-D)
-- torch.sparse._triton_ops.sampled_addmm (2-D BSR input, alpha, beta)
+- The complete values computation performed by torch.sparse._triton_ops.bsr_softmax in PyTorch 2.10 for one 2-D BSR tensor
 profiles:
-  torch_sparse:
-    meaning: The BSR matrix is its dense matrix with unspecified elements 0 (products) or absent (softmax, as -inf); the
-      specified elements are all elements of the specified blocks, explicit zeros included.
+  torch210_bsr_softmax_values_real:
+    meaning: >-
+      For a finite two-dimensional BSR tensor with canonical increasing column-block indices, apply softmax separately
+      to each scalar matrix row over every scalar value in its specified blocks. Explicit zeros inside specified
+      blocks participate; unspecified entries do not. Return the complete value buffer in the input BSR block order.
     task_choice_required: false
+    basis: [BS.TASK, BS.SPARSE, BS.NORM]
 outputs:
-  out:
-    shape: 'bsr_dense_mm: [M][n] dense; bsr_softmax and sampled_addmm: values [nnz][R][C] on the input''s pattern'
-    guarantee: rigorous_enclosure
+  out: {shape: 'complete BSR values [nnz_blocks,R,C] in input block order', guarantee: rigorous_enclosure}
 comparison:
-  input_binding: Block values, dense operands, alpha and beta are the exact values received.
-  quality: No tolerance; products are exact, softmax values are rigorous enclosures (exact when a row is constant).
-  test_evidence: Exact rational equality or containment of the expected formula's enclosure.
-  error_handling: Malformed BSR structure and incompatible shapes are invalid_input.
+  input_binding: >-
+    shape, blocksize, crow and col identify the exact canonical BSR pattern; values are the exact finite physical
+    f16, bf16 or f32 values received by the values-computation region.
+  complete_output: Every scalar in the result value buffer is required, including stored explicit zeros after softmax.
+  quality: Exact real softmax with rigorous exponential, sum and quotient enclosures.
+  test_evidence: >-
+    Independent 768-bit Arb evaluation and public PyTorch dense softmax formulas cover three physical dtypes, empty
+    rows, multiple blocks per row, explicit zeros, complete output checking and rejected structures. The retained and
+    installed PyTorch 2.10 bsr_softmax function bodies agree, and the installed Triton function was checked on GPU.
+  error_handling: >-
+    Missing fields, malformed canonical BSR structures and values not represented by the declared dtype are
+    invalid_input. Special values, other dtypes and other sparse tasks are unsupported.
 decisions:
-- id: BS.SPECIFIED
-  status: drafted
-  statement: 'The sparse documentation calls the stored elements "specified", with block layouts specifying whole blocks, and
-    unspecified elements take the fill value 0. sampled_addmm''s page writes spy(input) as "1 where input has non-zero values";
-    for a sparse input this is read as the specified pattern, which is what the Triton implementation computes (every element
-    of every specified block, explicit zeros included). The literal numeric reading (explicit zeros excluded) is kept as the
-    diagnostic reading nonzero_pattern; the two differ only at explicit zeros inside specified blocks. bsr_softmax normalises
-    over the specified elements of each row (torch.sparse.softmax: unspecified entries are ignored, as -inf), explicit zeros
-    included (exp(0) = 1).'
-  basis: [T_SPARSE.SPECIFIED, T_SPARSE.BLOCK, T_SPARSE_SAMPLED_ADDMM.SPY, T_SPARSE_SOFTMAX.DEF, TS_SPARSE_TRITON.SAMPLED,
-    TS_SPARSE_TRITON.SOFTMAX]
-- id: BS.API_LIMITS
-  status: drafted
-  statement: The Triton entry points admit only some calls (bsr_dense_mm checks power-of-two block sizes >= 16 and
-    dense.size(-1) divisible by 16, half / bfloat16 / float32 dtypes, CUDA tensors). These are admission conditions of that
-    implementation, not part of the mathematical result; f is stated for any consistent BSR matrix, and agrees with every call
-    the implementation accepts. A call the implementation rejects produces no output to judge.
-  basis: [TS_SPARSE_TRITON.DENSE_MM]
-- id: BS.BETA0
-  status: drafted
-  statement: 'With beta = 0 the Triton kernel does not read the input values (IS_BETA_ZERO); for the finite real inputs of this
-    contract beta * v = 0 anyway, so f = alpha * (mat1 @ mat2) on the pattern. Non-finite input values are outside the contract.'
-  basis: [TS_SPARSE_TRITON.SAMPLED, T_SPARSE_SAMPLED_ADDMM.DEF]
+- id: BS.TASK
+  status: reviewed
+  statement: >-
+    The selected task is only the complete values computation of PyTorch 2.10 bsr_softmax on one 2-D BSR tensor.
+    Sparse tensor allocation and index copying, batched or hybrid layouts, BSR matrix products and sampled_addmm are
+    separate tasks and are not inferred from the BSR role name.
+  basis: [TS_SPARSE_TRITON.SOFTMAX]
+- id: BS.SPARSE
+  status: reviewed
+  statement: >-
+    A specified BSR block contains all R by C scalar values, including numeric zeros. Unspecified entries use the
+    sparse fill value and are absent from sparse softmax. crow identifies the block-row ranges and col fixes the
+    preserved canonical block order.
+  basis: [T_SPARSE.BSR, T_SPARSE.BLOCK, T_SPARSE.SPECIFIED, T_SPARSE_SOFTMAX.DEF]
+- id: BS.NORM
+  status: reviewed
+  statement: >-
+    For each scalar row within a block row, PyTorch 2.10 bsr_softmax jointly normalises all C values from every
+    specified block in that block row. The implementation converts them to float32 for execution; the contract uses
+    the corresponding exact real softmax as f and measures device rounding separately.
+  basis: [TS_SPARSE_TRITON.SOFTMAX, T_SPARSE_SOFTMAX.DEF]
 clauses:
-- {id: BS.C1, basis: [T_SPARSE.BSR, T_SPARSE.SPECIFIED], statement: 'dense(A): block e of block row r with column block c occupies
-    rows r*R .. r*R+R-1, columns c*C .. c*C+C-1; other elements are 0', observes: [out], evidence_kind: definition}
-- {id: BS.C2, basis: [TS_SPARSE_TRITON.DENSE_MM, BS.API_LIMITS], statement: 'bsr_dense_mm(A, B) = dense(A) @ B (zeros when A has no
-    specified block)', observes: [out], evidence_kind: definition}
-- {id: BS.C3, basis: [T_SPARSE_SOFTMAX.DEF, TS_SPARSE_TRITON.SOFTMAX, BS.SPECIFIED], statement: 'bsr_softmax: each matrix row is
-    normalised over all specified elements of that row (all blocks of its block row, explicit zeros included); rows without
-    specified blocks have no values', observes: [out], evidence_kind: definition}
-- {id: BS.C4, basis: [T_SPARSE_SAMPLED_ADDMM.DEF, TS_SPARSE_TRITON.SAMPLED, BS.SPECIFIED], statement: 'sampled_addmm: value at a
-    specified element (i, j) = alpha (mat1 @ mat2)[i][j] + beta * input[i][j]', observes: [out], evidence_kind: definition}
-- {id: BS.C5, basis: [BS.BETA0], statement: 'beta = 0: the input values do not contribute', observes: [out], evidence_kind: definition}
-- {id: BS.C6, basis: [T_SPARSE.BSR], statement: 'crow / col / values inconsistent with shape and block size, or column blocks out of
-    range or not increasing in a block row, are invalid_input; so are incompatible operand shapes', observes: [out], evidence_kind: definition}
+- {id: BS.C1, basis: [BS.TASK, BS.SPARSE], statement: 'The task receives one complete canonical 2-D BSR pattern and finite physical value buffer and returns a complete value buffer with the same [nnz_blocks,R,C] order.', observes: [out], evidence_kind: definition}
+- {id: BS.C2, basis: [BS.SPARSE], statement: 'Every scalar in a specified block participates, including explicit zero values; unspecified matrix entries do not participate.', observes: [out], evidence_kind: definition}
+- {id: BS.C3, basis: [BS.NORM], statement: 'For each block row br and scalar row i, out[e,i,j] equals exp(values[e,i,j]) divided by the sum over all blocks e in crow[br]:crow[br+1] and all j in that block row.', observes: [out], evidence_kind: definition}
+- {id: BS.C4, basis: [BS.SPARSE], statement: 'An empty block row has no output values; an entirely empty BSR value buffer returns the empty value buffer.', observes: [out], evidence_kind: definition}
+- {id: BS.C5, basis: [BS.TASK], statement: 'The input pattern and values are read-only for the selected values-computation task.', observes: [out], evidence_kind: definition}
 examples:
 - id: BS.E1
-  profile: torch_sparse
-  clauses: [BS.C1, BS.C2]
-  input: {op: bsr_dense_mm, bsr: {shape: [2, 4], blocksize: [2, 2], crow: [0, 1], col: [1], values: [[[1, 2], [3, 4]]]}, dense: [
-      [1], [1], [1], [2]]}
-  expected: {outcome: value, fields: {out: [[5], [11]]}}
-  note: dense(A) = [[0, 0, 1, 2], [0, 0, 3, 4]]
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1, BS.C2, BS.C3, BS.C5]
+  input: &base
+    shape: [2, 4]
+    blocksize: [1, 2]
+    crow: [0, 2, 3]
+    col: [0, 1, 1]
+    values: [[[0, 1]], [[1, 0]], [[5, 5]]]
+    dtype: f32
+  expected:
+    outcome: value
+    fields:
+      out: [[[1/(2 + 2*exp(1)), exp(1)/(2 + 2*exp(1))]], [[exp(1)/(2 + 2*exp(1)), 1/(2 + 2*exp(1))]], [['1/2', '1/2']]]
 - id: BS.E2
-  profile: torch_sparse
-  clauses: [BS.C2]
-  input: {op: bsr_dense_mm, bsr: {shape: [2, 4], blocksize: [2, 2], crow: [0, 0], col: [], values: []}, dense: [[1], [1], [1], [2]]}
-  expected: {outcome: value, fields: {out: [[0], [0]]}}
-- id: BS.E3
-  profile: torch_sparse
+  profile: torch210_bsr_softmax_values_real
   clauses: [BS.C3]
-  input: {op: bsr_softmax, bsr: {shape: [2, 4], blocksize: [1, 2], crow: [0, 2, 3], col: [0, 1, 1], values: [[[0, 1]], [[1, 0]],
-        [[5, 5]]]}}
-  expected: {outcome: value, fields: {out: [[[1/(2 + 2*exp(1)), exp(1)/(2 + 2*exp(1))]], [[exp(1)/(2 + 2*exp(1)), 1/(2 + 2*exp(1))]],
-        [['1/2', '1/2']]]}}
-  note: 'row 0 = (0, 1, 1, 0) over two blocks (explicit zeros count); row 1 has only block column 1: (5, 5) gives 1/2 each'
+  input: {shape: [2, 2], blocksize: [2, 2], crow: [0, 1], col: [0], values: [[[0, 1], [2, 0]]], dtype: f32}
+  expected:
+    outcome: value
+    fields:
+      out: [[[1/(1 + exp(1)), exp(1)/(1 + exp(1))], [exp(2)/(1 + exp(2)), 1/(1 + exp(2))]]]
+- id: BS.E3
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C3]
+  input: {shape: [2, 2], blocksize: [2, 1], crow: [0, 2], col: [0, 1], values: [[[0], [2]], [[1], [0]]], dtype: f32}
+  expected:
+    outcome: value
+    fields:
+      out: [[[1/(1 + exp(1))], [exp(2)/(1 + exp(2))]], [[exp(1)/(1 + exp(1))], [1/(1 + exp(2))]]]
 - id: BS.E4
-  profile: torch_sparse
+  profile: torch210_bsr_softmax_values_real
   clauses: [BS.C4]
-  input: {op: sampled_addmm, bsr: {shape: [2, 2], blocksize: [1, 1], crow: [0, 1, 2], col: [1, 0], values: [[[3]], [[0]]]}, mat1: [
-      [1, 2], [3, 4]], mat2: [[1, 0], [0, 1]], alpha: 2, beta: '1/2'}
-  expected: {outcome: value, fields: {out: [[['11/2']], [[6]]]}}
-  readings: {nonzero_pattern: {outcome: value, fields: {out: [[['11/2']], [[0]]]}}}
-  note: '(0, 1): 2*2 + 3/2; (1, 0) is an explicit zero: 2*3 + 0'
+  input: {shape: [4, 4], blocksize: [2, 2], crow: [0, 0, 0], col: [], values: [], dtype: f32}
+  expected: {outcome: value, fields: {out: []}}
 - id: BS.E5
-  profile: torch_sparse
-  clauses: [BS.C5, BS.C4]
-  input: {op: sampled_addmm, bsr: {shape: [2, 2], blocksize: [2, 2], crow: [0, 1], col: [0], values: [[[9, 9], [9, 9]]]}, mat1: [[
-        1, 0], [0, 1]], mat2: [[1, 2], [3, 4]], alpha: 1, beta: 0}
-  expected: {outcome: value, fields: {out: [[[1, 2], [3, 4]]]}}
-  note: the tested demo configuration (alpha = 1, beta = 0)
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {shape: [1, 2], blocksize: [1, 2], crow: [0, 1], col: [0], values: [[[0, 0]]], dtype: f16}
+  expected: {outcome: value, fields: {out: [[['1/2', '1/2']]]}}
 - id: BS.E6
-  profile: torch_sparse
-  clauses: [BS.C6]
-  input: {op: bsr_dense_mm, bsr: {shape: [2, 4], blocksize: [2, 2], crow: [0, 1], col: [2], values: [[[1, 2], [3, 4]]]}, dense: [
-      [1], [1], [1], [2]]}
-  expected: {outcome: invalid_input}
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {shape: [1, 2], blocksize: [1, 1], crow: [0, 2], col: [0, 1], values: [[[1]], [[1]]], dtype: bf16}
+  expected: {outcome: value, fields: {out: [[['1/2']], [['1/2']]]}}
 - id: BS.E7
-  profile: torch_sparse
-  clauses: [BS.C6]
-  input: {op: bsr_softmax, bsr: {shape: [3, 4], blocksize: [2, 2], crow: [0, 0], col: [], values: []}}
-  expected: {outcome: invalid_input}
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C3]
+  input: {shape: [1, 3], blocksize: [1, 1], crow: [0, 2], col: [0, 2], values: [[[-1]], [[1]]], dtype: f32}
+  expected: {outcome: value, fields: {out: [[[1/(1 + exp(2))]], [[exp(2)/(1 + exp(2))]]]}}
 - id: BS.E8
-  profile: torch_sparse
-  clauses: [BS.C6]
-  input: {op: bsr_dense_mm, bsr: {shape: [2, 4], blocksize: [2, 2], crow: [0, 1], col: [1], values: [[[1, 2], [3, 4]]]}, dense: [
-      [1], [1], [1]]}
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, shape: [3, 4]}
   expected: {outcome: invalid_input}
 - id: BS.E9
-  profile: torch_sparse
-  clauses: [BS.C3]
-  input: {op: bsr_softmax, bsr: {shape: [2, 2], blocksize: [1, 1], crow: [0, 0, 0], col: [], values: []}}
-  expected: {outcome: value, fields: {out: []}}
-readings:
-  nonzero_pattern:
-    meaning: sampled_addmm with spy(input) read as the numerically non-zero entries (explicit zeros excluded from the product).
-    basis: [T_SPARSE_SAMPLED_ADDMM.SPY]
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, crow: [0, 3]}
+  expected: {outcome: invalid_input}
+- id: BS.E10
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, col: [0, 2, 1]}
+  expected: {outcome: invalid_input}
+- id: BS.E11
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, col: [0, 0, 1]}
+  expected: {outcome: invalid_input}
+- id: BS.E12
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, values: [[[0, 1]], [[1, 0]]]}
+  expected: {outcome: invalid_input}
+- id: BS.E13
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, values: [[['1/3', 1]], [[1, 0]], [[5, 5]]]}
+  expected: {outcome: invalid_input}
+- id: BS.E14
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, values: [[[inf, 1]], [[1, 0]], [[5, 5]]]}
+  expected: {outcome: unsupported}
+- id: BS.E15
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, dtype: f64}
+  expected: {outcome: unsupported}
+- id: BS.E16
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, op: bsr_softmax}
+  expected: {outcome: unsupported}
 signature:
-  inputs: ['op: bsr_dense_mm | bsr_softmax | sampled_addmm', 'bsr {shape [M, N], blocksize [R, C], crow, col, values [nnz][R][C]}',
-    'dense [N][n] (mm); mat1 [M][k], mat2 [k][N], alpha, beta (sampled_addmm)']
-  pre_state: []
-  post_state: []
-  observation_unit: the result of one call
+  inputs: ['shape [M,N]', 'blocksize [R,C]', 'canonical crow and col', 'complete physical values [nnz_blocks,R,C]', dtype]
+  pre_state: [shape, blocksize, crow, col and values unchanged]
+  post_state: [complete softmax value buffer in input BSR block order]
+  observation_unit: every scalar of the complete result value buffer together with dtype and shape
 domain:
-  valid: [consistent 2-D BSR structure with rational values, compatible operand shapes]
-  domain_undefined: []
-  invalid_input: [malformed crow / col / values, block size not dividing the shape, incompatible operands]
-  unsupported: []
+  valid: [positive 2-D shape divisible by positive blocksize, canonical BSR pattern, finite physical f16/bf16/f32 values]
+  invalid_input: [missing or extra required records, malformed crow or col, duplicate or unordered column blocks, incompatible values shape, values not exactly represented by dtype]
+  unsupported: [special or complex values, other dtypes, batch or hybrid BSR, full sparse tensor allocation, matrix products, sampled_addmm, gradients, layout and alias effects]
 mutation_requirements:
-- {id: BS.M1, misreading: column block index ignored (blocks placed by their position in the row), witnesses: [BS.E1]}
-- {id: BS.M2, misreading: softmax normalised per block instead of per matrix row, witnesses: [BS.E3]}
-- {id: BS.M3, misreading: softmax over the dense row (unspecified elements as 0), witnesses: [BS.E3]}
-- {id: BS.M4, misreading: explicit zeros inside specified blocks excluded from the softmax, witnesses: [BS.E3]}
-- {id: BS.M5, misreading: beta * input dropped, witnesses: [BS.E4]}
-- {id: BS.M6, misreading: alpha ignored, witnesses: [BS.E4]}
-- {id: BS.M7, misreading: product sampled at the transposed position, witnesses: [BS.E4]}
+- {id: BS.M1, misreading: normalise each specified block separately, witnesses: [BS.E1]}
+- {id: BS.M2, misreading: include unspecified entries as numeric zeros in the denominator, witnesses: [BS.E1, BS.E7]}
+- {id: BS.M3, misreading: exclude explicit zero values inside specified blocks, witnesses: [BS.E1, BS.E2]}
+- {id: BS.M4, misreading: normalise all scalar rows of a block row together, witnesses: [BS.E2, BS.E3]}
+- {id: BS.M5, misreading: normalise each block column position independently across blocks, witnesses: [BS.E1]}
+- {id: BS.M6, misreading: apply sigmoid independently instead of softmax, witnesses: [BS.E1]}
 nonclaims:
-- bsr_dense_mm and bsr_softmax are private torch functions without a documentation page; their clauses rest on the torch 2.10
-  source (reference program) together with the documented sparse semantics.
-- Batch dimensions, hybrid (dense-dimension) BSR tensors and the implementation's admission checks are not modelled.
-changes: []
+- The profile certifies one PyTorch 2.10 private Triton values-computation task, not every operation called BSR or sparse softmax.
+- It does not certify sparse tensor allocation, copied indices, batches, hybrid sparse tensors, matrix multiplication, sampled_addmm, gradients, special values, storage or alias behavior.
+- Exact real softmax is the task target; the implementation's float32 conversion, exponent approximation, reduction order and output cast are measured separately.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace one profile that combined bsr_dense_mm, bsr_softmax and sampled_addmm with a reviewed values-only
+    PyTorch 2.10 bsr_softmax task. Preserve the broader former contract and adapter under contracts/draft.
+  trigger: >-
+    The former sampled_addmm profile depended on a disputed reading of spy(input), while the three calls have
+    different inputs, outputs and implementation restrictions and cannot be selected from a BSR family name.

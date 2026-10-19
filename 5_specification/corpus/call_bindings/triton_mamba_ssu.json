@@ -1,0 +1,52 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.mamba_ssu.f32.b8.h4.d32.n8.g2.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 Mamba selective state update",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with one Triton program per batch row and head; every y and state coordinate is read or written",
+    "measure_call": "../calls/triton_mamba_ssu.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "complete_selective_state_update",
+      "contract": "SSU",
+      "profile": "mamba232_real",
+      "task_statement": "Apply the complete mamba-ssm 2.3.2.post1 selective state update to finite contiguous float32 tensors with shape B=8,H=4,D=32,N=8,G=2, supplied D, z and dt_bias, torch-threshold softplus, no state remapping, and return y plus the complete state post-state.",
+      "input_map": [
+        {"target": "/state", "source": "/tensor_arguments/state/before", "conversion": "tensor_values"},
+        {"target": "/x", "source": "/tensor_arguments/x/before", "conversion": "tensor_values"},
+        {"target": "/dt", "source": "/tensor_arguments/dt/before", "conversion": "tensor_values"},
+        {"target": "/A", "source": "/tensor_arguments/A/before", "conversion": "tensor_values"},
+        {"target": "/B", "source": "/tensor_arguments/B/before", "conversion": "tensor_values"},
+        {"target": "/C", "source": "/tensor_arguments/C/before", "conversion": "tensor_values"},
+        {"target": "/D", "source": "/tensor_arguments/D/before", "conversion": "tensor_values"},
+        {"target": "/z", "source": "/tensor_arguments/z/before", "conversion": "tensor_values"},
+        {"target": "/dt_bias", "source": "/tensor_arguments/dt_bias/before", "conversion": "tensor_values"},
+        {"target": "/dt_softplus", "literal": true, "basis": "the kernel applies the torch threshold-20 softplus after adding dt_bias"},
+        {"target": "/state_batch_indices", "literal": null, "basis": "each input row updates its same-numbered state slot"},
+        {"target": "/dtype", "literal": "f32", "basis": "the wrapper requires physical float32 tensors"}
+      ],
+      "output_map": [
+        {"target": "/out/y", "source": "/returns/y", "conversion": "tensor_record", "measure_output": "y"},
+        {"target": "/out/state", "source": "/tensor_arguments/state/after", "conversion": "tensor_record", "measure_output": "state"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "state", "effect": "output", "task": "complete_selective_state_update", "target": "/out/state"},
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "dt", "effect": "unchanged"},
+    {"argument": "A", "effect": "unchanged"},
+    {"argument": "B", "effect": "unchanged"},
+    {"argument": "C", "effect": "unchanged"},
+    {"argument": "D", "effect": "unchanged"},
+    {"argument": "z", "effect": "unchanged"},
+    {"argument": "dt_bias", "effect": "unchanged"}
+  ]
+}

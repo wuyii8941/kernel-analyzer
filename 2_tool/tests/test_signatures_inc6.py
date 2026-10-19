@@ -85,7 +85,7 @@ def test_bitcast_bf16_and_fp8_signature(category):
     b8 = g.view(torch.int8).numpy()
     body = ("    i = tl.arange(0, N)\n    b = tl.load(x_ptr + i)\n"
             "    tl.store(out + i, b.to(tl.float8e5, bitcast=True).to(tl.float32))\n")
-    lo, hi, st = _run("bc_f8", body, {"x_ptr": ("int8", b8), "out": ("fp32", np.zeros(8))})
+    lo, hi, st = _run("bc_f8", body, {"x_ptr": ("int8", b8), "out": ("fp32", np.zeros(8))}, arch=89)
     for j, v in enumerate(g.float().numpy()):
         if math.isnan(v):
             assert st[j] == H.ST_NAN

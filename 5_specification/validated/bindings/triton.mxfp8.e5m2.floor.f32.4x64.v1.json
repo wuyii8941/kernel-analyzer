@@ -1,0 +1,42 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.mxfp8.e5m2.floor.f32.4x64.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton retained working-copy kernel",
+    "version": "source retained 2026-10-18; executed by Triton 3.6.0",
+    "callable": "_downcast_to_mxfp with E5M2 values, E8M0 scales and ROUND_DOWN",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch converts all four rows and both 32-element blocks per row, writing complete element and scale tensors",
+    "measure_call": "../calls/triton_mxfp8_e5m2_floor.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "program_reference": {
+    "mode": "rounding_check",
+    "basis": "The selected task is itself a discrete scale and element conversion, so the program comparison must retain the declared conversion rounding."
+  },
+  "tasks": [
+    {
+      "id": "complete_mxfp8_floor_conversion",
+      "contract": "F2_MX",
+      "profile": "torchao016_mxfp8_floor",
+      "task_statement": "Convert the complete contiguous float32 [4,64] input to non-swizzled E5M2 MXFP8 using final-axis blocks of32 and the FLOOR scale rule, returning every numerical element and every E8M0 code.",
+      "input_map": [
+        {"target": "/x", "source": "/tensor_arguments/x/before", "conversion": "tensor_values"},
+        {"target": "/input_dtype", "literal": "f32", "basis": "the wrapper requires physical float32 input"},
+        {"target": "/elem_format", "literal": "e5m2", "basis": "the output tensor has Triton float8e5 element type"},
+        {"target": "/block_size", "literal": 32, "basis": "MICROBLOCK is fixed to32 and the final dimension is split into two blocks"},
+        {"target": "/scaling_mode", "literal": "floor", "basis": "rounding mode argument1 selects ROUND_DOWN, the same exponent-floor task"},
+        {"target": "/is_swizzled_scales", "literal": false, "basis": "the output scale tensor has ordinary row-major shape [4,2]"}
+      ],
+      "output_map": [
+        {"target": "/elements", "source": "/returns/elements", "conversion": "tensor_record", "measure_output": "elements"},
+        {"target": "/scale_codes", "source": "/returns/scale_codes", "conversion": "tensor_record", "measure_output": "scale_codes"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

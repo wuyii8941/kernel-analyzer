@@ -1328,6 +1328,19 @@ class GpuEmulator(KernelReferenceEvaluator):
         x = args[0]
         combiner = recognize_combiner(op)
         if len(args) == 1 and combiner in self.ORDER_FREE:
+            # Prefer the existing explicit lowering-order model for supported
+            # integer scans. The generic reference may only assume associativity
+            # when its optional proof engine is unavailable; that assumption
+            # must not be silently accepted by bitwise verification.
+            info = self.scan_layouts.get(op.node_id)
+            single = self._single_op_region(op)
+            if (x.kind == "i" and info is not None and single is not None
+                    and single[0].name not in self._UB_INT_COMBINES
+                    and len(x.shape) == 1 and x.shape[0] > 0 and info["axis"] == 0
+                    and not info["reverse"] and info["tpw"] == 32
+                    and x.shape[0] % (info["spt"] * 32 * info["wpc"]) == 0
+                    and op.node_id not in self.exact_nodes):
+                return self._scan_device_combine(op, args)
             # associative and commutative without rounding (integers, float max / min): any order gives the
             # device's values, so the evaluator's own fold is exact
             mode, self.mode = self.mode, NumericMode.NUMERICAL_DIFFERENCE
@@ -1453,10 +1466,47 @@ def _compare(written, lo, hi, st, actual, elem, bits) -> dict:
             "value_equal": (finite | inf) & (value == actual), "nan_both": nan & np.isnan(actual)}
 
 
+def _verification_outputs(result, launch):
+    """Comparison masks for every written storage, including discrete outputs.
+
+    Integers are already decoded in their storage representation by the IR
+    evaluator. Compare those arrays directly: a float64 conversion loses i64
+    differences above 2**53. Unknown/set-valued outputs remain unverified.
+    """
+    floating = _outputs(result, launch)
+    for b in result.buffers.values():
+        written = b.written.copy()
+        if not written.any():
+            continue
+        if b.kind == "f":
+            masks = _compare(*floating[b.name])
+        else:
+            exact = np.zeros(written.shape, dtype=bool)
+            equal = exact.copy()
+            actual = b.actual_after
+            if (b.kind in ("i", "b") and actual is not None
+                    and np.asarray(actual).shape == b.lo.shape
+                    and np.asarray(actual).dtype.kind in "biu" and b.lo.dtype.kind in "biu"):
+                exact = written & (b.st == ST_OK)
+                if b.hi is not None:
+                    exact &= b.lo == b.hi
+                if b.kind == "b":
+                    exact &= np.isin(b.lo, (0, 1))
+                if getattr(b, "iset", None) is not None:
+                    exact &= ~b.iset
+                equal = exact & (b.lo == actual)
+            masks = {"emulated": exact, "bit_equal": equal, "value_equal": equal.copy(),
+                     "nan_both": np.zeros(written.shape, dtype=bool)}
+        unconditional = ~np.asarray(b.cond, dtype=bool)
+        if getattr(b, "premise", None) is not None:
+            unconditional &= ~np.asarray(b.premise, dtype=bool)
+        masks = {key: value & unconditional for key, value in masks.items()}
+        yield b.name, written, masks
+
+
 def _bitwise_count(result, launch) -> tuple:
     equal = emulated = 0
-    for name, o in _outputs(result, launch).items():
-        m = _compare(*o)
+    for name, written, m in _verification_outputs(result, launch):
         emulated += int(m["emulated"].sum())
         equal += int((m["bit_equal"] | m["nan_both"]).sum())
     return equal, emulated
@@ -1539,9 +1589,7 @@ def verify(launch, oracle: Optional[HardwareOracle] = None, ungrouped=None, swap
             report["not_emulable_nodes"].append(f"{node} ({how.split(':', 1)[1]})")
     report["nodes"] = dict(report["nodes"])
     totals = collections.Counter()
-    for name, o in _outputs(result, launch).items():
-        m = _compare(*o)
-        written = o[0]
+    for name, written, m in _verification_outputs(result, launch):
         entry = {"written": int(written.sum()), "emulated": int(m["emulated"].sum()),
                  "bit_identical": int(m["bit_equal"].sum()), "value_equal": int(m["value_equal"].sum()),
                  "nan_both": int(m["nan_both"].sum()), "not_emulated": int((written & ~m["emulated"]).sum())}

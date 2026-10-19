@@ -66,10 +66,10 @@ def plain(v):
 
 # ------------------------------------------------------------------ one normalisation set
 def rstd_of(second_moment, eps):
-    """1 / sqrt(second_moment + eps); zero is undefined (NM.ZERO_VAR / BN.ZERO_VAR)."""
+    """1 / sqrt(second_moment + eps); a nonpositive radicand is undefined."""
     d = second_moment + eps
-    if d == 0:
-        raise Undefined("variance + eps = 0: 1/sqrt(0) is undefined")
+    if d <= 0:
+        raise Undefined("variance + eps <= 0: reciprocal square root is undefined over the reals")
     return R(1) / rl.sqrt(R(d))
 
 
@@ -239,10 +239,7 @@ def group_norm(x, num_groups, weight, bias, eps, upstream):
 
 
 def _eps(eps):
-    e = rational(eps, "eps")
-    if e < 0:
-        raise Invalid("eps < 0")
-    return e
+    return rational(eps, "eps")
 
 
 # ------------------------------------------------------------------ BN

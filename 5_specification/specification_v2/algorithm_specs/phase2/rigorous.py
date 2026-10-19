@@ -101,10 +101,12 @@ class Interval:
         if not isinstance(n, int) or n < 0: raise TypeError('Interval ** n supports non-negative integer n only')
         if n == 0: return Interval.exact(1)
         if n == 1: return self
-        if n == 2:                                            # exact square: tight when the interval straddles zero
-            lo, hi = self.lo, self.hi; cands = [lo * lo, hi * hi]
-            low = min(cands) if (lo > 0 or hi < 0) else type(lo)(0)
-            return Interval(low, max(cands))
+        if n == 2:
+            # Use the same directed rounding and underflow enclosure as multiplication.
+            # Ambient Decimal precision must never determine the mathematical bounds.
+            product = self._bin(self, lambda a, b: a * b, signed_tiny=True)
+            low = Decimal(0) if self.lo <= 0 <= self.hi else product.lo
+            return Interval(low, product.hi)
         return (self ** 2) * (self ** (n - 2))
 
     def __truediv__(self, o):

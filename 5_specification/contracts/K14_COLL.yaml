@@ -1,0 +1,273 @@
+schema_version: '1.2'
+id: K14_COLL
+role: COLLECTIVES_AND_PARTIAL_ATTENTION
+title: K14 explicit collective values and partial attention merge (partial migration, draft)
+review:
+  status: drafted
+  author: Codex, 2026-10-18
+  date: '2026-10-18'
+  scope: Partial merge and basic collective value tasks; independent task/source review pending. GEMM collectives and EP not migrated.
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- Explicit finite-real partial attention merge; no automatic family-name matching
+- Explicit finite-real reductions, equal-shard scatter and gather, with every participant output
+profiles:
+  scaled_numerator:
+    outputs: [out, lse]
+    meaning: Each nonempty partial has shift m, positive shifted mass l and unnormalized vector u.
+    task_choice_required: true
+    basis: [K14.TASK, K14.EMPTY, K14.PARTICIPANTS]
+  normalized_lse:
+    outputs: [out, lse]
+    meaning: Each partial has normalized output o and natural-log mass lse, plus explicit emptiness.
+    task_choice_required: true
+    basis: [K14.TASK, K14.EMPTY, K14.PARTICIPANTS]
+  scaled_numerator_out:
+    meaning: Same scaled accumulator merge, observing only the complete output vector, as in the retained reduce_segments interface.
+    outputs: [out]
+    task_choice_required: true
+    basis: [K14.TASK, K14.EMPTY, K14.PARTICIPANTS, K14.OUTPUT]
+  all_reduce_sum:
+    meaning: Exact coordinate-wise sum of all participant vectors, returned to every participant.
+    outputs: [rank_outputs]
+    task_choice_required: true
+    basis: [K14.COLLECTIVE_TASK]
+  all_reduce_mean:
+    meaning: Exact coordinate-wise sum divided by number of participants, returned to every participant.
+    outputs: [rank_outputs]
+    task_choice_required: true
+    basis: [K14.COLLECTIVE_TASK]
+  all_reduce_weighted_mean:
+    meaning: sum_r weights[r]*values[r] divided by sum_r weights[r]; finite nonnegative rational weights.
+    outputs: [rank_outputs]
+    task_choice_required: true
+    basis: [K14.WEIGHTED_TASK]
+  all_reduce_count_mean:
+    meaning: Same weighted mean with explicitly supplied nonnegative integer counts; values are local means.
+    outputs: [rank_outputs]
+    task_choice_required: true
+    basis: [K14.WEIGHTED_TASK]
+  reduce_scatter_sum:
+    meaning: Exact sum split into equal contiguous shards in the supplied participant order.
+    outputs: [rank_outputs]
+    task_choice_required: true
+    basis: [K14.COLLECTIVE_TASK]
+  all_gather_equal:
+    meaning: Concatenate equally sized vectors in supplied participant order; return the full result to every participant.
+    outputs: [rank_outputs]
+    task_choice_required: true
+    basis: [K14.COLLECTIVE_TASK]
+outputs:
+  rank_outputs: {shape: '[participant][output coordinate], in the declared participant order', guarantee: exact}
+  out: {shape: '[value_width]', guarantee: rigorous_enclosure}
+  lse: {shape: scalar, guarantee: rigorous_enclosure}
+comparison:
+  input_binding: Explicit representation and all participants, with full value width; no inferred producer layout.
+  quality: All output coordinates and natural-log mass; containment alone does not certify equality.
+  error_handling: Invalid records reject; unresolved positivity remains not_established; no exception is undefined by default.
+decisions:
+- id: K14.COLLECTIVE_TASK
+  status: needs_binding
+  statement: >-
+    Select the finite-real sum, rank mean, equal-shard sum reduce-scatter or equal-size gather task.
+    The installed PyTorch collective documentation supports the interfaces and equal-shard convention,
+    but does not prove exact-real arithmetic on devices. Rank mean is an explicit sum/count task,
+    not an assertion about a backend AVG implementation. participant_ids declares process-group order;
+    unique labels alone do not prove the real group, its order or complete contributions. Every participant
+    has a returned rank_outputs vector. For an in-place all-reduce these are the complete mathematical
+    post-state values. Communication signals, asynchronous handles, aliasing and physical writes require
+    separate binding. Empty coordinate vectors are allowed; zero participants are not.
+  basis: [TORCH_LOCAL_COLLECTIVES.ALL_REDUCE, TORCH_LOCAL_COLLECTIVES.REDUCE_SCATTER, TORCH_LOCAL_COLLECTIVES.ALL_GATHER]
+- id: K14.WEIGHTED_TASK
+  status: needs_binding
+  statement: >-
+    The caller explicitly selects sum(w*x)/sum(w), not a standard collective opcode.
+    weighted_mean accepts nonnegative rational weights. count_mean requires nonnegative integer counts
+    and finite supplied local means; zero-count participants contribute zero. The count-weighted task
+    follows from global sum/global count when each nonempty local sum is count times local mean.
+    HF is a supporting example of that task choice, not universal authority for distributed objectives.
+    Zero total weight/count is mathematically undefined. All weights/counts and vectors must correspond
+    one-to-one with the declared participants before arithmetic. All participants receive the full result.
+  basis: [HF.TOKEN_MEAN, K14.COLLECTIVE_TASK]
+- id: K14.TASK
+  status: needs_binding
+  statement: >-
+    Adopt the finite-real softmax union task. For scaled inputs choose any finite M,
+    L=sum_i exp(m_i-M)*l_i, U=sum_i exp(m_i-M)*u_i; out=U/L, lse=M+log(L).
+    For normalized inputs use m_i=lse_i, l_i=1, u_i=o_i. This algebra follows by
+    splitting the numerator and denominator sums of softmax. The retained engine
+    supports the accumulator convention; it does not independently certify this
+    reference. Returning lse in the first two profiles is part of their selected logical task, not a claim
+    that vLLM reduce_segments writes lse. Natural logs only.
+  basis: [T_SDPA.REFERENCE, VLLM_UA.PARTIAL_MERGE]
+- id: K14.EMPTY
+  status: needs_binding
+  statement: >-
+    Zero mass is an explicit state with shift=null, mass=0, complete zero numerator.
+    In normalized input, is_empty=true requires an infinity sentinel and a full finite
+    placeholder vector; the sentinel is discarded at this boundary, never exponentiated.
+    Either +inf or -inf requires a task-specific producer binding proving emptiness.
+    All-empty output is undefined unless empty_policy=zero is explicitly selected,
+    in which case out is the zero vector and lse=-inf. This is a task convention,
+    not a universal attention API or a proof of engine behavior on empty sequences.
+  basis: [T_SDPA.REFERENCE, VLLM_UA.PARTIAL_MERGE]
+- id: K14.PARTICIPANTS
+  status: needs_binding
+  statement: >-
+    Each declared partial has a distinct nonblank string participant ID and equal
+    value width. The binding must establish that these are exactly all intended
+    partials and that their contributing key sets form the intended partition.
+    Unique IDs alone do not prove disjoint keys, complete reads or complete writes.
+  basis: [T_SDPA.REFERENCE, VLLM_UA.PARTIAL_MERGE]
+- id: K14.OUTPUT
+  status: needs_binding
+  statement: >-
+    scaled_numerator_out observes every coordinate of out and does not promise an
+    LSE write. Other profiles promise both out and lse. Selecting the out-only
+    task requires evidence that no additional outputs or post-state writes belong
+    to the region being audited; it cannot excuse missing outputs of another
+    selected profile. The retained reduce_segments writes acc, not log mass.
+  basis: [VLLM_UA.PARTIAL_MERGE]
+clauses:
+- {id: K14.C5, basis: [K14.COLLECTIVE_TASK], statement: Preserve all contributions and every participant output in declared order., observes: [rank_outputs], evidence_kind: definition}
+- {id: K14.C6, basis: [K14.WEIGHTED_TASK], statement: Use exactly the selected weights or integer counts; never silently truncate participants or counts., observes: [rank_outputs], evidence_kind: derived}
+- {id: K14.C1, basis: [K14.TASK], statement: Merge all shifted masses and unnormalized numerators before division.,
+    observes: [out, lse], evidence_kind: derived}
+- {id: K14.C2, basis: [K14.EMPTY], statement: Nonempty plus empty preserves the result; all empty follows the explicit convention.,
+    observes: [out, lse], evidence_kind: definition}
+- {id: K14.C3, basis: [K14.PARTICIPANTS], statement: Validate all records and dimensions before merging; retain every declared output.,
+    observes: [out, lse], evidence_kind: definition}
+- {id: K14.C4, basis: [K14.OUTPUT], statement: Only the explicitly selected out-only interface omits LSE; out remains complete.,
+    observes: [out], evidence_kind: definition}
+signature:
+  inputs:
+  - Merge profiles require operation=merge; participant_ids and parts have equal nonzero length
+  - Collective profiles require operation=all_reduce, reduce_scatter or all_gather as selected; values is a rectangular participant-by-coordinate matrix
+  - Collective participant_ids is a nonempty ordered list of distinct nonblank strings; weights/counts is required only for its selected profile, with one entry per participant
+  - 'scaled_numerator parts: {shift, mass, numerator[value_width]}; shift=null only for explicit zero mass'
+  - 'normalized_lse parts: {out[value_width], lse, is_empty:boolean}'
+  - empty_policy explicitly undefined or zero
+  pre_state: []
+  post_state: []
+  observation_unit: All coordinates of merged output, plus natural-log mass for profiles promising it; input records are immutable.
+domain:
+  valid: [Finite values or finite rigorous enclosures; positive nonempty mass; positive common value width]
+  domain_undefined: [All partials empty with empty_policy=undefined]
+  invalid_input: [Missing or duplicate participant ID; missing fields; unequal widths; nonpositive nonempty mass; undeclared fields]
+  unsupported: [GEMM collectives and EP dispatch/combine; log2 interface; quantized buffers; physical layout and communication effects]
+  not_established: [Mass enclosure cannot establish positivity; source or task binding incomplete]
+examples:
+- id: K14.E1
+  profile: scaled_numerator
+  clauses: [K14.C1, K14.C3]
+  input:
+    operation: merge
+    participant_ids: [first, second]
+    empty_policy: undefined
+    parts: [{shift: 0, mass: 1, numerator: [2, 8]}, {shift: 0, mass: 3, numerator: [12, -4]}]
+  expected: {outcome: value, fields: {out: [7/2, 1], lse: 'log(4)'}}
+- id: K14.E2
+  profile: normalized_lse
+  clauses: [K14.C1, K14.C2, K14.C3]
+  input:
+    operation: merge
+    participant_ids: [first, empty]
+    empty_policy: undefined
+    parts: [{out: [2, 7, -1], lse: 0, is_empty: false}, {out: [0, 0, 0], lse: '+inf', is_empty: true}]
+  expected: {outcome: value, fields: {out: [2, 7, -1], lse: 0}}
+- id: K14.E3
+  profile: scaled_numerator
+  clauses: [K14.C2]
+  input: {operation: merge, participant_ids: [empty], empty_policy: undefined,
+    parts: [{shift: null, mass: 0, numerator: [0, 0]}]}
+  expected: {outcome: domain_undefined}
+- id: K14.E4
+  profile: scaled_numerator
+  clauses: [K14.C2]
+  input: {operation: merge, participant_ids: [empty], empty_policy: zero,
+    parts: [{shift: null, mass: 0, numerator: [0, 0]}]}
+  expected: {outcome: value, fields: {out: [0, 0], lse: '-inf'}}
+- id: K14.E5
+  profile: scaled_numerator
+  clauses: [K14.C3]
+  input: {operation: merge, participant_ids: [first], empty_policy: undefined,
+    parts: [{shift: 0, mass: 1, numerator: [2]}, {shift: 0, mass: 1, numerator: [3]}]}
+  expected: {outcome: invalid_input}
+- id: K14.E6
+  profile: normalized_lse
+  clauses: [K14.C1, K14.C2]
+  input: {operation: merge, participant_ids: [first], empty_policy: undefined,
+    parts: [{out: [0], lse: '+inf', is_empty: false}]}
+  expected: {outcome: invalid_input}
+- id: K14.E7
+  profile: scaled_numerator_out
+  clauses: [K14.C1, K14.C3, K14.C4]
+  input:
+    operation: merge
+    participant_ids: [first, second]
+    empty_policy: undefined
+    parts: [{shift: 0, mass: 1, numerator: [2, 8]}, {shift: 0, mass: 3, numerator: [12, -4]}]
+  expected: {outcome: value, fields: {out: [7/2, 1]}}
+- id: K14.E8
+  profile: all_reduce_sum
+  clauses: [K14.C5]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1, 2], [3, 4]]}
+  expected: {outcome: value, fields: {rank_outputs: [[4, 6], [4, 6]]}}
+- id: K14.E9
+  profile: all_reduce_mean
+  clauses: [K14.C5]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1, 2], [3, 4]]}
+  expected: {outcome: value, fields: {rank_outputs: [[2, 3], [2, 3]]}}
+- id: K14.E10
+  profile: all_reduce_weighted_mean
+  clauses: [K14.C6]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1, 2], [3, 4]], weights: [3/2, 1/2]}
+  expected: {outcome: value, fields: {rank_outputs: [[3/2, 5/2], [3/2, 5/2]]}}
+- id: K14.E11
+  profile: all_reduce_count_mean
+  clauses: [K14.C6]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1, 2], [3, 4]], counts: [3, 1]}
+  expected: {outcome: value, fields: {rank_outputs: [[3/2, 5/2], [3/2, 5/2]]}}
+- id: K14.E12
+  profile: reduce_scatter_sum
+  clauses: [K14.C5]
+  input: {operation: reduce_scatter, participant_ids: [b, a], values: [[1, 2, 3, 4], [10, 20, 30, 40]]}
+  expected: {outcome: value, fields: {rank_outputs: [[11, 22], [33, 44]]}}
+- id: K14.E13
+  profile: all_gather_equal
+  clauses: [K14.C5]
+  input: {operation: all_gather, participant_ids: [b, a], values: [[1, 2], [3, 4]]}
+  expected: {outcome: value, fields: {rank_outputs: [[1, 2, 3, 4], [1, 2, 3, 4]]}}
+- id: K14.E14
+  profile: all_reduce_count_mean
+  clauses: [K14.C6]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1], [3]], counts: [3.9, 1]}
+  expected: {outcome: invalid_input}
+- id: K14.E15
+  profile: all_reduce_weighted_mean
+  clauses: [K14.C6]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1], [3]], weights: [3]}
+  expected: {outcome: invalid_input}
+- id: K14.E16
+  profile: all_reduce_count_mean
+  clauses: [K14.C6]
+  input: {operation: all_reduce, participant_ids: [b, a], values: [[1], [3]], counts: [0, 0]}
+  expected: {outcome: domain_undefined}
+mutation_requirements:
+- {id: K14.M1, misreading: Drop the last value coordinate., witnesses: [K14.E1, K14.E7]}
+- {id: K14.M2, misreading: Omit the declared log mass output., witnesses: [K14.E1]}
+- {id: K14.M3, misreading: Omit one participating partial., witnesses: [K14.E1]}
+- {id: K14.M4, misreading: Average ranks instead of using the selected counts., witnesses: [K14.E11]}
+- {id: K14.M5, misreading: Reverse reduce-scatter participant order., witnesses: [K14.E12]}
+- {id: K14.M6, misreading: Omit one participant output., witnesses: [K14.E8]}
+readings: []
+nonclaims:
+- Not a complete K14 migration; GEMM collectives, EP dispatch/combine and communication protocols remain outside this contract.
+- Supporting engine source is not independent proof of task correctness; review, implementation admission and kernel binding remain pending.
+- No inference about intended key partitions, sentinels, log bases or buffer layouts from names or matching outputs.
+changes: []

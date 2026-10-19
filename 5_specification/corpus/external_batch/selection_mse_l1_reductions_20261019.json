@@ -1,0 +1,115 @@
+{
+  "purpose": "Development: public MSE/L1 none/sum/mean, exact references and full input/target VJPs",
+  "prior_exposure": "attorch source and mean losses already studied; none/sum are new parameter configurations, not held-out implementations.",
+  "selection_rule": "All three documented reductions for each of the two public modules; retain every error.",
+  "standard_reference": "Installed PyTorch 2.10.0+cu128 public functions, CUDA float32, autocast disabled. This is an implementation reference, not a rigorous mathematical oracle.",
+  "shapes": [
+    [
+      4,
+      32
+    ],
+    [
+      3,
+      17
+    ]
+  ],
+  "seeds": [
+    20261019,
+    20261020
+  ],
+  "upstream": [
+    1.0,
+    -2.0
+  ],
+  "boundary_inputs": "Integer multiples of 1/8; loss calls include differences 0, +1/2, -1/2, +2, -2. Unary calls include 0, +1/2, -1/2, +2, -2. These are diagnostic samples, not a training distribution.",
+  "repositories": {
+    "attorch": {
+      "path": ".cache/untrusted/attorch_src/repo",
+      "url": "https://github.com/BobMcDear/attorch",
+      "commit": "67c2772baf33913ef51c2d1064f746ca17b63749",
+      "license": "MIT",
+      "task_sources": [
+        "attorch/p_loss_layers.py",
+        "tests/test_p_loss_layers.py",
+        "attorch/softmax_layers.py",
+        "tests/test_softmax_layers.py"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "attorch_mse_none",
+      "library": "attorch",
+      "split": "development",
+      "op": "mse",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "none"
+      },
+      "entry": "attorch.MSELoss(reduction='none')"
+    },
+    {
+      "id": "attorch_mse_sum",
+      "library": "attorch",
+      "split": "development",
+      "op": "mse",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "sum"
+      },
+      "entry": "attorch.MSELoss(reduction='sum')"
+    },
+    {
+      "id": "attorch_mse_mean",
+      "library": "attorch",
+      "split": "development",
+      "op": "mse",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "mean"
+      },
+      "entry": "attorch.MSELoss(reduction='mean')"
+    },
+    {
+      "id": "attorch_l1_none",
+      "library": "attorch",
+      "split": "development",
+      "op": "l1",
+      "contract": "L1",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "none"
+      },
+      "entry": "attorch.L1Loss(reduction='none')"
+    },
+    {
+      "id": "attorch_l1_sum",
+      "library": "attorch",
+      "split": "development",
+      "op": "l1",
+      "contract": "L1",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "sum"
+      },
+      "entry": "attorch.L1Loss(reduction='sum')"
+    },
+    {
+      "id": "attorch_l1_mean",
+      "library": "attorch",
+      "split": "development",
+      "op": "l1",
+      "contract": "L1",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "mean"
+      },
+      "entry": "attorch.L1Loss(reduction='mean')"
+    }
+  ],
+  "revision": "mse_l1_reductions_v1",
+  "upstream_rule": "Scalar losses use the listed scalar upstream. Nonscalar outputs use upstream * ((flat_index % 7) - 3) / 4 at every coordinate."
+}

@@ -1,0 +1,27 @@
+{
+  "call": "../calls/triton_mamba_ssu.py:call",
+  "inputs": {
+    "state": {"sampler": {"normal": [0, 0.25]}, "shape": [8, 4, 32, 8], "dtype": "float32"},
+    "x": {"sampler": {"normal": [0, 0.5]}, "shape": [8, 4, 32], "dtype": "float32"},
+    "dt": {"sampler": {"normal": [0, 0.5]}, "shape": [8, 4, 32], "dtype": "float32"},
+    "A": {"sampler": {"uniform": [-1, 0]}, "shape": [4, 32, 8], "dtype": "float32"},
+    "B": {"sampler": {"normal": [0, 0.5]}, "shape": [8, 2, 8], "dtype": "float32"},
+    "C": {"sampler": {"normal": [0, 0.5]}, "shape": [8, 2, 8], "dtype": "float32"},
+    "D": {"sampler": {"normal": [0, 0.25]}, "shape": [4, 32], "dtype": "float32"},
+    "z": {"sampler": {"normal": [0, 0.5]}, "shape": [8, 4, 32], "dtype": "float32"},
+    "dt_bias": {"sampler": {"normal": [0, 0.25]}, "shape": [4, 32], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["y", "state"],
+    "binding_plan": "../call_bindings/triton_mamba_ssu.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

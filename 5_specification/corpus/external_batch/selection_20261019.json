@@ -1,0 +1,37 @@
+{
+  "purpose": "External public-call task and reference trial; not a bias certification or blind benchmark",
+  "prior_exposure": "Both repositories were statically surveyed on 2026-10-15. Attorch L1 equality was already a suspected issue. No first-encounter claim.",
+  "selection_rule": "Development: attorch public regression losses and normalization. Separate acceptance: trident public reduction, activation and normalization. Keep every selected failure; do not replace failed cases.",
+  "standard_reference": "Installed PyTorch 2.10.0+cu128 public functions, CUDA float32, autocast disabled. This is an implementation reference, not a rigorous mathematical oracle.",
+  "shapes": [[4, 32], [3, 17]],
+  "seeds": [20261019, 20261020],
+  "upstream": [1.0, -2.0],
+  "boundary_inputs": "Integer multiples of 1/8; loss calls include differences 0, +1/2, -1/2, +2, -2. Unary calls include 0, +1/2, -1/2, +2, -2. These are diagnostic samples, not a training distribution.",
+  "repositories": {
+    "attorch": {
+      "path": ".cache/untrusted/attorch_src/repo",
+      "url": "https://github.com/BobMcDear/attorch",
+      "commit": "67c2772baf33913ef51c2d1064f746ca17b63749",
+      "license": "MIT",
+      "task_sources": ["attorch/p_loss_layers.py", "tests/test_p_loss_layers.py", "attorch/softmax_layers.py", "tests/test_softmax_layers.py"]
+    },
+    "trident": {
+      "path": ".cache/untrusted/trident_src/repo",
+      "url": "https://github.com/kakaobrain/trident",
+      "commit": "6c429c6b1a2d33711d964a9d643c2b4b1610afdf",
+      "license": "Apache-2.0",
+      "task_sources": ["trident/function/function.py", "tests/test_sum.py", "tests/test_mean.py", "tests/test_relu.py", "tests/test_softmax.py"]
+    }
+  },
+  "cases": [
+    {"id": "attorch_mse", "split": "development", "library": "attorch", "op": "mse", "entry": "attorch.MSELoss(reduction='mean')", "contract": "MSE"},
+    {"id": "attorch_l1", "split": "development", "library": "attorch", "op": "l1", "entry": "attorch.L1Loss(reduction='mean')", "contract": "L1"},
+    {"id": "attorch_smooth_l1", "split": "development", "library": "attorch", "op": "smooth_l1", "entry": "attorch.SmoothL1Loss(reduction='mean', beta=0.5)", "contract": null},
+    {"id": "attorch_huber", "split": "development", "library": "attorch", "op": "huber", "entry": "attorch.HuberLoss(reduction='mean', delta=0.5)", "contract": null},
+    {"id": "attorch_softmax", "split": "development", "library": "attorch", "op": "softmax", "entry": "attorch.Softmax(dim=-1)", "contract": "SOFTMAX"},
+    {"id": "trident_sum", "split": "acceptance", "library": "trident", "op": "sum", "entry": "trident.function.sum(x, dim=1)", "contract": "REDUCE"},
+    {"id": "trident_mean", "split": "acceptance", "library": "trident", "op": "mean", "entry": "trident.function.mean(x, dim=1)", "contract": "REDUCE"},
+    {"id": "trident_relu", "split": "acceptance", "library": "trident", "op": "relu", "entry": "trident.function.relu(x)", "contract": "ACT"},
+    {"id": "trident_softmax", "split": "acceptance", "library": "trident", "op": "softmax", "entry": "trident.function.softmax(x, dim=1)", "contract": "SOFTMAX"}
+  ]
+}

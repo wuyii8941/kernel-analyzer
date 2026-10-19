@@ -3,21 +3,24 @@ id: MATMUL
 role: MATMUL
 title: Matrix products (mm, bmm, matmul with broadcasting, addmm, baddbmm, linear) and their vector-Jacobian products
 review:
-  status: drafted
+  status: reviewed_for_implementation
   author: Claude (spec v3 author), 2026-10-16
-  date: '2026-10-16'
-  scope: Real-number values and gradients of the documented products; awaiting a review by someone who did not write it
+  date: '2026-10-18'
+  reviewer: Codex independent source, formula, domain and implementation review
+  scope: Exact finite floating values and VJPs for the declared default functional operations; concrete kernel binding remains separate
 activation:
-  implementation_status: pending
+  implementation_status: validated
+  implementation_evidence: evidence/matmul_implementation.md
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [aten.mm, aten.bmm, aten.matmul, aten.addmm, aten.baddbmm, aten.linear, inductor.mm_plus_mm, vjp.aten.mm, vjp.aten.bmm,
   vjp.aten.matmul, vjp.aten.linear, vjp.aten.addmm]
 profiles:
   real:
-    meaning: Exact real matrix products (sums of products, no rounding, any accumulation order); gradients are the VJPs
-      against an explicit upstream gradient, with broadcast dimensions summed back to each operand's shape.
+    meaning: Exact matrix products of finite f16, bf16, f32 or f64 values (sums of products, no rounding, any accumulation
+      order); gradients are the VJPs against an explicit upstream gradient, with broadcast dimensions summed back to
+      each operand's shape. The covered aten names select their default functional overloads.
     task_choice_required: false
 outputs:
   out:
@@ -25,22 +28,34 @@ outputs:
     guarantee: exact
 comparison:
   input_binding: Tensor values are the exact values received.
+  complete_output: >-
+    Observed tensors use records with exactly t, v and shape. All coordinates,
+    dtypes and explicit shapes are checked, including empty outputs. VJPs require
+    every gradient in operand order; linear without bias requires an explicit
+    null third entry. An absent gradient is distinct from a zero tensor.
   quality: Exact equality.
   test_evidence: Exact equality (products of rationals are rational).
   error_handling: Shape mismatches are invalid_input. Input precision modes (TF32, bf16 products) are numerical, not part of
     the target.
 decisions:
 - id: MM.PRECISION
-  status: drafted
-  statement: allow_tf32 / input_precision / out_dtype choose how a device computes the product; the task value is the
-    exact product of the received operands (MATMUL role of specification_v2, 'TF32 supported' on the linear page refers to
-    the computation).
-  basis: [T_MM.DEF, T_LINEAR.DEF]
+  status: reviewed
+  statement: Device choices such as TF32 and input_precision affect K-G and do not change the exact finite-real task
+    value. The covered aten.mm, aten.bmm, aten.addmm and aten.baddbmm names mean the default functional overloads in the
+    retained PyTorch 2.10 schemas. Their separate dtype and out overloads, including public out_dtype, are not silently
+    treated as the default task and require a separately declared profile and state/output binding.
+    Official keyword names are mapped explicitly to the evaluator's internal names, namely self/mat2 for mm and bmm,
+    self/other for matmul, self/mat1/mat2 for addmm, self/batch1/batch2 for baddbmm, and input/weight/bias for linear.
+    Duplicate positional, official or legacy internal names remain invalid; the mapping does not weaken dtype,
+    shape, keyword-only scale or ignored-addend checks. Synthetic VJP interfaces are unchanged.
+  basis: [T_MM.DEF, T_BMM.DEF, T_ADDMM.DEF, T_BADDBMM.DEF, T_LINEAR.DEF,
+    TS_NATIVE_FUNCTIONS.MATMUL_SCHEMAS]
 - id: MM.VJP
-  status: drafted
+  status: reviewed
   statement: 'Gradients of the products are the VJPs: d(A B) gives dA = G B^T and dB = A^T G; for matmul the batch
     dimensions of each gradient are summed back to the operand''s shape (it was broadcast); for linear dx = G W, dW = sum
-    over leading dims of G^T x, db = the sum of G over the leading dims; for addmm d input = beta * G summed to input''s
+    over leading dims of G^T x for matrix weights; vector weights use the matmul vector rule.
+    db sums G back to the declared bias shape (all dimensions for scalar bias); for addmm d input = beta * G summed to input''s
     shape.'
   basis: [T_MM.DEF, T_MATMUL.DEF, T_LINEAR.DEF, T_ADDMM.DEF]
 clauses:
@@ -49,11 +64,17 @@ clauses:
 - {id: MM.C2, basis: [T_MATMUL.DEF], statement: 'matmul: 1-D promotion and removal, batch dimensions broadcast', observes: [out],
   evidence_kind: definition}
 - {id: MM.C3, basis: [T_ADDMM.DEF, T_ADDMM.BETA0, T_BADDBMM.DEF], statement: 'addmm / baddbmm = beta input + alpha product;
-    beta = 0 ignores input', observes: [out], evidence_kind: definition}
-- {id: MM.C4, basis: [T_LINEAR.DEF], statement: 'linear = x W^T + b over the last dim of x', observes: [out], evidence_kind: definition}
+    beta = 0 ignores input values including NaN and infinities, but input must still broadcast to the fixed product output shape without enlarging it', observes: [out], evidence_kind: definition}
+- {id: MM.C4, basis: [T_LINEAR.DEF, T_LINEAR.SHAPE], statement: 'linear = x W^T + b over the last dim of x;
+    W may be a matrix or vector, with the corresponding output-feature dimension retained or removed;
+    bias is scalar or the documented output-feature vector', observes: [out], evidence_kind: definition}
 - {id: MM.C5, basis: [MM.VJP], statement: VJPs of mm / bmm / matmul / linear / addmm per MM.VJP, observes: [out], evidence_kind: derived}
 - {id: MM.C6, basis: [TS_POST_GRAD.MM_PLUS_MM, T_MM.DEF], statement: 'inductor.mm_plus_mm(mat1, mat2, mat3, mat4) = mat1 @ mat2
     + mat3 @ mat4 (the pattern it replaces)', observes: [out], evidence_kind: definition}
+- {id: MM.C7, basis: [MM.PRECISION, TS_NATIVE_FUNCTIONS.MATMUL_SCHEMAS], statement: 'the real profile accepts only finite
+    f16/bf16/f32/f64 tensor operands in the default functional overloads; beta and alpha are keyword-only for addmm and
+    baddbmm; beta=0 is the sole declared exception allowing nonfinite addend contents', observes: [out],
+  evidence_kind: definition}
 examples:
 - {id: MM.E1, profile: real, clauses: [MM.C1], input: {op: aten.mm, args: [{t: f32, v: [[1, 2], [3, 4]]}, {t: f32, v: [[5], [6]]}]},
   expected: {outcome: value, fields: {out: [[17], [39]]}}}
@@ -95,15 +116,48 @@ examples:
 - {id: MM.E17, profile: real, clauses: [MM.C6], input: {op: inductor.mm_plus_mm, kwargs: {mat1: {t: f32, v: [[1, 2]]}, mat2: {
         t: f32, v: [[1], [1]]}, mat3: {t: f32, v: [[3, 0]]}, mat4: {t: f32, v: [[2], [5]]}}}, expected: {outcome: value, fields: {
       out: [[9]]}}}
+- {id: MM.E18, profile: real, clauses: [MM.C7], input: {op: aten.mm, args: [{t: i32, v: [[2]]}, {t: i32, v: [[3]]}]},
+  expected: {outcome: unsupported}, note: Fixed-width integer overflow is not replaced by unbounded integer arithmetic.}
+- {id: MM.E19, profile: real, clauses: [MM.C7], input: {op: aten.mm, args: [{t: f32, v: [[inf]]}, {t: f32, v: [[1]]}]},
+  expected: {outcome: unsupported}}
+- {id: MM.E20, profile: real, clauses: [MM.C3, MM.C7], input: {op: aten.addmm, args: [{t: f32, v: [[nan]]}, {t: f32,
+        v: [[2]]}, {t: f32, v: [[3]]}], kwargs: {beta: 0}}, expected: {outcome: value, fields: {out: [[6]]}}}
+- {id: MM.E21, profile: real, clauses: [MM.C7], input: {op: aten.addmm, args: [{t: f32, v: [[0]]}, {t: f32, v: [[2]]}, {
+        t: f32, v: [[3]]}, 0]}, expected: {outcome: invalid_input}, note: beta is keyword-only in the selected default ATen schema.}
+- {id: MM.E22, profile: real, clauses: [MM.C7], input: {op: aten.addmm, args: [{t: f16, v: [[0]]}, {t: f16, v: [[2]]}, {
+        t: f16, v: [[3]]}], kwargs: {out_dtype: torch.float32}}, expected: {outcome: unsupported}, note: The dtype overload is
+    a distinct operation outside this profile.}
+- {id: MM.E23, profile: real, clauses: [MM.C1, MM.C7], input: {op: aten.mm,
+    kwargs: {self: {t: f32, v: [[1, 2]]}, mat2: {t: f32, v: [[3], [4]]}}},
+    expected: {outcome: value, fields: {out: [[11]]}}}
+- {id: MM.E24, profile: real, clauses: [MM.C3, MM.C7], input: {op: aten.addmm,
+    kwargs: {self: {t: f32, v: [[nan]]}, mat1: {t: f32, v: [[2]]}, mat2: {t: f32, v: [[3]]}, beta: 0, alpha: 2}},
+    expected: {outcome: value, fields: {out: [[12]]}}}
+- {id: MM.E25, profile: real, clauses: [MM.C4, MM.C7], input: {op: aten.linear,
+    kwargs: {input: {t: f32, v: [[1, 2]]}, weight: {t: f32, v: [[3, 4]]}, bias: {t: f32, v: [2]}}},
+    expected: {outcome: value, fields: {out: [[13]]}}}
 signature:
-  inputs: ['op: one of the covered names', 'args as in ATen; vjp ops take (upstream, operands...)']
+  inputs: ['op: one of the covered default functional names', 'args as in ATen; addmm/baddbmm scales are keyword-only;
+      vjp ops take (upstream, operands...)']
   pre_state: []
   post_state: []
   observation_unit: the product or the operand gradients
 domain:
-  valid: [exact real values (finite; addmm with beta = 0 ignores the input, also when it holds infinities)]
-  invalid_input: [inner dimensions that do not match, non-broadcastable batch dimensions, wrong ranks for mm / bmm]
-  unsupported: [sparse layouts]
+  valid: [finite f16/bf16/f32/f64 tensor values in the default functional overloads; addmm/baddbmm with beta = 0 ignore
+      the addend values including NaN and infinities]
+  invalid_input: [inner dimensions that do not match including empty batches, non-broadcastable batch dimensions,
+    wrong ranks for mm / bmm, scalar matmul operands, addend shapes that enlarge or cannot broadcast to the product,
+    upstream gradient shape different from the forward output, nonscalar or nonfinite alpha/beta,
+    mismatched product operand dtypes outside the unresolved empty batched cases,
+    addmm/baddbmm addend dtype different from the operands even when beta is zero,
+    product VJP upstream dtype different from the operands, positional alpha/beta]
+  not_established:
+  - Empty batched products with mixed operand dtypes require a reviewed result-type convention.
+    Observed native acceptance on empty batches does not establish a general conversion rule.
+  - Linear bias with a different dtype from the operands, or a broadcastable shape outside
+    the documented scalar/output-feature vector shapes, requires a reviewed task convention.
+  unsupported: [integer, boolean, float8 or complex tensor operands; infinite values except an addmm/baddbmm addend ignored
+      by beta=0; sparse layouts; dtype/out overloads and public out_dtype/out parameters]
 mutation_requirements:
 - {id: MM.M1, misreading: linear computes x W instead of x W^T, witnesses: [MM.E11]}
 - {id: MM.M2, misreading: addmm adds the input even when beta = 0, witnesses: [MM.E9]}
@@ -111,8 +165,107 @@ mutation_requirements:
 - {id: MM.M4, misreading: mm gradient dB = G A (wrong orientation), witnesses: [MM.E13]}
 - {id: MM.M5, misreading: linear bias gradient not summed over the leading dims, witnesses: [MM.E14]}
 - {id: MM.M6, misreading: addmm ignores alpha, witnesses: [MM.E8]}
+- {id: MM.M7, misreading: the finite floating profile silently accepts integer or infinite product operands, witnesses: [MM.E18,
+    MM.E19]}
+- {id: MM.M8, misreading: positional beta is accepted for the default addmm operation, witnesses: [MM.E21]}
+- {id: MM.M9, misreading: out_dtype is ignored and the dtype overload is treated as the default addmm operation, witnesses: [MM.E22]}
 nonclaims:
 - TF32, bf16 tensor-core products and accumulation order are numerical (K - G); the TF32 finding B006 is numerical.
+- Integer and float8 products, public out_dtype, out buffers and the corresponding ATen overloads are outside this profile.
+- The linear real profile follows the documented mathematical formula and shapes.
+  Local PyTorch 2.10 execution rejects some two-dimensional input/vector-weight/scalar-bias combinations.
+  Formula evaluation does not establish native acceptance or a binding for those combinations.
 changes:
+- date: '2026-10-18'
+  change: >-
+    Independent review narrowed admission to finite f16/bf16/f32/f64 tensors and the named default functional ATen
+    overloads. Integer products are no longer equated with unbounded integer arithmetic; infinity is refused except in
+    an addend explicitly ignored by beta=0; positional scales and silently ignored out_dtype are rejected.
+  trigger: >-
+    Retained PyTorch 2.10 documentation and native_functions schemas, exact derivative reconstruction, complete-output
+    checks and tests/test_matmul_profile_domains.py. This review does not bind a concrete Triton call.
+- date: '2026-10-18'
+  change: >-
+    Lazy mm/bmm/addmm/baddbmm now share shape, dtype and scaling validation with
+    the full reference, preserve integer arithmetic and validate ignored-addend
+    metadata. Validation reads no tensor coordinates except an explicitly supplied
+    lazy scalar scale. Beta zero does not read addend values. Evaluation remains
+    lazy and subject to its existing budget.
+  trigger: >-
+    tests/test_lazy_matmul.py reproduced dtype conversion, missing bmm shape checks
+    and bypassed addend validation. Small exact native products check all coordinates;
+    callbacks that fail on reads check metadata-only validation and ignored inputs.
+    This does not certify unqueried outputs or a real kernel binding.
+- date: '2026-10-18'
+  change: >-
+    Decode NaN-bearing addends only after beta is established to be exactly zero
+    for addmm/baddbmm and the addmm VJP. NaN is retained as ignored input storage,
+    never converted to a mathematical real value or substituted with zero. All
+    tensor metadata, argument signatures and scale parameters remain validated.
+  trigger: >-
+    T_ADDMM.BETA0 and the retained T_BADDBMM definition explicitly ignore NaN/Inf
+    in this branch. tests/test_matmul_ignored_input.py reproduced premature input
+    rejection and checks native forward agreement, full gradients, empty results,
+    invalid metadata, used NaN inputs and uncertain beta. Certification remains pending.
+- date: '2026-10-18'
+  change: >-
+    Added complete observed-output comparison for the real profile, including
+    optional absent bias gradients, tensor dtypes and empty shapes. Reference and
+    comparison entry points reject unselected profiles. Runtime activation remains
+    subject to source, implementation and binding requirements.
+  trigger: >-
+    tests/test_matmul_output_membership.py exposed the missing comparison entry point;
+    negative cases cover omitted gradients, invented bias gradients, wrong values,
+    dtypes and shapes. Comparison success does not activate this draft contract.
+- date: '2026-10-18'
+  change: >-
+    Linear forward and VJP share rank, product and bias validation. The VJP differentiates
+    matmul with the transposed weight and sums the bias gradient to the bias shape,
+    supporting vector weights, scalar bias and empty feature/batch dimensions without
+    ambiguous inferred reshape dimensions. Upstream shape and dtype must match the product.
+  trigger: >-
+    Retained T_LINEAR.SHAPE explicitly permits vector weights and scalar bias.
+    tests/test_linear_domains.py reproduced failures and wrong gradient shapes;
+    independent einsum/autograd comparisons check every forward output and operand gradient
+    of the documented formula. Direct native linear rejects some documented vector-weight
+    combinations, so these comparisons do not establish native acceptance.
+    Mixed bias dtypes and undocumented bias shapes are not established. Ignored NaN
+    addends and complete contract validation remain outstanding.
+- date: '2026-10-18'
+  change: >-
+    mm/bmm/matmul preserve matching operand dtypes and use exact integer storage for
+    integer inputs, including empty inner dimensions. Integral addmm/baddbmm scales
+    preserve integer results. Product VJPs require matching floating operand and
+    upstream dtypes. Mixed dtypes are rejected except unresolved empty batched
+    products, which return not_established.
+  trigger: >-
+    tests/test_matmul_dtypes.py reproduced silent conversion and promotion. Independent
+    native comparisons check complete shapes, dtypes and values on small exactly
+    representable inputs; they do not establish overflow or rounding semantics.
+    Linear forward/VJP and ignored NaN addends remain under review; implementation
+    status remains pending.
+- date: '2026-10-18'
+  change: >-
+    Validate alpha/beta as finite scalars before computation, including empty results.
+    Normalize zero-dimensional tensors and exact real scalars before zero/one branches;
+    a nonpoint scalar enclosure cannot select a branch. Forward and addmm VJP share
+    these rules. Noninteger scaling of integer operands is isolated as not_established
+    pending the task owner's choice between documentation and source semantics.
+  trigger: >-
+    T_ADDMM/T_BADDBMM and retained TS_DECOMP source review; tests/test_matmul_scales.py
+    reproduced output enlargement by nonscalar scales and failed beta-zero handling.
+    Floating cases were independently compared with PyTorch for all output coordinates
+    and dtype. Integer dtype handling and ignored NaN input remain under review.
+- date: '2026-10-18'
+  change: >-
+    Product dimensions are checked before iteration, including empty batches.
+    addmm/baddbmm validate the addend shape even when beta is zero. Product VJPs
+    validate the forward operand and upstream shapes; the vector-vector matmul
+    VJP promotes its scalar upstream to a 1x1 matrix before differentiation.
+  trigger: >-
+    Source review of T_MM, T_BMM, T_MATMUL, T_ADDMM and T_BADDBMM and failing
+    cases in tests/test_matmul_domains.py. Complete small-integer forward results
+    and gradients are compared with independent PyTorch/autograd execution.
+    Dtype and scaling semantics still require further review; implementation remains pending.
 - {date: '2026-10-17', change: 'added inductor.mm_plus_mm (clause MM.C6, example MM.E17)', trigger: 'operation found in four
     three_way graph fragments by the static binding; source TS_POST_GRAD'}

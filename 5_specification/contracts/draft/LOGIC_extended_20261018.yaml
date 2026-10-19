@@ -1,0 +1,108 @@
+schema_version: '1.2'
+id: LOGIC
+role: ATEN_LOGIC
+title: Comparisons, logical and bitwise operations, any / all, isnan (ATen operations)
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Exact semantics of the documented operations; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.eq, aten.ne, aten.lt, aten.le, aten.gt, aten.ge, aten.logical_and, aten.logical_or, aten.logical_not,
+  aten.bitwise_and, aten.bitwise_or, aten.bitwise_not, aten.any, aten.all, aten.isnan]
+profiles:
+  real:
+    meaning: Comparisons of exact real values (with +-inf) give exact booleans; logical operations treat zero as False
+      and nonzero as True; bitwise operations act on integers (two's complement) and as logical operations on booleans.
+    task_choice_required: false
+  ieee_values:
+    meaning: For isnan only, the input elements are IEEE values that may be NaN; the output says which ones are NaN.
+    task_choice_required: false
+outputs:
+  out:
+    shape: the broadcast shape (reductions remove the reduced dimension)
+    kind: discrete
+    guarantee: exact
+comparison:
+  input_binding: Tensor values are the exact values received.
+  quality: Exact equality of booleans and integers.
+  test_evidence: Exact equality.
+  error_handling: A comparison of enclosures that cannot be decided is not_established, never guessed.
+decisions:
+- id: LG.EMPTY
+  status: drafted
+  statement: any over an empty set is False and all over an empty set is True (the identities of OR and AND; torch.any /
+    torch.all follow NumPy, which uses these identities).
+  basis: [T_ANY.DEF, T_ALL.DEF]
+clauses:
+- {id: LG.C1, basis: [T_EQ.DEF, T_NE.DEF, T_LT.DEF, T_LE.DEF, T_GT.DEF, T_GE.DEF], statement: 'eq, ne, lt, le, gt,
+    ge compare exact values element-wise (broadcast) and return booleans', observes: [out], evidence_kind: definition}
+- {id: LG.C2, basis: [T_LAND.DEF, T_LOR.DEF, T_LNOT.DEF], statement: 'logical_and / or / not with zero = False,
+    nonzero = True', observes: [out], evidence_kind: definition}
+- {id: LG.C3, basis: [T_BAND.DEF, T_BOR.DEF, T_BNOT.DEF], statement: 'bitwise_and / or / not on integers (two''s
+    complement); logical on booleans', observes: [out], evidence_kind: definition}
+- {id: LG.C4, basis: [T_ANY.DEF, T_ALL.DEF, LG.EMPTY], statement: 'any / all over all elements or along a dim; empty
+    any = False, empty all = True', observes: [out], evidence_kind: definition}
+- {id: LG.C5, basis: [T_ISNAN.DEF], statement: isnan is True exactly where the element is NaN, observes: [out],
+  evidence_kind: definition}
+examples:
+- {id: LG.E1, profile: real, clauses: [LG.C1], input: {op: aten.eq, args: [{t: f32, v: [1, 2, '1/3']}, {t: f32, v: [1, 3,
+        '1/3']}]}, expected: {outcome: value, fields: {out: [true, false, true]}}}
+- {id: LG.E2, profile: real, clauses: [LG.C1], input: {op: aten.ne, args: [{t: f32, v: [1, 2]}, 2]}, expected: {outcome: value,
+    fields: {out: [true, false]}}}
+- {id: LG.E3, profile: real, clauses: [LG.C1], input: {op: aten.lt, args: [{t: f32, v: [1, 2, -inf]}, 2]}, expected: {
+    outcome: value, fields: {out: [true, false, true]}}}
+- {id: LG.E4, profile: real, clauses: [LG.C1], input: {op: aten.le, args: [{t: i64, v: [1, 2, 3]}, 2]}, expected: {outcome: value,
+    fields: {out: [true, true, false]}}}
+- {id: LG.E5, profile: real, clauses: [LG.C1], input: {op: aten.gt, args: [{t: f32, v: [[1], [-inf]]}, {t: f32, v: [0, 1]}]},
+  expected: {outcome: value, fields: {out: [[true, false], [false, false]]}}}
+- {id: LG.E6, profile: real, clauses: [LG.C1], input: {op: aten.ge, args: [{t: f32, v: ['1/2', inf]}, '1/2']}, expected: {
+    outcome: value, fields: {out: [true, true]}}}
+- {id: LG.E7, profile: real, clauses: [LG.C2], input: {op: aten.logical_and, args: [{t: i64, v: [0, 1, 2]}, {t: i64, v: [1,
+        1, 1]}]}, expected: {outcome: value, fields: {out: [false, true, true]}}}
+- {id: LG.E8, profile: real, clauses: [LG.C2], input: {op: aten.logical_or, args: [{t: b8, v: [false, false, true]}, {t: b8,
+        v: [false, true, false]}]}, expected: {outcome: value, fields: {out: [false, true, true]}}}
+- {id: LG.E9, profile: real, clauses: [LG.C2], input: {op: aten.logical_not, args: [{t: f32, v: [0, 3, '-1/2']}]}, expected: {
+    outcome: value, fields: {out: [true, false, false]}}}
+- {id: LG.E10, profile: real, clauses: [LG.C3], input: {op: aten.bitwise_and, args: [{t: i64, v: [12, 5]}, {t: i64, v: [10,
+        3]}]}, expected: {outcome: value, fields: {out: [8, 1]}}}
+- {id: LG.E11, profile: real, clauses: [LG.C3], input: {op: aten.bitwise_or, args: [{t: i64, v: [12, 5]}, {t: i64, v: [10,
+        3]}]}, expected: {outcome: value, fields: {out: [14, 7]}}}
+- {id: LG.E12, profile: real, clauses: [LG.C3], input: {op: aten.bitwise_not, args: [{t: i64, v: [0, 5]}]}, expected: {
+    outcome: value, fields: {out: [-1, -6]}}}
+- {id: LG.E13, profile: real, clauses: [LG.C3], input: {op: aten.bitwise_not, args: [{t: b8, v: [true, false]}]}, expected: {
+    outcome: value, fields: {out: [false, true]}}}
+- {id: LG.E14, profile: real, clauses: [LG.C4], input: {op: aten.any, args: [{t: f32, v: [[0, 0], [0, '1/2']]}, 1]}, expected: {
+    outcome: value, fields: {out: [false, true]}}}
+- {id: LG.E15, profile: real, clauses: [LG.C4], input: {op: aten.all, args: [{t: i64, v: [[1, 2], [0, 1]]}, 1]}, expected: {
+    outcome: value, fields: {out: [true, false]}}}
+- {id: LG.E16, profile: real, clauses: [LG.C4], input: {op: aten.all, args: [{t: b8, v: []}]}, expected: {outcome: value,
+    fields: {out: true}}}
+- {id: LG.E17, profile: real, clauses: [LG.C4], input: {op: aten.any, args: [{t: b8, v: []}]}, expected: {outcome: value,
+    fields: {out: false}}}
+- {id: LG.E18, profile: ieee_values, clauses: [LG.C5], input: {op: aten.isnan, args: [{t: f32, v: [nan, 1, inf, -inf, 0]}]},
+  expected: {outcome: value, fields: {out: [true, false, false, false, false]}}}
+signature:
+  inputs: ['op: one of the covered ATen names', 'args: tensors {t: dtype, v: values} and scalars']
+  pre_state: []
+  post_state: []
+  observation_unit: the result tensor of one operation
+domain:
+  valid: [real values and +-inf, integers, booleans; NaN only in the ieee_values profile of isnan]
+  invalid_input: [non-broadcastable shapes, NaN values outside isnan, bitwise operations on floating tensors]
+  unsupported: [complex dtypes]
+mutation_requirements:
+- {id: LG.M1, misreading: logical_and computed bitwise on integers, witnesses: [LG.E7]}
+- {id: LG.M2, misreading: lt computed as le, witnesses: [LG.E3]}
+- {id: LG.M3, misreading: all over an empty set is False, witnesses: [LG.E16]}
+- {id: LG.M4, misreading: bitwise_not of a boolean computed as integer complement (~True = -2, truthy), witnesses: [LG.E13]}
+- {id: LG.M5, misreading: isnan true for infinities, witnesses: [LG.E18]}
+- {id: LG.M6, misreading: -inf compared as a finite large negative number fails (treated as NaN, comparisons false),
+  witnesses: [LG.E3]}
+nonclaims:
+- NaN payloads, signalling NaNs and signed zeros are not modelled.
+changes: []

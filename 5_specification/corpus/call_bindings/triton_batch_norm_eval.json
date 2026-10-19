@@ -1,0 +1,45 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.batch_norm_eval.f32.2x8x8x8.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 BatchNorm evaluation values",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with four Triton programs producing every value of one contiguous 2x8x8x8 output from one input and four channel vectors",
+    "measure_call": "../calls/triton_batch_norm_eval.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "batch_norm_evaluation_values",
+      "contract": "BN",
+      "profile": "finite_eval_values",
+      "task_statement": "Return every evaluation-mode BatchNorm value using the received physical finite float32 input, running mean, running variance, weight and bias, with eps 0.125 and no state update.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.batch_norm", "basis": "selected one-output functional BatchNorm task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/weight/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/tensor_arguments/bias/before", "conversion": "tensor_record"},
+        {"target": "/args/3", "source": "/tensor_arguments/running_mean/before", "conversion": "tensor_record"},
+        {"target": "/args/4", "source": "/tensor_arguments/running_var/before", "conversion": "tensor_record"},
+        {"target": "/args/5", "literal": false, "basis": "the kernel reads fixed running statistics"},
+        {"target": "/args/6", "literal": 0, "basis": "momentum does not affect evaluation values"},
+        {"target": "/args/7", "literal": 0.125, "basis": "the kernel adds the exact binary value 0.125 before rsqrt"},
+        {"target": "/args/8", "literal": false, "basis": "the mathematical task does not select a cuDNN backend"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "running_mean", "effect": "unchanged"},
+    {"argument": "running_var", "effect": "unchanged"},
+    {"argument": "weight", "effect": "unchanged"},
+    {"argument": "bias", "effect": "unchanged"}
+  ]
+}

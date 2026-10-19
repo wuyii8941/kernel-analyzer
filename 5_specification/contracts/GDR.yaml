@@ -12,7 +12,7 @@ activation:
   implementation_status: pending
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers:
 - fla.ops.gated_delta_rule.chunk_gated_delta_rule (forward; options scale, initial_state, output_final_state,
   use_qk_l2norm_in_kernel, use_beta_sigmoid_in_kernel, allow_neg_eigval, use_gate_in_kernel with A_log / dt_bias,
@@ -26,9 +26,11 @@ profiles:
       1e-6; scale default 1/sqrt(K).'
     task_choice_required: false
   paper_block:
-    meaning: The paper's token-mixer use of Eq. 10 - q and k L2-normalised exactly (no eps), o_t = S_t q_t without a scale
-      factor, alpha_t = exp(g_t), beta given. A task that means "the Gated DeltaNet layer of the paper" binds this profile;
-      the FLA kernel call realises it only up to its eps and scale options.
+    meaning: 'Only the normalised recurrence subcomputation of Eq. 10: q and k L2-normalised exactly (no eps),
+      o_t = S_t q_t without a scale factor, alpha_t = exp(g_t), beta given. The historical profile name paper_block
+      does not denote the complete Gated DeltaNet layer: projections, short convolution, SiLU, output normalisation,
+      output gating and output projection are outside this contract. Exact normalisation without eps and unit scale
+      are explicit task choices; a FLA call requires its own option binding.'
     task_choice_required: true
 outputs:
   out:
@@ -88,10 +90,12 @@ decisions:
   basis: [GDN_PAPER.CHUNK, FLA_GDR_CHUNK.CHUNK_SIZE, FLA_GDR_CHUNK.LOG2, FLA_GDR_NAIVE.CHUNK]
 - id: GD.PAPER
   status: drafted
-  statement: 'The v2.5 draft defined the un-normalised S^T q recurrence while citing the paper, whose layer normalises q and
-    k (review 2026-10-16). The two are kept apart: fla_chunk is the FLA call as made (what the tested case calls), paper_block
-    is the paper''s layer recurrence (exact L2 normalisation, no scale). Neither is presented as the other; a zero q or k has
-    no normalised value under paper_block (domain_undefined, no requirement on a device). The tested case uses fla_chunk.'
+  statement: 'The retained Gated DeltaNet paper describes L2-normalised q and k as inputs to Eq. 10, and separately describes
+    projection, convolution, activation, output normalisation, gating and output projection in its token mixer block.
+    paper_block specifies only the normalised recurrence, with exact L2 normalisation and unit scale explicitly selected;
+    it does not specify that complete block. This is separate from the normalising denominator and Z state in the
+    Katharopoulos linear-attention algorithm discussed in the A1 review. A zero q or k has no normalised value under
+    paper_block (domain_undefined). The tested FLA case uses fla_chunk, not paper_block.'
   basis: [GDN_PAPER.BLOCK, GDN_PAPER.EQ10, GDN_PAPER.OUT]
 clauses:
 - {id: GD.C1, basis: [GDN_PAPER.EQ10, GD.LAYOUT, FLA_GDR_NAIVE.RECURRENT], statement: 'h_t = alpha_t h_{t-1} + k_t u_t^T,
@@ -114,7 +118,7 @@ clauses:
 - {id: GD.C9, basis: [FLA_GDR_CHUNK.GATE_LOG, FLA_GDR_GATE.NAIVE, T_SOFTPLUS_F.DEF, T_SOFTPLUS_F.THRESH], statement: 'use_gate_in_kernel:
     log alpha_t = -exp(A_log) softplus(g_t + dt_bias) (torch softplus, threshold 20)', observes: [out], evidence_kind: definition}
 - {id: GD.C10, basis: [FLA_GDR_CHUNK.GATE_LOG, FLA_GDR_CHUNK.LOG2, GD.DOMAIN], statement: 'without the in-kernel gate g is in
-    log space: alpha_t = exp(g_t)', observes: [out], evidence_kind: definition}
+    log space: alpha_t = exp(g_t); supplied A_log and dt_bias are inactive and do not change the result', observes: [out], evidence_kind: definition}
 - {id: GD.C11, basis: [GDN_PAPER.CHUNK, GD.CHUNK], statement: the chunkwise WY evaluation (any chunk size) equals the recurrence
     in exact arithmetic; chunk_size must be 16, 32 or 64, observes: [out], evidence_kind: definition}
 - {id: GD.C12, basis: [GD.PAPER, GDN_PAPER.BLOCK, GDN_PAPER.OUT], statement: 'paper_block: q and k divided by their Euclidean
@@ -260,6 +264,14 @@ examples:
   input: {q: [[[[3, 4]]]], k: [[[[0, 2]]]], v: [[[[5]]]], g: [[[0]]], beta: [[[1]]], scale: 1}
   expected: {outcome: unsupported}
   note: an FLA option is not part of the paper profile (a profile choice, not a missing definition)
+- id: GD.E21
+  profile: fla_chunk
+  clauses: [GD.C1, GD.C10]
+  input: {q: [[[[1]]]], k: [[[[1]]]], v: [[[[3]]]], g: [[[0]]], beta: [[[1]]],
+    A_log: [17], dt_bias: [2], output_final_state: true}
+  expected: {outcome: value, fields: {out: {o: [[[[3]]]], final_state: [[[[3]]]]}}}
+  readings: {chunked: {outcome: value, fields: {out: {o: [[[[3]]]], final_state: [[[[3]]]]}}}}
+  note: The gate is disabled by default; its optional parameters are accepted but inactive in the retained FLA source.
 readings:
   chunked:
     meaning: Diagnostic evaluation by the chunkwise WY / UT-transform algorithm with the call's chunk size; it must give the
@@ -300,4 +312,8 @@ nonclaims:
   agreement with that program, not a published standard. Eq. 10 itself is the paper's.
 - Backward (gradients) is not covered; the tested case is forward only.
 - Kernel numerics (TF32 dots, float32 cumsum of the log gate, binary64 scale) are the numerical question (K - G).
-changes: []
+changes:
+- date: '2026-10-18'
+  reason: Re-read retained FLA_GDR_CHUNK and GDN_PAPER sources; wrapper-only CPU reproduction confirms inactive gate keywords are accepted.
+  change: Accept inactive A_log/dt_bias under fla_chunk (GD.C10, GD.E21); clarify that paper_block covers only the normalised recurrence and not the complete layer.
+  evidence: tests/test_gdr_independent.py

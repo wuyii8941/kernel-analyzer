@@ -40,7 +40,8 @@ def iv_erf(x: IV) -> IV:
         lo_q, hi_q = ends(x)
         out = []
         for q, side in ((lo_q, 0), (hi_q, 1)):
-            a = flint.arb(q.numerator) / flint.arb(q.denominator)        # Arb encloses the quotient rigorously
+            # int(): with gmpy2 installed mpmath (and so ends()) yields gmpy2.mpz, which Arb does not accept
+            a = flint.arb(int(q.numerator)) / flint.arb(int(q.denominator))   # Arb encloses the quotient rigorously
             ball = a.erf()
             m, e = (ball.lower() if side == 0 else ball.upper()).man_exp()
             v = Fraction(int(m)) * (Fraction(2) ** int(e))

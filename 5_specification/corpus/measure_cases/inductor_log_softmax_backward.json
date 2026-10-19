@@ -1,0 +1,22 @@
+{
+  "call": "../calls/inductor_log_softmax_backward.py:call",
+  "inputs": {
+    "upstream": {"sampler": {"normal": [0, 1]}, "shape": [16, 128], "dtype": "float32"},
+    "saved_output": {"state": "../calls/inductor_log_softmax_backward.py:make_saved_output", "shape": [16, 128], "dtype": "float32"},
+    "dim": {"const": -1},
+    "input_dtype": {"const": "f32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["dx"],
+    "binding_plan": "../call_bindings/inductor_log_softmax_backward.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

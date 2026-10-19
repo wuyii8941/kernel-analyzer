@@ -1,0 +1,192 @@
+schema_version: '1.2'
+id: EMB
+role: EMB
+title: Exact public PyTorch 2.10 dense embedding lookup and weight VJP
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 functional embedding without renormalisation or sparse gradients, including the complete dense weight VJP
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.functional.embedding, aten.embedding, aten.embedding_dense_backward]
+profiles:
+  torch210_dense_real:
+    meaning: >-
+      One public PyTorch 2.10 functional embedding lookup and its complete dense weight VJP for a nonempty
+      two-dimensional finite f16, bf16, f32 or f64 weight, a nonempty positive-rank int64 index tensor, and a
+      same-dtype finite upstream tensor. padding_idx may be null or any valid positive or negative row index, and
+      scale_grad_by_freq may be false or true. max_norm is null, norm_type is the public default 2 and sparse is false.
+    task_choice_required: false
+    basis: [EM.TASK, EM.LOOKUP, EM.DENSE_VJP]
+outputs:
+  out: {shape: 'indices.shape followed by embedding dimension', guarantee: exact}
+  dweight: {shape: 'the complete weight shape [num_embeddings, embedding_dim]', guarantee: exact}
+comparison:
+  input_binding: >-
+    weight and upstream are the exact finite physical values received in their declared common dtype. indices are
+    literal int64 values. padding_idx, max_norm, norm_type, scale_grad_by_freq and sparse are explicit call choices.
+  complete_output: The complete lookup result and every row of the dense weight VJP are required.
+  quality: Exact real lookup, addition and division by an integer frequency; no numerical tolerance is used.
+  test_evidence: >-
+    Independent coordinate construction and public PyTorch 2.10 comparisons cover four floating dtypes, repeated
+    indices, multidimensional indices, positive and negative padding_idx and both frequency choices.
+  error_handling: >-
+    Malformed records, shapes and out-of-range values are invalid_input. Legal public tasks outside the selected dense
+    non-renormalizing profile receive no answer.
+decisions:
+- id: EM.TASK
+  status: reviewed
+  statement: >-
+    Select the public functional embedding forward together with the dense weight VJP. max_norm mutation,
+    embedding_bag, sparse gradient layout, module initialization and internal overloads are separate tasks.
+  basis: [T_EMBEDDING_F.DEF, T_EMBEDDING.PADDING, T_EMBEDDING.FREQ, TS_FUNCTIONAL_EMB.EMB_RENORM]
+- id: EM.LOOKUP
+  status: reviewed
+  statement: >-
+    weight has shape [V,D]. The complete forward result has shape indices.shape+[D], and each position copies
+    weight[indices[position]]. padding_idx does not replace or zero that stored row in the functional forward.
+  basis: [T_EMBEDDING_F.DEF, T_EMBEDDING_F.PADDING, TS_EMBEDDING_CPP.FORWARD]
+- id: EM.PADDING
+  status: reviewed
+  statement: >-
+    padding_idx in [-V,V) is normalized once by adding V when negative. Forward lookup still returns its stored row,
+    while occurrences of that row contribute no weight gradient.
+  basis: [T_EMBEDDING_F.PADDING, T_EMBEDDING.PADDING, TS_FUNCTIONAL_EMB.EMB_PADDING, TS_EMBEDDING_CPP.DENSE_BWD]
+- id: EM.DENSE_VJP
+  status: reviewed
+  statement: >-
+    For every non-padding row k, dweight[k] is the sum of upstream positions whose index is k. When
+    scale_grad_by_freq=true, each such contribution is divided by the number of occurrences of k in the complete
+    index tensor. Rows without a contributing position and the padding row are zero.
+  basis: [T_EMBEDDING.FREQ, TS_EMBEDDING_CPP.DENSE_BWD]
+clauses:
+- {id: EM.C1, basis: [EM.TASK], statement: 'The call uses finite exactly represented weight and upstream values, int64 indices, max_norm=null, norm_type=2 and sparse=false.', observes: [out, dweight], evidence_kind: definition}
+- {id: EM.C2, basis: [EM.LOOKUP], statement: 'out[position,:]=weight[indices[position],:] with the complete indices.shape+[D] shape, including repeated and multidimensional indices.', observes: [out], evidence_kind: definition}
+- {id: EM.C3, basis: [EM.PADDING], statement: 'A valid negative padding_idx is normalized by adding V; padding occurrences return the stored row in out but contribute nothing to dweight.', observes: [out, dweight], evidence_kind: definition}
+- {id: EM.C4, basis: [EM.DENSE_VJP], statement: 'Without frequency scaling, dweight[k] is the sum of all upstream rows at positions whose index is k, except padding.', observes: [dweight], evidence_kind: definition}
+- {id: EM.C5, basis: [EM.DENSE_VJP], statement: 'With frequency scaling, every contribution for row k is divided by the total occurrence count of k in the complete index tensor.', observes: [dweight], evidence_kind: definition}
+- {id: EM.C6, basis: [EM.TASK], statement: 'Every input is read-only and the result includes the full forward and dense weight-gradient tensors.', observes: [out, dweight], evidence_kind: definition}
+examples:
+- id: EM.E1
+  profile: torch210_dense_real
+  clauses: [EM.C2, EM.C4, EM.C6]
+  input: &base {weight: [[1, 2], [3, 4], [5, 6]], indices: [2, 0, 2], upstream: [[1, 1], [2, 3], [10, 20]], dtype: f32, index_dtype: i64, padding_idx: null, max_norm: null, norm_type: 2, scale_grad_by_freq: false, sparse: false}
+  expected: {outcome: value, fields: {out: [[5, 6], [1, 2], [5, 6]], dweight: [[2, 3], [0, 0], [11, 21]]}}
+- id: EM.E2
+  profile: torch210_dense_real
+  clauses: [EM.C3]
+  input: {<<: *base, weight: [[7, 8], [1, 2]], indices: [0, 1, 0], upstream: [[1, 1], [2, 2], [3, 3]], padding_idx: 0}
+  expected: {outcome: value, fields: {out: [[7, 8], [1, 2], [7, 8]], dweight: [[0, 0], [2, 2]]}}
+- id: EM.E3
+  profile: torch210_dense_real
+  clauses: [EM.C3]
+  input: {<<: *base, weight: [[7, 8], [1, 2]], indices: [1, 0], upstream: [[1, 2], [3, 4]], padding_idx: -1}
+  expected: {outcome: value, fields: {out: [[1, 2], [7, 8]], dweight: [[3, 4], [0, 0]]}}
+- id: EM.E4
+  profile: torch210_dense_real
+  clauses: [EM.C5]
+  input: {<<: *base, weight: [[1, 1], [2, 2]], indices: [1, 1, 0], upstream: [[2, 4], [6, 8], [1, 1]], scale_grad_by_freq: true}
+  expected: {outcome: value, fields: {out: [[2, 2], [2, 2], [1, 1]], dweight: [[1, 1], [4, 6]]}}
+- id: EM.E5
+  profile: torch210_dense_real
+  clauses: [EM.C2, EM.C4]
+  input: {<<: *base, weight: [[1, 2], [3, 4], [5, 6]], indices: [[2, 0], [1, 2]], upstream: [[[1, 1], [2, 2]], [[3, 3], [4, 4]]]}
+  expected: {outcome: value, fields: {out: [[[5, 6], [1, 2]], [[3, 4], [5, 6]]], dweight: [[2, 2], [3, 3], [5, 5]]}}
+- id: EM.E6
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, weight: [[1/2, -1/4]], indices: [0], upstream: [[1/2, 1/4]], dtype: f16}
+  expected: {outcome: value, fields: {out: [[1/2, -1/4]], dweight: [[1/2, 1/4]]}}
+- id: EM.E7
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, indices: [3], upstream: [[1, 1]]}
+  expected: {outcome: invalid_input}
+- id: EM.E8
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, weight: [1, 2, 3], indices: [0], upstream: [[1]]}
+  expected: {outcome: invalid_input}
+- id: EM.E9
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, upstream: [[1, 1]]}
+  expected: {outcome: invalid_input}
+- id: EM.E10
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, weight: [['1/3', 2], [3, 4], [5, 6]]}
+  expected: {outcome: invalid_input}
+- id: EM.E11
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, weight: [[inf, 2], [3, 4], [5, 6]]}
+  expected: {outcome: unsupported}
+- id: EM.E12
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, max_norm: 1}
+  expected: {outcome: unsupported}
+- id: EM.E13
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, sparse: true}
+  expected: {outcome: unsupported}
+- id: EM.E14
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, index_dtype: i32}
+  expected: {outcome: unsupported}
+- id: EM.E15
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, op: embedding_bag}
+  expected: {outcome: unsupported}
+- id: EM.E16
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, indices: [true], upstream: [[1, 1]]}
+  expected: {outcome: invalid_input}
+- id: EM.E17
+  profile: torch210_dense_real
+  clauses: [EM.C3, EM.C5]
+  input: {<<: *base, weight: [[9, 9], [1, 2]], indices: [0, 1, 1, 1], upstream: [[8, 8], [3, 6], [6, 9], [9, 12]], padding_idx: 0, scale_grad_by_freq: true}
+  expected: {outcome: value, fields: {out: [[9, 9], [1, 2], [1, 2], [1, 2]], dweight: [[0, 0], [6, 9]]}}
+- id: EM.E18
+  profile: torch210_dense_real
+  clauses: [EM.C1]
+  input: {<<: *base, indices: [], upstream: []}
+  expected: {outcome: unsupported}
+signature:
+  inputs: [complete physical weight, complete int64 indices, complete upstream, dtype and all selected public options]
+  pre_state: [weight, indices and upstream are unchanged]
+  post_state: [complete newly returned out and complete dense dweight]
+  observation_unit: every coordinate of both outputs together with dtype and shape
+domain:
+  valid: [finite physical f16/bf16/f32/f64 values, nonempty positive dimensions, int64 in-range indices, valid optional padding_idx, max_norm null, norm_type 2, sparse false]
+  invalid_input: [malformed records, ragged or mismatched shapes, out-of-range or noninteger indices or padding_idx, values not exactly represented by the declared dtype]
+  unsupported: [embedding_bag, max_norm renormalisation, sparse gradients, special or complex values, non-int64 indices, empty tensors, module initialization, layout and alias effects]
+mutation_requirements:
+- {id: EM.M1, misreading: padding positions contribute to dweight, witnesses: [EM.E2]}
+- {id: EM.M2, misreading: functional embedding replaces the stored padding row with zeros in forward, witnesses: [EM.E2]}
+- {id: EM.M3, misreading: frequency is one larger than the actual occurrence count, witnesses: [EM.E4]}
+- {id: EM.M4, misreading: scale every row by the total number of positions, witnesses: [EM.E4, EM.E17]}
+- {id: EM.M5, misreading: multidimensional indices are flattened in the returned shape, witnesses: [EM.E5]}
+- {id: EM.M6, misreading: lookup reads the following weight row, witnesses: [EM.E1]}
+- {id: EM.M7, misreading: repeated-index gradients overwrite instead of accumulate, witnesses: [EM.E1]}
+nonclaims:
+- No answer is supplied for embedding_bag, max_norm mutation, sparse gradient layout, module initialization, unusual layouts, aliasing or special values.
+- Exact real accumulation defines the selected semantic target; finite-precision reduction order remains a numerical effect measured separately.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the active mixed embedding, embedding_bag and renormalisation draft with one reviewed public dense
+    embedding forward and VJP profile. Preserve the former broader contract and adapter under contracts/draft.
+  trigger: >-
+    The former draft combined multiple public tasks, mutation and disputed renormalisation behavior. Those branches
+    could not share one ground truth without task-specific evidence and binding.

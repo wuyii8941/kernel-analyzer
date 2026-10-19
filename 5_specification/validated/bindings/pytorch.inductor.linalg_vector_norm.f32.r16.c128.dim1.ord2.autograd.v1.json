@@ -1,0 +1,54 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.linalg_vector_norm.f32.r16.c128.dim1.ord2.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.linalg.vector_norm))",
+    "runtime_package": {"distribution": "torch", "version": "2.10.0+cu128"},
+    "boundary": "all generated Triton launches return the complete float32[16] public vector 2-norm and float32[16,128] input VJP",
+    "measure_call": "../calls/inductor_vector_norm.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_vector_norm_forward",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute public PyTorch 2.10 linalg vector 2-norm along dimension one for every positive-norm row of the complete finite float32 input.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.linalg_vector_norm", "basis": "the public callable is torch.linalg.vector_norm"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/scalars/ord"},
+        {"target": "/args/2", "source": "/scalars/dim"},
+        {"target": "/args/3", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/y", "conversion": "tensor_record", "measure_output": "y"}
+      ]
+    },
+    {
+      "id": "public_vector_norm_input_vjp",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute the complete input VJP of public PyTorch 2.10 linalg vector 2-norm against the received upstream tensor on positive-norm rows.",
+      "input_map": [
+        {"target": "/op", "literal": "vjp.aten.linalg_vector_norm", "basis": "the public autograd boundary differentiates torch.linalg.vector_norm"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/scalars/ord"},
+        {"target": "/args/3", "source": "/scalars/dim"},
+        {"target": "/args/4", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

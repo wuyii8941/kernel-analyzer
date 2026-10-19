@@ -2,16 +2,42 @@
 independent direct implementations of the misreadings (1-D only, enough for their witnesses)."""
 from __future__ import annotations
 
+import math
 import numpy as np
 import yaml
 
 from kernel_spec import aten as A
-from kernel_spec.aten_adapter import make_reference
+from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
+from kernel_spec.num import Invalid, Unsupported
 from kernel_spec.real import R
 from kernel_spec.registry import CONTRACTS
 
 COVERS = yaml.safe_load((CONTRACTS / "CONV.yaml").read_text())["covers"]
-reference = make_reference(COVERS)
+FINITE_FLOAT_DTYPES = {"f16", "bf16", "f32", "f64"}
+
+
+def _decode_argument(op, name, value, arguments):
+    decoded = decode(value)
+    if not isinstance(decoded, A.Ten):
+        return decoded
+    if decoded.dtype not in FINITE_FLOAT_DTYPES:
+        raise Unsupported(f"{name} dtype {decoded.dtype!r} is outside the finite floating CONV profile")
+    for item in decoded.a.flat:
+        finite = item.finite if isinstance(item, R) else (math.isfinite(item) if isinstance(item, float) else True)
+        if not finite:
+            if isinstance(item, float) and math.isnan(item):
+                raise Invalid(f"{name} contains NaN")
+            raise Unsupported(f"{name} contains an infinite value outside the finite CONV profile")
+    if name in {"g", "x", "w"}:
+        if decoded.a.ndim == 5:
+            raise Unsupported("3-D convolution is outside the reviewed CONV profile")
+        if decoded.a.ndim not in (3, 4):
+            raise Invalid("the reviewed low-level convolution profile requires batched 1-D or 2-D tensors")
+    return decoded
+
+
+reference = make_reference(COVERS, profiles=("real",), argument_decoder=_decode_argument)
+check_output = make_output_checker(COVERS, profiles=("real",), argument_decoder=_decode_argument)
 
 
 def _conv1d(x, w, bias, stride, pad_left, pad_right, dilation, flip=False, groups=1, ignore_groups=False):
@@ -51,14 +77,15 @@ def _no_groups(x, w, bias, stride, padding, dilation, transposed, output_padding
     return _conv1d(x, w, bias, stride[0], padding[0], padding[0], dilation[0], groups=1, ignore_groups=True)
 
 
-def _bias_first_position(g, x, w, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask=(True, True, True)):
-    gi, gw, gb = A.convolution_backward(g, x, w, bias_sizes, stride, padding, dilation, transposed, output_padding, groups)
+def _bias_first_position(g, x, w, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask):
+    gi, gw, gb = A.convolution_backward(
+        g, x, w, bias_sizes, stride, padding, dilation, transposed, output_padding, groups, output_mask)
     g = A._floatify(g)
     return [gi, gw, A.Ten(np.array([g.a[0, co, 0] for co in range(g.shape[1])], dtype=object), g.dtype)]
 
 
 def _m(**ops):
-    return make_reference(COVERS, extra=ops)
+    return make_reference(COVERS, extra=ops, profiles=("real",), argument_decoder=_decode_argument)
 
 
 MUTANTS = {

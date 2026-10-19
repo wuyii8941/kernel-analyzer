@@ -1,0 +1,36 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.dropout_backward.f32.1024.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 native dropout backward",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with four Triton programs producing every coordinate of one contiguous 1024-element output from grad_output and an explicit Boolean mask",
+    "measure_call": "../calls/triton_dropout_backward.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "native_dropout_backward",
+      "contract": "RANDOM",
+      "profile": "finite_backward",
+      "task_statement": "Return every native dropout backward value grad_output*mask*1.25 from the received physical finite float32 gradient and explicit Boolean mask.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.native_dropout_backward", "basis": "selected deterministic native dropout backward task"},
+        {"target": "/args/0", "source": "/tensor_arguments/grad_output/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/mask/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "literal": 1.25, "basis": "the kernel multiplies kept coordinates by the exact binary value 1.25"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "grad_output", "effect": "unchanged"},
+    {"argument": "mask", "effect": "unchanged"}
+  ]
+}

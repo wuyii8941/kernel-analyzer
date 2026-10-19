@@ -72,6 +72,9 @@ def execute(checks, tmp):
         try:
             rc, out, s = run(c.argv, c.cwd)
             ok, note = c.accept(rc, out, tmp)
+            if rc != 0:
+                ok = False
+                note = f"exit {rc}: " + (note or out.strip()[-300:])
         except Exception as e:  # noqa: BLE001
             ok, note, s = False, f"{type(e).__name__}: {e}", 0.0
         if not ok and not note:
@@ -86,7 +89,7 @@ def execute(checks, tmp):
 def counted(expected_total=None):
     def accept(rc, out, tmp):
         n = tests_passed(out)
-        ok = rc == 0 and n is not None and (expected_total is None or n == expected_total)
+        ok = rc == 0 and n is not None and n > 0 and (expected_total is None or n == expected_total)
         return ok, f"{n} 项" if ok else ""
     return accept
 
@@ -119,6 +122,12 @@ def required_checks(tmp):
         Check("合同", "合同检查（结构、例子、读法、变异）", [HERE / "tools/check_contracts.py"], HERE),
         Check("合同", "检查器与注册入口的测试（含注入失败 A–I）", ["-m", "unittest", "discover", "-s", "tests"], HERE,
               counted()),
+        # unittest discovery imports pytest-style modules but does not execute their functions.
+        Check("合同", "外部调用驱动的参照与报告检查", ["-m", "pytest", "-q",
+              "tests/test_softmax_public_vjp.py", "tests/test_huber_independent.py",
+              "tests/test_mse_independent.py", "tests/test_l1_independent.py",
+              "tests/test_loss_reductions.py", "tests/test_external_batch.py",
+              "tests/test_attention_vjp.py", "tests/test_attention_public_call_mapping.py"], HERE),
         Check("合同", "审阅方的例子对照（22 例、58 个标量）",
               [HERE / "tools/check_witnesses.py", "--source-root", HERE, "--output", tmp / "witness.json"], HERE,
               lambda rc, out, t: ((ok := rc == 0 and same_json(t / "witness.json", REVIEW / "reviewed_witness_checks.json")),

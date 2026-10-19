@@ -1,0 +1,323 @@
+schema_version: '1.2'
+id: F2_MX
+role: MX_BLOCK_QUANTIZATION
+title: Explicit MX scale and saturating element conversion tasks (draft migration)
+review:
+  status: drafted
+  author: Codex, 2026-10-18
+  date: '2026-10-18'
+  scope: Finite logical conversion for three element formats; independent source review and OCP compliance review
+    pending.
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - reviewed_contract_and_adapter_match_current
+covers:
+- Selected finite block or logical tensor conversion; no automatic mapping from a kernel family name
+profiles:
+  ocp_floor:
+    meaning: 'For nonzero block: X=2^clamp(floor(log2(amax))-floor(log2(qmax)),-127,127). The historical profile
+      name is not an OCP compliance claim.'
+    task_choice_required: true
+    basis:
+    - MX.TASK
+    - MX.ZERO
+    - MX.LAYOUT
+  ceil_pow2:
+    meaning: 'For nonzero block: X=2^clamp(ceil(log2(amax/qmax)),-127,127). This is a distinct chosen conversion,
+      not a misreading of ocp_floor.'
+    task_choice_required: true
+    basis:
+    - MX.TASK
+    - MX.ZERO
+    - MX.LAYOUT
+outputs:
+  result:
+    shape: 'block: {scale, elements[L], dequantized[L]}; tensor: {scales[scale_shape], elements[input_shape], dequantized[input_shape]}'
+    guarantee: exact
+comparison:
+  input_binding: Finite rational input values; received floats denote exact binary values. Explicit profile and
+    axis are mandatory.
+  quality: Exact equality of every scale, element and dequantized coordinate. No tolerance or dropped fields.
+  test_evidence: Independent enumeration of finite encodings, rounding boundaries and tensor block coordinates;
+    development evidence only.
+  error_handling: Invalid dimensions and contradictory parameters reject; unspecified zero-block scale is not_established;
+    unsupported format/rounding/layout is not guessed.
+decisions:
+- id: MX.TASK
+  status: needs_binding
+  statement: Select one exact real scale formula followed by saturating nearest-even element conversion. Supporting
+    local Triton source contains both scale choices but uses float32 intermediates; this mathematical task is not
+    its floating execution. No inference that another profile is semantically wrong, nor that these exhaust OCP
+    choices. OCP MX original text and a versioned TensorRT definition have not yet been retained/reviewed.
+  basis:
+  - MX_LOCAL_TRITON_DOWNCAST.SCALES
+  - MX_LOCAL_TRITON_DOWNCAST.FORMATS
+- id: MX.FORMAT
+  status: drafted
+  statement: 'Current finite element formats: E2M1 with values 0, 1/2, 1, 3/2, 2, 3, 4, 6 and negatives; E4M3FN
+    maximum448; E5M2 maximum57344. Round nearest, ties to even significand, saturate magnitude. Signed zero, NaN/Inf
+    encodings and FP6 outside scope.'
+  basis:
+  - MX_LOCAL_TRITON_FORMATS.FP4
+  - OCP_OFP8.E4M3
+  - OCP_OFP8.E5M2
+  - OCP_OFP8.CONVERT
+- id: MX.ZERO
+  status: needs_binding
+  statement: For a zero block, return a full value only when the caller chooses zero_scale as a finite E8M0 power
+    of two in [2^-127,2^127]; otherwise not_established. This does not claim a unique scale is required by OCP,
+    nor define its full allowed-result set. Tensor zero_scale applies to all its zero blocks.
+  basis:
+  - MX_LOCAL_TRITON_FORMATS.E8M0
+- id: MX.LAYOUT
+  status: needs_binding
+  statement: Block call selects 1..32 logical values. Tensor call selects an axis and groups consecutive logical
+    coordinates by32; scale_shape replaces that axis by ceil(length/32). Default tensor call rejects nonmultiple
+    lengths, consistent with retained API. partial_blocks=True explicitly selects a logical tail extension using
+    only present elements, not a claim about the source API. No physical storage/packing binding follows.
+  basis:
+  - MX_LOCAL_TRITON_API.AXIS
+  - MX_LOCAL_TRITON_API.SCALE_SHAPE
+clauses:
+- id: MX.C1
+  basis:
+  - MX.TASK
+  statement: Nonzero scale uses the selected profile exactly, including exponent clamp.
+  observes:
+  - result
+  evidence_kind: definition
+- id: MX.C2
+  basis:
+  - MX.FORMAT
+  statement: Each element is saturating nearest-even(x/X), dequantized value is X*element; return every coordinate.
+  observes:
+  - result
+  evidence_kind: definition
+- id: MX.C3
+  basis:
+  - MX.ZERO
+  statement: Zero-block result requires explicit chosen finite scale, otherwise not established.
+  observes:
+  - result
+  evidence_kind: definition
+- id: MX.C4
+  basis:
+  - MX.LAYOUT
+  statement: Explicit axis determines block members and every scale position; no dropped tail.
+  observes:
+  - result
+  evidence_kind: definition
+- id: MX.C5
+  basis:
+  - MX.TASK
+  - MX.LAYOUT
+  statement: Reject ignored/contradictory fields and incomplete outputs; default tensor call rejects partial blocks.
+  observes:
+  - result
+  evidence_kind: derived
+signature:
+  inputs:
+  - 'operation: block or tensor; fmt: e2m1/e4m3/e5m2'
+  - 'block operation: block[1..32]; tensor operation: rectangular x and required integer axis'
+  - optional zero_scale; tensor-only partial_blocks boolean defaults false
+  - optional scale_rule must equal the selected profile; it never silently overrides it
+  pre_state: []
+  post_state:
+  - All output fields above, no input mutation
+  observation_unit: One selected logical conversion task; all scales and all elements
+domain:
+  valid:
+  - Finite exact inputs; scalar tensor input not supported; negative in-range axis allowed
+  - Empty tensor permitted with valid metadata; block must be nonempty
+  domain_undefined: []
+  invalid_input:
+  - Ragged tensor, invalid axis/type, contradictory scale_rule, invalid zero_scale, incomplete observed output
+  unsupported:
+  - FP6, stochastic rounding, NaN/Inf/signed-zero behavior, byte packing, strides or device memory effects
+  - Unknown operations/parameters; nonmultiple tensor axis without explicit partial_blocks extension
+  - zero_scale supplied to nonzero block operation
+  not_established:
+  - Zero block without selected zero_scale; unresolved source or binding requirements
+examples:
+- id: MX.E1
+  profile: ocp_floor
+  clauses:
+  - MX.C1
+  - MX.C2
+  input:
+    operation: block
+    fmt: e4m3
+    block: &id001
+    - 500
+    - 1
+    - -3/4
+  expected:
+    outcome: value
+    fields:
+      result:
+        scale: 1
+        elements:
+        - 448
+        - 1
+        - -3/4
+        dequantized:
+        - 448
+        - 1
+        - -3/4
+- id: MX.E2
+  profile: ceil_pow2
+  clauses:
+  - MX.C1
+  - MX.C2
+  input:
+    operation: block
+    fmt: e4m3
+    block: *id001
+    scale_rule: ceil_pow2
+  expected:
+    outcome: value
+    fields:
+      result:
+        scale: 2
+        elements:
+        - 256
+        - 1/2
+        - -3/8
+        dequantized:
+        - 512
+        - 1
+        - -3/4
+- id: MX.E3
+  profile: ocp_floor
+  clauses:
+  - MX.C3
+  input:
+    operation: block
+    fmt: e4m3
+    block:
+    - 0
+    - 0
+    zero_scale: 2
+  expected:
+    outcome: value
+    fields:
+      result:
+        scale: 2
+        elements:
+        - 0
+        - 0
+        dequantized:
+        - 0
+        - 0
+- id: MX.E4
+  profile: ocp_floor
+  clauses:
+  - MX.C3
+  input:
+    operation: block
+    fmt: e4m3
+    block:
+    - 0
+    - 0
+  expected:
+    outcome: not_established
+- id: MX.E5
+  profile: ocp_floor
+  clauses:
+  - MX.C4
+  input:
+    operation: tensor
+    fmt: e4m3
+    x:
+    - - 500
+      - 1/1024
+    - - 1
+      - 1
+    axis: 1
+    partial_blocks: true
+  expected:
+    outcome: value
+    fields:
+      result:
+        scales:
+        - - 1
+        - - 1/256
+        elements:
+        - - 448
+          - 0
+        - - 256
+          - 256
+        dequantized:
+        - - 448
+          - 0
+        - - 1
+          - 1
+- id: MX.E6
+  profile: ocp_floor
+  clauses:
+  - MX.C5
+  input:
+    operation: block
+    fmt: e4m3
+    block: *id001
+    scale_rule: ceil_pow2
+  expected:
+    outcome: invalid_input
+- id: MX.E7
+  profile: ocp_floor
+  clauses:
+  - MX.C5
+  input:
+    operation: tensor
+    fmt: e2m1
+    x:
+    - 1
+    - 2
+    axis: 0
+  expected:
+    outcome: unsupported
+- id: MX.E8
+  profile: ocp_floor
+  clauses:
+  - MX.C4
+  input:
+    operation: tensor
+    fmt: e2m1
+    x: []
+    axis: 0
+  expected:
+    outcome: value
+    fields:
+      result:
+        scales: []
+        elements: []
+        dequantized: []
+mutation_requirements:
+- id: F2.M1
+  misreading: Ignore selected scale profile
+  witnesses:
+  - MX.E1
+  - MX.E2
+- id: F2.M2
+  misreading: Drop last quantized element
+  witnesses:
+  - MX.E1
+- id: F2.M3
+  misreading: Ignore selected tensor axis
+  witnesses:
+  - MX.E5
+- id: F2.M4
+  misreading: Replace chosen zero scale by1
+  witnesses:
+  - MX.E3
+nonclaims:
+- Draft migration does not establish OCP compliance or TensorRT equivalence.
+- Both profiles require explicit task choice; no kernel-level semantic conclusion without full binding.
+- Review, implementation and binding remain pending; historical draft is not a fallback.

@@ -1,0 +1,38 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.cast.f32_to_bf16.1024.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 to bfloat16 RTNE conversion",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with four Triton programs covering one contiguous 1024-element tensor",
+    "measure_call": "../calls/triton_cast_bf16.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "program_reference": {
+    "mode": "rounding_check",
+    "basis": "The public task is exactly the only floating operation in the launch: an explicit float32-to-bfloat16 RTNE conversion. Its declared rounding belongs in both the program value and the task value."
+  },
+  "tasks": [
+    {
+      "id": "cast",
+      "contract": "CAST",
+      "profile": "finite_rne",
+      "task_statement": "Convert every received finite float32 value to bfloat16 using IEEE roundTiesToEven and preserve the full shape.",
+      "input_map": [
+        {"target": "/op", "literal": "prims.convert_element_type", "basis": "selected functional conversion task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": "bf16", "basis": "the wrapper output allocation and explicit Triton cast target are bfloat16"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

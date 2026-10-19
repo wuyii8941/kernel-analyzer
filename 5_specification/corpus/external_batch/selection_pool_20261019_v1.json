@@ -1,0 +1,20 @@
+{
+  "task": "Public finite float32 max_pool2d (values, int64 indices, input VJP) and avg_pool2d (values, input VJP), with input and upstream unchanged",
+  "reference": "Native PyTorch 2.10.0+cu128 CUDA public functions and autograd; comparison with this explicit implementation is the selected task. Existing POOL.finite_max2d_values independently checks only its admitted forward-values scope.",
+  "limits": "Tied-max indices and VJPs are versioned implementation comparisons, not universal mathematical truth. No independent admitted average/backward specification. Inductor and native PyTorch share framework code and are not fully independent references. No statistical bias conclusion.",
+  "development": {"implementation": "flag_gems", "dimensions": [2, 3, 6, 8], "seeds": [20261211, 20261212]},
+  "acceptance": {"implementation": "inductor", "dimensions": [1, 2, 8, 10], "seeds": [20261213, 20261214]},
+  "cases": [
+    {"id": "max_default_stride", "kind": "max", "options": {"kernel_size": 2}},
+    {"id": "max_ties_overlap", "kind": "max", "constant": true, "options": {"kernel_size": 3, "stride": 1}},
+    {"id": "max_dilated_noncontiguous", "kind": "max", "noncontiguous": true, "options": {"kernel_size": [2, 3], "stride": [1, 2], "dilation": [2, 1]}},
+    {"id": "max_padded_ceil", "kind": "max", "options": {"kernel_size": 3, "stride": 2, "padding": 1, "ceil_mode": true}},
+    {"id": "max_unbatched", "kind": "max", "unbatched": true, "options": {"kernel_size": 2}},
+    {"id": "avg_default_stride", "kind": "avg", "options": {"kernel_size": 2}},
+    {"id": "avg_ceil_tail_include_pad", "kind": "avg", "options": {"kernel_size": 3, "stride": 2, "ceil_mode": true, "count_include_pad": true}},
+    {"id": "avg_padded_exclude_pad", "kind": "avg", "options": {"kernel_size": 3, "stride": 2, "padding": 1, "ceil_mode": true, "count_include_pad": false}},
+    {"id": "avg_divisor_noncontiguous", "kind": "avg", "noncontiguous": true, "options": {"kernel_size": [2, 3], "stride": 1, "padding": [1, 1], "divisor_override": 5}},
+    {"id": "avg_unbatched", "kind": "avg", "unbatched": true, "options": {"kernel_size": 2}}
+  ],
+  "selection_note": "Written before either split executes. Acceptance uses a different implementation, dimensions and seeds without adapting its cases to results. This is limited implementation-transfer acceptance, not unseen-family generalization. Preserve unavailable references, execution errors and missing Triton phases."
+}

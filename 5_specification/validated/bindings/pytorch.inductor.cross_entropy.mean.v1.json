@@ -1,0 +1,43 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.cross_entropy.mean.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.nn.functional.cross_entropy))",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "compiled mean loss and complete logits VJP",
+    "measure_call": "../calls/inductor_cross_entropy.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "cross_entropy",
+      "contract": "CE",
+      "profile": "index_unsmoothed",
+      "task_statement": "Two-dimensional unsmoothed class-index mean cross entropy with no class weights, ignore_index -100 and scalar upstream 1.",
+      "input_map": [
+        {"target": "/logits", "source": "/tensor_arguments/logits/before", "conversion": "tensor_values"},
+        {"target": "/target", "source": "/tensor_arguments/target/before", "conversion": "tensor_values"},
+        {"target": "/weights", "source": "/scalars/weights"},
+        {"target": "/eps", "source": "/scalars/eps"},
+        {"target": "/ignore_index", "source": "/scalars/ignore_index"},
+        {"target": "/reduction", "source": "/scalars/reduction"},
+        {"target": "/upstream", "source": "/scalars/upstream"}
+      ],
+      "output_map": [
+        {"target": "/loss", "source": "/returns/loss", "conversion": "tensor_values", "measure_output": "loss"},
+        {"target": "/gradient", "source": "/returns/gradient", "conversion": "tensor_values", "measure_output": "gradient"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "logits", "effect": "unchanged"},
+    {"argument": "target", "effect": "unchanged"}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "purpose": "Reuse INDEX lookup and EMB forward/VJP references on a real public embedding call; separate FlagGems development from TorchInductor acceptance. Not an independent blind benchmark.",
+  "versions": {"torch": "2.10.0+cu128", "flag_gems": "5.0.2"},
+  "task": "torch.nn.functional.embedding, float32 weight and upstream, int64 repeated indices; complete out and dense dweight; inputs unchanged; max_norm=null, norm_type=2, sparse=false",
+  "development": {"implementation": "flag_gems", "weight_shape": [11, 7], "index_shape": [2, 5], "seeds": [20261125, 20261126]},
+  "acceptance": {"implementation": "inductor", "weight_shape": [13, 17], "index_shape": [3, 5], "seeds": [20261127, 20261128]},
+  "cases": [
+    {"id": "default", "padding_idx": null, "scale_grad_by_freq": false},
+    {"id": "padding_zero", "padding_idx": 0, "scale_grad_by_freq": false},
+    {"id": "padding_last", "padding_idx": -1, "scale_grad_by_freq": false},
+    {"id": "frequency", "padding_idx": null, "scale_grad_by_freq": true},
+    {"id": "padding_zero_frequency", "padding_idx": 0, "scale_grad_by_freq": true},
+    {"id": "padding_last_frequency", "padding_idx": -1, "scale_grad_by_freq": true}
+  ],
+  "comparison": "Exact rational residuals for every output/gradient coordinate; standard implementation comparison separately. Nonzero floating residuals are not automatically errors or bias. No formal binding admission."
+}

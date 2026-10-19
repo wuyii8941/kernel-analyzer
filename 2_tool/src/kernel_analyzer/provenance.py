@@ -74,7 +74,18 @@ class _Trace:
         class Mode(TorchDispatchMode):
             def __torch_dispatch__(self, func, types, args=(), kwargs=None):
                 kwargs = kwargs or {}
+                first_launch = len(recorder.launches)
                 out = func(*args, **kwargs)
+                stop_launch = len(recorder.launches)
+                if stop_launch > first_launch:
+                    # PyTorch removes this mode while redispatching func. A
+                    # Python library implementation can launch Triton here, but
+                    # its nested ATen producers are not observed by this mode.
+                    # This is a diagnostic, never producer evidence.
+                    trace.enclosed_launches.append({
+                        "operator": str(func), "first_launch": first_launch,
+                        "stop_launch": stop_launch,
+                    })
                 mutated = []
                 for i, a in enumerate(func._schema.arguments):
                     if a.alias_info is not None and a.alias_info.is_write:
@@ -85,6 +96,7 @@ class _Trace:
                 return out
 
         self.events = []
+        self.enclosed_launches = []
         self.mode = Mode()
 
 
@@ -164,6 +176,7 @@ def _signature(launch):
 
 
 ATEN_WRITES = "__aten_writes__"   # key of {launch index: {measured storage address: ATen in-place writes so far}}
+ENCLOSED_LAUNCHES = "__dispatch_enclosed_launches__"  # unobserved internals; half-open launch index ranges
 
 
 def rng_state() -> dict:
@@ -193,7 +206,8 @@ def producer_records(case, seed, measured_launches, seq, rng_before=None) -> Opt
     the measured launches (different Triton launch sequence, an error in the traced run).  Under the key
     ``ATEN_WRITES``: per launch, the number of ATen in-place writes so far to each storage the launch touches (keyed by
     the measured run's storage address), the write evidence between two launches that bytes and version counters miss
-    (``tensor.data``; storage_effects M4).
+    (``tensor.data``; storage_effects M4). ``ENCLOSED_LAUNCHES`` reports dispatch calls that enclose Triton launches:
+    their internal ATen producers are not observed. Launch alignment alone does not imply complete ATen visibility.
 
     ``rng_before``: the random state before the measured run (``rng_state``).  The traced run starts from it, so an
     in-call random draw (a dropout mask) is the measured run's, and afterwards every random state is restored to what
@@ -242,6 +256,7 @@ def _traced(case, seed, measured_launches, seq, stance, TritonLaunchRecorder, rn
     pending = next(events, None)
     writes = {}                            # trace storage -> ATen in-place writes so far
     out[ATEN_WRITES] = {}
+    out[ENCLOSED_LAUNCHES] = trace.enclosed_launches
     for i, (tl_, ml) in enumerate(zip(rec.launches, measured_launches)):
         while pending is not None and pending[0] <= i:
             for p in _apply(prov, pending):

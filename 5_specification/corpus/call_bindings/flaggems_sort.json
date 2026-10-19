@@ -1,0 +1,38 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "flaggems.sort.public.v1",
+  "status": "drafted",
+  "unresolved": [
+    "The public outputs depend on internally allocated radix-sort values, indices and exclusive-prefix buffers across eight sweep launches. The current capture does not prove that every such buffer is produced inside this call solely from x and exact constants, so call-level contract binding is refused."
+  ],
+  "subject": {
+    "library": "FlagGems",
+    "version": "5.0.2",
+    "callable": "torch.sort under flag_gems.use_gems",
+    "runtime_package": {"distribution": "flag_gems", "version": "5.0.2"},
+    "boundary": "one public call sorting every row of one contiguous 32x32 float32 tensor and returning complete values and int64 original indices",
+    "measure_call": "../calls/flaggems_sort_unique.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "sort",
+      "contract": "SORT",
+      "profile": "finite_unique",
+      "task_statement": "Sort every row of the received physical finite contiguous float32 matrix in ascending order along dimension one and return every ordered value and its unique original column index; every received row has pairwise distinct values.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.sort", "basis": "selected public functional integer-dimension sort task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": 1, "basis": "the wrapper sorts rows along dimension one"},
+        {"target": "/args/2", "literal": false, "basis": "the wrapper requests ascending order"}
+      ],
+      "output_map": [
+        {"target": "/out/0", "source": "/returns/values", "conversion": "tensor_record", "measure_output": "values"},
+        {"target": "/out/1", "source": "/returns/indices", "conversion": "tensor_record", "measure_output": "indices"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

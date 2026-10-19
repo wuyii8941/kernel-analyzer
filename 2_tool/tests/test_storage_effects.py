@@ -202,6 +202,28 @@ def test_storage_watch_excludes_announced_raw_pointer_writes():
     assert w.count(x.untyped_storage().data_ptr()) == 1
 
 
+def test_storage_watch_allows_aot_announcement_for_storage_less_wrapper_subclass():
+    class Wrapper(torch.Tensor):
+        @staticmethod
+        def __new__(cls):
+            return torch.Tensor._make_wrapper_subclass(cls, (2,), dtype=torch.float32, device="cpu")
+
+        @classmethod
+        def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
+            raise RuntimeError("not used by this version-counter test")
+
+    wrapper = Wrapper()
+    with pytest.raises(RuntimeError, match="invalid python storage"):
+        wrapper.untyped_storage().data_ptr()
+    w = S.StorageWatch()
+    w.install()
+    try:
+        torch.autograd.graph.increment_version(wrapper)
+    finally:
+        w.uninstall()
+    assert wrapper._version == 1
+
+
 def test_storage_watch_states_its_limits():
     w = S.StorageWatch()
     x = torch.rand(8)
@@ -252,6 +274,15 @@ def test_declared_read_identity_and_coverage():
     assert not ok and "outside the declared input" in why                     # bytes of the storage outside it
     ok, why = snap.declared_read(_arg(x, storage_id=12345), [(32, 96)])
     assert not ok and "another storage instance" in why
+
+
+@pytest.mark.parametrize("value", [torch.tensor([2, 0, -1], dtype=torch.int64),
+                                   torch.tensor([True, False, True], dtype=torch.bool)])
+def test_declared_read_recognises_non_floating_task_inputs(value):
+    snap = S.InputSnapshot({"value": value})
+    assert snap.declared_read(_arg(value), None) == (True, "declared input")
+    assert value in snap.all_tensors
+    assert value not in snap.tensors
 
 
 def test_input_digest_map_is_ordered_by_path():

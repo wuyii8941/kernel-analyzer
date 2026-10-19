@@ -32,6 +32,7 @@ bump the version counter; the producer trace sees them as ATen writes when it ca
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import Iterable, Optional
 
 import numpy as np
@@ -305,7 +306,17 @@ class StorageWatch:
     def _announce(self, tensors):
         import torch
         ts = [tensors] if isinstance(tensors, torch.Tensor) else list(tensors)
-        ptrs = {t.untyped_storage().data_ptr() for t in ts if isinstance(t, torch.Tensor)}
+        ptrs = set()
+        for tensor in ts:
+            if not isinstance(tensor, torch.Tensor):
+                continue
+            try:
+                ptrs.add(tensor.untyped_storage().data_ptr())
+            except RuntimeError:
+                # Wrapper subclasses (for example torchao optimizer states) have no data-bearing storage of their
+                # own. AOTAutograd still announces their version increment; the actual flattened tensors are
+                # recorded separately when their pointers reach a Triton launch.
+                pass
         before = {id(h): self._version(h) for p in ptrs for h, _ in self._held.get(p, ())}
         self._original(ts)
         for p in ptrs:
@@ -374,9 +385,10 @@ def _host_view(t, host):
 
 
 class InputSnapshot:
-    """The declared inputs before the call (M1, M3): per floating input storage the storage itself (held), its
+    """The declared inputs before the call (M1, M3): per tensor input storage the storage itself (held), its
     StorageImpl identity, its bytes, and the byte runs of the declared input tensors on it; per input path the digest
-    of the tensor's bytes (an ordered map: two inputs that swap contents are different inputs)."""
+    of the tensor's bytes (an ordered map: two inputs that swap contents are different inputs).  ``tensors`` keeps
+    the floating subset used by the numerical decomposition; ``all_tensors`` is used by contract binding."""
 
     @staticmethod
     def digests_of(inp, hosts=None) -> dict:
@@ -398,19 +410,22 @@ class InputSnapshot:
 
     def __init__(self, inp):
         self.tensors = []
+        self.all_tensors = []
+        self.all_storages = {}  # every tensor input, including integer state used by a task specification
         self.storages = {}     # ptr -> storage
         self.cdata = {}        # ptr -> StorageImpl identity
         self.raw = {}          # ptr -> uint8 bytes before the call
-        self.cover = {}        # ptr -> merged byte runs of the declared float input tensors
+        self.cover = {}        # ptr -> merged byte runs of the declared input tensors
         self.exact = {}        # ptr -> False when some input's coverage had to be approximated (no claim then)
         hosts = {}
         self.digest_map = self.digests_of(inp, hosts)
         self.by_path = dict(_tensors(inp))
         self._hosts = hosts
         for path, t in _tensors(inp):
-            if not t.is_floating_point():
-                continue
-            self.tensors.append(t)
+            self.all_tensors.append(t)
+            self.all_storages.setdefault(t.untyped_storage().data_ptr(), t.untyped_storage())
+            if t.is_floating_point():
+                self.tensors.append(t)
             s = t.untyped_storage()
             p = s.data_ptr()
             if p not in self.storages:
@@ -425,6 +440,34 @@ class InputSnapshot:
             else:
                 self.cover[p] = merge_runs(self.cover[p] + runs)
 
+    @contextmanager
+    def pre_call_state(self):
+        """Temporarily expose every tensor input exactly as it was before the call.
+
+        A supplied task reference is evaluated after the measured call so it cannot alter the candidate's RNG or
+        execution.  In-place calls may already have changed the input storages by then.  This context restores the
+        saved bytes on the same storage objects (therefore preserving device, views and aliasing), lets the reference
+        read them, and restores the real post-call bytes even when the reference raises or mutates an input.
+        """
+        import torch
+
+        post = {ptr: _host_bytes(storage) for ptr, storage in self.all_storages.items()}
+
+        def write(hosts):
+            for ptr, storage in self.all_storages.items():
+                view = torch.empty(0, dtype=torch.uint8, device=storage.device).set_(storage, 0, (storage.nbytes(),))
+                view.copy_(hosts[ptr], non_blocking=False)
+
+        write(self._hosts)
+        try:
+            yield
+        finally:
+            devices = {storage.device for storage in self.all_storages.values()
+                       if storage.device.type == "cuda"}
+            for device in devices:
+                torch.cuda.synchronize(device)
+            write(post)
+
     def ptrs(self) -> set:
         return set(self.storages)
 
@@ -437,6 +480,12 @@ class InputSnapshot:
         v = v.float() if v.dtype in (torch.bfloat16, torch.float16) or (v.element_size() == 1 and v.is_floating_point()) \
             else v
         return v.contiguous().reshape(-1).double().numpy()
+
+    def pre_call_tensor(self, path: str):
+        """A detached CPU tensor with the input view's exact pre-call dtype, shape, strides and values."""
+        t = self.by_path[path]
+        host = self._hosts[t.untyped_storage().data_ptr()]
+        return _host_view(t.detach(), host).clone()
 
     def declared_read(self, arg, read_runs: Optional[list]) -> tuple:
         """(declared input, reason) for a captured argument whose reference read ``read_runs`` (storage-relative

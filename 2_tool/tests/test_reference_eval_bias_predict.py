@@ -115,6 +115,8 @@ def test_sum_tree_contract_absorption_in_low_precision():
 
 torch = pytest.importorskip("torch")
 cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+fp8_cuda = pytest.mark.skipif(not torch.cuda.is_available() or torch.cuda.get_device_capability() < (8, 9),
+                              reason="device FP8 conversion needs sm_89 or newer")
 
 
 @cuda
@@ -157,7 +159,7 @@ def test_ex_ante_prediction_of_a_tf32_dot():
     assert np.all(np.abs(e - o["delta"].reshape(64, 64)) <= o["radius"].reshape(64, 64))
 
 
-@cuda
+@fp8_cuda
 def test_e5m2_software_conversion_matches_the_device():
     """The conversion function the predictor evaluates for f8E5M2 is the device's (f32 and f16 operands)."""
     g = torch.Generator(device="cuda").manual_seed(8)
@@ -182,7 +184,7 @@ def test_e5m2_software_conversion_matches_the_device():
         assert np.array_equal(model[ok], y.double().cpu().numpy()[ok])
 
 
-@cuda
+@fp8_cuda
 def test_noise_pass_carries_operand_exactness():
     """A rounding chain fed by a rounded value: the noise pass must keep the variance of the later sites (v1 took
     every operand as exact in the noise pass and predicted almost no noise for an e5m2 chain)."""

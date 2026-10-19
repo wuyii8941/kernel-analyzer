@@ -1,99 +1,142 @@
 schema_version: '1.2'
 id: RANDOM
 role: RANDOM
-title: Random operations conditioned on the kernel's own random numbers (Inductor seeds and random tensors, dropout)
+title: Deterministic dropout forward boundaries and finite native dropout backward
 review:
-  status: drafted
-  author: Claude (spec v3 author), 2026-10-16
-  date: '2026-10-16'
-  scope: The value of a random operation given its random numbers; the distribution of those numbers is a separate
-    statistical question. Awaiting a review by someone who did not write it.
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 dropout cases whose complete value is fixed without choosing or observing a random stream
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
-covers: [prims.inductor_lookup_seed, prims.inductor_random, aten.native_dropout, aten.dropout, aten.native_dropout_backward,
-  keep_from_uniform]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.dropout, torch.nn.functional.dropout, aten.native_dropout_backward]
 profiles:
-  conditioned:
-    meaning: The random numbers (Inductor's random tensor, or dropout's keep mask) are inputs supplied from the kernel's
-      own run; the contract states what the operation computes from them. Whether they follow the intended distribution
-      is checked statistically and reported separately (PLAN_v3 section 1, v2.5 plan section 4).
+  deterministic_forward:
+    meaning: >-
+      Complete dropout forward values on positive rank-1 through rank-4 physical finite f16, bf16, f32 or f64
+      tensors when evaluation is selected, or when training uses p=0 or p=1. These cases have a unique result without
+      observing or reproducing a random stream. Training with 0<p<1 is outside this profile.
     task_choice_required: false
+    basis: [RN2.SCHEMA, RN2.DETERMINISTIC]
+  finite_backward:
+    meaning: >-
+      Complete native dropout backward values for a positive rank-1 through rank-4 physical finite f16, bf16, f32 or
+      f64 gradient tensor, an explicit same-shape Boolean mask, and a finite exact scale.
+    task_choice_required: false
+    basis: [RN2.SCHEMA, RN2.BACKWARD]
 outputs:
   out:
-    shape: per operation; native_dropout returns (output, keep mask)
-    kind: discrete
+    shape: the complete input or gradient shape
     guarantee: exact
 comparison:
-  input_binding: The conditioning values are the kernel's own; other values are the exact values received.
-  quality: Exact equality.
-  test_evidence: Exact equality.
-  error_handling: Missing conditioning values are unsupported (no value can be given without them); malformed ones are
-    invalid_input.
+  input_binding: >-
+    The tensor records contain the exact physical values received in their declared dtypes. Forward probability and
+    training mode, or backward mask and scale, are explicit call arguments.
+  complete_output: The complete returned tensor is observed with dtype, explicit shape and every value.
+  quality: Exact finite-real task value, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent coordinate formulas and PyTorch 2.10 comparisons over all selected floating dtypes.
+  error_handling: Malformed calls are invalid_input; stochastic training forward, in-place operation, special values,
+    signed-zero distinctions, empty or unselected ranks and other dtypes receive no reference answer.
 decisions:
-- id: RN.CONDITION
-  status: drafted
-  statement: The random stream of a device (Philox counters, offsets) is implementation-defined and is not part of any
-    task definition, so f takes the kernel's random numbers as given. The statistical test of those numbers (keep
-    fraction against Binomial(n, 1 - p), uniformity of 'rand') is a separate result and is never folded into f.
-  basis: [T_DROPOUT.DEF, TS_INDUCTOR_PRIMS.RANDOM]
-- id: RN.MASK_RULE
-  status: drafted
-  statement: When the kernel exposes uniform numbers rather than a mask, the keep mask is uniform > p (the torch 2.10
-    decomposition of native_dropout). A kernel that keeps where uniform < 1 - p has the same distribution but a
-    different mask; such a difference is reported as a difference of the random stream, not as a semantic error.
-  basis: [TS_DECOMP.DROPOUT]
+- id: RN2.SCHEMA
+  status: reviewed
+  statement: >-
+    Select the one-output functional dropout calls and the one-output native_dropout_backward call. Native dropout
+    forward returns an additional mask and is a different task. In-place, feature, alpha and fused attention dropout
+    forms are also different tasks.
+  basis: [TS_NATIVE_FUNCTIONS.DROPOUT_SCHEMAS]
+- id: RN2.DETERMINISTIC
+  status: reviewed
+  statement: >-
+    Evaluation-mode dropout is the identity. In training, p=0 is the identity and p=1 is the all-zero tensor. For
+    0<p<1 the output depends on independently sampled Bernoulli variables, so this value reference refuses the query
+    instead of inventing a mask or accepting the tested kernel's mask as ground truth.
+  basis: [T_DROPOUT.DEF, T_DROPOUT_F.DEF, TS_DECOMP.DROPOUT]
+- id: RN2.BACKWARD
+  status: reviewed
+  statement: >-
+    Native dropout backward with an explicit mask and scale returns grad_output * mask * scale at every coordinate.
+    Its result is deterministic because the mask is an ordinary task input.
+  basis: [TS_DECOMP.DROPOUT_BWD, TS_NATIVE_FUNCTIONS.DROPOUT_SCHEMAS]
 clauses:
-- {id: RN.C1, basis: [TS_INDUCTOR_PRIMS.SEED], statement: 'inductor_lookup_seed(seeds, i) = seeds[i]', observes: [out],
-  evidence_kind: definition}
-- {id: RN.C2, basis: [TS_INDUCTOR_PRIMS.RANDOM, RN.CONDITION], statement: 'inductor_random(size, seed, mode) = the kernel''s
-    own random tensor of that size (''rand'' values in [0, 1))', observes: [out], evidence_kind: definition}
-- {id: RN.C3, basis: [T_DROPOUT.DEF, T_DROPOUT_F.DEF, TS_DECOMP.DROPOUT, RN.CONDITION], statement: 'native_dropout / dropout
-    given the keep mask: x * keep / (1 - p) in training; p = 1 gives zeros; evaluation or p = 0 gives x', observes: [out],
-  evidence_kind: definition}
-- {id: RN.C4, basis: [TS_DECOMP.DROPOUT_BWD], statement: 'native_dropout_backward(g, mask, scale) = g * mask * scale',
-  observes: [out], evidence_kind: definition}
-- {id: RN.C5, basis: [TS_DECOMP.DROPOUT, RN.MASK_RULE], statement: keep mask from uniforms = uniform > p, observes: [out],
-  evidence_kind: definition}
+- id: RN2.C1
+  basis: [RN2.SCHEMA, RN2.DETERMINISTIC]
+  statement: Evaluation forward returns the complete input unchanged for every admitted p in [0,1].
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C2
+  basis: [RN2.DETERMINISTIC]
+  statement: Training forward returns the complete input for p=0 and a same-dtype, same-shape all-zero tensor for p=1.
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C3
+  basis: [RN2.DETERMINISTIC]
+  statement: Training forward with 0<p<1 has no value answer in this profile.
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C4
+  basis: [RN2.BACKWARD]
+  statement: Every backward output coordinate is grad_output at that coordinate times the Boolean mask and exact scale.
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C5
+  basis: [RN2.SCHEMA]
+  statement: >-
+    Both profiles require complete positive rank-1 through rank-4 physical finite floating tensors; backward additionally
+    requires a same-shape Boolean mask. Special values, signed-zero distinctions and other ranks or dtypes are refused.
+  observes: [out]
+  evidence_kind: definition
 examples:
-- {id: RN.E1, profile: conditioned, clauses: [RN.C1], input: {op: prims.inductor_lookup_seed, args: [{t: i64, v: [11, 22, 33]},
-      1]}, expected: {outcome: value, fields: {out: 22}}}
-- {id: RN.E2, profile: conditioned, clauses: [RN.C2], input: {op: prims.inductor_random, args: [[2], 7, rand], kwargs: {values: {
-          t: f32, v: ['1/4', '3/4']}}}, expected: {outcome: value, fields: {out: ['1/4', '3/4']}}}
-- {id: RN.E3, profile: conditioned, clauses: [RN.C2], input: {op: prims.inductor_random, args: [[2], 7, rand], kwargs: {values: {
-          t: f32, v: ['1/4', 1]}}}, expected: {outcome: invalid_input}}
-- {id: RN.E4, profile: conditioned, clauses: [RN.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4, 6]}, '1/4', true],
-    kwargs: {keep: {t: b8, v: [true, false, true]}}}, expected: {outcome: value, fields: {out: [['8/3', 0, 8], [true, false, true]]}}}
-- {id: RN.E5, profile: conditioned, clauses: [RN.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, 1, true]},
-  expected: {outcome: value, fields: {out: [[0, 0], [false, false]]}}}
-- {id: RN.E6, profile: conditioned, clauses: [RN.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', false]},
-  expected: {outcome: value, fields: {out: [[2, 4], [true, true]]}}}
-- {id: RN.E7, profile: conditioned, clauses: [RN.C3], input: {op: aten.dropout, args: [{t: f32, v: [3, 3]}, '1/10', true], kwargs: {
-      keep: {t: b8, v: [false, true]}}}, expected: {outcome: value, fields: {out: [0, '10/3']}}}
-- {id: RN.E8, profile: conditioned, clauses: [RN.C3], input: {op: aten.dropout, args: [{t: f32, v: [3, 3]}, '1/10', true]},
-  expected: {outcome: unsupported}, note: Without the kernel's mask there is no value to compare (conditioning missing).}
-- {id: RN.E9, profile: conditioned, clauses: [RN.C4], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2, 3]}, {
-        t: b8, v: [true, false, true]}, '4/3']}, expected: {outcome: value, fields: {out: ['4/3', 0, 4]}}}
-- {id: RN.E10, profile: conditioned, clauses: [RN.C5], input: {op: keep_from_uniform, args: [{t: f32, v: ['1/20', '1/10', '1/2']},
-      '1/10']}, expected: {outcome: value, fields: {out: [false, false, true]}}}
+- {id: RN2.E1, profile: deterministic_forward, clauses: [RN2.C1], input: {op: aten.dropout, args: [{t: f32, v: [2, -4, 6]}, '1/2', false]}, expected: {outcome: value, fields: {out: [2, -4, 6]}}}
+- {id: RN2.E2, profile: deterministic_forward, clauses: [RN2.C1], input: {op: torch.nn.functional.dropout, args: [{t: f64, v: [[1, 2], [3, 4]]}], kwargs: {p: '1/4', training: false, inplace: false}}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4]]}}}
+- {id: RN2.E3, profile: deterministic_forward, clauses: [RN2.C2], input: {op: aten.dropout, args: [{t: f16, v: [1, -2, 3]}, 0, true]}, expected: {outcome: value, fields: {out: [1, -2, 3]}}}
+- {id: RN2.E4, profile: deterministic_forward, clauses: [RN2.C2], input: {op: torch.nn.functional.dropout, args: [{t: bf16, v: [[1, -2], [3, 4]]}, 1, true]}, expected: {outcome: value, fields: {out: [[0, 0], [0, 0]]}}}
+- {id: RN2.E5, profile: deterministic_forward, clauses: [RN2.C3], input: {op: aten.dropout, args: [{t: f32, v: [1, 2]}, '1/2', true]}, expected: {outcome: unsupported}}
+- {id: RN2.E6, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: [1, 2]}, '3/2', false]}, expected: {outcome: invalid_input}}
+- {id: RN2.E7, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: [1, 2]}, 0, 1]}, expected: {outcome: invalid_input}}
+- {id: RN2.E8, profile: deterministic_forward, clauses: [RN2.C5], input: {op: torch.nn.functional.dropout, args: [{t: f32, v: [1, 2]}], kwargs: {p: 0, training: true, inplace: true}}, expected: {outcome: unsupported}}
+- {id: RN2.E9, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: i64, v: [1, 2]}, 0, true]}, expected: {outcome: unsupported}}
+- {id: RN2.E10, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: [1, inf]}, 0, true]}, expected: {outcome: unsupported}}
+- {id: RN2.E11, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: ['1/3', 1]}, 0, true]}, expected: {outcome: invalid_input}}
+- {id: RN2.E12, profile: finite_backward, clauses: [RN2.C4], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2, -3]}, {t: b8, v: [true, false, true]}, '5/4']}, expected: {outcome: value, fields: {out: ['5/4', 0, '-15/4']}}}
+- {id: RN2.E13, profile: finite_backward, clauses: [RN2.C4], input: {op: aten.native_dropout_backward, args: [{t: f16, v: [[2, -4], [6, 8]]}, {t: b8, v: [[false, true], [true, false]]}, '-1/2']}, expected: {outcome: value, fields: {out: [[0, 2], [-3, 0]]}}}
+- {id: RN2.E14, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2]}, {t: b8, v: [true]}, 1]}, expected: {outcome: invalid_input}}
+- {id: RN2.E15, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2]}, {t: i64, v: [1, 0]}, 1]}, expected: {outcome: invalid_input}}
+- {id: RN2.E16, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2]}, {t: b8, v: [true, false]}, inf]}, expected: {outcome: unsupported}}
+- {id: RN2.E17, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: 2}, {t: b8, v: true}, 1]}, expected: {outcome: unsupported}}
 signature:
-  inputs: ['op: one of the covered names', 'conditioning: values (random tensor) or keep (boolean mask) from the kernel']
-  pre_state: []
-  post_state: []
-  observation_unit: the value of one random operation given its random numbers
+  inputs: [selected dropout operation and exact scalar parameters, one physical finite floating tensor, an explicit same-shape Boolean mask for backward]
+  pre_state: [all input tensors are unchanged]
+  post_state: [one complete newly returned tensor]
+  observation_unit: every returned coordinate together with dtype and shape
 domain:
-  valid: ['p in [0, 1]; conditioning values of the right shape and range']
-  invalid_input: ['p outside [0, 1]', 'conditioning values of the wrong shape, dtype or range']
-  unsupported: [a training-mode random operation without its conditioning values]
+  valid:
+  - evaluation forward with p in the closed unit interval
+  - training forward with p equal to zero or one
+  - native backward with explicit Boolean mask and finite exact scale
+  invalid_input:
+  - malformed record, probability outside the closed unit interval, nonboolean options, wrong mask dtype or shape, or unrepresentable physical input value
+  unsupported:
+  - stochastic training forward, native forward pair, in-place operation, special values, signed-zero distinctions, empty dimensions, unselected ranks, or integer or complex floating inputs
 mutation_requirements:
-- {id: RN.M1, misreading: dropout scales by (1 - p) instead of dividing by it (trident bug class), witnesses: [RN.E4]}
-- {id: RN.M2, misreading: dropout keeps the scale in evaluation mode, witnesses: [RN.E6]}
-- {id: RN.M3, misreading: dropout backward without the scale, witnesses: [RN.E9]}
-- {id: RN.M4, misreading: keep mask taken as uniform >= p, witnesses: [RN.E10]}
-- {id: RN.M5, misreading: p = 1 divides by zero instead of returning zeros, witnesses: [RN.E5]}
+- {id: RN2.M1, misreading: evaluation forward still applies inverse keep-probability scaling, witnesses: [RN2.E1]}
+- {id: RN2.M2, misreading: training p=1 returns the input instead of zeros, witnesses: [RN2.E4]}
+- {id: RN2.M3, misreading: backward omits scale, witnesses: [RN2.E12]}
+- {id: RN2.M4, misreading: backward uses the complement of the mask, witnesses: [RN2.E13]}
+- {id: RN2.M5, misreading: backward adds scale instead of multiplying by it, witnesses: [RN2.E12]}
 nonclaims:
-- The distribution of the random numbers is a statistical question reported separately; f never certifies it.
-- The unsupported outcome in RN.E8 is the absence of conditioning data for a query, not a missing definition of dropout.
-changes: []
+- No value ground truth is claimed for training forward with 0<p<1. Its output law requires a separate statistical test, and a tested kernel's realized mask is not an independent reference.
+- No result is certified for native forward mask output, random-number generation, in-place or feature dropout, fused attention dropout, gradients with respect to probability, special values, empty tensors, aliasing or device placement.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the conditioned-random draft with two reviewed deterministic profiles: forward boundary cases independent of
+    a random stream, and native backward with an explicit mask. Preserve the former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The former adapter accepted a synthetic keep keyword absent from the selected ATen schemas. The current runtime
+    binding cannot use a returned mask as a task input, and doing so would not independently validate that mask.

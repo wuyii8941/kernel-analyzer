@@ -5,7 +5,7 @@
 ## 做什么
 
 对一个 Triton kernel 的每次启动，从捕获的 IR 自动构造实数语义 G 的严格包围（参照 K_R），与实际输出 K 比较，
-再用固定的方向规则与端点保守统计判断数值差异 e_num = K − G 的平均作用是否非零。有任务规格时（模式 B）另报 e_sem = G − f。
+再用固定的方向规则与端点保守统计判断数值差异 e_num = K − G 的平均作用是否非零。普通模式 B 的手写参照只作实现对照；合同模式通过已审阅的任务合同与公开调用绑定，分别统计 G − f 和完整公开输出上的 K − f。
 状态与参数的写入可以放在增量观察层上看（`compare.observe`）：比较实际写入的增量与参照增量，报告未写入的比例、保留比例与方向。
 没有 IR 的实现（ATen、cuBLAS）用黑箱模式（`compare.mode = "black-box"`）：只比较 K − f，规格要手写。
 
@@ -39,10 +39,14 @@ $PY -m pytest -q 2_tool/tests                          # 测试：不得改写�
 [2_tool/docs/binding_guide.md](docs/binding_guide.md) 与 [2_tool/examples/bindings](examples/bindings/)。报告给出每个输出的完整参照率、宽度相对 ulp 的分布、
 平均作用的判定（非零（方向）/ 未确认 / 无法判断）与失败归因。「未确认」不等于「没有 bias」。
 
+命令行每个输出的 `comparisons` 分别展示设备相对程序参照、程序参照相对任务、设备相对任务的结果。
+没有程序参照时，前两项明确标为未建立；已准入的完整 K−f 仍单独报告。黑箱对照只显示相对所选参照
+的结果，未经准入的参照不会被改称为数学任务标准。原有顶层 `fixed_mean`/`aligned` 字段保留兼容，
+读取结论时应同时查看 `comparisons`、适用范围及完整输出标记；NaN/Inf 类别矛盾也单独展示。
+
 ## 能做与不能做
 
-- **能**：单个 Triton kernel（classic 由 TTIR，Gluon 由 TTGIR）、输出由 Triton 写出、操作在注册表内；模式 A 测数值差异的平均作用，
-  有规格时模式 B 另报 e_sem。NVIDIA sm_90 / sm_100 与 AMD gfx942 / gfx950 的 TTGIR 操作有 CPU 语义（设备验证 0）。
+- **能**：单个 Triton kernel（classic 由 TTIR，Gluon 由 TTGIR）、输出由 Triton 写出、操作在注册表内；模式 A 测数值差异的平均作用。合同模式在参照与公开调用绑定都通过准入时，统计任务差异 K − f，并保留可建立部分的 K − G 与 G − f 分解。NVIDIA sm_90 / sm_100 与 AMD gfx942 / gfx950 的 TTGIR 操作有 CPU 语义（设备验证 0）。
 - **不能**：注册表外的操作与未登记的 libdevice / inline asm（明确拒绝）；cuBLAS / ATen 写出的输出没有自动参照（黑箱模式只能对手写规格比较）；warp specialization、
   asm 内访存；保存值、反向与优化器写入作为一个自动调用图。
 - **证明状态**：CAS 自旋锁（单一临界区）的结果在 z3 证明临界区两两可交换时无条件成立，scan 在 z3 证明组合区域结合时无条件成立；

@@ -1,177 +1,215 @@
 schema_version: '1.2'
 id: SGD
 role: SGD
-title: torch.optim.SGD (momentum, dampening, nesterov, weight decay, maximize), one step from an explicit pre-state,
-  PyTorch 2.10 algorithm box
+title: Exact torch.optim.SGD state transition for one dense real parameter tensor
 review:
-  status: drafted
-  author: Claude (spec v3 author, group E1_optim), 2026-10-17
-  date: '2026-10-17'
-  scope: One optimizer step on one parameter tensor (flattened), exact rational arithmetic; awaiting a review by
-    someone who did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 public SGD, one parameter tensor and one step from an explicit parameter and momentum-buffer pre-state
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
-covers: [torch.optim.SGD, aten._fused_sgd_]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.optim.SGD]
 profiles:
   torch210:
-    meaning: torch.optim.SGD as its 2.10 algorithm box states; all option values (momentum, dampening, nesterov,
-      weight_decay, maximize), plain SGD included (momentum = 0).
+    meaning: >-
+      The exact-real state transition of one dense real parameter tensor in one PyTorch 2.10 torch.optim.SGD step.
+      The complete old parameter and optional momentum buffer, gradient presence, all algorithmic hyperparameters and
+      the public foreach, fused and differentiable choices are explicit. foreach and fused may select different
+      implementations of this same target; differentiable=true is outside this profile.
     task_choice_required: false
+    basis: [SG.TASK, SG.FIRST, SG.NO_MOMENTUM_BUFFER]
 outputs:
   theta:
-    shape: '[d]'
+    shape: '[d] complete parameter post-state'
     guarantee: exact
   b:
-    shape: '[d] momentum buffer, or [] when no buffer exists (momentum = 0, or no step taken yet)'
+    shape: '[d] complete momentum-buffer post-state, or [] when no buffer exists'
     guarantee: exact
 comparison:
-  input_binding: All values are the exactly received rationals.
-  quality: Exact; the step uses only rational operations.
-  test_evidence: Exact equality of theta and b.
-  error_handling: Inputs validated before evaluation; the documented nesterov precondition is invalid input.
+  input_binding: >-
+    Every coordinate is the exactly received rational. state.theta and state.b are the complete pre-state for this
+    parameter. gradient is either the complete gradient vector or null. The remaining fields are the public SGD
+    choices for this step.
+  complete_output: Both the complete parameter and complete momentum-buffer post-state are required.
+  quality: Exact real arithmetic for the documented state-transition formula; no tolerance and no partial state.
+  test_evidence: Independent coordinate evaluation and direct PyTorch 2.10 comparisons for loop, foreach, default and fused strategies.
+  error_handling: Malformed calls are invalid_input; legal tasks outside the selected dense real, non-differentiable single-parameter step receive no answer.
 decisions:
+- id: SG.TASK
+  status: reviewed
+  statement: >-
+    Select one public torch.optim.SGD step on one dense real parameter tensor. The result includes the complete
+    parameter and momentum-buffer post-state. Internal aten._fused_sgd_, AMP grad_scale/found_inf, closure results,
+    sparse or complex gradients, differentiable execution and multi-parameter-group orchestration are separate tasks.
+  basis: [T_SGD_OPT.PAGE, TS_SGD.PAGE]
 - id: SG.FIRST
-  status: drafted
-  statement: 'The box distinguishes t > 1 (b_t <- mu*b_{t-1} + (1-tau)*g_t) from the first step (b_t <- g_t). With an
-    explicit pre-state the first step is the step at which no buffer exists (b = []): torch keeps no step counter for
-    SGD, creates the buffer as a copy of the processed gradient the first time the parameter has a gradient, and steps
-    with grad None do not touch it. Alternative (t = number of optimizer.step calls, counting steps in which this
-    parameter had no gradient) rejected: the box iterates the updates of the parameter, and the reference program keys
-    the first step on the missing buffer.'
+  status: reviewed
+  statement: >-
+    A missing momentum buffer, represented by b=[], identifies the first momentum update for this parameter. PyTorch
+    creates it as a copy of the processed gradient, without dampening. A step with gradient=null skips this parameter
+    and therefore does not create or alter its buffer.
+  basis: [T_SGD_OPT.MOMENTUM, TS_SGD.FIRST_BUF, T_ZERO_GRAD.SKIP]
+- id: SG.NO_MOMENTUM_BUFFER
+  status: reviewed
+  statement: >-
+    When momentum is zero, PyTorch neither reads nor writes a momentum buffer. An existing buffer in the explicit
+    pre-state therefore remains present and unchanged; an absent buffer remains absent.
   basis: [T_SGD_OPT.MOMENTUM, TS_SGD.FIRST_BUF]
 - id: SG.NESTEROV
-  status: drafted
-  statement: 'nesterov=True is only applicable when momentum is non-zero (documentation); the reference program also
-    requires zero dampening and raises ValueError otherwise. Both are invalid input. Alternative (compute the box with
-    dampening != 0) rejected because the constructor refuses it; the claim on the dampening condition is consistent
-    with the reference program.'
+  status: reviewed
+  statement: >-
+    nesterov=true is valid only when momentum is positive and dampening is zero. This follows both the public
+    constructor check and the documented algorithm.
   basis: [T_SGD_OPT.NESTEROV_PRE, TS_SGD.NESTEROV_CHECK]
-- id: SG.NO_MOMENTUM_BUFFER
-  status: drafted
-  statement: 'With momentum = 0 the box never reads or writes b; the post-state buffer is the pre-state buffer
-    unchanged (normally []).'
-  basis: [T_SGD_OPT.MOMENTUM]
 clauses:
-- {id: SG.C1, basis: [T_SGD_OPT.MAXIMIZE], statement: 'maximize negates the gradient first: g = -grad', observes: [theta,
-    b], evidence_kind: definition}
-- {id: SG.C2, basis: [T_SGD_OPT.L2], statement: 'if weight_decay != 0: g <- g + weight_decay*theta_old, after the
-    negation and before the momentum', observes: [theta, b], evidence_kind: definition}
-- {id: SG.C3, basis: [T_SGD_OPT.MOMENTUM, SG.FIRST, SG.NO_MOMENTUM_BUFFER], statement: 'momentum != 0: b_new = g when no
-    buffer exists, else b_new = momentum*b_old + (1-dampening)*g; momentum = 0: b unchanged', observes: [b, theta],
-  evidence_kind: definition}
-- {id: SG.C4, basis: [T_SGD_OPT.NESTEROV, SG.NESTEROV], statement: 'nesterov: direction = g + momentum*b_new; otherwise
-    direction = b_new (momentum != 0) or g (momentum = 0); nesterov needs momentum > 0 and dampening = 0',
-  observes: [theta], evidence_kind: definition}
-- {id: SG.C5, basis: [T_SGD_OPT.UPDATE, T_SGD_OPT.NOTE_FORM], statement: 'theta_new = theta_old - lr*direction (lr
-    outside the buffer)', observes: [theta], evidence_kind: definition}
-- {id: SG.C6, basis: [T_ZERO_GRAD.SKIP], statement: 'gradient None leaves theta and b unchanged; a zero gradient is a full
-    step', observes: [theta, b], evidence_kind: definition}
+- {id: SG.C1, basis: [T_SGD_OPT.MAXIMIZE], statement: 'maximize negates the received gradient before every other transformation: g = -gradient', observes: [theta, b], evidence_kind: definition}
+- {id: SG.C2, basis: [T_SGD_OPT.L2], statement: 'weight decay is coupled L2: g becomes g + weight_decay*theta_old after maximize handling and before momentum', observes: [theta, b], evidence_kind: definition}
+- {id: SG.C3, basis: [T_SGD_OPT.MOMENTUM, SG.FIRST, SG.NO_MOMENTUM_BUFFER], statement: 'with nonzero momentum, a missing buffer becomes g and an existing buffer becomes momentum*b_old + (1-dampening)*g; with zero momentum the buffer is unchanged', observes: [theta, b], evidence_kind: definition}
+- {id: SG.C4, basis: [T_SGD_OPT.NESTEROV, SG.NESTEROV], statement: 'nesterov uses direction = g + momentum*b_new; ordinary momentum uses b_new; zero momentum uses g', observes: [theta], evidence_kind: definition}
+- {id: SG.C5, basis: [T_SGD_OPT.UPDATE, T_SGD_OPT.NOTE_FORM], statement: 'theta_new = theta_old - lr*direction; lr is outside the momentum buffer', observes: [theta], evidence_kind: definition}
+- {id: SG.C6, basis: [T_ZERO_GRAD.SKIP, SG.FIRST], statement: 'gradient null leaves theta and b unchanged, while an all-zero gradient performs a full step including decay and momentum', observes: [theta, b], evidence_kind: definition}
+- {id: SG.C7, basis: [SG.TASK, TS_SGD.PAGE], statement: 'foreach false/true/null and fused false/true/null are execution choices for the selected transition, subject to the public constructor constraints; differentiable execution and internal AMP inputs are outside this profile', observes: [theta, b], evidence_kind: definition}
 examples:
 - id: SG.E1
   profile: torch210
   clauses: [SG.C1, SG.C2, SG.C5]
-  input: {state: {theta: [1], b: []}, gradient: [0], lr: 1/10, momentum: 0, dampening: 0, weight_decay: 1/10,
-    nesterov: false, maximize: true}
+  input: {state: {theta: [1], b: []}, gradient: [0], lr: 1/10, momentum: 0, dampening: 0, weight_decay: 1/10, nesterov: false, maximize: true}
   expected: {outcome: value, fields: {theta: ['99/100'], b: []}}
-  note: The v1 error check (SPECIFICATION_v2 section 3) - negate then decay gives g = 1/10, theta = 99/100.
 - id: SG.E2
   profile: torch210
   clauses: [SG.C3, SG.C5]
-  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 1/2, weight_decay: 0,
-    nesterov: false, maximize: false}
+  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 1/2, weight_decay: 0, nesterov: false, maximize: false}
   expected: {outcome: value, fields: {theta: ['4/5'], b: [2]}}
-  note: First step - no dampening, b = g = 2.
 - id: SG.E3
   profile: torch210
   clauses: [SG.C3, SG.C5]
-  input: {state: {theta: [1], b: [1]}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 1/2, weight_decay: 0,
-    nesterov: false, maximize: false}
+  input: {state: {theta: [1], b: [1]}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 1/2, weight_decay: 0, nesterov: false, maximize: false}
   expected: {outcome: value, fields: {theta: ['81/100'], b: ['19/10']}}
 - id: SG.E4
   profile: torch210
   clauses: [SG.C3, SG.C4, SG.C5]
-  input: {state: {theta: [1], b: [1]}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 0, weight_decay: 0,
-    nesterov: true, maximize: false}
+  input: {state: {theta: [1], b: [1]}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 0, weight_decay: 0, nesterov: true, maximize: false}
   expected: {outcome: value, fields: {theta: ['539/1000'], b: ['29/10']}}
-  note: b = 9/10 + 2 = 29/10; direction = 2 + (9/10)(29/10) = 461/100.
 - id: SG.E5
   profile: torch210
   clauses: [SG.C1, SG.C2, SG.C3, SG.C4, SG.C5]
-  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 0, weight_decay: 1/10,
-    nesterov: true, maximize: true}
+  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 0, weight_decay: 1/10, nesterov: true, maximize: true}
   expected: {outcome: value, fields: {theta: ['1361/1000'], b: ['-19/10']}}
-  note: g = -2 + 1/10 = -19/10; b = g; direction = -19/10 - 171/100 = -361/100.
 - id: SG.E6
   profile: torch210
   clauses: [SG.C4]
-  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 1/2, weight_decay: 0,
-    nesterov: true, maximize: false}
+  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 9/10, dampening: 1/2, weight_decay: 0, nesterov: true, maximize: false}
   expected: {outcome: invalid_input}
 - id: SG.E7
   profile: torch210
   clauses: [SG.C4]
-  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 0, dampening: 0, weight_decay: 0,
-    nesterov: true, maximize: false}
+  input: {state: {theta: [1], b: []}, gradient: [2], lr: 1/10, momentum: 0, dampening: 0, weight_decay: 0, nesterov: true, maximize: false}
   expected: {outcome: invalid_input}
 - id: SG.E8
   profile: torch210
   clauses: [SG.C6]
-  input: {state: {theta: [1], b: [2]}, gradient: null, lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 0,
-    nesterov: false, maximize: false}
+  input: {state: {theta: [1], b: [2]}, gradient: null, lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
   expected: {outcome: value, fields: {theta: [1], b: [2]}}
 - id: SG.E9
   profile: torch210
   clauses: [SG.C3, SG.C6]
-  input: {state: {theta: [1], b: [2]}, gradient: [0], lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 0,
-    nesterov: false, maximize: false}
+  input: {state: {theta: [1], b: [2]}, gradient: [0], lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
   expected: {outcome: value, fields: {theta: ['9/10'], b: [1]}}
 - id: SG.E10
   profile: torch210
   clauses: [SG.C5]
-  input: {state: {theta: [3, -1], b: []}, gradient: [1, 1/2], lr: 1, momentum: 0, dampening: 0, weight_decay: 0,
-    nesterov: false, maximize: false}
+  input: {state: {theta: [3, -1], b: []}, gradient: [1, 1/2], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
   expected: {outcome: value, fields: {theta: [2, '-3/2'], b: []}}
-  note: Plain SGD with lr 1 (the optimizer of the essential-round GradScaler step conditions).
 - id: SG.E11
   profile: torch210
   clauses: [SG.C1, SG.C3, SG.C5]
-  input: {state: {theta: [0, 1], b: [1, -1]}, gradient: [1, 2], lr: 1/2, momentum: 1/2, dampening: 1/2, weight_decay: 0,
-    nesterov: false, maximize: true}
+  input: {state: {theta: [0, 1], b: [1, -1]}, gradient: [1, 2], lr: 1/2, momentum: 1/2, dampening: 1/2, weight_decay: 0, nesterov: false, maximize: true}
   expected: {outcome: value, fields: {theta: [0, '7/4'], b: [0, '-3/2']}}
-  note: g = [-1, -2]; b = [1/2 - 1/2, -1/2 - 1]; theta = [0 - 0, 1 + 3/4] = [0, 7/4].
-- id: SG.N1
+- id: SG.E12
   profile: torch210
   clauses: [SG.C3]
-  input: {state: {theta: [1, 2], b: [1]}, gradient: [1, 1], lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 0,
-    nesterov: false, maximize: false}
+  input: {state: {theta: [1], b: [3]}, gradient: [1], lr: 1/2, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
+  expected: {outcome: value, fields: {theta: ['1/2'], b: [3]}}
+- id: SG.E13
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [1], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false, foreach: true, fused: false, differentiable: false}
+  expected: {outcome: value, fields: {theta: [0], b: []}}
+- id: SG.E14
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [1], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false, differentiable: true}
+  expected: {outcome: unsupported}
+- id: SG.E15
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [1], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false, foreach: true, fused: true}
   expected: {outcome: invalid_input}
+- id: SG.E16
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [1], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false, grad_scale: 2}
+  expected: {outcome: unsupported}
+- id: SG.E17
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [1], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: 1}
+  expected: {outcome: invalid_input}
+- id: SG.E18
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [1], lr: -1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
+  expected: {outcome: invalid_input}
+- id: SG.E19
+  profile: torch210
+  clauses: [SG.C7]
+  input: {state: {theta: [1], b: []}, gradient: [.nan], lr: 1, momentum: 0, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
+  expected: {outcome: invalid_input}
+- id: SG.E20
+  profile: torch210
+  clauses: [SG.C3]
+  input: {state: {theta: [1, 2], b: [1]}, gradient: [1, 1], lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 0, nesterov: false, maximize: false}
+  expected: {outcome: invalid_input}
+- id: SG.E21
+  profile: torch210
+  clauses: [SG.C2, SG.C3]
+  input: {state: {theta: [1], b: [1]}, gradient: [2], lr: 1/10, momentum: 1/2, dampening: 0, weight_decay: 1/2, nesterov: false, maximize: false}
+  expected: {outcome: value, fields: {theta: ['7/10'], b: [3]}}
 signature:
-  inputs: ['gradient [d] or None', lr, momentum, dampening, weight_decay, 'nesterov, maximize (booleans)']
-  pre_state: ['theta [d]', 'b [d] or [] (no buffer)']
-  post_state: ['theta [d]', 'b [d] or []']
-  observation_unit: one parameter tensor (flattened; element-wise update), one optimizer step; SGD keeps no step counter
+  inputs: ['complete gradient vector or null', lr, momentum, dampening, weight_decay, nesterov, maximize, 'optional foreach/fused/differentiable']
+  pre_state: ['complete theta vector', 'complete b vector or [] for an absent momentum buffer']
+  post_state: ['complete theta vector', 'complete b vector or []']
+  observation_unit: one dense real parameter tensor and its momentum-buffer state across one public optimizer step
 domain:
-  valid: [d >= 1, finite rationals, 'lr, momentum, weight_decay >= 0', dampening any rational]
-  domain_undefined: []
-  invalid_input: [length mismatch (also of a non-empty buffer), NaN or infinite values, non-boolean options,
-    'nesterov with momentum <= 0 or dampening != 0', negative lr / momentum / weight_decay]
-  unsupported: [sparse gradients, complex parameters, differentiable=True]
+  valid: [d >= 1, finite exact rational values, lr/momentum/weight_decay >= 0, Boolean nesterov/maximize, foreach/fused false/true/null, differentiable false]
+  invalid_input: [missing fields, non-string field names, incomplete or extra state fields, length mismatch, nonfinite values, non-Boolean flags, negative lr/momentum/weight_decay, nesterov without positive momentum and zero dampening, foreach and fused both true]
+  unsupported: [undeclared top-level task fields, sparse or complex gradients, differentiable true, internal AMP grad_scale/found_inf, closure and loss result, multiple parameters or parameter groups, device rounding and layouts]
 mutation_requirements:
-- {id: SG.M1, misreading: 'maximize negates after weight decay (v1 error: negate(g + lambda*theta))', witnesses: [SG.E1,
-    SG.E5]}
-- {id: SG.M2, misreading: dampening applied on the first momentum step, witnesses: [SG.E2]}
-- {id: SG.M3, misreading: nesterov flag ignored, witnesses: [SG.E4]}
-- {id: SG.M4, misreading: 'maximize applied only at the update (theta + lr*direction, buffer from +grad)', witnesses: [
-    SG.E5, SG.E11]}
-- {id: SG.M5, misreading: None gradient treated as zero, witnesses: [SG.E8]}
-- {id: SG.M6, misreading: nesterov precondition not enforced, witnesses: [SG.E6, SG.E7]}
-- {id: SG.M7, misreading: momentum buffer not written to the post-state, witnesses: [SG.E2, SG.E3]}
-- {id: SG.M8, misreading: 'Sutskever form (lr inside the buffer: b = mu*b + lr*g, theta -= b), which the documentation
-    contrasts with torch', witnesses: [SG.E3]}
+- {id: SG.M1, misreading: maximize negates after adding weight decay, witnesses: [SG.E1, SG.E5]}
+- {id: SG.M2, misreading: dampening is applied to the first momentum buffer, witnesses: [SG.E2]}
+- {id: SG.M3, misreading: nesterov is ignored, witnesses: [SG.E4]}
+- {id: SG.M4, misreading: maximize changes only the final update sign while the buffer uses the positive gradient, witnesses: [SG.E5, SG.E11]}
+- {id: SG.M5, misreading: a null gradient is treated as an all-zero gradient, witnesses: [SG.E8]}
+- {id: SG.M6, misreading: the public nesterov precondition is not enforced, witnesses: [SG.E6, SG.E7]}
+- {id: SG.M7, misreading: the new momentum buffer is omitted from the post-state, witnesses: [SG.E2, SG.E3]}
+- {id: SG.M8, misreading: lr is multiplied into the momentum buffer as in the contrasted Sutskever form, witnesses: [SG.E3]}
+- {id: SG.M9, misreading: dampening is ignored for an existing momentum buffer, witnesses: [SG.E3]}
+- {id: SG.M10, misreading: weight decay is added after the momentum-buffer update, witnesses: [SG.E21]}
+- {id: SG.M11, misreading: an existing momentum buffer is discarded when momentum is zero, witnesses: [SG.E12]}
 nonclaims:
-- Device rounding of for-loop, foreach, fused and compiled implementations is not judged here (K - f).
-- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
-changes: []
+- No result is certified for internal aten._fused_sgd_, AMP scaling or overflow skipping, closures, sparse or complex gradients, differentiable execution, multi-parameter orchestration, layouts, aliasing or device execution.
+- The profile specifies the exact-real documented transition. Device rounding and the chosen loop, foreach or fused implementation remain part of K−Gπ.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the broad draft with a reviewed public torch.optim.SGD state transition, strict public-option validation,
+    a complete output interface and a current direct implementation. Preserve the former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The draft also named internal aten._fused_sgd_, silently ignored undeclared fields and lacked a complete-output
+    checker, so it could not establish that a supplied program implemented the same public task.

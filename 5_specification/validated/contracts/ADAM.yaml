@@ -1,0 +1,325 @@
+schema_version: '1.2'
+id: ADAM
+role: ADAM
+title: Strict-real torch.optim.Adam transition for one dense parameter tensor
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 public coupled Adam, one dense real parameter tensor and one step with complete optional state
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.optim.Adam]
+profiles:
+  torch210_dense_real:
+    meaning: >-
+      One public PyTorch 2.10 torch.optim.Adam step for one dense real parameter tensor with coupled L2 weight decay.
+      The complete parameter and optional optimizer pre-state, gradient presence, algorithmic options and public
+      execution choices are explicit. decoupled_weight_decay=true is the AdamW task. Capturable or differentiable
+      execution, tensor hyperparameters and internal fused AMP arguments are outside this profile.
+    task_choice_required: false
+    basis: [AD.TASK, AD.STATE, AD.ORDER]
+outputs:
+  theta: {shape: '[d] complete parameter post-state', guarantee: rigorous_enclosure}
+  m: {shape: '[d] complete first-moment post-state, or [] when state remains uninitialized', guarantee: exact}
+  v: {shape: '[d] complete second-moment post-state, or [] when state remains uninitialized', guarantee: exact}
+  vmax: {shape: '[d] complete AMSGrad maximum post-state, or [] when absent', guarantee: exact}
+  t: {shape: scalar nonnegative integer or null when state remains uninitialized, guarantee: exact}
+comparison:
+  input_binding: >-
+    All arithmetic values are the exactly received rationals. state contains the complete per-parameter pre-state;
+    m=[], v=[], vmax=[], t=null means PyTorch has not lazily initialized state for this parameter.
+  complete_output: The complete parameter, first moment, second moment, optional AMSGrad maximum and step are required.
+  quality: Moments and step are exact. Parameter coordinates are outward real enclosures of the square-root formula.
+  test_evidence: Independent coordinate checks and direct PyTorch 2.10 comparisons cover cold and warm state, AMSGrad, maximize, coupled decay and public execution strategies.
+  error_handling: Malformed calls are invalid_input; legal tasks outside this dense real noncapturable, nondifferentiable coupled-Adam profile receive no answer.
+decisions:
+- id: AD.TASK
+  status: reviewed
+  statement: >-
+    Select one public torch.optim.Adam step with coupled L2 weight decay. AdamW/decoupled decay, internal
+    aten._fused_adam_, AMP grad_scale/found_inf, closure results, sparse or complex gradients, differentiable or
+    capturable execution and multi-parameter orchestration are separate tasks.
+  basis: [T_ADAM_OPT.PAGE, TS_ADAM.PAGE, TS_ADAM.STRATEGIES]
+- id: AD.STATE
+  status: reviewed
+  statement: >-
+    State is initialized only for a parameter with a present gradient. It contains step, exp_avg and exp_avg_sq;
+    max_exp_avg_sq exists only when AMSGrad is enabled. A null gradient neither creates nor changes state.
+  basis: [TS_ADAM.LAZY_STATE, TS_ADAM.STATE_KEYS, TS_ADAM.NONE, T_ZERO_GRAD.SKIP]
+- id: AD.ORDER
+  status: reviewed
+  statement: >-
+    The selected order is maximize handling, step increment, coupled weight decay, moment updates, correction with
+    the incremented step, optional maximum over the uncorrected second moment, then the parameter update with eps
+    outside the square root.
+  basis: [T_ADAM_OPT.MAXIMIZE, T_ADAM_OPT.L2, T_ADAM_OPT.MOMENTS, T_ADAM_OPT.AMSGRAD,
+    T_ADAM_OPT.UPDATE, TS_ADAM.STEP]
+clauses:
+- {id: AD.C1, basis: [T_ADAM_OPT.MAXIMIZE, T_ADAM_OPT.L2, AD.ORDER], statement: 'The processed gradient is g=(-gradient if maximize else gradient)+weight_decay*theta_old; maximize is applied before coupled decay.', observes: [theta, m, v, vmax], evidence_kind: definition}
+- {id: AD.C2, basis: [T_ADAM_OPT.MOMENTS, TS_ADAM.STEP], statement: 'For a present gradient, t_new=t_old+1, m_new=beta1*m_old+(1-beta1)*g and v_new=beta2*v_old+(1-beta2)*g^2; absent state first initializes m_old=v_old=0 and t_old=0.', observes: [m, v, t], evidence_kind: definition}
+- {id: AD.C3, basis: [T_ADAM_OPT.MOMENTS, TS_ADAM.STEP], statement: 'Bias corrections use the incremented step: m_hat=m_new/(1-beta1^t_new) and the selected second moment is divided by (1-beta2^t_new).', observes: [theta, t], evidence_kind: definition}
+- {id: AD.C4, basis: [T_ADAM_OPT.AMSGRAD, TS_ADAM.STEP, AD.STATE], statement: 'With AMSGrad, vmax_new=max(vmax_old,v_new) before bias correction and it supplies the selected second moment; without AMSGrad the vmax state is absent and represented by [].', observes: [theta, vmax], evidence_kind: definition}
+- {id: AD.C5, basis: [T_ADAM_OPT.UPDATE, TS_ADAM.STEP], statement: 'theta_new=theta_old-lr*m_hat/(sqrt(v_hat)+eps), with eps outside the square root.', observes: [theta], evidence_kind: definition}
+- {id: AD.C6, basis: [TS_ADAM.NONE, T_ZERO_GRAD.SKIP, AD.STATE], statement: 'gradient=null leaves every field unchanged and does not initialize absent state; a zero gradient performs a full update including decay and increments step.', observes: [theta, m, v, vmax, t], evidence_kind: definition}
+- {id: AD.C7, basis: [TS_ADAM.VALIDATION, TS_ADAM.STRATEGIES, AD.TASK], statement: 'foreach false/true/null and fused false/true/null select implementations of this transition but cannot both be true; capturable and differentiable must be false, and decoupled_weight_decay must be false.', observes: [theta, m, v, vmax, t], evidence_kind: definition}
+examples:
+- id: AD.E1
+  profile: torch210_dense_real
+  clauses: [AD.C2, AD.C3, AD.C4, AD.C5]
+  input: &cold
+    state: {theta: [1], m: [], v: [], vmax: [], t: null}
+    gradient: [2]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: false
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: [9/10], m: [1], v: [2], vmax: [], t: 1}}
+- id: AD.E2
+  profile: torch210_dense_real
+  clauses: [AD.C5]
+  input:
+    <<: *cold
+    eps: 1
+  expected: {outcome: value, fields: {theta: [14/15], m: [1], v: [2], vmax: [], t: 1}}
+- id: AD.E3
+  profile: torch210_dense_real
+  clauses: [AD.C2, AD.C4]
+  input:
+    <<: *cold
+    amsgrad: true
+  expected: {outcome: value, fields: {theta: [9/10], m: [1], v: [2], vmax: [2], t: 1}}
+- id: AD.E4
+  profile: torch210_dense_real
+  clauses: [AD.C1, AD.C2, AD.C3, AD.C4, AD.C5]
+  input:
+    state: {theta: [2], m: [1], v: [2], vmax: [4], t: 1}
+    gradient: [-2]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: false
+    amsgrad: true
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: ['2+sqrt(3)/75'], m: [-2/5], v: [131/50], vmax: [4], t: 2}}
+- id: AD.E5
+  profile: torch210_dense_real
+  clauses: [AD.C1, AD.C2]
+  input:
+    state: {theta: [1], m: [0], v: [0], vmax: [], t: 0}
+    gradient: [2]
+    lr: 1/10
+    beta1: 0
+    beta2: 0
+    eps: 0
+    weight_decay: 1/10
+    maximize: true
+    amsgrad: false
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: [11/10], m: [-19/10], v: [361/100], vmax: [], t: 1}}
+- id: AD.E6
+  profile: torch210_dense_real
+  clauses: [AD.C3, AD.C4, AD.C5]
+  input:
+    state: {theta: [0, 0], m: [0, 0], v: [1, 0], vmax: [3, 0], t: 1}
+    gradient: [2, 2]
+    lr: 1
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: true
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: [-2/3, '-sqrt(6)/3'], m: [1, 1], v: [5/2, 2], vmax: [3, 2], t: 2}}
+- id: AD.E7
+  profile: torch210_dense_real
+  clauses: [AD.C6]
+  input:
+    <<: *cold
+    gradient: null
+  expected: {outcome: value, fields: {theta: [1], m: [], v: [], vmax: [], t: null}}
+- id: AD.E8
+  profile: torch210_dense_real
+  clauses: [AD.C6]
+  input:
+    state: {theta: [1], m: [1], v: [2], vmax: [3], t: 4}
+    gradient: null
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 1/10
+    maximize: true
+    amsgrad: true
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: [1], m: [1], v: [2], vmax: [3], t: 4}}
+- id: AD.E9
+  profile: torch210_dense_real
+  clauses: [AD.C4, AD.C6]
+  input:
+    <<: *cold
+    gradient: [0]
+    eps: 1/10
+  expected: {outcome: value, fields: {theta: [1], m: [0], v: [0], vmax: [], t: 1}}
+- id: AD.E10
+  profile: torch210_dense_real
+  clauses: [AD.C1, AD.C2, AD.C5]
+  input:
+    state: {theta: [2], m: [], v: [], vmax: [], t: null}
+    gradient: [1]
+    lr: 1/2
+    beta1: 0
+    beta2: 0
+    eps: 0
+    weight_decay: 1/4
+    maximize: false
+    amsgrad: false
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: [3/2], m: [3/2], v: [9/4], vmax: [], t: 1}}
+- id: AD.E11
+  profile: torch210_dense_real
+  clauses: [AD.C4]
+  input:
+    state: {theta: [1], m: [1], v: [1], vmax: [], t: 1}
+    gradient: [0]
+    lr: 1/10
+    beta1: 1/2
+    beta2: 1/2
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: false
+    decoupled_weight_decay: false
+  expected: {outcome: value, fields: {theta: ['1-sqrt(6)/30'], m: [1/2], v: [1/2], vmax: [], t: 2}}
+- id: AD.E12
+  profile: torch210_dense_real
+  clauses: [AD.C5]
+  input:
+    <<: *cold
+    gradient: [0]
+  expected: {outcome: domain_undefined}
+- id: AD.E13
+  profile: torch210_dense_real
+  clauses: [AD.C4]
+  input:
+    state: {theta: [1], m: [0], v: [0], vmax: [0], t: 0}
+    gradient: [1]
+    lr: 1
+    beta1: 0
+    beta2: 0
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: false
+    decoupled_weight_decay: false
+  expected: {outcome: invalid_input}
+- id: AD.E14
+  profile: torch210_dense_real
+  clauses: [AD.C2]
+  input:
+    state: {theta: [1], m: [], v: [], vmax: [], t: 0}
+    gradient: [1]
+    lr: 1
+    beta1: 0
+    beta2: 0
+    eps: 0
+    weight_decay: 0
+    maximize: false
+    amsgrad: false
+    decoupled_weight_decay: false
+  expected: {outcome: invalid_input}
+- id: AD.E15
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    decoupled_weight_decay: true
+  expected: {outcome: unsupported}
+- id: AD.E16
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    foreach: true
+    fused: true
+  expected: {outcome: invalid_input}
+- id: AD.E17
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    capturable: true
+  expected: {outcome: unsupported}
+- id: AD.E18
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    differentiable: true
+  expected: {outcome: unsupported}
+- id: AD.E19
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    grad_scale: 2
+  expected: {outcome: unsupported}
+- id: AD.E20
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    maximize: 1
+  expected: {outcome: invalid_input}
+- id: AD.E21
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    beta2: 1
+  expected: {outcome: invalid_input}
+- id: AD.E22
+  profile: torch210_dense_real
+  clauses: [AD.C7]
+  input:
+    <<: *cold
+    foreach: true
+    fused: false
+    capturable: false
+    differentiable: false
+  expected: {outcome: value, fields: {theta: [9/10], m: [1], v: [2], vmax: [], t: 1}}
+signature:
+  inputs: ['complete gradient vector or null', lr, beta1, beta2, eps, weight_decay, maximize, amsgrad,
+    decoupled_weight_decay, 'optional foreach/fused/capturable/differentiable']
+  pre_state: ['complete theta vector', 'complete m/v/vmax and t, or m=v=vmax=[] and t=null for absent state']
+  post_state: ['complete theta, m, v, vmax and t including explicit absence']
+  observation_unit: one dense real parameter tensor and all its optimizer state across one public Adam step
+domain:
+  valid: [d >= 1, finite exact rational values, initialized complete state or explicit absent state, nonnegative v/vmax/lr/eps/weight_decay, '0 <= beta1,beta2 < 1', Boolean maximize/amsgrad/decoupled_weight_decay, foreach/fused false/true/null, capturable=false, differentiable=false]
+  domain_undefined: ['sqrt(corrected selected second moment)+eps=0 for a coordinate']
+  invalid_input: [missing fields, incomplete or extra state fields, state length mismatch, initialized state inconsistent with amsgrad, nonfinite values, non-Boolean flags, invalid hyperparameter ranges, foreach and fused both true]
+  unsupported: [decoupled AdamW, undeclared top-level task fields, sparse or complex gradients, tensor hyperparameters, capturable or differentiable execution, internal AMP inputs, closure and loss result, multiple parameters or parameter groups, device rounding and layouts]
+mutation_requirements:
+- {id: AD.M1, misreading: omit bias correction, witnesses: [AD.E1]}
+- {id: AD.M2, misreading: place eps inside the square root, witnesses: [AD.E2]}
+- {id: AD.M3, misreading: ignore AMSGrad in the denominator, witnesses: [AD.E6]}
+- {id: AD.M4, misreading: compare the old maximum with the already bias-corrected second moment, witnesses: [AD.E6]}
+- {id: AD.M5, misreading: use AMSGrad but do not store its new maximum, witnesses: [AD.E3, AD.E6]}
+- {id: AD.M6, misreading: negate maximize after adding weight decay, witnesses: [AD.E5]}
+- {id: AD.M7, misreading: maximize only reverses the final parameter update, witnesses: [AD.E5]}
+- {id: AD.M8, misreading: apply AdamW-style decoupled decay, witnesses: [AD.E10]}
+- {id: AD.M9, misreading: treat a null gradient as a zero gradient, witnesses: [AD.E7, AD.E8]}
+- {id: AD.M10, misreading: use the old step for bias correction, witnesses: [AD.E4, AD.E6]}
+- {id: AD.M11, misreading: update theta but leave moment and step state unchanged, witnesses: [AD.E1, AD.E4]}
+- {id: AD.M12, misreading: create a fictitious vmax state when AMSGrad is disabled, witnesses: [AD.E1, AD.E11]}

@@ -20,8 +20,8 @@ Steps (each with the locked lowering rules of Triton 3.6.0 / sm_86):
    alignment of each output is K_emulated - K_(node exact), on the same inputs (contributions of different nodes
    interact, so they add up only approximately);
 4. the reference program, if given (S: its values in float64 on the kernel's inputs, e.g. the torch operation the
-   kernel replaces): G - S element by element (G has no rounding of the kernel in it, so any difference beyond the
-   threshold comes from the formula, a constant or a mask), where the reference is undefined, where the kernel gives
+   kernel replaces): G - S element by element as an implementation comparison (without a bound on S and a complete
+   task binding, a difference is not a certified semantic error), where the reference is non-finite, where the kernel gives
    a non-finite value; the total K - S; common tolerance checks evaluated on K against S (or G), and on K without its
    systematic component (whether a failing check is failed by the bias or by the random error alone);
 5. findings: the mechanism of each large contribution, fixes with their cost, and the deviation the model gives when
@@ -155,10 +155,41 @@ def _sources(ttir: str) -> dict:
     return out
 
 
+def _reference_storage(value, arg):
+    """Map logical callback coordinates to the captured output's storage.
+
+    Unspecified storage elements remain NaN (uncompared). This establishes the
+    output layout only; callback inputs, task choice and error remain unchecked.
+    """
+    values = np.asarray(value.double().cpu().numpy() if hasattr(value, "double") else value, dtype=np.float64)
+    if tuple(values.shape) != tuple(arg.shape):
+        raise ValueError(f"reference shape {values.shape} differs from output shape {arg.shape}")
+    size, byte = arg.element_size, arg.data_ptr - arg.storage_ptr
+    if size <= 0 or byte < 0 or byte % size or arg.storage_nbytes % size:
+        raise ValueError("invalid output storage offset or element size")
+    if len(arg.stride) != values.ndim or any(s < 0 for s in arg.stride):
+        raise ValueError("unsupported output stride")
+    span = 1
+    for stride, count in sorted((s, n) for s, n in zip(arg.stride, arg.shape) if n > 1):
+        if stride < span:
+            raise ValueError("overlapping output layout needs an explicit mapping")
+        span += stride * (count - 1)
+    if values.size and byte + span * size > arg.storage_nbytes:
+        raise ValueError("output view extends beyond captured storage")
+    indices = np.full(values.shape, byte // size, dtype=np.int64)
+    for axis, (count, stride) in enumerate(zip(arg.shape, arg.stride)):
+        shape = [1] * values.ndim
+        shape[axis] = count
+        indices += np.arange(count, dtype=np.int64).reshape(shape) * stride
+    storage = np.full(arg.storage_nbytes // size, np.nan, dtype=np.float64)
+    storage[indices.reshape(-1)] = values.reshape(-1)
+    return storage
+
+
 def _compare_reference(buf, ok, g, h, k, S, programs, resolution) -> dict:
     """G - S element by element on the evaluated elements (rules registered in
     1_experiments/flash_attention_case/reference_check_registration.md): an element exceeds when |G - S| - h >
-    theta max(|S|, rms S), theta = max(1e-6, unit roundoff of the output format); NaN / inf in S is undefined and left
+    theta max(|S|, rms S), theta = max(1e-6, unit roundoff of the output format); NaN / inf in S is non-finite and left
     out; a non-finite kernel output where S is finite and within the output format counts as a disagreement."""
     theta = max(1e-6, resolution)
     s_all = S[buf.global_indices()]
@@ -177,6 +208,8 @@ def _compare_reference(buf, ok, g, h, k, S, programs, resolution) -> dict:
     w = np.asarray(buf.writer)[ok][fin][over]
     by_program = sorted(([list(programs[j]), int((w == j).sum())] for j in np.unique(w[w >= 0])), key=lambda r: -r[1])
     out = {"threshold": theta, "compared": int(fin.sum()), "undefined": int((~fin).sum() + (~np.isfinite(sb)).sum()),
+           "reference_kind": "implementation_reference", "semantic_verdict": "无法判断",
+           "semantic_reason": "float64 参照尚无严格误差保证和完整任务绑定",
            "kernel_non_finite": int((np.isfinite(sb) & (np.abs(sb) <= fmt_max)).sum()),
            "out_of_range": int((np.isfinite(sb) & (np.abs(sb) > fmt_max)).sum()),
            "exceeding": int(over.sum()), "exceeding_by_program": by_program,
@@ -204,7 +237,7 @@ def _semantic_text(s: dict) -> str:
         parts.append(f"整体{'偏小' if s['semantic_alignment'] < 0 else '偏大'}约 {_pct(s['semantic_alignment'])}")
     if s["kernel_non_finite"]:
         parts.append(f"{s['kernel_non_finite']} 个元素 kernel 输出不是有限值，参照程序是有限值")
-    return "；".join(parts) + "。按声明的程序精确计算就是这样，数值舍入解释不了；核对常数、公式与 mask"
+    return "；".join(parts) + "。这是与所提供参照程序的差异；参照的误差保证与任务对应尚未核验，不能据此确认语义错误"
 
 
 def _ref_summary(s: dict) -> str:
@@ -225,8 +258,9 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
     """Audit the first Triton launch made by ``launch()``.
 
     spec: {kernel argument name: callable returning the values of a reference program for that tensor (float64,
-    same number of elements; NaN / inf where the reference is undefined)}.  reference: what the reference program is,
-    shown in the report.  names: {kernel argument name: name to show}.  programs: the program ids (x, y, z) to evaluate
+    same logical shape as the output; NaN / inf for values not compared)}.  reference: what the reference program is,
+    shown in the report. This float64 callback is an implementation reference, not a certified task specification;
+    its differences do not establish a semantic error. names: {kernel argument name: name to show}. programs: the program ids (x, y, z) to evaluate
     (default: sample_programs; "all": every program).  attribution_programs: evaluate the attribution on this many of them (the first ones and
     the last; default all -- the deviation before and after a fix then refers to the measured elements).  tolerance: an alignment below which a deviation does not matter to the caller
     (default: the unit roundoff of the output format -- a bias it cannot resolve is not a defect of the kernel).
@@ -301,10 +335,20 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
             rep["cannot_decide"].append(f"参照程序 {name}：没有这个名字的已求值输出")
             continue
         val = fn()
-        S = np.asarray(val.double().cpu().numpy() if hasattr(val, "double") else val, dtype=np.float64).reshape(-1)
+        arg = next((a for a in L.args if a.name == name and a.kind == "tensor"), None)
+        if arg is None:
+            rep["cannot_decide"].append(f"参照程序 {name}：没有同名捕获张量可用于输出映射")
+            continue
+        try:
+            S = _reference_storage(val, arg)
+        except (ValueError, TypeError) as error:
+            rep["cannot_decide"].append(f"参照程序 {name}：输出映射未建立（{error}）")
+            continue
         buf = next(b for b in res.buffers.values() if b.name == name)
         rep["spec"][name] = _compare_reference(buf, idx[name], G[name], H[name], K_of[name], S, programs,
                                                rep["measured"][name]["format_resolution"])
+    if rep["spec"]:
+        rep["cannot_decide"].append("语义正确性：spec= 提供的是 float64 实现参照，尚未核验参照误差保证与完整任务绑定")
     for name in G:
         # each check on K, and on K without its systematic component (K - a ref, a the alignment of K - ref): a check
         # that fails either way is failed by the random error and says nothing about the bias; only where the
@@ -456,7 +500,7 @@ def audit(launch: Callable[[], None], spec: Optional[dict] = None, programs: Opt
                                     "text": f"贡献相消：各位点贡献的绝对值之和 {_pct(a['gross'])}，净和 {_pct(a['sum'])}"})
     for name, s_ in rep["spec"].items():
         if s_["verdict"] == "不一致":
-            rep["findings"].append({"output": name, "kind": "semantic", "text": _semantic_text(s_)})
+            rep["findings"].append({"output": name, "kind": "reference_difference", "text": _semantic_text(s_)})
     rep["text"] = render(rep)
     return rep
 
@@ -471,7 +515,7 @@ def _ref_lines(s: Optional[dict], verdict: bool = True) -> list:
     elif verdict and s["verdict"] == "无法判断":
         out.append("  · 与参照程序：无法判断（没有可比较的元素）。")
     if s["undefined"]:
-        out.append(f"  · 参照程序在 {s['undefined']} 个元素上没有定义（不是有限值），这些元素不比较。")
+        out.append(f"  · 参照程序在 {s['undefined']} 个元素上返回非有限值，这些元素不比较；这不等于数学目标无定义。")
     if s["out_of_range"]:
         out.append(f"  · {s['out_of_range']} 个元素的参照值超出输出格式的范围，kernel 输出不是有限值，不算不一致。")
     return out
@@ -499,7 +543,7 @@ def render(rep: dict) -> str:
     out = []
     meas, spec = rep["measured"], rep["spec"]
     sig = [n for n, m in meas.items() if m.get("significant")]
-    sem = {f["output"]: f["text"] for f in rep["findings"] if f["kind"] == "semantic"}
+    sem = {f["output"]: f["text"] for f in rep["findings"] if f["kind"] in {"semantic", "reference_difference"}}
     order = sorted(meas, key=lambda n: (n not in spec, -abs(spec.get(n, {}).get("total_alignment", 0.0)
                                                              if n in sem else meas[n]["alignment"])))
     pred_failed = rep["prediction"] is not None and rep["prediction"]["status"] != "predicted"
@@ -538,7 +582,7 @@ def render(rep: dict) -> str:
             continue
         out.append("")
         if n in sem:
-            out.append(f"{name}：与参照程序不一致——来自公式、常数或 mask，不是数值误差")
+            out.append(f"{name}：与参照程序不一致；语义正确性尚无法判断")
             out.append(f"  · {sem[n]}（工具不能定位到具体的行）。")
         else:
             out.append(f"{name}：系统性{size(m['alignment'])}（不是噪声）")
@@ -574,8 +618,8 @@ def render(rep: dict) -> str:
             else:
                 out.append(f"  · 各 program 的偏差在 {_spct(lo)} 到 {_spct(hi)} 之间，差别在随机误差范围内。")
         if n in sig and n not in sem:
-            out.append("  · 与参照程序一致，问题出在数值实现。" if n in spec else
-                       "  · 未给参照程序：以上相对声明的程序；公式本身对不对，要给参照程序才能判断。")
+            out.append("  · 在所检查元素和阈值内，与参照程序未发现差异；语义正确性尚未建立。" if n in spec else
+                       "  · 未给参照程序：以上相对声明的程序；公式是否符合任务，还需确定任务规格并核验输入、输出与状态对应。")
 
     # causes per source line, fixes per mechanism
     groups = rep["fix_groups"]
@@ -615,12 +659,11 @@ def render(rep: dict) -> str:
         out.append("数值偏差是否值得修，取决于它进入下游（例如训练）后会不会超过随机种子之间的波动；这需要下游测量，工具不判断。")
     if sem:
         out.append("")
-        out.append("与参照程序不一致的地方应当核对：要么 kernel 的公式、常数或 mask 错了，要么参照程序不是这个 kernel "
-                   "想要的语义（例如约定不同）。")
+        out.append("与参照程序不一致的地方需要核对任务约定、输入与状态对应，以及参照自身的计算误差，再判断 kernel 是否写错。")
     out.append("")
     out.append(f"范围：{rep['scope']['target']}，{rep['scope']['rule']}。")
     if spec:
-        out.append(f"参照程序：{rep.get('reference') or '调用方提供，未注明'}；在 kernel 实际收到的输入上以 float64 计算。")
+        out.append(f"参照程序：{rep.get('reference') or '调用方提供，未注明'}；回调结果以 float64 比较，输入与前态对应尚未核验。")
     if rep["cannot_decide"]:
         out.append("无法判断：")
         out += [f"  - {c}" for c in rep["cannot_decide"]]
@@ -644,7 +687,7 @@ def render(rep: dict) -> str:
                    f"相对误差（能量加权）{m['energy_relative']:.2g}，最大 |K − G| {m['max_abs']:.3g}"
                    f"（{m['elements']} / {m['written']} 个元素）")
     for n, s_ in spec.items():
-        out.append(f"  {_show(rep, n)}: G − S（语义）对齐 {s_['semantic_alignment']:+.3g}，最大相对差 {s_['max_relative']:.2g}"
+        out.append(f"  {_show(rep, n)}: G − S（实现参照比较）对齐 {s_['semantic_alignment']:+.3g}，最大相对差 {s_['max_relative']:.2g}"
                    f"（阈值 {s_['threshold']:.2g}，超出 {s_['exceeding']} / {s_['compared']} 个元素；参照无定义 "
                    f"{s_['undefined']}，kernel 非有限 {s_['kernel_non_finite']}，参照超出输出格式范围 {s_['out_of_range']}）"
                    f"——{s_['verdict']}；K − S（合计）对齐 {s_['total_alignment']:+.3g}")

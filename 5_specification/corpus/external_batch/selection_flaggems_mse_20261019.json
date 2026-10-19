@@ -1,0 +1,62 @@
+{
+  "purpose": "Supplementary separate-implementation acceptance of MSE none/sum/mean forward; no autograd claim",
+  "prior_exposure": "FlagGems was used for other functions. MSE wrapper/source read to select its task; these numerical outputs have not been evaluated.",
+  "source_root": ".cache/pydeps/flag_gems_5_0_2",
+  "package": "flag_gems",
+  "version": "5.0.2",
+  "standard_reference": "PyTorch 2.10.0+cu128 functional forward, CUDA float32, no autocast",
+  "observation": "complete forward tensor or scalar, no changes to input or target; gradients not supplied by these entry points and not claimed",
+  "shapes": [
+    [
+      3,
+      23
+    ],
+    [
+      7,
+      41
+    ]
+  ],
+  "seeds": [
+    20261103,
+    20261104
+  ],
+  "input_rule": "Same integer-eighth generator and five boundary coordinates as development, with different seeds and shapes.",
+  "cases": [
+    {
+      "id": "flaggems_mse_none",
+      "op": "mse",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "none"
+      },
+      "module": "flag_gems/experimental_ops/mse_loss.py",
+      "function": "mse_loss",
+      "entry": "flag_gems.experimental_ops.mse_loss(input, target, reduction='none')"
+    },
+    {
+      "id": "flaggems_mse_sum",
+      "op": "mse",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "sum"
+      },
+      "module": "flag_gems/experimental_ops/mse_loss.py",
+      "function": "mse_loss",
+      "entry": "flag_gems.experimental_ops.mse_loss(input, target, reduction='sum')"
+    },
+    {
+      "id": "flaggems_mse_mean",
+      "op": "mse",
+      "contract": "MSE",
+      "profile": "torch210_unweighted_f32_same_shape",
+      "parameters": {
+        "reduction": "mean"
+      },
+      "module": "flag_gems/experimental_ops/mse_loss.py",
+      "function": "mse_loss",
+      "entry": "flag_gems.experimental_ops.mse_loss(input, target, reduction='mean')"
+    }
+  ]
+}

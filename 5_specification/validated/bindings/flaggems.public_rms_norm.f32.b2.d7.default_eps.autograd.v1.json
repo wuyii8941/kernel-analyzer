@@ -1,0 +1,94 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "flaggems.public_rms_norm.f32.b2.d7.default_eps.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "FlagGems replacing PyTorch public RMSNorm",
+    "version": "5.0.2",
+    "callable": "torch.nn.functional.rms_norm under flag_gems.use_gems(include=['rms_norm']) with public autograd VJP",
+    "runtime_package": {
+      "distribution": "flag_gems",
+      "version": "5.0.2"
+    },
+    "boundary": "complete public RMSNorm forward and x/weight VJP on contiguous finite CUDA float32[2,7], weight[7], explicit upstream[2,7], normalized_shape=(7,), eps=None and unchanged input values",
+    "measure_call": "../calls/flaggems_rms_norm.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_default_rms_norm_forward_and_vjp",
+      "contract": "NORM",
+      "profile": "torch_autograd",
+      "task_statement": "The public PyTorch 2.10 float32 RMSNorm task with eps=None, final dimension seven and affine weight, together with complete x and weight VJPs against the supplied upstream. The public default is 2^-23 even if the installed replacement passes a different epsilon to its kernel.",
+      "input_map": [
+        {
+          "target": "/op",
+          "literal": "rms_norm",
+          "basis": "the wrapper calls public F.rms_norm"
+        },
+        {
+          "target": "/x",
+          "source": "/tensor_arguments/x/before",
+          "conversion": "tensor_values"
+        },
+        {
+          "target": "/weight",
+          "source": "/tensor_arguments/weight/before",
+          "conversion": "tensor_values"
+        },
+        {
+          "target": "/upstream",
+          "source": "/tensor_arguments/upstream/before",
+          "conversion": "tensor_values"
+        },
+        {
+          "target": "/normalized_shape",
+          "literal": [
+            7
+          ],
+          "basis": "the reviewed call fixes the final normalized dimension to seven"
+        },
+        {
+          "target": "/eps",
+          "literal": "1/8388608",
+          "basis": "PyTorch 2.10 RMSNorm docs and NORM NM.RMS_EPS: public eps=None resolves to finfo(input.dtype).eps; this call requires float32"
+        }
+      ],
+      "output_map": [
+        {
+          "target": "/y",
+          "source": "/returns/y",
+          "conversion": "tensor_values",
+          "measure_output": "y"
+        },
+        {
+          "target": "/grad/x",
+          "source": "/returns/dx",
+          "conversion": "tensor_values",
+          "measure_output": "dx"
+        },
+        {
+          "target": "/grad/weight",
+          "source": "/returns/dweight",
+          "conversion": "tensor_values",
+          "measure_output": "dweight"
+        }
+      ]
+    }
+  ],
+  "state_map": [
+    {
+      "argument": "x",
+      "effect": "unchanged"
+    },
+    {
+      "argument": "weight",
+      "effect": "unchanged"
+    },
+    {
+      "argument": "upstream",
+      "effect": "unchanged"
+    }
+  ]
+}

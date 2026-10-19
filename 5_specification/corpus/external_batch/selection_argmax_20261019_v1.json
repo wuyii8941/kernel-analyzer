@@ -1,0 +1,31 @@
+{
+  "task": "PyTorch 2.10 public torch.argmax on finite float32 tensors, including the documented first-index rule for ties",
+  "reference": "Reuse REDUCE.real through an explicit public-call mapping to aten.argmax; no new mathematical profile is introduced",
+  "limits": "The batch checks output indices and read-only input state. Argmax has no ordinary input gradient in this task. Empty and nonfinite inputs, out overloads and other dtypes remain outside this batch.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "dimensions": [3, 5, 7],
+    "seeds": [20261601, 20261602],
+    "cases": [
+      {"id": "argmax_inner_unique", "dim": -1, "keepdim": false},
+      {"id": "argmax_noninner_tie_keepdim", "dim": 1, "keepdim": true, "tie": true},
+      {"id": "argmax_flat_unique", "dim": null, "keepdim": false},
+      {"id": "argmax_flat_tie", "dim": null, "keepdim": true, "tie": true},
+      {"id": "argmax_flat_noncontiguous", "dim": null, "keepdim": false, "noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "dimensions": [4, 6, 9],
+    "seeds": [20261603, 20261604],
+    "cases": [
+      {"id": "argmax_heldout_outer_unique", "dim": 0, "keepdim": false},
+      {"id": "argmax_heldout_noninner_tie", "dim": -2, "keepdim": true, "tie": true},
+      {"id": "argmax_heldout_flat_unique", "dim": null, "keepdim": true},
+      {"id": "argmax_heldout_inner_tie", "dim": -1, "keepdim": false, "tie": true},
+      {"id": "argmax_heldout_flat_noncontiguous", "dim": null, "keepdim": false, "noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, shapes, seeds, dimensions, tie cases and layouts were fixed before GPU execution. The acceptance split uses different shapes, seeds and reduction dimensions."
+}

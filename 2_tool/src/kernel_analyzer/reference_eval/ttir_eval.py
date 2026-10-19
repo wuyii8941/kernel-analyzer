@@ -137,6 +137,9 @@ class TV:
     cond: Optional[np.ndarray] = None
     reasons: frozenset = frozenset()
     d: Optional[tuple] = None  # forward-mode tangent interval (dlo, dhi); None means zero
+    # Input interval retained only for an unrounded real erf result.  It permits the exact identity
+    # 1 + erf(x) = erfc(-x), which avoids interval cancellation in GELU's negative tail.
+    erf_input: Optional[tuple] = None
 
     def __post_init__(self):
         self.lo = np.asarray(self.lo)
@@ -154,11 +157,12 @@ class TV:
 
         return TV(self.kind, self.elem, fn(self.lo), None if self.hi is None else fn(self.hi),
                   None if self.base is None else fn(self.base), fn(self.st), fn(self.cond), self.reasons,
-                  None if self.d is None else (fn(self.d[0]), fn(self.d[1])))
+                  None if self.d is None else (fn(self.d[0]), fn(self.d[1])),
+                  None if self.erf_input is None else (fn(self.erf_input[0]), fn(self.erf_input[1])))
 
     def with_reason(self, reason: str) -> "TV":
         return TV(self.kind, self.elem, self.lo, self.hi, self.base, self.st, self.cond,
-                  self.reasons | {reason}, self.d)
+                  self.reasons | {reason}, self.d, self.erf_input)
 
     def tangent(self):
         if self.d is None:
@@ -694,7 +698,12 @@ def decode_storage(raw: np.ndarray, dtype: str):
     if elem in ("f32", "f16", "f64"):
         vals = raw.view({"f32": np.float32, "f16": np.float16, "f64": np.float64}[elem]).astype(np.float64)
     elif elem == "bf16":
-        vals = (raw.view(np.uint16).astype(np.uint32) << 16).view(np.float32).astype(np.float64)
+        # A captured pre-state may be an uninitialized output allocation and
+        # therefore contain a signalling-NaN bit pattern.  It is still a NaN
+        # for the status classification below; NumPy need not warn while
+        # widening that arbitrary captured pattern.
+        with np.errstate(invalid="ignore"):
+            vals = (raw.view(np.uint16).astype(np.uint32) << 16).view(np.float32).astype(np.float64)
     elif elem.startswith("f8"):
         import torch
 
@@ -4450,10 +4459,27 @@ class KernelReferenceEvaluator:
         his = [np.where(finite, a.hi, 1.0) for a in args]
         ok = np.ones(shape, dtype=bool)
         same = len(op.operands) == 2 and op.operands[0] == op.operands[1]
+        used_erf_complement = False
         if name in ("add", "sub", "mul"):
             fn = {"add": iv.iadd, "sub": iv.isub}.get(name)
             lo, hi = (iv.imul(los[0], his[0], los[1], his[1], same=same) if name == "mul"
                       else fn(los[0], his[0], los[1], his[1]))
+            if name == "add":
+                # In numerical-difference mode libdevice/math erf denotes the real function.  When its direct result
+                # is added to the exact constant 1, evaluate the exact identity erfc(-x) instead of first rounding an
+                # interval close to -1 to float64 endpoints.  erf_input is cleared by any intervening operation or
+                # explicit rounding, so this cannot erase a program rounding step.
+                for erf_arg, other in ((args[0], args[1]), (args[1], args[0])):
+                    if erf_arg.erf_input is None:
+                        continue
+                    one = (other.st == ST_OK) & (other.lo == 1.0) & (other.hi == 1.0)
+                    if not one.any():
+                        continue
+                    zlo, zhi = erf_arg.erf_input
+                    clo, chi, cok = iv.erf_plus_one_bounds(zlo, zhi)
+                    use = one & cok
+                    lo, hi = np.where(use, clo, lo), np.where(use, chi, hi)
+                    used_erf_complement = used_erf_complement or bool(use.any())
             if name == "sub" and same:                       # one variable: x - x = 0 exactly (tool 3.0)
                 lo, hi = np.zeros(shape), np.zeros(shape)
         elif name in ("div", "rcp"):
@@ -4517,6 +4543,8 @@ class KernelReferenceEvaluator:
             raise ProgramAbort(f"{op.node_id}: no reference rule for {name}")
         st = np.where(finite & ~ok, ST_NE, ST_OK).astype(np.int8)
         reasons = _merge_reasons(*args)
+        if used_erf_complement:
+            reasons = reasons | {"reference_identity:1 + erf(x) = erfc(-x)"}
         if (finite & ~ok).any():
             reasons = reasons | {f"not_established:domain of {name}@{op.node_id}"}
         # Special values (NaN / inf) follow IEEE on representatives.
@@ -4548,7 +4576,10 @@ class KernelReferenceEvaluator:
             ok_t = st == ST_OK
             out.d = (np.where(ok_t, t[0], 0.0), np.where(ok_t, t[1], 0.0))
         declared = op.attrs.get("declared_quantization") is not None
-        return self._maybe_round(out, op, out_elem, declared)
+        out = self._maybe_round(out, op, out_elem, declared)
+        if name == "erf" and not declared and self.mode == NumericMode.NUMERICAL_DIFFERENCE:
+            out.erf_input = (los[0].copy(), his[0].copy())
+        return out
 
 
 # ---------------------------------------------------------------------------

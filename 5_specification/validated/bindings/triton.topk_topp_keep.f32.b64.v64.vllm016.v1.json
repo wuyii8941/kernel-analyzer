@@ -1,0 +1,37 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.topk_topp_keep.f32.b64.v64.vllm016.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 deterministic top-k then top-p keep mask",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with 64 Triton programs returning every Boolean keep decision for 64 rows of 64 logits",
+    "measure_call": "../calls/triton_topk_topp_keep.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "deterministic_topk_topp_keep",
+      "contract": "SAMPLING",
+      "profile": "vllm016_topk_topp_keep_real",
+      "task_statement": "For every row of 64 finite pairwise-distinct physical float32 logits, retain the k largest logits, renormalise exact-real softmax over that remainder, apply the row-specific p threshold and return the complete Boolean keep mask.",
+      "input_map": [
+        {"target": "/logits", "source": "/tensor_arguments/logits/before", "conversion": "tensor_values"},
+        {"target": "/k", "source": "/tensor_arguments/k/before", "conversion": "tensor_values"},
+        {"target": "/p", "source": "/tensor_arguments/p/before", "conversion": "tensor_values"},
+        {"target": "/dtype", "literal": "f32", "basis": "the logits and p vectors are float32"}
+      ],
+      "output_map": [
+        {"target": "/keep", "source": "/returns/keep", "conversion": "tensor_record", "measure_output": "keep"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "logits", "effect": "unchanged"},
+    {"argument": "k", "effect": "unchanged"},
+    {"argument": "p", "effect": "unchanged"}
+  ]
+}

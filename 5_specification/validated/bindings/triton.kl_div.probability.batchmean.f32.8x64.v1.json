@@ -1,0 +1,40 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.kl_div.probability.batchmean.f32.8x64.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 probability-target KL batchmean loss and input VJP",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch reads complete contiguous 8x64 input and target matrices and writes one scalar loss plus every coordinate of the 8x64 input VJP",
+    "measure_call": "../calls/triton_kl_batchmean.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "probability_target_kl_batchmean",
+      "contract": "DIVERG",
+      "profile": "torch210_probability_batchmean_f32",
+      "task_statement": "Compute the selected PyTorch 2.10 probability-target float32 KL batchmean scalar and the complete input VJP for scalar upstream 1 from two received contiguous 8x64 matrices.",
+      "input_map": [
+        {"target": "/input", "source": "/tensor_arguments/input/before", "conversion": "tensor_values"},
+        {"target": "/target", "source": "/tensor_arguments/target/before", "conversion": "tensor_values"},
+        {"target": "/input_dtype", "literal": "f32", "basis": "the wrapper accepts only float32 input"},
+        {"target": "/target_dtype", "literal": "f32", "basis": "the wrapper accepts only float32 target"},
+        {"target": "/reduction", "literal": "batchmean", "basis": "the kernel divides the complete pointwise sum by the fixed batch size"},
+        {"target": "/log_target", "literal": false, "basis": "the kernel applies log to the received probability-space target"},
+        {"target": "/upstream", "literal": 1, "basis": "the returned VJP is for scalar upstream one"}
+      ],
+      "output_map": [
+        {"target": "/loss", "source": "/returns/loss", "conversion": "tensor_record", "measure_output": "loss"},
+        {"target": "/grad", "source": "/returns/grad", "conversion": "tensor_record", "measure_output": "grad"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "input", "effect": "unchanged"},
+    {"argument": "target", "effect": "unchanged"}
+  ]
+}

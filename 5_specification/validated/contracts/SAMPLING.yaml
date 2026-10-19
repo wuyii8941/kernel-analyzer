@@ -1,0 +1,215 @@
+schema_version: '1.2'
+id: SAMPLING
+role: SAMPLING
+title: vLLM 0.16.0 deterministic top-k then top-p keep-mask core
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite tie-free float32 logits with per-row top-k and/or top-p parameters; deterministic keep mask only
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- The deterministic filtering decision of vLLM 0.16.0 apply_top_k_top_p for finite tie-free float32 rows
+profiles:
+  vllm016_topk_topp_keep_real:
+    meaning: >-
+      For each finite float32 logit row with distinct values, first keep the k largest entries when k is supplied.
+      Then, when p is supplied, compute exact-real softmax over the top-k remainder and keep a token exactly when the
+      retained probability mass at strictly larger logits is less than p. Return the complete Boolean keep mask.
+    task_choice_required: false
+    basis: [SP.TASK, SP.TOPK, SP.TOPP, SP.ORDER]
+outputs:
+  keep: {shape: 'complete Boolean keep mask [B,V]', guarantee: exact, kind: boolean}
+comparison:
+  input_binding: >-
+    logits and p are the exact finite float32 values received; k is the complete per-row integer vector. Null k or p
+    means that filter is absent, and at least one filter must be present.
+  complete_output: Every Boolean coordinate of every row is required.
+  quality: >-
+    Top-k ordering is exact on distinct physical logits. Top-p uses rigorous exponential and sum enclosures; a query
+    whose threshold comparison cannot be established remains not established instead of being guessed.
+  test_evidence: >-
+    Independent 768-bit Arb evaluation, public PyTorch operations and the installed vLLM 0.16.0 function cover
+    top-k-only, top-p-only and composed filtering, row-specific parameters, complete output checks and rejected ties.
+  error_handling: >-
+    Missing fields, malformed shapes, nonphysical float32 values and invalid k or p are invalid_input. Ties, special
+    values, unfiltered identity calls, masked-logit output and random sampling are unsupported.
+decisions:
+- id: SP.TASK
+  status: reviewed
+  statement: >-
+    The selected task is only the deterministic complete keep mask corresponding to vLLM 0.16.0
+    apply_top_k_top_p. Masked-logit materialisation, softmax output, exponential-noise generation, sampled token IDs,
+    FlashInfer/AITER alternatives and statistical sampling quality are separate tasks.
+  basis: [VLLM016_SAMPLER.MASK, VLLM016_SAMPLER.RANDOM]
+- id: SP.TOPK
+  status: reviewed
+  statement: >-
+    When k is supplied, values strictly below the k-th largest logit are removed. The active profile requires
+    pairwise-distinct logits, so exactly min(k,V) entries survive and no unstable tie order needs a ground truth.
+  basis: [NUCLEUS_PAPER.TOPK, VLLM016_SAMPLER.TOPK]
+- id: SP.TOPP
+  status: reviewed
+  statement: >-
+    For the currently surviving entries, a token is kept when the exact retained probability mass at strictly larger
+    logits is less than p. This is the smallest descending prefix whose cumulative probability is at least p and is
+    equivalent to the installed vLLM ascending-cumulative mask on the selected tie-free domain.
+  basis: [NUCLEUS_PAPER.TOPP, VLLM016_SAMPLER.TOPP]
+- id: SP.ORDER
+  status: reviewed
+  statement: >-
+    If both filters are present, top-k is applied first and top-p probabilities are renormalised over that remainder.
+  basis: [VLLM016_SAMPLER.ORDER]
+clauses:
+- {id: SP.C1, basis: [SP.TASK], statement: 'The task receives complete finite physical float32 logits and complete per-row k and p parameters and returns one complete Boolean keep mask.', observes: [keep], evidence_kind: definition}
+- {id: SP.C2, basis: [SP.TOPK], statement: 'Top-k keeps exactly the k largest distinct logits in a row; null k leaves the row unchanged at this stage.', observes: [keep], evidence_kind: definition}
+- {id: SP.C3, basis: [SP.TOPP], statement: 'Top-p keeps the smallest descending prefix with probability mass at least p; null p leaves the top-k result unchanged.', observes: [keep], evidence_kind: definition}
+- {id: SP.C4, basis: [SP.ORDER], statement: 'With both filters, top-p is evaluated after top-k and its probabilities are renormalised over the top-k remainder.', observes: [keep], evidence_kind: definition}
+- {id: SP.C5, basis: [SP.TASK], statement: 'The logits and parameter vectors are read-only and no random state participates in the selected task.', observes: [keep], evidence_kind: definition}
+examples:
+- id: SP.E1
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1, SP.C2, SP.C5]
+  input: &topk
+    logits: [[3, 1, 2]]
+    k: [2]
+    p: null
+    dtype: f32
+  expected: {outcome: value, fields: {keep: [[true, false, true]]}}
+- id: SP.E2
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3]
+  input: {logits: [[2, 1, 0]], k: null, p: ['3/4'], dtype: f32}
+  expected: {outcome: value, fields: {keep: [[true, true, false]]}}
+- id: SP.E3
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3, SP.C4]
+  input: &combined
+    logits: [[2, 1, 0]]
+    k: [2]
+    p: ['11/16']
+    dtype: f32
+  expected: {outcome: value, fields: {keep: [[true, false, false]]}}
+- id: SP.E4
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3]
+  input: {logits: [[2, 1, 0]], k: null, p: [1], dtype: f32}
+  expected: {outcome: value, fields: {keep: [[true, true, true]]}}
+- id: SP.E5
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C2]
+  input: {logits: [[2, 1, 0]], k: [3], p: null, dtype: f32}
+  expected: {outcome: value, fields: {keep: [[true, true, true]]}}
+- id: SP.E6
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C2, SP.C3, SP.C4]
+  input:
+    logits: [[4, 0, -1, -2], [2, 1, 0, -1]]
+    k: [2, 4]
+    p: [1, '1/2']
+    dtype: f32
+  expected: {outcome: value, fields: {keep: [[true, true, false, false], [true, false, false, false]]}}
+- id: SP.E7
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3]
+  input: {logits: [[3, 0, -3, -6]], k: null, p: ['15/16'], dtype: f32}
+  expected: {outcome: value, fields: {keep: [[true, false, false, false]]}}
+- id: SP.E8
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C2]
+  input: {logits: [[1, -1, 3, 0]], k: [2], p: null, dtype: f32}
+  expected: {outcome: value, fields: {keep: [[true, false, true, false]]}}
+- id: SP.E9
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C4]
+  input: {logits: [[3, 2, 1, 0]], k: [3], p: ['7/8'], dtype: f32}
+  expected: {outcome: value, fields: {keep: [[true, true, false, false]]}}
+- id: SP.E10
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1]
+  input: {<<: *topk, logits: [[1, 1, 0]]}
+  expected: {outcome: unsupported}
+- id: SP.E11
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1]
+  input: {<<: *topk, logits: [['1/3', 1, 2]]}
+  expected: {outcome: invalid_input}
+- id: SP.E12
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1]
+  input: {<<: *topk, logits: [[inf, 1, 2]]}
+  expected: {outcome: unsupported}
+- id: SP.E13
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C2]
+  input: {<<: *topk, k: [0]}
+  expected: {outcome: invalid_input}
+- id: SP.E14
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C2]
+  input: {<<: *topk, k: [4]}
+  expected: {outcome: invalid_input}
+- id: SP.E15
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3]
+  input: {<<: *combined, p: [0]}
+  expected: {outcome: invalid_input}
+- id: SP.E16
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3]
+  input: {<<: *combined, p: ['17/16']}
+  expected: {outcome: invalid_input}
+- id: SP.E17
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1]
+  input: {logits: [[2, 1, 0]], k: null, p: null, dtype: f32}
+  expected: {outcome: unsupported}
+- id: SP.E18
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1]
+  input: {<<: *topk, dtype: f16}
+  expected: {outcome: unsupported}
+- id: SP.E19
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C3]
+  input: {<<: *combined, p: ['1/3']}
+  expected: {outcome: invalid_input}
+- id: SP.E20
+  profile: vllm016_topk_topp_keep_real
+  clauses: [SP.C1]
+  input: {<<: *topk, q: [[1, 1, 1]]}
+  expected: {outcome: unsupported}
+signature:
+  inputs: ['complete physical float32 logits [B,V]', 'k [B] or null', 'physical float32 p [B] or null', 'dtype=f32']
+  pre_state: [logits, k and p unchanged]
+  post_state: ['complete Boolean keep mask [B,V]']
+  observation_unit: every Boolean mask coordinate together with shape and dtype
+domain:
+  valid: ['positive B and V', 'finite pairwise-distinct physical f32 logits per row', 'k in 1..V or null', 'physical f32 p in (0,1] or null', 'at least one active filter']
+  invalid_input: ['missing or malformed records', 'nonphysical values', 'wrong vector lengths', 'k outside 1..V', 'p outside (0,1]']
+  unsupported: [ties, special values, other dtypes, no active filter, masked logits, output probabilities, random sampling, alternate backends, gradients, layout and alias effects]
+mutation_requirements:
+- {id: SP.M1, misreading: keep the k plus one largest logits, witnesses: [SP.E1]}
+- {id: SP.M2, misreading: top-k keeps the k smallest logits, witnesses: [SP.E1, SP.E8]}
+- {id: SP.M3, misreading: compute top-p probabilities on the full row instead of renormalising after top-k, witnesses: [SP.E3]}
+- {id: SP.M4, misreading: apply top-p before top-k, witnesses: [SP.E3]}
+- {id: SP.M5, misreading: keep a token only when cumulative mass through that token is at most p, witnesses: [SP.E2]}
+- {id: SP.M6, misreading: exchange the per-row k and p parameters between batch rows, witnesses: [SP.E6]}
+nonclaims:
+- The profile defines one deterministic filtering core, not the probability distribution or output of random sampling.
+- It does not certify equal-logit tie order, masked-logit materialisation, log-probabilities, per-request generators, FlashInfer, AITER, CPU compilation, gradients, special values, layout or alias effects.
+- Exact real softmax determines the task mask; device exponent, cumulative-sum and comparison rounding are measured separately.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace the combined allowed-set, masked-logit, probability and random-sample draft with one tie-free deterministic
+    keep-mask task from the installed vLLM 0.16.0 filtering function. Preserve the former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The former contract depended on an unverified development commit and combined mathematical nucleus sets with
+    implementation-specific tie rules and conditioned random noise, so it could not provide one auditable ground truth.

@@ -42,15 +42,14 @@ def _l2(x, eps):
 
 
 def parse(profile, inp):
-    if profile == "fla_chunk":
-        U.check_keys(inp, FLA_KEYS)
-    elif profile == "paper_block":
+    if profile not in ("fla_chunk", "paper_block"):
+        raise Unsupported(f"profile {profile!r}")
+    U.check_keys(inp, FLA_KEYS, required={"q", "k", "v", "g", "beta"})
+    if profile == "paper_block":
         extra = set(inp) - PAPER_KEYS
         if extra & FLA_KEYS:
             raise Unsupported(f"options {sorted(extra & FLA_KEYS)} are not part of the paper_block profile")
         U.check_keys(inp, PAPER_KEYS)
-    else:
-        raise Unsupported(f"profile {profile!r}")
     q, qs = U.tensor(inp["q"], 4, "q")
     B, T, H, K = qs
     k, _ = U.tensor(inp["k"], 4, "k", shape=qs)
@@ -80,8 +79,8 @@ def parse(profile, inp):
         A_log, _ = U.tensor(inp["A_log"], 1, "A_log", shape=(HV,))
         if inp.get("dt_bias") is not None:
             dt_bias, _ = U.tensor(inp["dt_bias"], 1, "dt_bias", shape=(HV,))
-    elif "A_log" in inp or "dt_bias" in inp:
-        raise Invalid("A_log / dt_bias are read only with use_gate_in_kernel=True")
+    # The retained FLA entry accepts these keyword arguments with gate=False;
+    # its forward path reads them only inside the gate=True branch.
     cu = inp.get("cu_seqlens")
     if cu is not None:
         cu = [integer(c, "cu_seqlens") for c in cu]

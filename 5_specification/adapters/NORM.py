@@ -20,7 +20,9 @@ from kernel_spec.real import R
 KEYS = {"layer_norm": {"op", "x", "normalized_shape", "weight", "bias", "eps", "upstream"},
         "rms_norm": {"op", "x", "normalized_shape", "weight", "eps", "upstream"},
         "group_norm": {"op", "x", "num_groups", "weight", "bias", "eps", "upstream"}}
-PROFILES = {"torch": ("layer_norm", "rms_norm", "group_norm"), "rms_offset": ("rms_norm",)}
+PROFILES = {"torch": ("layer_norm", "rms_norm", "group_norm"),
+            "torch_autograd": ("layer_norm", "rms_norm", "group_norm"),
+            "rms_offset": ("rms_norm",)}
 
 
 def _check(profile, inp):
@@ -34,6 +36,15 @@ def _check(profile, inp):
         raise Invalid(f"{op} in profile {profile} takes exactly {sorted(want)}, got {sorted(inp)}")
     if not isinstance(inp.get("normalized_shape", [1]), list):
         raise Invalid("normalized_shape must be a list")
+    if profile == "torch_autograd" and op == "group_norm":
+        shape = CN.shape_of(inp.get("x"), "x")
+        if len(shape) >= 2:
+            groups = integer(inp.get("num_groups"), "num_groups", lo=1)
+            n, channels = shape[:2]
+            if channels % groups == 0:
+                public_size = n * (channels // groups) * CN.prod(shape[2:])
+                if public_size == 1:
+                    raise Invalid("public torch group_norm requires more than one value in its batch-size check")
     return op
 
 
@@ -46,7 +57,15 @@ def reference(profile, inp):
         out = CN.rms_norm(inp["x"], inp["normalized_shape"], inp["weight"], inp["eps"], inp["upstream"], offset=off)
     else:
         out = CN.group_norm(inp["x"], inp["num_groups"], inp["weight"], inp["bias"], inp["eps"], inp["upstream"])
+    if profile == "torch_autograd":
+        out = {name: out[name] for name in ("y", "grad")}
     return Result("value", out)
+
+
+def check_output(profile, inp, observed):
+    """Compare the complete interface selected by the profile."""
+    from kernel_spec.compare import check_enclosed_output
+    return check_enclosed_output(reference(profile, inp).fields, observed)
 
 
 # ------------------------------------------------------------------ independent implementation for the mutants
@@ -75,6 +94,8 @@ def _independent(profile, inp, mis=None):
     shp = _shape(inp["x"])
     g = [rational(v) for v in _flat(inp["upstream"])]
     eps = rational(inp["eps"])
+    if mis == "negative_eps_invalid" and eps < 0:
+        raise Invalid("eps < 0")
     w = None if inp.get("weight") is None else [rational(v) for v in _flat(inp["weight"])]
     b = None if inp.get("bias") is None else [rational(v) for v in _flat(inp["bias"])]
     if op in ("layer_norm", "rms_norm"):
@@ -125,8 +146,8 @@ def _independent(profile, inp, mis=None):
                 raise Undefined("zero denominator")
             r = R(1) / den
         else:
-            if var + eps == 0:
-                raise Undefined("var + eps = 0")
+            if var + eps <= 0:
+                raise Undefined("var + eps <= 0")
             r = R(1) / rl.sqrt(R(var + eps))
         xh = [R(v - mu) * r for v in vals]
         h = [R(g[i]) * (weff[chan(i)] if weff is not None else 1) for i in S]
@@ -174,5 +195,6 @@ MUTANTS = {
     "NM.M11": _m("weight_per_group"),
     "NM.M12": _m("dw_first_set_only"),
     "NM.M13": _m("zero_var_undefined"),
+    "NM.M14": _m("negative_eps_invalid"),
 }
 READINGS = {}

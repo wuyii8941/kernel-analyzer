@@ -24,7 +24,7 @@
 | ACCUM | 梯度累积窗口的归一化 | phase1/spec_accumulation.py | 任务 | 精确 | — | 程序级 | |
 | ATTN | SDPA 语义：mask、因果对齐、softcap、滑动窗口 | phase2/spec_attention.py | 文档；FlashAttention 的窗口约定 | 严格区间 | — | kernel 级 | v1 的窗口错误已改 |
 | GQA | 查询头到 KV 头的映射 | phase2/spec_attention.py | 论文 | 精确 | — | kernel 级 | |
-| PACK | 序列打包的 mask 与位置 | phase2/spec_attention.py | 任务 | 精确 | — | 程序级 | mask 会在注意力 kernel 里用到 |
+| PACK | FlashAttention 变长序列前向 | contracts/PACK.yaml | 文档（官方接口） | 严格包围 | PACK.yaml，已审阅 | kernel 级 | 累计长度界定独立序列；mask 与 position_ids 另属预处理任务 |
 | ROPE | 旋转位置编码，两种布局 | phase2/spec_attention.py | 论文 | 严格区间 | — | kernel 级 | |
 | MATMUL | matmul、linear 及其梯度 | phase2/spec_base_ops.py | 数学 | 精确 | — | kernel 级 | 待核：广播规则 |
 | REDUCE | sum、mean、prod、amax、amin、var、std、cumsum | phase2/spec_base_ops.py | 数学；correction 参数 | 精确 | — | kernel 级 | 待核：var 的 correction |
@@ -56,17 +56,17 @@
 ## 计数
 
 - **依据**（共 31）：
-  - 文档 17；
+  - 文档 18；
   - 论文 4（GQA、ROPE、MOE、KVCOMP）；
   - 数学 4（MATMUL、REDUCE、SOFTMAX、CKPT）；
   - 标准 1（CAST）；
-  - 任务 5（ACCUM、PACK、LABELS、RANKMEAN、KVCACHE）。
-- **合同**：3 份已审阅，28 个角色没有合同。
+  - 任务 4（ACCUM、LABELS、RANKMEAN、KVCACHE）。
+- **合同**：此表所列角色中 4 份已审阅，27 个角色没有本表记录的合同。
 - **Triton 审查**：
-  - kernel 级 18；
+  - kernel 级 19；
   - 编译后 6（BN、ADAM、SGD、RMSPROP、CLIP、EMA）；
-  - 程序级 7（ACCUM、PACK、SCHED、SCALER、LABELS、RANKMEAN、CKPT）。
+  - 程序级 6（ACCUM、SCHED、SCALER、LABELS、RANKMEAN、CKPT）。
 
 两点观察：
-- 「任务」类的 5 个角色没有外部权威，它们的条款本质上是任务负责人的选择。按方法应写成需任务绑定的决定；目前只有 RANKMEAN 的合同这样写了。
+- 「任务」类的 4 个角色没有外部权威，它们的条款本质上是任务负责人的选择。按方法应写成需任务绑定的决定；目前只有 RANKMEAN 的合同这样写了。
 - 三份试点合同里，只有 CE 属于 kernel 级。

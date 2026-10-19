@@ -1,0 +1,21 @@
+{
+  "call": "../calls/triton_topk_topp_keep.py:call",
+  "inputs": {
+    "logits": {"state": "../calls/triton_topk_topp_keep.py:make_unique_logits", "shape": [64, 64], "dtype": "float32"},
+    "k": {"sampler": {"randint": [1, 65]}, "shape": [64], "dtype": "int32"},
+    "p": {"sampler": {"uniform": [0.5, 1]}, "shape": [64], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["keep"],
+    "binding_plan": "../call_bindings/triton_topk_topp_keep.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 900, "gpu_seconds": 900, "case_timeout": 420, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

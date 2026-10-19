@@ -107,7 +107,8 @@ def test_black_box_state_update_reports_the_same_layer():
     assert out["status"] == "evaluated (black box)"
     assert out["observation"]["summary"]["dropped_fraction"]["mean"] > 0.5
     assert lv["refinement"]["category"] == "not applicable"
-    assert rep["expanded_declaration"]["query"]["comparison_target"]["quantity"].startswith("K - f only")
+    assert rep["expanded_declaration"]["query"]["comparison_target"]["quantity"].startswith(
+        "K - supplied reference only")
 
 
 def test_observe_declaration_is_validated():
@@ -120,14 +121,65 @@ def test_observe_declaration_is_validated():
     d = _decl("ema_state_aten", mode="black-box")
     assert any(m.startswith("compare.spec") for m in measure.missing_items(d))
 
+    d = _decl("ema_state_inplace")
+    d["compare"] = {"mode": "contract", "measure": ["v"]}
+    missing = measure.missing_items(d)
+    assert any(m.startswith("compare.binding_plan") for m in missing)
+    assert any(m.startswith("compare.specification_root") for m in missing)
+
+
+def test_contract_mode_rejects_a_draft_binding_before_running_the_call():
+    from kernel_analyzer import measure
+
+    d = _decl("ema_state_inplace")
+    root = HERE.parents[1] / "5_specification"
+    d["compare"] = {
+        "mode": "contract", "measure": ["v"], "specification_root": str(root),
+        "binding_plan": str(root / "corpus/call_bindings/liger_cross_entropy.json"),
+    }
+    with pytest.raises(measure.ReferenceNotAdmitted, match="reviewed binding plan"):
+        measure.run(d)
+
+
+def test_black_box_spec_receives_the_pre_call_inputs():
+    """An in-place implementation must not silently turn its post-state into the task reference's input."""
+    from kernel_analyzer import check
+
+    seen = []
+
+    class Case(check.Case):
+        name = "pre-state-for-spec"
+        implementation = "in-place test call"
+        specification = "point reference on the received pre-state"
+
+        def inputs(self, seed):
+            return {"x": torch.tensor([float(seed + 1)])}
+
+        def launch(self, inp):
+            inp["x"].add_(10)
+            return {"x": inp["x"]}
+
+        def spec(self, inp):
+            value = inp["x"].detach().double().numpy()
+            seen.append(float(value[0]))
+            return {"x": (value, value)}
+
+    report = check.run_black_box(Case(), dev=[0, 1], conf=[2, 3])
+    assert report["outputs"]["x"]
+    assert seen == [1.0, 2.0, 3.0, 4.0]
+
 
 @CUDA
 def test_mode_b_decomposes_the_increment_frame():
-    """mode B: the increment layer reports total (K vs f), numerical (K vs K_R) and semantic (K_R vs f) apart"""
+    """Mode B keeps the numerical decomposition but does not certify an arbitrary callback as task truth."""
     from kernel_analyzer import measure
     d = _decl("ema_state_inplace", mode="B")
     d["compare"]["spec"] = "audit_calls.py:ema_state_spec"
     lv = measure.run(d)["levels"][0]
+    assert lv["reference_kind"] == "implementation_reference"
+    assert lv["semantic_verdict"] == "not_established"
+    assert lv["outputs"]["v"]["semantic"]["verdict_scope"] == \
+        "reference_difference; not a semantic verdict"
     dec = lv["outputs"]["v"]["observation"]["decomposition"]
     num = lv["outputs"]["v"]["observation"]["summary"]
     # the kernel's float32 constant 0.999 differs from the spec's exact 0.999: a small semantic part; the dropped

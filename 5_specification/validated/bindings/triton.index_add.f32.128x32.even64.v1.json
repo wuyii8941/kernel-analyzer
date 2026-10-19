@@ -1,0 +1,39 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.index_add.f32.128x32.even64.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 out-of-place index_add for fixed even row indices",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with sixteen Triton programs producing every value of one contiguous 128x32 output from self, a 64x32 source and the validated even-row index vector",
+    "measure_call": "../calls/triton_index_add.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "out_of_place_index_add",
+      "contract": "INDEXREDUCE",
+      "profile": "finite_index_add_values",
+      "task_statement": "Return the complete out-of-place index_add value along dimension zero for index [0,2,...,126] and exact alpha 0.5 from the received physical finite float32 self and source tensors.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.index_add", "basis": "selected one-output functional index_add task"},
+        {"target": "/args/0", "source": "/tensor_arguments/self/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": 0, "basis": "the kernel updates rows"},
+        {"target": "/args/2", "source": "/tensor_arguments/index/before", "conversion": "tensor_record"},
+        {"target": "/args/3", "source": "/tensor_arguments/source/before", "conversion": "tensor_record"},
+        {"target": "/kwargs/alpha", "literal": 0.5, "basis": "the kernel multiplies every source value by the exact binary value 0.5"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "self", "effect": "unchanged"},
+    {"argument": "source", "effect": "unchanged"},
+    {"argument": "index", "effect": "unchanged"}
+  ]
+}

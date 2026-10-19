@@ -1,0 +1,53 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.radam.f32.4096.warm_rectified.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 warm-state rectified coupled RAdam transition",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "two launches: sixteen Triton programs update every parameter and moment coordinate, then one Triton program increments the scalar step",
+    "measure_call": "../calls/triton_radam.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "one_parameter_radam_step",
+      "contract": "RADAM",
+      "profile": "torch210_dense_real",
+      "task_statement": "Perform one complete public torch.optim.RAdam transition on one received dense float32 parameter with existing first and second moments at step 5, using maximize, coupled weight decay and the rectified branch, and return every post-state at step 6.",
+      "input_map": [
+        {"target": "/state/theta", "source": "/tensor_arguments/theta/before", "conversion": "tensor_values"},
+        {"target": "/state/m", "source": "/tensor_arguments/m/before", "conversion": "tensor_values"},
+        {"target": "/state/v", "source": "/tensor_arguments/v/before", "conversion": "tensor_values"},
+        {"target": "/state/t", "source": "/tensor_arguments/t/before", "conversion": "tensor_values"},
+        {"target": "/gradient", "source": "/tensor_arguments/gradient/before", "conversion": "tensor_values"},
+        {"target": "/lr", "literal": 0.125, "basis": "the kernel uses the exact binary value 0.125"},
+        {"target": "/beta1", "literal": 0.5, "basis": "the kernel uses the exact binary value 0.5"},
+        {"target": "/beta2", "literal": 0.875, "basis": "the kernel uses the exact binary value 0.875"},
+        {"target": "/eps", "literal": 0.25, "basis": "the kernel adds the exact binary value 0.25 after sqrt"},
+        {"target": "/weight_decay", "literal": 0.25, "basis": "the kernel accumulates the exact binary coupled L2 term 0.25*theta in both moments"},
+        {"target": "/maximize", "literal": true, "basis": "the kernel negates the received gradient before coupled decay"},
+        {"target": "/decoupled_weight_decay", "literal": false, "basis": "the kernel leaves theta as the update base and accumulates decay in both moments"},
+        {"target": "/foreach", "literal": false, "basis": "the bound task is one complete parameter transition"},
+        {"target": "/capturable", "literal": false, "basis": "the selected task fixes the noncapturable strict-real branch rule"},
+        {"target": "/differentiable", "literal": false, "basis": "the selected task is nondifferentiable"}
+      ],
+      "output_map": [
+        {"target": "/theta", "source": "/tensor_arguments/theta/after", "conversion": "tensor_values", "measure_output": "theta"},
+        {"target": "/m", "source": "/tensor_arguments/m/after", "conversion": "tensor_values", "measure_output": "m"},
+        {"target": "/v", "source": "/tensor_arguments/v/after", "conversion": "tensor_values", "measure_output": "v"},
+        {"target": "/t", "source": "/tensor_arguments/t/after", "conversion": "tensor_values", "measure_output": "t"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "theta", "effect": "output", "task": "one_parameter_radam_step", "target": "/theta"},
+    {"argument": "gradient", "effect": "unchanged"},
+    {"argument": "m", "effect": "output", "task": "one_parameter_radam_step", "target": "/m"},
+    {"argument": "v", "effect": "output", "task": "one_parameter_radam_step", "target": "/v"},
+    {"argument": "t", "effect": "output", "task": "one_parameter_radam_step", "target": "/t"}
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "liger.rope.public_autograd.v1",
+  "status": "drafted",
+  "subject": {
+    "library": "Liger Kernel",
+    "version": "0.6.2",
+    "callable": "LigerRopeFunction.apply",
+    "boundary": "public q+k forward followed by sum backward"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "q",
+      "contract": "ROPE",
+      "profile": "liger_batched_tables_duplicated",
+      "task_statement": "Apply the duplicated Liger rotary tables to q and return its VJP.",
+      "input_map": [
+        {"target": "/x", "source": "/tensor_arguments/q/before", "conversion": "tensor_values"},
+        {"target": "/cos", "source": "/tensor_arguments/cos/before", "conversion": "tensor_values"},
+        {"target": "/sin", "source": "/tensor_arguments/sin/before", "conversion": "tensor_values"},
+        {"target": "/upstream", "source": "/tensor_arguments/upstream_q/before", "conversion": "tensor_values"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/q", "conversion": "tensor_values"},
+        {"target": "/grad", "source": "/gradients/q", "conversion": "tensor_values"}
+      ]
+    },
+    {
+      "id": "k",
+      "contract": "ROPE",
+      "profile": "liger_batched_tables_duplicated",
+      "task_statement": "Apply the same duplicated Liger rotary tables to k and return its VJP.",
+      "input_map": [
+        {"target": "/x", "source": "/tensor_arguments/k/before", "conversion": "tensor_values"},
+        {"target": "/cos", "source": "/tensor_arguments/cos/before", "conversion": "tensor_values"},
+        {"target": "/sin", "source": "/tensor_arguments/sin/before", "conversion": "tensor_values"},
+        {"target": "/upstream", "source": "/tensor_arguments/upstream_k/before", "conversion": "tensor_values"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/k", "conversion": "tensor_values"},
+        {"target": "/grad", "source": "/gradients/k", "conversion": "tensor_values"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "q", "effect": "unchanged"},
+    {"argument": "k", "effect": "unchanged"},
+    {"argument": "cos", "effect": "unchanged"},
+    {"argument": "sin", "effect": "unchanged"},
+    {"argument": "upstream_q", "effect": "unchanged"},
+    {"argument": "upstream_k", "effect": "unchanged"}
+  ]
+}

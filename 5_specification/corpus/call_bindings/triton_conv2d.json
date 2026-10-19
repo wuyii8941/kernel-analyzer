@@ -1,0 +1,43 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.conv2d.f32.grouped.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton grouped 2-D cross-correlation with float32 inputs",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one 2x4x8x9 by 6x2x3x3 grouped Conv2d launch",
+    "measure_call": "../calls/triton_conv2d.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "conv2d",
+      "contract": "CONV",
+      "profile": "real",
+      "task_statement": "Exact finite-real grouped 2-D cross-correlation of the received contiguous float32 input, weight and bias.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.convolution", "basis": "selected default functional convolution task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/weight/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/tensor_arguments/bias/before", "conversion": "tensor_record"},
+        {"target": "/args/3", "source": "/scalars/stride"},
+        {"target": "/args/4", "source": "/scalars/padding"},
+        {"target": "/args/5", "source": "/scalars/dilation"},
+        {"target": "/args/6", "source": "/scalars/transposed"},
+        {"target": "/args/7", "source": "/scalars/output_padding"},
+        {"target": "/args/8", "source": "/scalars/groups"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "weight", "effect": "unchanged"},
+    {"argument": "bias", "effect": "unchanged"}
+  ]
+}

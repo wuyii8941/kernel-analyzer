@@ -1,0 +1,316 @@
+schema_version: '1.2'
+id: ACT
+role: ACT
+title: Activation functions (ReLU, GELU both forms, SiLU, Softplus), direct tanh and sigmoid VJPs, declared backward
+  operations, and the GLU composites SwiGLU / GeGLU, finite real-number semantics
+review:
+  status: reviewed_for_implementation
+  author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
+  date: '2026-10-18'
+  reviewer: Codex independent source, formula, domain and implementation review
+  scope: Finite floating real-number semantics in the two declared profiles; device rounding and concrete kernel
+    binding remain separate
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/act_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.relu, aten.threshold_backward, aten.gelu, aten.gelu_backward, aten.silu, aten.silu_backward, aten.softplus,
+  aten.softplus_backward, aten.tanh_backward, aten.sigmoid_backward, act.swiglu, act.swiglu_backward, act.geglu,
+  act.geglu_backward, vjp.aten.tanh, vjp.aten.sigmoid]
+profiles:
+  torch:
+    meaning: The PyTorch 2.10 documented forward functions and sourced backward formulas on finite floating tensors of
+      matching shapes; relu'(0) = 0 (autograd minimum-norm sub-gradient); softplus includes the documented reversion
+      to the linear function where beta*x > threshold; gelu follows its approximate argument; GLU composites follow
+      the GLU-variants paper and Liger definitions; direct tanh and sigmoid VJPs are derived from their sourced public
+      forward formulas and explicitly receive the original input.
+    task_choice_required: false
+  softplus_formula:
+    meaning: An explicitly selected mathematical task in which softplus is (1/beta) log(1 + exp(beta x)) for every x
+      and its VJP is sigmoid(beta*x). This is distinct from the documented PyTorch API task; threshold is accepted for
+      call compatibility but has no mathematical effect (decision ACT.SOFTPLUS_THRESHOLD).
+    task_choice_required: true
+outputs:
+  out:
+    shape: the unary input's shape; backward operands have one matching shape; the GLU VJPs give the list [da, db]
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Tensor values are the exact values received (a binary float is its exact rational value); the
+    documented decimal constants (0.044715) are exact decimals, not their binary roundings (decision ACT.GELU_FORMS).
+  quality: No tolerance; exact results compare exactly, transcendental results as rigorous enclosures.
+  test_evidence: Enclosure containment of hand / sympy derived closed forms.
+  error_handling: Invalid arguments and NaN are invalid_input; non-floating tensor records and infinite inputs are
+    unsupported (decision ACT.FINITE).
+decisions:
+- id: ACT.RELU0
+  status: reviewed
+  statement: The VJP of relu is threshold_backward(g, x, 0) = g where x > 0 and 0 where x <= 0, so relu'(0) = 0.
+    Basis - the autograd notes take, at a non-differentiable point of a locally convex function, the sub-gradient of
+    minimum norm (the sub-differential of max(0, x) at 0 is [0, 1], minimum norm 0), and torch's threshold_backward
+    is where(x <= threshold, 0, g). Alternatives - (a) any element of the sub-differential, the v2.4 'math' profile
+    (an interval of answers, not a single VJP; not adopted because the notes fix the value for torch's VJP, recorded
+    here for a task that wants it); (b) the v1 set {0, upstream} (no source; rejected, SPECIFICATION_v2 section 3);
+    (c) relu'(0) = 1 (no source; mutant ACT.M1).
+  basis: [ACT_AUTOGRAD.NONDIFF, ACT_DECOMP.THRESHOLD_BWD]
+- id: ACT.PHI
+  status: reviewed
+  statement: Phi in GELU(x) = x Phi(x) is the standard Gaussian CDF, Phi(x) = (1 + erf(x / sqrt 2)) / 2 (identity of
+    the normal distribution; erf as torch.special documents it). The page does not state mean 0 / variance 1;
+    'the Cumulative Distribution Function for Gaussian Distribution' is read as the standard one, as in the GELU paper
+    cited there and in torch's own decomposition. No other reading found.
+  basis: [T_GELU.DEF, T_SPECIAL.ERF, ACT_DECOMP.GELU_BWD]
+- id: ACT.GELU_FORMS
+  status: reviewed
+  statement: approximate='tanh' selects its own declared function 0.5 x (1 + tanh(sqrt(2/pi) (x + 0.044715 x^3)))
+    with the exact constants 44715/1000000 and sqrt(2/pi); it is compared with that function only, not with the erf
+    form plus a tolerance. Alternatives - (a) treat 'tanh' as an approximation of x Phi(x) with an undeclared
+    tolerance (rejected, no tolerance is documented); (b) use the binary constants of an implementation (rejected,
+    the document gives decimals). An approximate value other than 'none' / 'tanh' is invalid_input.
+  basis: [T_GELU.TANH, T_GELU_F.TANH]
+- id: ACT.SOFTPLUS_THRESHOLD
+  status: reviewed
+  statement: 'The PyTorch pages explicitly say the implementation reverts to the linear function when input x beta >
+    threshold. Therefore profile torch includes that strict branch: output x and backward value g above the threshold,
+    the displayed formula and g sigma(beta x) otherwise. At beta x = threshold the formula branch is used. For finite
+    threshold the resulting piecewise forward has a small jump at the boundary, so the sourced softplus_backward value
+    there is a defined PyTorch backward operation, not the derivative of the piecewise forward. Profile
+    softplus_formula is a different mathematical task selected by its caller; it is not an alternate interpretation of
+    the PyTorch API. beta = 0 makes both real formulas undefined (domain_undefined).'
+  basis: [T_SOFTPLUS.DEF, T_SOFTPLUS.THRESH, T_SOFTPLUS_F.THRESH, ACT_DECOMP.SOFTPLUS_BWD]
+- id: ACT.VJP
+  status: reviewed
+  statement: 'For the differentiable declared functions the VJP is the derivative times the explicit upstream g:
+    gelu none gives g (Phi(x) + x phi(x)), phi the standard normal density; gelu tanh gives g (0.5 (1 + tanh u) +
+    0.5 x (1 - tanh^2 u) sqrt(2/pi) (1 + 3 0.044715 x^2)), u = sqrt(2/pi)(x + 0.044715 x^3); silu gives g sigma(x)
+    (1 + x (1 - sigma(x))). These follow by differentiation and agree with torch''s decompositions. The direct ATen
+    tanh_backward and sigmoid_backward operations interpret their second argument y as a saved forward output and
+    compute g (1 - y^2) and g y (1 - y) for any admitted y; they are VJPs only when y really is the corresponding
+    forward result. The public-function VJP tasks vjp.aten.tanh(g, x) and vjp.aten.sigmoid(g, x) instead receive the
+    original input x and differentiate the sourced forward functions. Softplus at the threshold boundary is handled
+    separately by ACT.SOFTPLUS_THRESHOLD.'
+  basis: [ACT_DECOMP.GELU_BWD, ACT_DECOMP.SILU_BWD, ACT_DECOMP.TANH_BWD, ACT_DECOMP.SIGMOID_BWD, T_TANH.DEF,
+    T_SPECIAL.EXPIT]
+- id: ACT.GEGLU_FORM
+  status: reviewed
+  statement: GEGLU uses GELU(x) = x Phi(x) in the GLU-variants paper; Liger's LigerGELUMulFunction uses the tanh form
+    only; the phase-2b condition used F.gelu(a) * b (erf form). The GELU form is therefore an explicit argument
+    approximate of act.geglu / act.geglu_backward, default 'none' (the paper's GELU); a binding to Liger passes
+    'tanh'. Alternative (fix one form for geglu) rejected because the tested implementations differ.
+  basis: [ACT_GLU_FULL.GLU, ACT_GLU_FULL.ACTS, ACT_LIGER_GEGLU.FWD]
+- id: ACT.GLU_SHAPES
+  status: reviewed
+  statement: act.swiglu(a, b) = silu(a) * b and act.geglu(a, b) = gelu(a) * b are component-wise products of operands
+    of one shape (the paper's component-wise product of two projections; Liger views both as (-1, n_cols) without
+    broadcasting). Operands of different shapes are invalid_input; broadcasting is not part of these composites.
+    SwiGLU's Swish_beta is taken with beta = 1 (FFN_SwiGLU in the paper; silu in Liger).
+  basis: [ACT_GLU_FULL.GLU, ACT_LIGER_SWIGLU.FWD, ACT_LIGER_GEGLU.FWD]
+- id: ACT.FINITE
+  status: reviewed
+  statement: The profiles conservatively cover finite floating tensor inputs only. Infinite inputs are legal for some
+    APIs but are outside these profiles (unsupported), because limits such as gelu(-inf) = 0 need conventions not
+    stated by the selected formulas; integer and boolean tensor behavior is also outside this real floating profile.
+    NaN is not a real value and is invalid_input. Every multi-tensor backward operation and GLU composite in these
+    profiles requires one matching tensor shape, the ordinary VJP boundary; broader direct-ATen broadcasting is not
+    claimed. No tested phase-2b condition needs a non-floating, infinite or broadcasted input.
+  basis: [T_RELU.DEF, T_GELU.DEF, T_SILU.DEF, T_SOFTPLUS.DEF, ACT_AUTOGRAD.NONDIFF, ACT_DECOMP.GELU_BWD,
+    ACT_DECOMP.SILU_BWD, ACT_LIGER_SWIGLU.FWD, ACT_LIGER_GEGLU.FWD]
+clauses:
+- {id: ACT.C1, basis: [T_RELU.DEF, T_RELU_F.DEF], statement: 'relu(x) = max(0, x) element-wise', observes: [out],
+  evidence_kind: definition}
+- {id: ACT.C2, basis: [ACT.RELU0, ACT_DECOMP.THRESHOLD_BWD], statement: 'threshold_backward(g, x, t) = g where x > t,
+    0 where x <= t; with t = 0 it is the VJP of relu (relu''(0) = 0)', observes: [out], evidence_kind: definition}
+- {id: ACT.C3, basis: [T_GELU.DEF, T_GELU_F.DEF, ACT.PHI], statement: 'gelu(x, none) = x (1 + erf(x / sqrt 2)) / 2',
+  observes: [out], evidence_kind: definition}
+- {id: ACT.C4, basis: [T_GELU.TANH, T_GELU_F.TANH, ACT.GELU_FORMS], statement: 'gelu(x, tanh) = 0.5 x (1 +
+    tanh(sqrt(2/pi) (x + 0.044715 x^3))); any other approximate value is invalid_input', observes: [out],
+  evidence_kind: definition}
+- {id: ACT.C5, basis: [ACT.VJP, ACT.PHI, ACT.GELU_FORMS], statement: 'gelu_backward(g, x, approximate) is the VJP of
+    the selected gelu form; finite for every finite x (|x| >= 2^64 included, bug B023)', observes: [out],
+  evidence_kind: derived}
+- {id: ACT.C6, basis: [T_SILU.DEF, T_SILU_F.DEF, T_SPECIAL.EXPIT, ACT.VJP], statement: 'silu(x) = x / (1 + exp(-x));
+    silu_backward(g, x) = g sigma(x) (1 + x (1 - sigma(x)))', observes: [out], evidence_kind: definition}
+- {id: ACT.C7, basis: [T_SOFTPLUS.DEF, T_SOFTPLUS.THRESH, ACT.SOFTPLUS_THRESHOLD], statement: 'profile torch -
+    softplus(x, beta, threshold) = (1/beta) log(1 + exp(beta x)) if beta x <= threshold, x if beta x > threshold;
+    softplus_backward = g sigma(beta x) resp. g; at equality this is the sourced backward operation rather than a
+    derivative of the discontinuous piecewise forward', observes: [out], evidence_kind: definition}
+- {id: ACT.C8, basis: [T_SOFTPLUS.DEF, ACT.SOFTPLUS_THRESHOLD], statement: 'profile softplus_formula - softplus =
+    (1/beta) log(1 + exp(beta x)) and softplus_backward = g sigma(beta x) for every x', observes: [out],
+  evidence_kind: definition}
+- {id: ACT.C9, basis: [ACT.VJP, ACT_DECOMP.TANH_BWD, ACT_DECOMP.SIGMOID_BWD], statement: 'tanh_backward(g, y) = g (1 -
+    y^2), sigmoid_backward(g, y) = g y (1 - y), with y interpreted as a saved forward output; the direct formulas are
+    defined for any admitted y', observes: [out], evidence_kind: definition}
+- {id: ACT.C10, basis: [ACT_GLU_FULL.GLU, ACT_LIGER_SWIGLU.FWD, ACT_LIGER_SWIGLU.BWD, ACT.GLU_SHAPES, ACT.VJP],
+  statement: 'act.swiglu(a, b) = silu(a) b; act.swiglu_backward(g, a, b) = [g b silu''(a), g silu(a)]',
+  observes: [out], evidence_kind: definition}
+- {id: ACT.C11, basis: [ACT_GLU_FULL.GLU, ACT_LIGER_GEGLU.FWD, ACT_LIGER_GEGLU.BWD, ACT.GEGLU_FORM, ACT.GLU_SHAPES],
+  statement: 'act.geglu(a, b, approximate) = gelu(a, approximate) b; act.geglu_backward(g, a, b, approximate) =
+    [g b gelu''(a), g gelu(a)]', observes: [out], evidence_kind: definition}
+- {id: ACT.C12, basis: [ACT.GLU_SHAPES, ACT.GELU_FORMS], statement: 'GLU operands of different shapes and unknown
+    approximate values are invalid_input', observes: [out], evidence_kind: definition}
+- {id: ACT.C13, basis: [ACT.FINITE], statement: 'all tensor inputs are finite floating tensors; operands of every
+    multi-tensor backward operation have one matching shape; non-floating or infinite tensors are unsupported and NaN
+    is invalid_input', observes: [out], evidence_kind: definition}
+- {id: ACT.C14, basis: [ACT.VJP, T_TANH.DEF, T_SIGMOID.DEF, T_SPECIAL.EXPIT], statement: 'The public-function tasks
+    receive the original input x: vjp.aten.tanh(g, x) = g (1 - tanh(x)^2), and vjp.aten.sigmoid(g, x) =
+    g sigmoid(x) (1 - sigmoid(x)). They are distinct from the saved-output ATen backward operations in ACT.C9.',
+  observes: [out], evidence_kind: derived}
+examples:
+- {id: ACT.E1, profile: torch, clauses: [ACT.C1], input: {op: aten.relu, args: [{t: f32, v: [-2, 0, '1/2', 3]}]},
+  expected: {outcome: value, fields: {out: [0, 0, '1/2', 3]}}}
+- {id: ACT.E2, profile: torch, clauses: [ACT.C2], input: {op: aten.threshold_backward, args: [{t: f32, v: [5, 7, -3]},
+      {t: f32, v: [-1, 0, 2]}, 0]}, expected: {outcome: value, fields: {out: [0, 0, -3]}},
+  note: relu'(0) = 0 at the middle element (phase-2b relu x zeros condition)}
+- {id: ACT.E3, profile: torch, clauses: [ACT.C2], input: {op: aten.threshold_backward, args: [{t: f32, v: [2, 2]}, {t: f32,
+        v: ['1/2', 1]}, '1/2']}, expected: {outcome: value, fields: {out: [0, 2]}}}
+- {id: ACT.E4, profile: torch, clauses: [ACT.C1, ACT.C2], input: {op: aten.threshold_backward, args: [{t: f32, v: [1, 1]},
+      {t: f32, v: ['1/1000000000000000000000000000000', -1000000000000000000000000000000]}, 0]}, expected: {outcome: value,
+    fields: {out: [1, 0]}}, note: phase-2b tiny / huge magnitudes}
+- {id: ACT.E5, profile: torch, clauses: [ACT.C3], input: {op: aten.gelu, args: [{t: f32, v: [0, 1, -1]}]}, expected: {
+    outcome: value, fields: {out: [0, '(1+erf(1/sqrt(2)))/2', '-(1-erf(1/sqrt(2)))/2']}}}
+- {id: ACT.E6, profile: torch, clauses: [ACT.C4], input: {op: aten.gelu, args: [{t: f32, v: [0, 1]}], kwargs: {approximate: tanh}},
+  expected: {outcome: value, fields: {out: [0, '(1+tanh(sqrt(2/pi)*(1+44715/1000000)))/2']}}}
+- {id: ACT.E7, profile: torch, clauses: [ACT.C3], input: {op: aten.gelu, args: [{t: f32, v: [1000000000000000000000000000000,
+          -1000000000000000000000000000000, '1/1000000000000000000000000000000']}]}, expected: {outcome: value, fields: {
+      out: ['1000000000000000000000000000000*(1+erf(1000000000000000000000000000000/sqrt(2)))/2',
+        '-1000000000000000000000000000000*(1+erf(-1000000000000000000000000000000/sqrt(2)))/2',
+        '(1+erf(1/(1000000000000000000000000000000*sqrt(2))))/2000000000000000000000000000000']}}, note: phase-2b huge /
+    tiny}
+- {id: ACT.E8, profile: torch, clauses: [ACT.C5], input: {op: aten.gelu_backward, args: [{t: f32, v: [2]}, {t: f32, v: [1]}]},
+  expected: {outcome: value, fields: {out: ['2*((1+erf(1/sqrt(2)))/2+exp(-1/2)/sqrt(2*pi))']}}}
+- {id: ACT.E9, profile: torch, clauses: [ACT.C5], input: {op: aten.gelu_backward, args: [{t: f32, v: [1]}, {t: f32, v: [1]}],
+    kwargs: {approximate: tanh}}, expected: {outcome: value, fields: {out: ['(1+tanh(sqrt(2/pi)*(1+44715/1000000)))/2+(1-tanh(sqrt(2/pi)*(1+44715/1000000))*tanh(sqrt(2/pi)*(1+44715/1000000)))*sqrt(2/pi)*(1+3*44715/1000000)/2']}}}
+- id: ACT.E10
+  profile: torch
+  clauses: [ACT.C5]
+  input: {op: aten.gelu_backward, args: [{t: f32, v: [1, 1]}, {t: f32, v: [18446744073709551616, -18446744073709551616]}],
+    kwargs: {approximate: tanh}}
+  expected:
+    outcome: value
+    fields:
+      out:
+      - (1+tanh(sqrt(2/pi)*(18446744073709551616+44715/1000000*18446744073709551616**3)))/2+18446744073709551616*(1-tanh(sqrt(2/pi)*(18446744073709551616+44715/1000000*18446744073709551616**3))*tanh(sqrt(2/pi)*(18446744073709551616+44715/1000000*18446744073709551616**3)))*sqrt(2/pi)*(1+3*44715/1000000*18446744073709551616**2)/2
+      - (1+tanh(sqrt(2/pi)*(-18446744073709551616-44715/1000000*18446744073709551616**3)))/2-18446744073709551616*(1-tanh(sqrt(2/pi)*(-18446744073709551616-44715/1000000*18446744073709551616**3))*tanh(sqrt(2/pi)*(-18446744073709551616-44715/1000000*18446744073709551616**3)))*sqrt(2/pi)*(1+3*44715/1000000*18446744073709551616**2)/2
+  note: Bug B023 - at |x| = 2^64 the real derivative of the tanh form is finite (about 1 and about 0); float32 x*x
+    overflows and the device returns NaN.
+- {id: ACT.E11, profile: torch, clauses: [ACT.C6], input: {op: aten.silu, args: [{t: f32, v: [0, 1, -1]}]}, expected: {
+    outcome: value, fields: {out: [0, '1/(1+exp(-1))', '-1/(1+exp(1))']}}}
+- {id: ACT.E12, profile: torch, clauses: [ACT.C6], input: {op: aten.silu, args: [{t: f32, v: [1000000000000000000000000000000,
+          -1000]}]}, expected: {outcome: value, fields: {out: ['1000000000000000000000000000000/(1+exp(-1000000000000000000000000000000))',
+        '-1000/(1+exp(1000))']}}, note: 'large magnitudes; silu(-1e30) is about -1e30 exp(-1e30), whose enclosure endpoints
+    cannot be converted to exact fractions by kernel_spec.num.ends (shared-code limitation reported), so the negative
+    side uses -1000'}
+- {id: ACT.E13, profile: torch, clauses: [ACT.C6], input: {op: aten.silu_backward, args: [{t: f32, v: [3, 4]}, {t: f32,
+        v: [1, 0]}]}, expected: {outcome: value, fields: {out: ['3*(2-1/(1+exp(-1)))/(1+exp(-1))', 2]}}}
+- {id: ACT.E14, profile: torch, clauses: [ACT.C7], input: {op: aten.softplus, args: [{t: f32, v: [0, 1, 21, 20]}], kwargs: {
+      beta: 1, threshold: 20}}, expected: {outcome: value, fields: {out: ['log(2)', 'log(1+exp(1))', 21, 'log(1+exp(20))']}},
+  note: 'beta x = 20 is not > threshold: the formula applies'}
+- {id: ACT.E15, profile: torch, clauses: [ACT.C7], input: {op: aten.softplus, args: [{t: f32, v: [1]}], kwargs: {beta: 2,
+      threshold: 20}}, expected: {outcome: value, fields: {out: ['log(1+exp(2))/2']}}}
+- {id: ACT.E16, profile: torch, clauses: [ACT.C7], input: {op: aten.softplus, args: [{t: f32, v: [6]}], kwargs: {beta: 4,
+      threshold: 20}}, expected: {outcome: value, fields: {out: [6]}}, note: 'beta x = 24 > 20 although x = 6 < 20'}
+- {id: ACT.E17, profile: torch, clauses: [ACT.C7], input: {op: aten.softplus_backward, args: [{t: f32, v: [2, 3]}, {t: f32,
+        v: [0, 21]}], kwargs: {beta: 1, threshold: 20}}, expected: {outcome: value, fields: {out: [1, 3]}}}
+- {id: ACT.E18, profile: softplus_formula, clauses: [ACT.C8], input: {op: aten.softplus, args: [{t: f32, v: [21]}], kwargs: {
+      beta: 1, threshold: 20}}, expected: {outcome: value, fields: {out: ['log(1+exp(21))']}}}
+- {id: ACT.E19, profile: softplus_formula, clauses: [ACT.C8], input: {op: aten.softplus_backward, args: [{t: f32, v: [1]},
+      {t: f32, v: [21]}], kwargs: {beta: 1, threshold: 20}}, expected: {outcome: value, fields: {out: ['1/(1+exp(-21))']}}}
+- {id: ACT.E20, profile: torch, clauses: [ACT.C9], input: {op: aten.tanh_backward, args: [{t: f32, v: [2, 1]}, {t: f32, v: [
+          '1/2', 0]}]}, expected: {outcome: value, fields: {out: ['3/2', 1]}}}
+- {id: ACT.E21, profile: torch, clauses: [ACT.C9], input: {op: aten.sigmoid_backward, args: [{t: f32, v: [4]}, {t: f32, v: [
+          '1/4']}]}, expected: {outcome: value, fields: {out: ['3/4']}}}
+- {id: ACT.E22, profile: torch, clauses: [ACT.C10], input: {op: act.swiglu, args: [{t: f32, v: [1, 0]}, {t: f32, v: [2, 5]}]},
+  expected: {outcome: value, fields: {out: ['2/(1+exp(-1))', 0]}}}
+- {id: ACT.E23, profile: torch, clauses: [ACT.C10], input: {op: act.swiglu_backward, args: [{t: f32, v: [1, 1]}, {t: f32,
+        v: [1, 0]}, {t: f32, v: [2, 5]}]}, expected: {outcome: value, fields: {out: [['2*(2-1/(1+exp(-1)))/(1+exp(-1))',
+          '5/2'], ['1/(1+exp(-1))', 0]]}}}
+- {id: ACT.E24, profile: torch, clauses: [ACT.C11], input: {op: act.geglu, args: [{t: f32, v: [1]}, {t: f32, v: [3]}]},
+  expected: {outcome: value, fields: {out: ['3*(1+erf(1/sqrt(2)))/2']}}, note: default approximate 'none' (paper GELU,
+    phase-2b F.gelu(a) * b)}
+- {id: ACT.E25, profile: torch, clauses: [ACT.C11], input: {op: act.geglu, args: [{t: f32, v: [1]}, {t: f32, v: [3]}], kwargs: {
+      approximate: tanh}}, expected: {outcome: value, fields: {out: ['3*(1+tanh(sqrt(2/pi)*(1+44715/1000000)))/2']}},
+  note: Liger LigerGELUMulFunction}
+- {id: ACT.E26, profile: torch, clauses: [ACT.C11], input: {op: act.geglu_backward, args: [{t: f32, v: [2]}, {t: f32, v: [1]},
+      {t: f32, v: [3]}], kwargs: {approximate: tanh}}, expected: {outcome: value, fields: {out: [['6*((1+tanh(sqrt(2/pi)*(1+44715/1000000)))/2+(1-tanh(sqrt(2/pi)*(1+44715/1000000))*tanh(sqrt(2/pi)*(1+44715/1000000)))*sqrt(2/pi)*(1+3*44715/1000000)/2)'],
+        ['1+tanh(sqrt(2/pi)*(1+44715/1000000))']]}}}
+- {id: ACT.E27, profile: torch, clauses: [ACT.C11], input: {op: act.geglu_backward, args: [{t: f32, v: [1]}, {t: f32, v: [0]},
+      {t: f32, v: [3]}]}, expected: {outcome: value, fields: {out: [['3/2'], [0]]}}}
+- {id: ACT.E28, profile: torch, clauses: [ACT.C12, ACT.C4], input: {op: aten.gelu, args: [{t: f32, v: [1]}], kwargs: {
+      approximate: fast}}, expected: {outcome: invalid_input}}
+- {id: ACT.E29, profile: torch, clauses: [ACT.C12, ACT.C10], input: {op: act.swiglu, args: [{t: f32, v: [1, 2]}, {t: f32,
+        v: [1]}]}, expected: {outcome: invalid_input}}
+- {id: ACT.E30, profile: torch, clauses: [ACT.C12, ACT.C5], input: {op: aten.gelu_backward, args: [{t: f32, v: [1]}, {t: f32,
+        v: [1]}], kwargs: {approximate: fast}}, expected: {outcome: invalid_input}}
+- {id: ACT.E31, profile: torch, clauses: [ACT.C7], input: {op: aten.softplus_backward, args: [{t: f32, v: [3]}, {t: f32,
+        v: [2]}], kwargs: {beta: 2, threshold: 4}}, expected: {outcome: value, fields: {out: ['3/(1+exp(-4))']}},
+  note: 'At beta*x == threshold the sourced backward takes the sigmoid branch; this is a direct backward convention at
+    the jump, not a derivative of the piecewise forward.'}
+- {id: ACT.E32, profile: torch, clauses: [ACT.C9], input: {op: aten.tanh_backward, args: [{t: f32, v: [1]}, {t: f32,
+        v: [2]}]}, expected: {outcome: value, fields: {out: [-3]}}, note: 'The direct ATen operation applies the
+    saved-output formula even when y is not in the range of tanh; a binding may call this a VJP only when y is an
+    actual forward result.'}
+- {id: ACT.E33, profile: torch, clauses: [ACT.C13], input: {op: aten.silu, args: [{t: i64, v: [1]}]}, expected: {
+    outcome: unsupported}, note: 'This reviewed profile is deliberately limited to floating tensors.'}
+- {id: ACT.E34, profile: torch, clauses: [ACT.C13], input: {op: aten.relu, args: [{t: f32, v: [.inf]}]}, expected: {
+    outcome: unsupported}, note: 'Numeric infinity from a runtime tensor must not bypass the finite-domain check.'}
+- {id: ACT.E35, profile: torch, clauses: [ACT.C13], input: {op: aten.silu_backward, args: [{t: f32, v: [1]}, {t: f32,
+        v: [[1], [2]]}]}, expected: {outcome: invalid_input}, note: 'The selected VJP boundary requires equal operand
+    shapes; broader direct-ATen broadcasting is outside this profile.'}
+- {id: ACT.E36, profile: torch, clauses: [ACT.C14], input: {op: vjp.aten.tanh, args: [{t: f32, v: [2]}, {t: f32,
+      v: ['1/2']}]}, expected: {outcome: value, fields: {out: ['2*(1-tanh(1/2)*tanh(1/2))']}}}
+- {id: ACT.E37, profile: torch, clauses: [ACT.C14], input: {op: vjp.aten.sigmoid, args: [{t: f32, v: [4]}, {t: f32,
+      v: ['1/2']}]}, expected: {outcome: value, fields: {out: ['4/(1+exp(-1/2))*(1-1/(1+exp(-1/2)))']}}}
+signature:
+  inputs: ['op: one of the covered names', 'args / kwargs as ATen: gelu(x, approximate), gelu_backward(g, x, approximate),
+      silu_backward(g, x), softplus(x, beta, threshold), softplus_backward(g, x, beta, threshold), threshold_backward(g,
+      x, threshold), tanh_backward(g, y), sigmoid_backward(g, y), vjp.aten.tanh(g, x), vjp.aten.sigmoid(g, x);
+      act.swiglu(a, b), act.swiglu_backward(g, a, b), act.geglu(a, b, approximate),
+      act.geglu_backward(g, a, b, approximate)', 'tensors {t: dtype, v: values}']
+  pre_state: []
+  post_state: []
+  observation_unit: the result tensor of one operation (the GLU VJPs - both gradients)
+domain:
+  valid: [finite floating tensor values; unary inputs of any shape; all operands of a backward or GLU call of one shape]
+  domain_undefined: [softplus with beta = 0]
+  invalid_input: [NaN, unknown approximate value, operands of different shapes]
+  unsupported: [infinite input values, integer, boolean or complex tensor dtypes (decision ACT.FINITE)]
+mutation_requirements:
+- {id: ACT.M1, misreading: 'relu''(0) = 1 (gradient passed where x >= 0)', witnesses: [ACT.E2]}
+- {id: ACT.M2, misreading: 'v1 zero point - the set {0, upstream} at x = 0', witnesses: [ACT.E2]}
+- {id: ACT.M3, misreading: approximate ignored (erf form always), witnesses: [ACT.E6]}
+- {id: ACT.M4, misreading: tanh form used for approximate='none', witnesses: [ACT.E5]}
+- {id: ACT.M5, misreading: gelu_backward without the x * pdf term, witnesses: [ACT.E8, ACT.E9]}
+- {id: ACT.M6, misreading: 'silu'' taken as sigmoid', witnesses: [ACT.E13]}
+- {id: ACT.M7, misreading: softplus beta ignored, witnesses: [ACT.E15]}
+- {id: ACT.M8, misreading: softplus reversion tested on x instead of beta * x, witnesses: [ACT.E16]}
+- {id: ACT.M9, misreading: softplus without the documented reversion in profile torch, witnesses: [ACT.E14]}
+- {id: ACT.M10, misreading: reversion applied in profile softplus_formula, witnesses: [ACT.E18]}
+- {id: ACT.M11, misreading: 'tanh_backward from the input (1 - tanh(y)^2) instead of the output', witnesses: [ACT.E20,
+    ACT.E32]}
+- {id: ACT.M12, misreading: 'sigmoid_backward from the input instead of the output', witnesses: [ACT.E21]}
+- {id: ACT.M13, misreading: swiglu da without the factor b, witnesses: [ACT.E23]}
+- {id: ACT.M14, misreading: 'swiglu da uses silu(a) instead of silu''(a)', witnesses: [ACT.E23]}
+- {id: ACT.M15, misreading: geglu with the other GELU form, witnesses: [ACT.E24, ACT.E25]}
+- {id: ACT.M16, misreading: 'B023 - x*x overflow at |x| >= 2^64 taken as 0 * inf (undefined) in the tanh-form
+    derivative', witnesses: [ACT.E10]}
+- {id: ACT.M17, misreading: 'softplus_backward takes the linear branch at beta*x == threshold instead of only above
+    the threshold', witnesses: [ACT.E31]}
+- {id: ACT.M18, misreading: 'multi-tensor backward operands are broadcast instead of requiring the selected matching
+    shape VJP boundary', witnesses: [ACT.E35]}
+- {id: ACT.M19, misreading: 'vjp.aten.tanh treats original input x as saved output y and computes g (1-x^2)',
+  witnesses: [ACT.E36]}
+- {id: ACT.M20, misreading: 'vjp.aten.sigmoid treats original input x as saved output y and computes g x (1-x)',
+  witnesses: [ACT.E37]}
+nonclaims:
+- Floating-point rounding (including the float32 overflow of B023) is the numerical question K - G; this contract
+  states the real target.
+- The GLU composites rest on the GLU-variants paper and the Liger reference program (kind reference_program); their
+  VJPs are derived. Agreement with Liger is agreement with a reference program, not with an official definition.
+- Liger's intermediate casts (silu(a) cast to b's dtype before the product) are rounding steps of the program, not part
+  of the real target.
+changes:
+- date: '2026-10-19'
+  change: Add direct public tanh and sigmoid VJP tasks whose second tensor is the original input, while retaining the
+    separately named saved-output ATen backward operations.
+  trigger: End-to-end compiled autograd regions receive x and cannot soundly bind it as the saved forward output y.

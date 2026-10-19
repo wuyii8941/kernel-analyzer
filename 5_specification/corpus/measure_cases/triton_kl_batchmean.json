@@ -1,0 +1,20 @@
+{
+  "call": "../calls/triton_kl_batchmean.py:call",
+  "inputs": {
+    "input": {"sampler": {"uniform": [-4, 4]}, "shape": [8, 64], "dtype": "float32"},
+    "target": {"sampler": {"uniform": [0.05, 2]}, "shape": [8, 64], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["loss", "grad"],
+    "binding_plan": "../call_bindings/triton_kl_batchmean.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

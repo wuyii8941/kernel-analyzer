@@ -1,129 +1,170 @@
 schema_version: '1.2'
 id: PACK
 role: PACK
-title: Packed-sequence (document) attention mask, position ids and packed attention output (task definition)
+title: FlashAttention v2.8.3 packed variable-length attention forward, complete output
 review:
-  status: drafted
-  author: Claude (spec v3 author, group D1_attention), 2026-10-17
-  date: '2026-10-17'
-  scope: Task-defined semantics of packing several documents into one sequence; awaiting a review by someone who did not
-    write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite physical f16 or bf16 CUDA inputs; nonpaged varlen forward; complete output
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
-  requires:
-  - source_profile_matched
-  - input_contract_validated
-  - all_required_outputs_bound
-  - reference_semantics_and_guarantees_validated
-  - no_unresolved_contradiction
-  - contract_and_implementation_hashes_bound
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
 covers:
-- block-diagonal document mask for SDPA (boolean attn_mask) and flex attention (document mask_mod)
-- position_ids reset per document (transformers DataCollatorWithFlattening)
-- flash_attn varlen cu_seqlens packing
+- flash_attn_varlen_func from FlashAttention v2.8.3 for packed positive-length sequences, without optional features
 profiles:
-  packed_causal:
-    meaning: Token i attends token j iff both belong to the same document and j <= i; position ids restart at 0 in every
-      document. A task choice (no external authority fixes it).
-    task_choice_required: true
-  packed_bidirectional:
-    meaning: Token i attends every token of its own document; position ids restart at 0 in every document. A task choice.
-    task_choice_required: true
+  flashattn283_varlen_causal_real:
+    meaning: Each packed query sequence attends only its matching packed K/V sequence with bottom-right causal alignment.
+    task_choice_required: false
+    basis: [PK.TASK, PK.PACK, PK.CAUSAL, PK.GQA, PK.DTYPE]
+  flashattn283_varlen_bidirectional_real:
+    meaning: Each packed query sequence attends every key in its matching packed K/V sequence.
+    task_choice_required: false
+    basis: [PK.TASK, PK.PACK, PK.GQA, PK.DTYPE]
 outputs:
-  mask:
-    shape: '[L][L] booleans (True = may attend)'
-    guarantee: exact
-    kind: boolean
-  position_ids:
-    shape: '[L] integers'
-    guarantee: exact
-  out:
-    shape: '[H][L][Ev]: attention of the packed q, k, v under the mask (SDPA semantics)'
-    guarantee: rigorous_enclosure
+  out: {shape: '[total_q,nheads_q,headdim]', guarantee: rigorous_enclosure}
 comparison:
-  input_binding: document lengths are exact positive integers; q, k, v are the exact values received.
-  quality: No tolerance; mask and positions are exact, the attention output is a rigorous enclosure.
-  test_evidence: Exact equality or containment of the expected formula's enclosure.
-  error_handling: Lengths that do not cover the packed sequence, or a document of length 0, are invalid_input.
+  input_binding: >-
+    Complete q, k and v are exact physical finite values of one declared f16 or bf16 dtype. cu_seqlens_q and
+    cu_seqlens_k are complete signed-int32 cumulative arrays. Explicit scale is an exact physical finite f32;
+    null selects the documented 1/sqrt(headdim) default.
+  complete_output: Every output coordinate, the full shape and the common q/k/v dtype are required.
+  quality: Exact rational dot products surround exp and division with rigorous intervals; comparison uses no tolerance.
+  test_evidence: >-
+    Independent high-precision element loops, dense per-sequence PyTorch formulas, installed vLLM 0.16 vendored
+    FlashAttention GPU calls for f16 and bf16, complete-output checks, unequal q/k lengths, GQA and rejected paths.
+  error_handling: >-
+    Missing fields, malformed shapes, nonphysical values, bad cumulative lengths or incorrect maxima are invalid_input.
+    Other legal FlashAttention features outside this profile are unsupported.
 decisions:
 - id: PK.TASK
-  status: needs_binding
-  statement: 'Packing is a task definition, not a documented operator: the documents are independent sequences that share
-    one buffer. The reference programs agree that each document is a separate sequence (flash_attn varlen indexes q and
-    kv by cu_seqlens; DataCollatorWithFlattening restarts position_ids at 0 and records seq_idx). Within a document the
-    task chooses causal (language-model training, the tested essential-round construction) or bidirectional attention: two
-    profiles, bound by the task. A token never attends a token of another document. Documents have at least one token (a
-    zero-length document is invalid_input: it has no tokens to place). The attention output is the ATTN contract''s sdpa
-    semantics with this boolean mask (every row keeps at least its own token, so no row is empty).'
-  basis:
-  - FA_IFACE.VARLEN
-  - HF_COLLATOR.FLATTEN
-  - T_SDPA.BOOL_MASK
+  status: reviewed
+  statement: >-
+    The public operator returns the packed attention output. It does not return a document mask or position_ids.
+    The former mixed document-construction draft is archived and cannot be used as a runtime fallback.
+  basis: [FA_IFACE.VARLEN, T_SDPA.REFERENCE]
+- id: PK.PACK
+  status: reviewed
+  statement: >-
+    cu_seqlens_q and cu_seqlens_k partition q and k/v into the same number of independent sequences. No score or
+    value crosses a cumulative-length boundary. This profile conservatively requires every represented sequence to
+    have positive q and k length and requires max_seqlen_q/k to equal the represented maxima.
+  basis: [FA_IFACE.VARLEN]
+- id: PK.CAUSAL
+  status: reviewed
+  statement: >-
+    For sequence-local query i and key j, the causal profile admits j <= i + seqlen_k - seqlen_q. This is the
+    documented bottom-right alignment. A row with no admitted key returns zero. The bidirectional profile admits all
+    keys in the matching sequence.
+  basis: [FA_IFACE.CAUSAL_BR, FA_IFACE.EMPTY_ROW]
+- id: PK.GQA
+  status: reviewed
+  statement: >-
+    Query heads are divided into contiguous equal groups: query head h uses KV head floor(h/(Hq/Hkv)). Scores are
+    softmax_scale times QK, with the documented default 1/sqrt(headdim), followed by softmax and multiplication by V.
+  basis: [FA_IFACE.GQA, FA_IFACE.SCALE, T_SDPA.REFERENCE]
+- id: PK.PATH
+  status: reviewed
+  statement: >-
+    The active range fixes dropout_p=0, window_size=(-1,-1), softcap=0, alibi_slopes=None,
+    return_attn_probs=False and block_table=None. deterministic may be either Boolean because the documented forward
+    is deterministic; backward and all optional outputs are outside this contract.
+  basis: [FA_IFACE.WINDOW, FA_IFACE.SOFTCAP]
+- id: PK.DTYPE
+  status: reviewed
+  statement: >-
+    The certified CUDA range is finite physical f16 and bf16 q/k/v/out. This deliberately narrow range was checked
+    against the installed vLLM 0.16 vendored FlashAttention wrapper; that cross-check is separate from the v2.8.3
+    semantic source. Device accumulation, exponential approximation and output stores remain measured K-f effects.
+  basis: [PK.TASK]
 clauses:
-- {id: PK.C1, basis: [PK.TASK, FA_IFACE.VARLEN], statement: 'token t belongs to document d iff start_d <= t < start_d + n_d,
-      start_d = n_0 + ... + n_(d-1)', observes: [mask], evidence_kind: definition}
-- {id: PK.C2, basis: [PK.TASK], statement: 'mask[i][j] = same document and (j <= i in packed_causal)', observes: [mask, out],
-    evidence_kind: definition}
-- {id: PK.C3, basis: [HF_COLLATOR.FLATTEN, PK.TASK], statement: 'position_ids[t] = t - start_d (restart at 0 in every document)',
-    observes: [position_ids], evidence_kind: definition}
-- {id: PK.C4, basis: [PK.TASK, T_SDPA.BOOL_MASK, T_SDPA.REFERENCE], statement: 'out = SDPA of the packed q, k, v with the
-      boolean mask; no weight crosses a document boundary', observes: [out], evidence_kind: definition}
-- {id: PK.C5, basis: [PK.TASK], statement: lengths not summing to L or a zero-length document are invalid_input, observes: [
-      mask], evidence_kind: definition}
+- {id: PK.C1, basis: [PK.PACK], statement: 'Only q and k/v slices with the same cumulative sequence index interact.', observes: [out], evidence_kind: definition}
+- {id: PK.C2, basis: [PK.CAUSAL], statement: 'Causal masking is bottom-right aligned and an empty causal row returns zero.', observes: [out], evidence_kind: definition}
+- {id: PK.C3, basis: [PK.GQA], statement: 'GQA maps contiguous query-head groups to one KV head.', observes: [out], evidence_kind: definition}
+- {id: PK.C4, basis: [PK.GQA], statement: 'Scores use the explicit scale or the documented 1/sqrt(headdim) default before softmax.', observes: [out], evidence_kind: definition}
+- {id: PK.C5, basis: [PK.PATH], statement: 'Only the declared feature-free forward path is admitted.', observes: [out], evidence_kind: definition}
+- {id: PK.C6, basis: [PK.DTYPE], statement: 'The complete output has shape [total_q,Hq,D] and the declared common dtype.', observes: [out], evidence_kind: definition}
 examples:
-- {id: PK.E1, profile: packed_causal, clauses: [PK.C1, PK.C2, PK.C3, PK.C4], input: {doc_lengths: [1, 2], q: [[[0], [0], [
-            0]]], k: [[[0], [0], [0]]], v: [[[1], [2], [4]]], scale: null}, expected: {outcome: value, fields: {mask: [[true,
-            false, false], [false, true, false], [false, true, true]], position_ids: [0, 0, 1], out: [[[1], [2], [3]]]}}}
-- {id: PK.E2, profile: packed_bidirectional, clauses: [PK.C2, PK.C3, PK.C4], input: {doc_lengths: [2, 1], q: [[[0], [0], [
-            0]]], k: [[[0], [0], [0]]], v: [[[1], [3], [5]]], scale: null}, expected: {outcome: value, fields: {mask: [[true,
-            true, false], [true, true, false], [false, false, true]], position_ids: [0, 1, 0], out: [[[2], [2], [5]]]}}}
-- {id: PK.E3, profile: packed_causal, clauses: [PK.C2, PK.C3], input: {doc_lengths: [3], q: [[[0], [0], [0]]], k: [[[0], [
-            0], [0]]], v: [[[1], [2], [3]]], scale: null}, expected: {outcome: value, fields: {mask: [[true, false, false],
-          [true, true, false], [true, true, true]], position_ids: [0, 1, 2], out: [[[1], [3/2], [2]]]}}, note: 'one document:
-      plain causal attention'}
-- {id: PK.E4, profile: packed_causal, clauses: [PK.C1, PK.C3], input: {doc_lengths: [1, 1, 2], q: [[[0], [0], [0], [0]]],
-      k: [[[0], [0], [0], [0]]], v: [[[2], [4], [6], [8]]], scale: null}, expected: {outcome: value, fields: {mask: [[true,
-            false, false, false], [false, true, false, false], [false, false, true, false], [false, false, true, true]], position_ids: [
-          0, 0, 0, 1], out: [[[2], [4], [6], [7]]]}}, note: one-token documents}
-- {id: PK.E5, profile: packed_causal, clauses: [PK.C5], input: {doc_lengths: [1, 1], q: [[[0], [0], [0]]], k: [[[0], [0],
-          [0]]], v: [[[1], [2], [3]]], scale: null}, expected: {outcome: invalid_input}, note: lengths do not cover the packed
-      sequence}
-- {id: PK.E6, profile: packed_causal, clauses: [PK.C5], input: {doc_lengths: [2, 0, 1], q: [[[0], [0], [0]]], k: [[[0], [
-            0], [0]]], v: [[[1], [2], [3]]], scale: null}, expected: {outcome: invalid_input}, note: a document of length
-      0}
-- {id: PK.E7, profile: packed_causal, clauses: [PK.C4], input: {doc_lengths: [2, 1], q: [[[1], [1], [1]]], k: [[[1], [0],
-          [2]]], v: [[[1], [0], [3]]], scale: null}, expected: {outcome: value, fields: {mask: [[true, false, false], [true,
-            true, false], [false, false, true]], position_ids: [0, 1, 0], out: [[[1], [exp(1)/(1 + exp(1))], [3]]]}}, note: token
-      2 must not see the first document}
+- id: PK.E1
+  profile: flashattn283_varlen_causal_real
+  clauses: [PK.C1, PK.C2]
+  input: &causal_base {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[1]], [[2]], [[4]]], cu_seqlens_q: [0, 1, 3], cu_seqlens_k: [0, 1, 3], max_seqlen_q: 2, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: true, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[1]], [[2]], [[3]]]}}
+- id: PK.E2
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C1]
+  input: {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[1]], [[2]], [[4]]], cu_seqlens_q: [0, 1, 3], cu_seqlens_k: [0, 1, 3], max_seqlen_q: 2, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: true, return_attn_probs: false, block_table: null, dtype: bf16}
+  expected: {outcome: value, fields: {out: [[[1]], [[3]], [[3]]]}}
+- id: PK.E3
+  profile: flashattn283_varlen_causal_real
+  clauses: [PK.C2]
+  input: {q: [[[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[1]], [[2]], [[4]]], cu_seqlens_q: [0, 2], cu_seqlens_k: [0, 3], max_seqlen_q: 2, max_seqlen_k: 3, dropout_p: 0, softmax_scale: 1, causal: true, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[3/2]], [[7/3]]]}}
+- id: PK.E4
+  profile: flashattn283_varlen_causal_real
+  clauses: [PK.C2]
+  input: {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[2]], [[4]]], cu_seqlens_q: [0, 3], cu_seqlens_k: [0, 2], max_seqlen_q: 3, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: true, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[0]], [[2]], [[3]]]}}
+- id: PK.E5
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C3]
+  input: {q: [[[0], [0], [0], [0]]], k: [[[0], [0]]], v: [[[1], [2]]], cu_seqlens_q: [0, 1], cu_seqlens_k: [0, 1], max_seqlen_q: 1, max_seqlen_k: 1, dropout_p: 0, softmax_scale: 1, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[1], [1], [2], [2]]]}}
+- id: PK.E6
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C4]
+  input: {q: [[[1]]], k: [[[0]], [[1]]], v: [[[0]], [[1]]], cu_seqlens_q: [0, 1], cu_seqlens_k: [0, 2], max_seqlen_q: 1, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 2, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[exp(2)/(1+exp(2))]]]}}
+- id: PK.E7
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C4]
+  input: {q: [[[1, 1, 1, 1]]], k: [[[0, 0, 0, 0]], [[1, 1, 1, 1]]], v: [[[0, 0, 0, 0]], [[1, 1, 1, 1]]], cu_seqlens_q: [0, 1], cu_seqlens_k: [0, 2], max_seqlen_q: 1, max_seqlen_k: 2, dropout_p: 0, softmax_scale: null, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[exp(2)/(1+exp(2)), exp(2)/(1+exp(2)), exp(2)/(1+exp(2)), exp(2)/(1+exp(2))]]]}}
+- id: PK.E8
+  profile: flashattn283_varlen_bidirectional_real
+  clauses: [PK.C1]
+  input: {q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]], [[0]]], v: [[[2]], [[4]], [[9]]], cu_seqlens_q: [0, 1, 3], cu_seqlens_k: [0, 2, 3], max_seqlen_q: 2, max_seqlen_k: 2, dropout_p: 0, softmax_scale: 1, causal: false, window_size: [-1, -1], softcap: 0, alibi_slopes: null, deterministic: false, return_attn_probs: false, block_table: null, dtype: f16}
+  expected: {outcome: value, fields: {out: [[[3]], [[9]], [[9]]]}}
+- {id: PK.E9, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, cu_seqlens_q: [0, 1, 2]}, expected: {outcome: invalid_input}}
+- {id: PK.E10, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, max_seqlen_q: 3}, expected: {outcome: invalid_input}}
+- {id: PK.E11, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, window_size: [1, -1]}, expected: {outcome: unsupported}}
+- {id: PK.E12, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, dropout_p: 1/10}, expected: {outcome: unsupported}}
+- {id: PK.E13, profile: flashattn283_varlen_causal_real, clauses: [PK.C5], input: {<<: *causal_base, return_attn_probs: true}, expected: {outcome: unsupported}}
+- {id: PK.E14, profile: flashattn283_varlen_causal_real, clauses: [PK.C6], input: {<<: *causal_base, q: [[[1/3]], [[0]], [[0]]]}, expected: {outcome: invalid_input}}
+- {id: PK.E15, profile: flashattn283_varlen_causal_real, clauses: [PK.C3], input: {<<: *causal_base, q: [[[0], [0], [0]], [[0], [0], [0]], [[0], [0], [0]]], k: [[[0], [0]], [[0], [0]], [[0], [0]]], v: [[[1], [1]], [[2], [2]], [[4], [4]]]}, expected: {outcome: invalid_input}}
 signature:
-  inputs:
-  - 'doc_lengths: positive integers'
-  - q, k [H][L][E], v [H][L][Ev] of the packed sequence
-  - scale (null = 1/sqrt(E))
+  inputs: [complete q, complete k, complete v, cu_seqlens_q, cu_seqlens_k, max_seqlen_q,
+    max_seqlen_k, dropout_p, softmax_scale, causal, window_size, softcap, alibi_slopes,
+    deterministic, return_attn_probs, block_table, common dtype]
   pre_state: []
-  post_state: []
-  observation_unit: mask, position ids and attention output of one packed sequence
+  post_state: [complete packed output]
+  observation_unit: one complete FlashAttention v2.8.3 flash_attn_varlen_func forward call
 domain:
-  valid:
-  - doc_lengths >= 1 summing to L
-  - rational q
-  - k
-  - v
+  valid: [positive rank-3 packed q/k/v, f16 or bf16 common dtype, finite exactly represented values,
+    positive sequences, matching q/k batch count, exact cumulative int32 arrays, exact represented maxima,
+    divisible GQA head count, dropout_p=0, no local window, no softcap, no ALiBi, no paging,
+    no optional testing outputs]
   domain_undefined: []
-  invalid_input:
-  - lengths not summing to L
-  - zero-length documents
-  - shape mismatches
-  unsupported:
-  - cross-document attention patterns other than the two profiles
+  invalid_input: [missing field, malformed or incompatible shape, bad cumulative endpoint or order,
+    incorrect max_seqlen, nonphysical value, invalid Boolean or probability, nondivisible GQA]
+  unsupported: [dtype outside f16/bf16, dropout, local window, softcap, ALiBi, block table,
+    optional attention probabilities, empty represented sequence, special values, gradients]
 mutation_requirements:
-- {id: PK.M1, misreading: mask ignores document boundaries (plain causal over the pack), witnesses: [PK.E1, PK.E7]}
-- {id: PK.M2, misreading: position ids not reset per document, witnesses: [PK.E1]}
-- {id: PK.M3, misreading: position ids restart at 1, witnesses: [PK.E1]}
-- {id: PK.M4, misreading: bidirectional attention inside documents under packed_causal, witnesses: [PK.E1]}
-- {id: PK.M5, misreading: the first token of a document assigned to the previous document, witnesses: [PK.E1]}
+- {id: PK.M1, misreading: allow attention across packed sequence boundaries, witnesses: [PK.E1]}
+- {id: PK.M2, misreading: align unequal causal masks to the upper left, witnesses: [PK.E3]}
+- {id: PK.M3, misreading: replace a fully masked causal row by a uniform row, witnesses: [PK.E4]}
+- {id: PK.M4, misreading: assign GQA heads to KV heads round-robin, witnesses: [PK.E5]}
+- {id: PK.M5, misreading: use 1/headdim instead of 1/sqrt(headdim) for default scale, witnesses: [PK.E7]}
+- {id: PK.M6, misreading: ignore an explicit scale and use the default, witnesses: [PK.E6]}
+- {id: PK.M7, misreading: ignore causal masking, witnesses: [PK.E1]}
+- {id: PK.M8, misreading: use q cumulative boundaries for k/v, witnesses: [PK.E8]}
 nonclaims:
-- The choice between the two profiles belongs to the task; neither is a documented property of an operator.
-- Gradients of the packed attention are those of the ATTN contract with the mask given here.
-changes: []
+- Position IDs, document masks and sequence-index arrays are preprocessing outputs of other APIs and are not outputs of flash_attn_varlen_func.
+- The contract does not define dropout, local windows, softcap, ALiBi, paged K/V, optional probability/LSE outputs or backward.
+- Rigorous real arithmetic defines f. CUDA accumulation and storage rounding are measured separately as K-f.
+- GPU agreement and rejected mutants support only the stated range and do not prove other FlashAttention versions or devices.
+changes:
+- '2026-10-19: replaced the mixed document-construction draft with the versioned FlashAttention varlen operator task.'

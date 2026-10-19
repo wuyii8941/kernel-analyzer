@@ -1,145 +1,203 @@
 schema_version: '1.2'
 id: INDEX
 role: GATHER
-title: Indexing, gathering, scattering and embedding lookups (ATen operations) and the embedding gradient
+title: Physical finite read-only gather, index-select and embedding lookup
 review:
-  status: drafted
-  author: Claude (spec v3 author), 2026-10-16
-  date: '2026-10-16'
-  scope: Values of the documented operations; awaiting a review by someone who did not write it
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-18'
+  scope: PyTorch 2.10 default functional read-only lookup schemas on physical finite floating tensors and int64 indices
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
-covers: [aten.index, aten.index_put, aten.index_put_, aten.gather, aten.scatter, aten.scatter_add, aten.index_select,
-  aten.index_add, aten.embedding, aten.embedding_dense_backward, aten.take_along_dim, vjp.aten.gather, vjp.aten.index_select]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.gather, aten.index_select, aten.embedding, torch.gather, torch.index_select,
+  torch.nn.functional.embedding]
 profiles:
   real:
-    meaning: Exact values; additions (index_put with accumulate, scatter_add, index_add, embedding gradient) are exact
-      sums, so their order does not matter; documented nondeterministic choices are allowed sets.
+    meaning: >-
+      Read-only lookup for physical finite f16, bf16, f32 or f64 values and int64 indices. gather selects along one
+      integer dimension without broadcasting; index_select selects a one-dimensional index list; embedding selects
+      rows of a two-dimensional weight. Only the default non-sparse forward forms are selected.
     task_choice_required: false
+    basis: [IX.SCHEMA, IX.PHYSICAL, IX.LOOKUP]
 outputs:
   out:
-    shape: per operation
-    kind: discrete
-    guarantee: allowed_set
-readings:
-  pick_one:
-    meaning: Diagnostic reading of index_put with duplicate indices and accumulate=False in which each such position
-      holds one of the written values (as scatter documents for itself); not the documented semantics, which leave it
-      undefined.
-    basis: [T_INDEX_PUT.DUP, T_SCATTER.DUP]
+    shape: the complete logical result shape fixed by the selected operation
+    guarantee: exact
 comparison:
-  input_binding: Tensor values and index values are the exact values received.
-  quality: Exact equality; an allowed-set element matches only the same set.
-  test_evidence: Exact equality.
-  error_handling: Out-of-range indices are invalid_input; documented undefined behaviour is domain_undefined.
+  input_binding: >-
+    Floating tensor records are the exact physical values received in the declared dtype. Index records are literal
+    int64 values. Shape and dtype are part of both input and observed output records.
+  quality: Exact logical values, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent NumPy coordinate construction and PyTorch 2.10 comparisons over all selected dtypes.
+  error_handling: Malformed physical records and illegal shapes or ranges are invalid_input; unselected dtypes,
+    options, overloads and operations are unsupported.
 decisions:
-- id: IX.PUT_DUP
-  status: drafted
-  statement: index_put with accumulate=False and duplicate indices is undefined (the page says so); the whole result is
-    domain_undefined. The 'pick one written value' behaviour is kept only as the diagnostic reading pick_one, because
-    the page for index_put does not promise it (scatter does, and scatter's duplicates are an allowed set).
-  basis: [T_INDEX_PUT.DUP, T_SCATTER.DUP]
-- id: IX.EMB_GRAD
-  status: drafted
-  statement: The gradient of embedding with respect to weight is, for each row r, the sum of the output gradients of
-    the positions whose index is r; the padding_idx row gets zero; with scale_grad_by_freq each row's sum is divided by
-    the count of that index in the batch.
-  basis: [T_EMBEDDING_F.DEF, T_EMBEDDING.PADDING, T_EMBEDDING.FREQ]
+- id: IX.SCHEMA
+  status: reviewed
+  statement: >-
+    Select only the default functional gather, index_select and embedding schemas. gather's sparse_grad is fixed to
+    false; embedding's padding_idx, scale_grad_by_freq and sparse are fixed to their defaults. Out, backward,
+    scatter, mutation and named-dimension forms are different tasks and are outside this profile.
+    gather and index_select accept the native self/index and public Python input/index keyword names, respectively.
+    These map to internal a/idx before argument validation; legacy DSL names remain accepted, but duplicate
+    positional or keyword bindings are invalid even when their values agree.
+  basis: [TS_NATIVE_FUNCTIONS.INDEX_SCHEMAS, T_GATHER.DEF, T_INDEX_SELECT.DEF]
+- id: IX.PUBLIC_EMBEDDING
+  status: reviewed
+  statement: >-
+    Public torch.nn.functional.embedding takes input indices before weight; native aten.embedding takes weight
+    before indices. The public no-padding default is null and becomes the native sentinel -1. This read-only profile
+    accepts public max_norm=null, norm_type=2, scale_grad_by_freq=false and sparse=false only. Nondefault public
+    padding choices and frequency scaling belong to the separate EMB task; max_norm mutates weight and is not a lookup.
+  basis: [T_EMBEDDING_F.DEF, TS_FUNCTIONAL_EMB.EMB_PADDING, TS_FUNCTIONAL_EMB.EMB_RENORM]
+- id: IX.PHYSICAL
+  status: reviewed
+  statement: >-
+    The executable profile is restricted to finite f16, bf16, f32 and f64 tensor records whose values are exactly
+    representable in the declared dtype, plus literal int64 index tensors. This is the declared usable domain; it
+    does not claim semantics for special values, integer data tensors, mixed records or other index dtypes.
+  basis: [T_GATHER.DEF, T_INDEX_SELECT.DEF, T_EMBEDDING_F.DEF]
+- id: IX.LOOKUP
+  status: reviewed
+  statement: >-
+    All three selected operations copy existing input values without arithmetic: gather uses the index value at each
+    output coordinate on the selected axis, index_select copies the listed slices, and embedding copies the listed
+    rows. Repeated indices repeat values and do not create an allowed-set result.
+  basis: [T_GATHER.DEF, T_INDEX_SELECT.DEF, T_EMBEDDING_F.DEF, TS_EMBEDDING_CPP.FORWARD]
 clauses:
-- {id: IX.C1, basis: [T_TENSOR_INDEXING.SLICE], statement: 'index(x, [i_0, ...]): advanced indexing with integer index
-    tensors (None = whole dimension); out-of-range indices invalid', observes: [out], evidence_kind: definition}
-- {id: IX.C2, basis: [T_INDEX_PUT.DEF, T_INDEX_PUT.DUP, IX.PUT_DUP], statement: 'index_put writes values at the indexed
-    positions; accumulate adds them; duplicates without accumulate are undefined', observes: [out], evidence_kind: definition}
-- {id: IX.C3, basis: [T_GATHER.DEF, T_TAKE_ALONG_DIM.DEF], statement: 'gather: out[i..] = input[.. index[i..] ..] along
-    dim, shape of index; take_along_dim likewise', observes: [out], evidence_kind: definition}
-- {id: IX.C4, basis: [T_SCATTER.DEF, T_SCATTER.DUP, T_SCATTER.REDUCE], statement: 'scatter writes src (or a value) at
-    index along dim; duplicates give an allowed set; reduce add / multiply combines', observes: [out], evidence_kind: definition}
-- {id: IX.C5, basis: [T_SCATTER_ADD.DEF, T_INDEX_ADD.DEF], statement: 'scatter_add adds src at index along dim; index_add
-    adds alpha * source rows at index', observes: [out], evidence_kind: definition}
-- {id: IX.C6, basis: [T_INDEX_SELECT.DEF], statement: index_select picks the listed slices along dim, observes: [out],
-  evidence_kind: definition}
-- {id: IX.C7, basis: [T_EMBEDDING_F.DEF], statement: 'embedding(weight, idx): the rows of weight given by idx (padding_idx
-    does not change the forward value)', observes: [out], evidence_kind: definition}
-- {id: IX.C8, basis: [IX.EMB_GRAD], statement: embedding_dense_backward per IX.EMB_GRAD, observes: [out], evidence_kind: derived}
-- {id: IX.C9, basis: [T_GATHER.DEF, T_INDEX_SELECT.DEF, T_SCATTER_ADD.DEF, T_INDEX_ADD.DEF], statement: 'VJP of gather is
-    scatter_add of the upstream gradient into zeros at the same indices; VJP of index_select is index_add; repeated indices
-    accumulate', observes: [out], evidence_kind: derived}
+- id: IX.C1
+  basis: [IX.SCHEMA, IX.PHYSICAL]
+  statement: Every selected call uses one physical finite floating source, literal int64 indices and the exact
+    default functional schema; all inputs are read-only.
+  observes: [out]
+  evidence_kind: definition
+- id: IX.C2
+  basis: [T_GATHER.DEF, IX.LOOKUP]
+  statement: >-
+    gather returns the shape of index; input and index have the same rank, sizes outside the selected dimension do
+    not exceed the input sizes, and each output coordinate reads input with only that dimension replaced by the
+    corresponding nonnegative in-range index value. Empty index returns its empty shape.
+  observes: [out]
+  evidence_kind: definition
+- id: IX.C3
+  basis: [T_INDEX_SELECT.DEF, IX.LOOKUP]
+  statement: >-
+    index_select requires a one-dimensional index tensor and returns the input shape with the selected dimension
+    replaced by the index length; output slice j is input slice index[j], including repeated indices.
+  observes: [out]
+  evidence_kind: definition
+- id: IX.C4
+  basis: [T_EMBEDDING_F.DEF, TS_EMBEDDING_CPP.FORWARD, IX.LOOKUP, IX.PUBLIC_EMBEDDING]
+  statement: >-
+    embedding requires a two-dimensional weight and returns indices.shape followed by the embedding dimension; every
+    output row is the corresponding weight row. This profile selects native padding_idx=-1 or public padding_idx=null,
+    scale_grad_by_freq=false and sparse=false, so it makes no backward, renormalisation or sparse-layout claim.
+  observes: [out]
+  evidence_kind: definition
+- id: IX.C5
+  basis: [IX.SCHEMA, IX.PHYSICAL]
+  statement: >-
+    Scatter, mutation, backward accumulation, nondefault embedding options, sparse gradients, special floating
+    values, integer data tensors, non-int64 indices and out overloads receive no reference answer from this profile.
+  observes: [out]
+  evidence_kind: definition
 examples:
-- {id: IX.E1, profile: real, clauses: [IX.C1], input: {op: aten.index, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [null, {t: i64,
-          v: [2, 0]}]]}, expected: {outcome: value, fields: {out: [[3, 1], [6, 4]]}}}
-- {id: IX.E2, profile: real, clauses: [IX.C1], input: {op: aten.index, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [{t: i64, v: [
-            0, 1]}, {t: i64, v: [2, -3]}]]}, expected: {outcome: value, fields: {out: [3, 4]}}}
-- {id: IX.E3, profile: real, clauses: [IX.C1], input: {op: aten.index, args: [{t: f32, v: [1, 2]}, [{t: i64, v: [2]}]]}, expected: {
-    outcome: invalid_input}}
-- {id: IX.E4, profile: real, clauses: [IX.C2], input: {op: aten.index_put, args: [{t: f32, v: [0, 0, 0]}, [{t: i64, v: [2, 0]}],
-      {t: f32, v: [5, 6]}]}, expected: {outcome: value, fields: {out: [6, 0, 5]}}}
-- {id: IX.E5, profile: real, clauses: [IX.C2], input: {op: aten.index_put, args: [{t: f32, v: [1, 1, 1]}, [{t: i64, v: [0, 0,
-            2]}], {t: f32, v: [5, 6, 7]}, true]}, expected: {outcome: value, fields: {out: [12, 1, 8]}}}
-- {id: IX.E6, profile: real, clauses: [IX.C2], input: {op: aten.index_put, args: [{t: f32, v: [0, 0]}, [{t: i64, v: [0, 0]}], {
-        t: f32, v: [5, 6]}]}, expected: {outcome: domain_undefined}, readings: {pick_one: {outcome: value, fields: {out: [{set: [
-              5, 6]}, 0]}}}}
-- {id: IX.E7, profile: real, clauses: [IX.C3], input: {op: aten.gather, args: [{t: f32, v: [[1, 2], [3, 4]]}, 1, {t: i64, v: [
-          [0, 0], [1, 0]]}]}, expected: {outcome: value, fields: {out: [[1, 1], [4, 3]]}}}
-- {id: IX.E8, profile: real, clauses: [IX.C3], input: {op: aten.gather, args: [{t: f32, v: [[1, 2], [3, 4]]}, 0, {t: i64, v: [
-          [1, 0]]}]}, expected: {outcome: value, fields: {out: [[3, 2]]}}}
-- {id: IX.E9, profile: real, clauses: [IX.C3], input: {op: aten.take_along_dim, args: [{t: f32, v: [[10, 30, 20], [60, 40, 50]]},
-      {t: i64, v: [[1], [2]]}, 1]}, expected: {outcome: value, fields: {out: [[30], [50]]}}}
-- {id: IX.E10, profile: real, clauses: [IX.C4], input: {op: aten.scatter, args: [{t: f32, v: [[0, 0, 0], [0, 0, 0]]}, 1, {t: i64,
-        v: [[2], [0]]}], kwargs: {src: {t: f32, v: [[7], [8]]}}}, expected: {outcome: value, fields: {out: [[0, 0, 7], [8, 0, 0]]}}}
-- {id: IX.E11, profile: real, clauses: [IX.C4], input: {op: aten.scatter, args: [{t: f32, v: [0, 0, 0]}, 0, {t: i64, v: [1]}],
-    kwargs: {value: 5}}, expected: {outcome: value, fields: {out: [0, 5, 0]}}}
-- {id: IX.E12, profile: real, clauses: [IX.C4], input: {op: aten.scatter, args: [{t: f32, v: [0, 0]}, 0, {t: i64, v: [1, 1]}],
-    kwargs: {src: {t: f32, v: [5, 6]}}}, expected: {outcome: value, fields: {out: [0, {set: [5, 6]}]}}}
-- {id: IX.E13, profile: real, clauses: [IX.C4], input: {op: aten.scatter, args: [{t: f32, v: [2, 3]}, 0, {t: i64, v: [0, 0]}],
-    kwargs: {src: {t: f32, v: [5, 7]}, reduce: multiply}}, expected: {outcome: value, fields: {out: [70, 3]}}}
-- {id: IX.E14, profile: real, clauses: [IX.C5], input: {op: aten.scatter_add, args: [{t: f32, v: [1, 1]}, 0, {t: i64, v: [1, 1,
-          0]}, {t: f32, v: [5, 6, 7]}]}, expected: {outcome: value, fields: {out: [8, 12]}}}
-- {id: IX.E15, profile: real, clauses: [IX.C5], input: {op: aten.index_add, args: [{t: f32, v: [[0, 0], [0, 0]]}, 0, {t: i64,
-        v: [1, 1]}, {t: f32, v: [[1, 2], [3, 4]]}], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [[0, 0], [8,
-          12]]}}}
-- {id: IX.E16, profile: real, clauses: [IX.C6], input: {op: aten.index_select, args: [{t: f32, v: [[1, 2], [3, 4], [5, 6]]}, 0,
-      {t: i64, v: [2, 0, 2]}]}, expected: {outcome: value, fields: {out: [[5, 6], [1, 2], [5, 6]]}}}
-- {id: IX.E17, profile: real, clauses: [IX.C7], input: {op: aten.embedding, args: [{t: f32, v: [[1, 1], [2, 2], [3, 3]]}, {t: i64,
-        v: [2, 0, 2]}]}, expected: {outcome: value, fields: {out: [[3, 3], [1, 1], [3, 3]]}}}
-- {id: IX.E18, profile: real, clauses: [IX.C7], input: {op: aten.embedding, args: [{t: f32, v: [[1, 1], [2, 2]]}, {t: i64, v: [
-          1]}], kwargs: {padding_idx: 1}}, expected: {outcome: value, fields: {out: [[2, 2]]}}}
-- {id: IX.E19, profile: real, clauses: [IX.C8], input: {op: aten.embedding_dense_backward, args: [{t: f32, v: [[1, 2], [3, 4],
-          [5, 6]]}, {t: i64, v: [0, 2, 0]}, 3], kwargs: {padding_idx: -1}}, expected: {outcome: value, fields: {out: [[6, 8], [
-          0, 0], [3, 4]]}}}
-- {id: IX.E20, profile: real, clauses: [IX.C8], input: {op: aten.embedding_dense_backward, args: [{t: f32, v: [[1, 2], [3, 4],
-          [5, 6]]}, {t: i64, v: [0, 2, 0]}, 3], kwargs: {padding_idx: 2}}, expected: {outcome: value, fields: {out: [[6, 8], [
-          0, 0], [0, 0]]}}}
-- {id: IX.E21, profile: real, clauses: [IX.C8], input: {op: aten.embedding_dense_backward, args: [{t: f32, v: [[1, 2], [3, 4],
-          [5, 6]]}, {t: i64, v: [0, 2, 0]}, 3], kwargs: {padding_idx: -1, scale_grad_by_freq: true}}, expected: {outcome: value,
-    fields: {out: [[3, 4], [0, 0], [3, 4]]}}}
-- {id: IX.E22, profile: real, clauses: [IX.C9], input: {op: vjp.aten.gather, args: [{t: f32, v: [[1, 2]]}, {t: f32, v: [[5, 6, 7]]},
-      1, {t: i64, v: [[2, 2]]}]}, expected: {outcome: value, fields: {out: [[0, 0, 3]]}}}
-- {id: IX.E23, profile: real, clauses: [IX.C9], input: {op: vjp.aten.index_select, args: [{t: f32, v: [[1, 2], [3, 4]]}, {t: f32,
-        v: [[0, 0], [0, 0], [0, 0]]}, 0, {t: i64, v: [1, 1]}]}, expected: {outcome: value, fields: {out: [[0, 0], [4, 6], [0, 0]]}}}
+- {id: IX.E1, profile: real, clauses: [IX.C1, IX.C2], input: {op: aten.gather, args: [{t: f32, v: [[1, 2], [3, 4]]}, 1,
+      {t: i64, v: [[0, 0], [1, 0]]}]}, expected: {outcome: value, fields: {out: [[1, 1], [4, 3]]}}}
+- {id: IX.E2, profile: real, clauses: [IX.C2], input: {op: aten.gather, args: [{t: f16, v: [[1, 2], [3, 4]]}, 0,
+      {t: i64, v: [[1, 0]]}]}, expected: {outcome: value, fields: {out: [[3, 2]]}}}
+- {id: IX.E3, profile: real, clauses: [IX.C2], input: {op: aten.gather, args: [{t: f32, v: [[1, 2], [3, 4]]}, -1,
+      {t: i64, v: [[1], [0]]}]}, expected: {outcome: value, fields: {out: [[2], [3]]}}}
+- {id: IX.E4, profile: real, clauses: [IX.C2], input: {op: aten.gather, args: [{t: f32, v: [[1, 2], [3, 4]]}, 1,
+      {t: i64, v: [], shape: [0, 3]}]}, expected: {outcome: value, fields: {out: []}}}
+- {id: IX.E5, profile: real, clauses: [IX.C2], input: {op: aten.gather, args: [{t: f32, v: [1, 2]}, 0,
+      {t: i64, v: [-1]}]}, expected: {outcome: invalid_input}}
+- {id: IX.E6, profile: real, clauses: [IX.C2], input: {op: aten.gather, args: [{t: f32, v: [1, 2]}, 0,
+      {t: i64, v: [2]}]}, expected: {outcome: invalid_input}}
+- {id: IX.E7, profile: real, clauses: [IX.C5], input: {op: aten.gather, args: [{t: f32, v: [1, 2]}, 0,
+      {t: i32, v: [0]}]}, expected: {outcome: unsupported}}
+- {id: IX.E8, profile: real, clauses: [IX.C5], input: {op: aten.gather, args: [{t: f32, v: [1, 2]}, 0,
+      {t: i64, v: [0]}], kwargs: {sparse_grad: true}}, expected: {outcome: unsupported}}
+- {id: IX.E9, profile: real, clauses: [IX.C3], input: {op: aten.index_select, args: [{t: bf16, v: [[1, 2], [3, 4], [5, 6]]},
+      0, {t: i64, v: [2, 0, 2]}]}, expected: {outcome: value, fields: {out: [[5, 6], [1, 2], [5, 6]]}}}
+- {id: IX.E10, profile: real, clauses: [IX.C3], input: {op: aten.index_select, args: [{t: f64, v: [[1, 2], [3, 4]]},
+      -1, {t: i64, v: [1, 0]}]}, expected: {outcome: value, fields: {out: [[2, 1], [4, 3]]}}}
+- {id: IX.E11, profile: real, clauses: [IX.C3], input: {op: aten.index_select, args: [{t: f32, v: [1, 2]}, 0,
+      {t: i64, v: 0}]}, expected: {outcome: invalid_input}}
+- {id: IX.E12, profile: real, clauses: [IX.C4], input: {op: aten.embedding, args: [{t: f32, v: [[1, 1], [2, 2], [3, 3]]},
+      {t: i64, v: [[2, 0], [2, 1]]}]}, expected: {outcome: value, fields: {out: [[[3, 3], [1, 1]], [[3, 3], [2, 2]]]}}}
+- {id: IX.E13, profile: real, clauses: [IX.C4], input: {op: aten.embedding, args: [{t: f16, v: [[1, 2], [3, 4]]},
+      {t: i64, v: [1, 0]}]}, expected: {outcome: value, fields: {out: [[3, 4], [1, 2]]}}}
+- {id: IX.E14, profile: real, clauses: [IX.C4], input: {op: aten.embedding, args: [{t: f32, v: [1, 2]},
+      {t: i64, v: [0]}]}, expected: {outcome: invalid_input}}
+- {id: IX.E15, profile: real, clauses: [IX.C4], input: {op: aten.embedding, args: [{t: f32, v: [[1, 2], [3, 4]]},
+      {t: i64, v: [2]}]}, expected: {outcome: invalid_input}}
+- {id: IX.E16, profile: real, clauses: [IX.C5], input: {op: aten.embedding, args: [{t: f32, v: [[1, 2], [3, 4]]},
+      {t: i64, v: [0]}], kwargs: {padding_idx: 0}}, expected: {outcome: unsupported}}
+- {id: IX.E17, profile: real, clauses: [IX.C5], input: {op: aten.index_select, args: [{t: f32, v: [inf]}, 0,
+      {t: i64, v: [0]}]}, expected: {outcome: unsupported}}
+- {id: IX.E18, profile: real, clauses: [IX.C5], input: {op: aten.index_select, args: [{t: f32, v: ['1/3']}, 0,
+      {t: i64, v: [0]}]}, expected: {outcome: invalid_input}}
+- {id: IX.E19, profile: real, clauses: [IX.C5], input: {op: aten.scatter, args: [{t: f32, v: [0]}, 0,
+      {t: i64, v: [0]}, {t: f32, v: [1]}]}, expected: {outcome: unsupported}}
+- {id: IX.E20, profile: real, clauses: [IX.C1, IX.C2], input: {op: aten.gather, kwargs: {
+      self: {t: f32, v: [[1, 2], [3, 4]]}, dim: 1, index: {t: i64, v: [[1], [0]]}}},
+      expected: {outcome: value, fields: {out: [[2], [3]]}}}
+- {id: IX.E21, profile: real, clauses: [IX.C1, IX.C3], input: {op: torch.index_select, kwargs: {
+      input: {t: f32, v: [[1, 2], [3, 4]]}, dim: 0, index: {t: i64, v: [1, 0, 1]}}},
+      expected: {outcome: value, fields: {out: [[3, 4], [1, 2], [3, 4]]}}}
+- {id: IX.E22, profile: real, clauses: [IX.C1, IX.C4], input: {op: torch.nn.functional.embedding,
+      args: [{t: i64, v: [[1, 0]]}, {t: f32, v: [[1, 2], [3, 4]]}]},
+      expected: {outcome: value, fields: {out: [[[3, 4], [1, 2]]]}}}
+- {id: IX.E23, profile: real, clauses: [IX.C1, IX.C4], input: {op: torch.nn.functional.embedding,
+      kwargs: {input: {t: i64, v: [1, 0]}, weight: {t: f32, v: [[1, 2], [3, 4]]},
+      padding_idx: null, max_norm: null, norm_type: 2, scale_grad_by_freq: false, sparse: false}},
+      expected: {outcome: value, fields: {out: [[3, 4], [1, 2]]}}}
+- {id: IX.E24, profile: real, clauses: [IX.C5], input: {op: torch.nn.functional.embedding,
+      args: [{t: i64, v: [0]}, {t: f32, v: [[3, 4]]}], kwargs: {max_norm: 1}},
+      expected: {outcome: unsupported}}
+- {id: IX.E25, profile: real, clauses: [IX.C5], input: {op: torch.nn.functional.embedding,
+      args: [{t: i64, v: [0]}, {t: f32, v: [[3, 4]]}], kwargs: {padding_idx: -1}},
+      expected: {outcome: unsupported}}
+- {id: IX.E26, profile: real, clauses: [IX.C1], input: {op: torch.nn.functional.embedding,
+      args: [{t: f32, v: [[3, 4]]}, {t: i64, v: [0]}]}, expected: {outcome: unsupported}}
 signature:
-  inputs: ['op: one of the covered ATen names', 'args / kwargs: tensors {t: dtype, v: values}, index lists (null = whole dimension), scalars']
-  pre_state: []
-  post_state: []
-  observation_unit: the result tensor of one operation
+  inputs: [selected default functional operation and exact positional or keyword arguments,
+    physical finite floating source tensor, literal int64 index tensor]
+  pre_state: [all input tensors are unchanged]
+  post_state: [one complete newly returned logical tensor]
+  observation_unit: every output coordinate together with dtype and shape
 domain:
-  valid: [exact values; integer index tensors within range (negative indices count from the end)]
-  domain_undefined: [index_put duplicates with accumulate=False]
-  invalid_input: [out-of-range indices, shape mismatches]
-  unsupported: [boolean-mask indexing, sparse gradients]
+  valid: [finite physical f16/bf16/f32/f64 sources, int64 nonnegative in-range indices, selected shapes and defaults]
+  invalid_input: [unrepresentable source value, malformed record, invalid dimension, rank or shape, out-of-range index]
+  unsupported: [scatter and mutation, backward operations, integer or complex data, non-int64 indices, special floating
+      values, sparse gradients, nondefault embedding options, out overloads and layout or alias effects]
 mutation_requirements:
-- {id: IX.M1, misreading: gather indexes the other axis (dim confused), witnesses: [IX.E7]}
-- {id: IX.M2, misreading: scatter_add overwrites instead of adding, witnesses: [IX.E14]}
-- {id: IX.M3, misreading: index_put ignores accumulate, witnesses: [IX.E5]}
-- {id: IX.M4, misreading: embedding gradient keeps the padding row, witnesses: [IX.E20]}
-- {id: IX.M5, misreading: scale_grad_by_freq ignored, witnesses: [IX.E21]}
-- {id: IX.M6, misreading: index_add ignores alpha, witnesses: [IX.E15]}
-- {id: IX.M7, misreading: scatter duplicates resolved as last-write-wins (a single value), witnesses: [IX.E12]}
-- {id: IX.M8, misreading: gather gradient overwrites at repeated indices instead of accumulating, witnesses: [IX.E22]}
+- {id: IX.M1, misreading: gather indexes the next axis, witnesses: [IX.E1]}
+- {id: IX.M2, misreading: gather uses index plus one, witnesses: [IX.E1]}
+- {id: IX.M3, misreading: index_select removes repeated indices, witnesses: [IX.E9]}
+- {id: IX.M4, misreading: index_select reverses the index list, witnesses: [IX.E10]}
+- {id: IX.M5, misreading: embedding uses the following row, witnesses: [IX.E12]}
+- {id: IX.M6, misreading: embedding flattens the index shape, witnesses: [IX.E12]}
 nonclaims:
-- Order of floating-point accumulation in device kernels is numerical (K - G); here sums are exact.
+- No result is certified for scatter, update, mutation, gradient accumulation, max_norm, sparse layout, aliasing,
+  device placement, strides or another overload.
+- Exact copied logical values do not claim that every device uses the same physical addressing for unsupported layouts.
 changes:
-- {date: '2026-10-17', change: 'added vjp.aten.gather and vjp.aten.index_select (clause IX.C9, examples IX.E22-E23, mutation IX.M8)',
-  trigger: 'the essential-round gather_layout family tests gradients with repeated indices (frozen inventory)'}
+- date: '2026-10-19'
+  change: Give public functional embedding its documented argument order and defaults, reusing native lookup only after validation.
+  trigger: A real FlagGems public call matched native PyTorch but the reference misread its indices as weight.
+- date: '2026-10-19'
+  change: Map official gather and index_select keyword names before strict argument validation and output checking.
+  trigger: A separate FlagGems public-call batch exposed rejection of the documented index keyword; formulas unchanged.
+- date: '2026-10-18'
+  change: >-
+    Replace the active broad indexing/scatter/embedding draft with a reviewed read-only forward lookup profile on
+    physical finite floating tensors and int64 indices. Preserve the former broad contract under contracts/draft.
+  trigger: >-
+    The former profile mixed exact copies, floating accumulation, mutation and nondeterministic allowed sets under one
+    output guarantee, so it could not safely serve as a common ground truth.

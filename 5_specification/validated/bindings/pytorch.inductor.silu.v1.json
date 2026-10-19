@@ -1,0 +1,36 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.silu.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.nn.functional.silu)",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "one compiled SiLU forward call",
+    "measure_call": "../calls/inductor_silu.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "silu",
+      "contract": "ACT",
+      "profile": "torch",
+      "task_statement": "Elementwise SiLU on the received finite floating tensor.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.silu", "basis": "public PyTorch operation"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

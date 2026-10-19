@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Contract checker: structure, examples, diagnostic readings and mutation requirements of every contract.
 
-    python tools/check_contracts.py [--json OUT] [--lock]
+    python tools/check_contracts.py [--json OUT] [--record-checks]
 
 Exit status: 0 when every example and reading is consistent and every mutation requirement is rejected by one of
 its witnesses; 1 on any contradiction, structure error, implementation error or surviving mutation; 2 when the only
 problems are results that are not established. A consistent example means "consistent with the reference on this
 example"; it does not review the contract, and nothing here changes a review status.
 
---lock records the contract and adapter hashes of the contracts that passed completely in contracts/LOCK.json
-(implementation validated at these hashes); contracts that did not pass are removed from it.
+--record-checks records only the date and number of development checks that passed
+in contracts/DEVELOPMENT_CHECKS.json. It does not bind file content and is never
+used for runtime admission. Independent implementation review retains the exact
+reviewed files separately.
 """
 from __future__ import annotations
 
@@ -27,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 from kernel_spec import compare as C  # noqa: E402
 from kernel_spec import registry, schema  # noqa: E402
 from kernel_spec.num import evaluate  # noqa: E402
+from kernel_spec.contracts_io import load_contract  # noqa: E402
 
 
 def safe_compare(res, expected, outputs):
@@ -46,19 +49,25 @@ def killed(mres, expected, outputs):
         return mres.outcome != expected["outcome"], f"outcome {mres.outcome}"
     if mres.outcome != "value":
         return True, f"outcome {mres.outcome}"
-    v, checks = safe_compare(mres, expected, outputs)
+    # A different mathematical formula can need an enclosure even when the
+    # target is rational. Disjoint rigorous values prove a disagreement; an
+    # enclosure merely violating the target's exact representation does not.
+    witness_outputs = {k: dict(info, guarantee="rigorous_enclosure") if info["guarantee"] == "exact" else info
+                       for k, info in outputs.items()}
+    v, checks = safe_compare(mres, expected, witness_outputs)
     # a structure difference rejects a mutant only when it is a real difference of shape, keys, type or outcome;
     # 'cannot compare' (an inexact allowed-set element, a failed comparison) is not evidence
     def real(vv, d):
         return vv == C.CONTRADICTION or (vv == C.STRUCTURE and not any(
-            k in d for k in ("not exact", "is an enclosure", "comparison failed", "expected value:", "reference value of type")))
+            k in d for k in ("not exact", "is an enclosure", "comparison failed", "expected value:",
+                            "reference value of type", "reference guarantee:")))
     bad = [f"{p}: {d}" for p, vv, d in checks if real(vv, d)]
     return bool(bad), (bad[0] if bad else v)[:120]
 
 
 def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
     try:
-        data = yaml.safe_load(path.read_text())
+        data = load_contract(path)
         if not isinstance(data, dict):
             raise ValueError("not a mapping")
     except (yaml.YAMLError, ValueError) as e:
@@ -78,11 +87,11 @@ def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
         rep["structure"].append(f"adapter: {type(e).__name__}: {e}")
         rep["verdict"] = C.STRUCTURE
         return rep
-    outputs = data["outputs"]
     readings_impl = getattr(A, "READINGS", {})
     mutants = getattr(A, "MUTANTS", {})
     by_id = {e["id"]: e for e in data["examples"]}
     for e in data["examples"]:
+        outputs = schema.profile_outputs(data, e['profile'])
         res = evaluate(A.reference, e["profile"], e["input"])
         v, checks = safe_compare(res, e["expected"], outputs)
         rep["examples"].append({"id": e["id"], "verdict": v, "outcome": res.outcome,
@@ -104,6 +113,7 @@ def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
             continue
         by, notes = [], []
         for w in m["witnesses"]:
+            outputs = schema.profile_outputs(data, by_id[w]['profile'])
             ok, note = killed(evaluate(fn, by_id[w]["profile"], by_id[w]["input"]), by_id[w]["expected"], outputs)
             notes.append(f"{w}: {note}")
             if ok:
@@ -122,9 +132,18 @@ def check_contract(path: Path, sources: dict, adapters: Path) -> dict:
 def source_status(data, sources):
     used = {b.split(".")[0] for node in [*data.get("clauses", []), *data.get("decisions", [])]
             for b in node.get("basis", []) if b.split(".")[0] in sources}
-    return {s: ("snapshot " + sources[s]["snapshot_sha256"][:12]) if sources[s].get("snapshot_sha256")
-            else ("standard, " + sources[s]["edition"]) if registry.frozen_source(sources[s]) else "no snapshot"
-            for s in sorted(used)}
+    status = {}
+    for sid in sorted(used):
+        source = sources[sid]
+        if not registry.frozen_source(source):
+            status[sid] = "no snapshot"
+        elif source.get("snapshot"):
+            status[sid] = 'retained local source'
+            if source.get('version_review', {}).get('status') == 'unverified':
+                status[sid] += '; claimed version unverified'
+        else:
+            status[sid] = "standard, " + source["edition"]
+    return status
 
 
 def main(argv=None):
@@ -133,15 +152,21 @@ def main(argv=None):
     ap.add_argument("--adapters", type=Path, default=registry.ADAPTERS)
     ap.add_argument("--sources", type=Path, default=registry.SOURCES)
     ap.add_argument("--json", type=Path)
-    ap.add_argument("--lock", action="store_true")
-    ap.add_argument("--only", nargs="*", help="check only these contract IDs (with --lock: lock only these)")
+    ap.add_argument("--record-checks", action="store_true")
+    ap.add_argument("--only", nargs="+", help="check only these contract IDs")
     a = ap.parse_args(argv)
     try:
         sources = json.loads(a.sources.read_text())
     except (OSError, ValueError) as e:
         print(f"cannot read sources: {e}")
         return 1
-    paths = sorted(p for p in a.contracts.glob("*.yaml") if not a.only or p.stem in a.only)
+    paths = sorted(a.contracts.glob("*.yaml"))
+    if a.only is not None:
+        missing = set(a.only) - {p.stem for p in paths}
+        if missing:
+            print(f"requested contracts not found: {', '.join(sorted(missing))}")
+            return 1
+        paths = [p for p in paths if p.stem in a.only]
     if not paths:
         print(f"no contracts in {a.contracts}: an empty run is not a success")
         return 1
@@ -164,24 +189,27 @@ def main(argv=None):
     print("\nProblems:" if problems else "\nNo problems.")
     for p in problems:
         print(f"- {p}")
-    data = {r["id"]: yaml.safe_load(Path(r["path"]).read_text()) for r in reps if not r["structure"]}
+    data = {r["id"]: load_contract(Path(r["path"])) for r in reps if not r["structure"]}
     print("\nSources used by each contract:")
     for r in reps:
         if not r["structure"]:
             print(f"- {r['id']}: " + ", ".join(f"{k} ({v})" for k, v in source_status(data[r['id']], sources).items()))
     if a.json:
         a.json.write_text(json.dumps(reps, indent=1, ensure_ascii=False, default=str) + "\n")
-    if a.lock:
-        lock = registry.load_lock() if a.contracts == registry.CONTRACTS else {}
+    if a.record_checks:
+        record_path = a.contracts / "DEVELOPMENT_CHECKS.json"
+        try:
+            records = json.loads(record_path.read_text()) if record_path.is_file() else {}
+        except (OSError, ValueError):
+            records = {}
         for r in reps:
             if r["verdict"] == C.CONSISTENT:
-                c = registry.load(r["id"], a.contracts, a.adapters)
-                lock[r["id"]] = {"contract_sha256": c.contract_sha256, "adapter_sha256": c.adapter_sha256,
-                                 "examples": len(r["examples"]), "readings": len(r["readings"]),
-                                 "mutations": len(r["mutations"]), "checked": datetime.date.today().isoformat()}
+                records[r["id"]] = {"checked": datetime.date.today().isoformat(),
+                                     "examples": len(r["examples"]), "readings": len(r["readings"]),
+                                     "mutations": len(r["mutations"]), "verdict": C.CONSISTENT}
             else:
-                lock.pop(r["id"], None)
-        (a.contracts / "LOCK.json").write_text(json.dumps(lock, indent=1, sort_keys=True) + "\n")
+                records.pop(r["id"], None)
+        record_path.write_text(json.dumps(records, indent=1, sort_keys=True) + "\n")
     worst = C.aggregate([r["verdict"] for r in reps])
     print(f"\nTOTAL: {len(reps)} contracts; verdict {worst}")
     return {C.CONSISTENT: 0, C.NOT_ESTABLISHED: 2}.get(worst, 1)

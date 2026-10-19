@@ -12,6 +12,49 @@ import sys
 from pathlib import Path
 
 
+def _comparison_summary(result, comparison, reason=None):
+    """Display an existing comparison without changing its statistical judgment."""
+    if result is None:
+        return {"comparison": comparison, "status": "not established", "reason": reason}
+    statistics = result.get("statistics") or {}
+    summary = {"comparison": result.get("comparison") or comparison, "status": "evaluated",
+               "fixed_mean": (statistics.get("fixed_mean") or {}).get("summary"),
+               "aligned": (statistics.get("aligned") or {}).get("summary")}
+    for name in ("verdict_scope", "covers_complete_public_output", "elements_per_seed"):
+        if name in result:
+            summary[name] = result[name]
+    if result.get("scale") is not None:
+        summary["mean_abs_residual"] = result["scale"].get("mean_abs_residual")
+    return summary
+
+
+def _measurement_output_summary(output, *, black_box=False):
+    quality = output.get("reference") or {}
+    no_program_reference = black_box or not quality or quality.get("elements") == 0
+    scope = ("not established: no program-reference coordinates" if no_program_reference
+             else quality.get("reference_scope"))
+    semantic = output.get("semantic")
+    semantic_label = ("G_pi - f" if (semantic or {}).get("verdict_scope") ==
+                      "G_pi_minus_admitted_task_specification" else "program reference - supplied reference")
+    total = output if black_box and output.get("statistics") is not None else output.get("total")
+    # Keep the old fields for existing consumers; the explicit comparisons
+    # distinguish the top-level program statistics from the full task result.
+    return {"status": output.get("status"), "complete_rate": quality.get("complete_rate"),
+            "resolved": quality.get("resolved_fraction"), "reference_scope": scope,
+            "fixed_mean": ((output.get("statistics") or {}).get("fixed_mean") or {}).get("summary"),
+            "aligned": ((output.get("statistics") or {}).get("aligned") or {}).get("summary"),
+            "failures": output.get("failure_classes") or output.get("failure_class"),
+            "task_special_value_verdict": output.get("task_special_value_verdict"),
+            "boolean_task_comparison": output.get("boolean_task_comparison"),
+            "comparisons": {
+                "numerical": _comparison_summary(None if no_program_reference else output,
+                    "K - program reference", "no program reference established for this output"),
+                "semantic": _comparison_summary(semantic, semantic_label,
+                    "no program-to-task/reference comparison established"),
+                "total": _comparison_summary(total, "K - supplied reference",
+                    "no candidate-to-task/reference comparison established")}}
+
+
 def measure_main(argv=None) -> int:
     """Unified entry (``kernel_analyzer.measure.run``): exit 0 with a report, 2 when the declaration is incomplete."""
     from . import measure
@@ -27,16 +70,15 @@ def measure_main(argv=None) -> int:
         Path(a.out).write_text(json.dumps({"status": "declaration incomplete", "missing": exc.items}, indent=1) + "\n")
         print("declaration incomplete:", *exc.items, sep="\n  ")
         return 2
+    except measure.ReferenceNotAdmitted as exc:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.out).write_text(json.dumps({"status": "reference not admitted", "reason": str(exc)}, indent=1) + "\n")
+        print("reference not admitted:", exc)
+        return 2
     for lv in rep["levels"]:
         print(json.dumps({"level": lv["level"], "status": lv["status"], "seconds": lv.get("seconds"),
                           "refinement": (lv.get("refinement") or {}).get("outcome"),
-                          "outputs": {k: {"status": v.get("status"),
-                                          "complete_rate": (v.get("reference") or {}).get("complete_rate"),
-                                          "resolved": (v.get("reference") or {}).get("resolved_fraction"),
-                                          "fixed_mean": ((v.get("statistics") or {}).get("fixed_mean") or {}).get(
-                                              "summary"),
-                                          "aligned": ((v.get("statistics") or {}).get("aligned") or {}).get("summary"),
-                                          "failures": v.get("failure_classes") or v.get("failure_class")}
+                          "outputs": {k: _measurement_output_summary(v, black_box=lv.get("mode") == "black-box")
                                       for k, v in (lv.get("outputs") or {}).items()},
                           "reason": lv.get("reason")}, default=str))
     print("failure counts", rep["failure_counts"])

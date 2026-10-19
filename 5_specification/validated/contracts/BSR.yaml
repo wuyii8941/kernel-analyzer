@@ -1,0 +1,192 @@
+schema_version: '1.2'
+id: BSR
+role: SPARSE_BSR
+title: PyTorch 2.10 Triton BSR softmax value core
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Two-dimensional finite BSR value softmax with a canonical fixed pattern and no batch or hybrid dimensions
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- The complete values computation performed by torch.sparse._triton_ops.bsr_softmax in PyTorch 2.10 for one 2-D BSR tensor
+profiles:
+  torch210_bsr_softmax_values_real:
+    meaning: >-
+      For a finite two-dimensional BSR tensor with canonical increasing column-block indices, apply softmax separately
+      to each scalar matrix row over every scalar value in its specified blocks. Explicit zeros inside specified
+      blocks participate; unspecified entries do not. Return the complete value buffer in the input BSR block order.
+    task_choice_required: false
+    basis: [BS.TASK, BS.SPARSE, BS.NORM]
+outputs:
+  out: {shape: 'complete BSR values [nnz_blocks,R,C] in input block order', guarantee: rigorous_enclosure}
+comparison:
+  input_binding: >-
+    shape, blocksize, crow and col identify the exact canonical BSR pattern; values are the exact finite physical
+    f16, bf16 or f32 values received by the values-computation region.
+  complete_output: Every scalar in the result value buffer is required, including stored explicit zeros after softmax.
+  quality: Exact real softmax with rigorous exponential, sum and quotient enclosures.
+  test_evidence: >-
+    Independent 768-bit Arb evaluation and public PyTorch dense softmax formulas cover three physical dtypes, empty
+    rows, multiple blocks per row, explicit zeros, complete output checking and rejected structures. The retained and
+    installed PyTorch 2.10 bsr_softmax function bodies agree, and the installed Triton function was checked on GPU.
+  error_handling: >-
+    Missing fields, malformed canonical BSR structures and values not represented by the declared dtype are
+    invalid_input. Special values, other dtypes and other sparse tasks are unsupported.
+decisions:
+- id: BS.TASK
+  status: reviewed
+  statement: >-
+    The selected task is only the complete values computation of PyTorch 2.10 bsr_softmax on one 2-D BSR tensor.
+    Sparse tensor allocation and index copying, batched or hybrid layouts, BSR matrix products and sampled_addmm are
+    separate tasks and are not inferred from the BSR role name.
+  basis: [TS_SPARSE_TRITON.SOFTMAX]
+- id: BS.SPARSE
+  status: reviewed
+  statement: >-
+    A specified BSR block contains all R by C scalar values, including numeric zeros. Unspecified entries use the
+    sparse fill value and are absent from sparse softmax. crow identifies the block-row ranges and col fixes the
+    preserved canonical block order.
+  basis: [T_SPARSE.BSR, T_SPARSE.BLOCK, T_SPARSE.SPECIFIED, T_SPARSE_SOFTMAX.DEF]
+- id: BS.NORM
+  status: reviewed
+  statement: >-
+    For each scalar row within a block row, PyTorch 2.10 bsr_softmax jointly normalises all C values from every
+    specified block in that block row. The implementation converts them to float32 for execution; the contract uses
+    the corresponding exact real softmax as f and measures device rounding separately.
+  basis: [TS_SPARSE_TRITON.SOFTMAX, T_SPARSE_SOFTMAX.DEF]
+clauses:
+- {id: BS.C1, basis: [BS.TASK, BS.SPARSE], statement: 'The task receives one complete canonical 2-D BSR pattern and finite physical value buffer and returns a complete value buffer with the same [nnz_blocks,R,C] order.', observes: [out], evidence_kind: definition}
+- {id: BS.C2, basis: [BS.SPARSE], statement: 'Every scalar in a specified block participates, including explicit zero values; unspecified matrix entries do not participate.', observes: [out], evidence_kind: definition}
+- {id: BS.C3, basis: [BS.NORM], statement: 'For each block row br and scalar row i, out[e,i,j] equals exp(values[e,i,j]) divided by the sum over all blocks e in crow[br]:crow[br+1] and all j in that block row.', observes: [out], evidence_kind: definition}
+- {id: BS.C4, basis: [BS.SPARSE], statement: 'An empty block row has no output values; an entirely empty BSR value buffer returns the empty value buffer.', observes: [out], evidence_kind: definition}
+- {id: BS.C5, basis: [BS.TASK], statement: 'The input pattern and values are read-only for the selected values-computation task.', observes: [out], evidence_kind: definition}
+examples:
+- id: BS.E1
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1, BS.C2, BS.C3, BS.C5]
+  input: &base
+    shape: [2, 4]
+    blocksize: [1, 2]
+    crow: [0, 2, 3]
+    col: [0, 1, 1]
+    values: [[[0, 1]], [[1, 0]], [[5, 5]]]
+    dtype: f32
+  expected:
+    outcome: value
+    fields:
+      out: [[[1/(2 + 2*exp(1)), exp(1)/(2 + 2*exp(1))]], [[exp(1)/(2 + 2*exp(1)), 1/(2 + 2*exp(1))]], [['1/2', '1/2']]]
+- id: BS.E2
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C3]
+  input: {shape: [2, 2], blocksize: [2, 2], crow: [0, 1], col: [0], values: [[[0, 1], [2, 0]]], dtype: f32}
+  expected:
+    outcome: value
+    fields:
+      out: [[[1/(1 + exp(1)), exp(1)/(1 + exp(1))], [exp(2)/(1 + exp(2)), 1/(1 + exp(2))]]]
+- id: BS.E3
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C3]
+  input: {shape: [2, 2], blocksize: [2, 1], crow: [0, 2], col: [0, 1], values: [[[0], [2]], [[1], [0]]], dtype: f32}
+  expected:
+    outcome: value
+    fields:
+      out: [[[1/(1 + exp(1))], [exp(2)/(1 + exp(2))]], [[exp(1)/(1 + exp(1))], [1/(1 + exp(2))]]]
+- id: BS.E4
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C4]
+  input: {shape: [4, 4], blocksize: [2, 2], crow: [0, 0, 0], col: [], values: [], dtype: f32}
+  expected: {outcome: value, fields: {out: []}}
+- id: BS.E5
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {shape: [1, 2], blocksize: [1, 2], crow: [0, 1], col: [0], values: [[[0, 0]]], dtype: f16}
+  expected: {outcome: value, fields: {out: [[['1/2', '1/2']]]}}
+- id: BS.E6
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {shape: [1, 2], blocksize: [1, 1], crow: [0, 2], col: [0, 1], values: [[[1]], [[1]]], dtype: bf16}
+  expected: {outcome: value, fields: {out: [[['1/2']], [['1/2']]]}}
+- id: BS.E7
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C3]
+  input: {shape: [1, 3], blocksize: [1, 1], crow: [0, 2], col: [0, 2], values: [[[-1]], [[1]]], dtype: f32}
+  expected: {outcome: value, fields: {out: [[[1/(1 + exp(2))]], [[exp(2)/(1 + exp(2))]]]}}
+- id: BS.E8
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, shape: [3, 4]}
+  expected: {outcome: invalid_input}
+- id: BS.E9
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, crow: [0, 3]}
+  expected: {outcome: invalid_input}
+- id: BS.E10
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, col: [0, 2, 1]}
+  expected: {outcome: invalid_input}
+- id: BS.E11
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, col: [0, 0, 1]}
+  expected: {outcome: invalid_input}
+- id: BS.E12
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, values: [[[0, 1]], [[1, 0]]]}
+  expected: {outcome: invalid_input}
+- id: BS.E13
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, values: [[['1/3', 1]], [[1, 0]], [[5, 5]]]}
+  expected: {outcome: invalid_input}
+- id: BS.E14
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, values: [[[inf, 1]], [[1, 0]], [[5, 5]]]}
+  expected: {outcome: unsupported}
+- id: BS.E15
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, dtype: f64}
+  expected: {outcome: unsupported}
+- id: BS.E16
+  profile: torch210_bsr_softmax_values_real
+  clauses: [BS.C1]
+  input: {<<: *base, op: bsr_softmax}
+  expected: {outcome: unsupported}
+signature:
+  inputs: ['shape [M,N]', 'blocksize [R,C]', 'canonical crow and col', 'complete physical values [nnz_blocks,R,C]', dtype]
+  pre_state: [shape, blocksize, crow, col and values unchanged]
+  post_state: [complete softmax value buffer in input BSR block order]
+  observation_unit: every scalar of the complete result value buffer together with dtype and shape
+domain:
+  valid: [positive 2-D shape divisible by positive blocksize, canonical BSR pattern, finite physical f16/bf16/f32 values]
+  invalid_input: [missing or extra required records, malformed crow or col, duplicate or unordered column blocks, incompatible values shape, values not exactly represented by dtype]
+  unsupported: [special or complex values, other dtypes, batch or hybrid BSR, full sparse tensor allocation, matrix products, sampled_addmm, gradients, layout and alias effects]
+mutation_requirements:
+- {id: BS.M1, misreading: normalise each specified block separately, witnesses: [BS.E1]}
+- {id: BS.M2, misreading: include unspecified entries as numeric zeros in the denominator, witnesses: [BS.E1, BS.E7]}
+- {id: BS.M3, misreading: exclude explicit zero values inside specified blocks, witnesses: [BS.E1, BS.E2]}
+- {id: BS.M4, misreading: normalise all scalar rows of a block row together, witnesses: [BS.E2, BS.E3]}
+- {id: BS.M5, misreading: normalise each block column position independently across blocks, witnesses: [BS.E1]}
+- {id: BS.M6, misreading: apply sigmoid independently instead of softmax, witnesses: [BS.E1]}
+nonclaims:
+- The profile certifies one PyTorch 2.10 private Triton values-computation task, not every operation called BSR or sparse softmax.
+- It does not certify sparse tensor allocation, copied indices, batches, hybrid sparse tensors, matrix multiplication, sampled_addmm, gradients, special values, storage or alias behavior.
+- Exact real softmax is the task target; the implementation's float32 conversion, exponent approximation, reduction order and output cast are measured separately.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Replace one profile that combined bsr_dense_mm, bsr_softmax and sampled_addmm with a reviewed values-only
+    PyTorch 2.10 bsr_softmax task. Preserve the broader former contract and adapter under contracts/draft.
+  trigger: >-
+    The former sampled_addmm profile depended on a disputed reading of spy(input), while the three calls have
+    different inputs, outputs and implementation restrictions and cannot be selected from a BSR family name.

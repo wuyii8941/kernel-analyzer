@@ -1,0 +1,179 @@
+schema_version: '1.2'
+id: DIVERG
+role: DIVERG
+title: PyTorch 2.10 float32 probability-target KL divergence with batchmean reduction and input VJP
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  reviewer: Codex independent source, formula, output and implementation review
+  date: '2026-10-19'
+  scope: Finite rank-2 float32 input, strictly positive float32 probability-space target, batchmean, log_target=false
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/diverg_kl_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- torch.nn.functional.kl_div(input, target, reduction='batchmean', log_target=False) and the complete VJP with respect to input in the reviewed subset
+profiles:
+  torch210_probability_batchmean_f32:
+    meaning: >-
+      For finite float32 matrices input and strictly positive float32 matrices target of the same shape, compute
+      sum(target * (log(target) - input)) divided by the batch size. Return that scalar and the complete VJP with
+      respect to input for an explicit scalar upstream.
+    task_choice_required: false
+outputs:
+  loss: {shape: scalar, guarantee: rigorous_enclosure}
+  grad: {shape: same as input, guarantee: exact}
+comparison:
+  input_binding: >-
+    input, target and upstream are the exact real values represented by the received float32 tensors/scalar. The call
+    must explicitly select reduction=batchmean and log_target=false. Input and target are read-only.
+  complete_output: The scalar loss and every input-gradient coordinate are required with float32 dtype and shape.
+  quality: No tolerance. The logarithmic loss is outwardly enclosed; the VJP is exact rational arithmetic.
+  test_evidence: >-
+    Independent 768-bit evaluation, direct rational VJP calculation, PyTorch 2.10 public-function/autograd comparison,
+    complete-output checks and rejected wrong formulas.
+  error_handling: >-
+    Malformed shapes and nonphysical float32 records are invalid_input. Other dtypes, reductions, log targets,
+    nonpositive targets, special values, target gradients and deprecated argument overrides are unsupported.
+decisions:
+- id: DV210.TASK
+  status: reviewed
+  statement: >-
+    The selected task is the public PyTorch 2.10 probability-target KL call with batchmean reduction and
+    log_target=false. It is one documented call, not a claim that mean, sum, none or log-target calls are wrong.
+  basis: [T_KLDIV.DEF, T_KLDIV.REDUCTION, T_KLDIV_F.DEF,
+    TORCH210_KLDIV_FUNCTIONAL.SIGNATURE, TORCH210_KLDIV_FUNCTIONAL.WARNING]
+- id: DV210.VALUE
+  status: reviewed
+  statement: >-
+    Each pointwise term is target * (log(target) - input). Batchmean sums every coordinate and divides by the first
+    dimension only. The reviewed positive-target range avoids the documented formula's zero and negative logarithm
+    boundary without inventing a convention for it.
+  basis: [T_KLDIV.DEF, T_KLDIV.REDUCTION, TORCH210_KLDIV_FUNCTIONAL.BATCHMEAN]
+- id: DV210.VJP
+  status: reviewed
+  statement: >-
+    With target treated as a read-only task input, the VJP with respect to input is
+    -target * upstream / batch_size at every coordinate. A target VJP is outside this profile.
+  basis: [DV210.VALUE]
+- id: DV210.PHYSICAL
+  status: reviewed
+  statement: >-
+    This profile fixes rank-2 float32 input and target, a float32 scalar upstream, positive dimensions, finite values
+    and strictly positive target entries. These restrictions are the reviewed measurement range, not general
+    restrictions asserted for the PyTorch API.
+  basis: [T_KLDIV.SHAPE, DV210.TASK]
+clauses:
+- {id: DV.C1, basis: [DV210.VALUE], statement: 'loss = sum(target * (log(target) - input)) / batch_size', observes: [loss], evidence_kind: definition}
+- {id: DV.C2, basis: [DV210.VJP], statement: 'grad_input = -target * upstream / batch_size at every coordinate', observes: [grad], evidence_kind: derived}
+- {id: DV.C3, basis: [DV210.PHYSICAL], statement: 'All selected parameters, physical dtypes, shapes and read-only inputs are checked before evaluation.', observes: [loss, grad], evidence_kind: derived}
+examples:
+- id: DV.E1
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C1, DV.C2]
+  input: &base
+    input: [[-1, -2], [0, -1]]
+    target: [['1/2', '1/2'], ['1/2', '1/2']]
+    input_dtype: f32
+    target_dtype: f32
+    reduction: batchmean
+    log_target: false
+    upstream: 1
+  expected:
+    outcome: value
+    fields: {loss: '1-log(2)', grad: [['-1/4', '-1/4'], ['-1/4', '-1/4']]}
+- id: DV.E2
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C1, DV.C2]
+  input:
+    <<: *base
+    input: [[0, -1]]
+    target: [[1, '1/2']]
+  expected:
+    outcome: value
+    fields: {loss: '1/2-log(2)/2', grad: [[-1, '-1/2']]}
+  note: The public operation does not renormalise the received target row.
+- id: DV.E3
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C2]
+  input: {<<: *base, upstream: 2}
+  expected:
+    outcome: value
+    fields: {loss: '1-log(2)', grad: [['-1/2', '-1/2'], ['-1/2', '-1/2']]}
+- id: DV.E4
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, reduction: mean}
+  expected: {outcome: unsupported}
+- id: DV.E5
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, log_target: true}
+  expected: {outcome: unsupported}
+- id: DV.E6
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, target: [['1/2', 0], ['1/2', '1/2']]}
+  expected: {outcome: unsupported}
+- id: DV.E7
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, target: [['1/2', '-1/2'], ['1/2', '1/2']]}
+  expected: {outcome: unsupported}
+- id: DV.E8
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, target: [[1, 1]]}
+  expected: {outcome: invalid_input}
+- id: DV.E9
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, input_dtype: f16}
+  expected: {outcome: unsupported}
+- id: DV.E10
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, upstream: '1/3'}
+  expected: {outcome: invalid_input}
+- id: DV.E11
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, input: [['inf', -2], [0, -1]]}
+  expected: {outcome: unsupported}
+- id: DV.E12
+  profile: torch210_probability_batchmean_f32
+  clauses: [DV.C3]
+  input: {<<: *base, extra: 1}
+  expected: {outcome: unsupported}
+signature:
+  inputs:
+  - 'input, target: finite physical float32 matrices [B,V], B,V > 0; target entries strictly positive'
+  - 'input_dtype=f32, target_dtype=f32, reduction=batchmean, log_target=false'
+  - 'upstream: finite physical float32 scalar'
+  pre_state: [complete read-only input and target]
+  post_state: [float32 scalar loss, complete float32 input VJP, input and target unchanged]
+  observation_unit: The scalar loss and every input-gradient coordinate
+domain:
+  valid:
+  - Finite physical float32 rank-2 input and strictly positive target of the same positive shape
+  - Explicit batchmean reduction, probability-space target and finite physical float32 upstream
+  invalid_input: [missing fields, malformed or mismatched shapes, Boolean values, values not exactly representable as float32]
+  unsupported: [other dtypes or ranks, other reductions, log_target=true, zero or negative target, special values, target VJP, deprecated size_average or reduce]
+mutation_requirements:
+- {id: DV.M1, misreading: divide by every element as reduction mean does, witnesses: [DV.E1]}
+- {id: DV.M2, misreading: omit the target log-target term and compute only -target*input, witnesses: [DV.E1, DV.E2]}
+- {id: DV.M3, misreading: flip the input-gradient sign, witnesses: [DV.E1]}
+- {id: DV.M4, misreading: divide the input gradient by the support size as well as the batch size, witnesses: [DV.E1]}
+- {id: DV.M5, misreading: renormalise every received target row before computing the result, witnesses: [DV.E2]}
+- {id: DV.M6, misreading: exponentiate target as if log_target were true, witnesses: [DV.E1]}
+nonclaims:
+- This contract does not decide whether another KL orientation, reduction, log-target representation or target-gradient task is wrong.
+- It does not cover zero/negative targets, special values, higher-rank tensors, other dtypes or deprecated overrides.
+- Device rounding and reduction order remain numerical questions. A real kernel still needs a complete input, output and state binding.
+changes:
+- date: '2026-10-19'
+  note: Replaced the mixed PyTorch/Liger/JSD/TVD draft with one documented PyTorch 2.10 call; the former contract and adapter are archived under contracts/draft.

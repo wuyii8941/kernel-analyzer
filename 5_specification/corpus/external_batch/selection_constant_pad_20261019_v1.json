@@ -1,0 +1,29 @@
+{
+  "task": "PyTorch 2.10 public torch.nn.functional.pad with mode='constant' and complete input VJP",
+  "reference": "Cross-check the versioned PyTorch 2.10 public call against LAYOUT.torch210_functional_constant_pad_autograd, whose crop, fill and input-gradient coordinates are evaluated independently with exact rational values",
+  "limits": "The batch excludes nonconstant modes, nonfloating or special values, zero-rank and zero-sized inputs, in-place/out variants and gradients other than the input VJP. Every execution failure, missing Triton phase and numerical difference remains in the result.",
+  "frozen_before_gpu": true,
+  "development": {
+    "implementation": "flag_gems",
+    "seeds": [20261801, 20261802],
+    "cases": [
+      {"id": "pad_positive_last_axis", "input_shape": [2, 3, 7], "pad": [2, 1], "value": "1/2"},
+      {"id": "pad_mixed_two_axes", "input_shape": [2, 5, 7], "pad": [-2, 1, 1, -1], "value": "-1/4"},
+      {"id": "pad_rank4_partial", "input_shape": [2, 3, 4, 5], "pad": [0, 2, -1, 1], "value": 3},
+      {"id": "pad_full_crop", "input_shape": [2, 3, 4], "pad": [-2, -2], "value": 0},
+      {"id": "pad_noncontiguous", "input_shape": [2, 5, 7], "pad": [1, 2], "value": -1, "noncontiguous": true}
+    ]
+  },
+  "acceptance": {
+    "implementation": "inductor",
+    "seeds": [20261803, 20261804],
+    "cases": [
+      {"id": "pad_heldout_rank2", "input_shape": [5, 11], "pad": [3, 0], "value": "-3/4"},
+      {"id": "pad_heldout_mixed", "input_shape": [4, 9], "pad": [1, -2, -1, 2], "value": "1/4"},
+      {"id": "pad_heldout_rank4_three_axes", "input_shape": [2, 3, 5, 8], "pad": [1, 0, 0, 2, -1, 1], "value": 2},
+      {"id": "pad_heldout_crop_to_one", "input_shape": [3, 5], "pad": [-4, 0], "value": null},
+      {"id": "pad_heldout_noncontiguous", "input_shape": [3, 6, 10], "pad": [-1, 2, 1, 0], "value": -2, "noncontiguous": true}
+    ]
+  },
+  "selection_note": "Both implementations, all cases, shapes, padding pairs, values and seeds were fixed before GPU execution. The acceptance split uses another implementation and unseen ranks, dimensions, crop/fill combinations and noncontiguous strides."
+}

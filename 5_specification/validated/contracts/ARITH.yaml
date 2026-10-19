@@ -1,0 +1,493 @@
+schema_version: '1.2'
+id: ARITH
+role: ATEN_ARITH
+title: Common finite floating element-wise arithmetic and selected PyTorch 2.10 autograd tasks
+review:
+  status: reviewed_for_implementation
+  author: Claude (original broad draft) and Codex (finite common-operation revision), 2026-10-18
+  date: '2026-10-18'
+  reviewer: Codex source, formula, domain and complete-output review with separate exact-rational tests
+  scope: Finite same-dtype f16/bf16/f32/f64 default functional operations; scalar masked_fill, Tensor/Tensor where, scalar-bound clamp and Tensor/Tensor maximum/minimum additionally have complete public-call forward and VJP profiles
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/arith_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.add, aten.sub, aten.rsub, aten.mul, aten.div, aten.neg, aten.reciprocal, aten.abs, aten.sign,
+  prims.fma, aten.floor, aten.ceil, aten.clamp, aten.clamp_min, aten.clamp_max, aten.maximum, aten.minimum,
+  aten.where, aten.masked_fill, aten.floor_divide, torch.Tensor.masked_fill, torch.where, torch.clamp,
+  torch.maximum, torch.minimum]
+profiles:
+  real:
+    meaning: >-
+      Exact real formulas for common default functional operations on dense finite f16, bf16, f32 or f64 values.
+      Every tensor value must be exactly representable in its declared source dtype. All data tensors in one call
+      have the same dtype; finite scalar operands, alpha and scalar bounds must also be exactly representable in it.
+      Operation rounding and output storage rounding belong to K-G, not to this task value.
+    task_choice_required: false
+    outputs: [out]
+  torch210_masked_fill_scalar_autograd:
+    meaning: >-
+      PyTorch 2.10 out-of-place Tensor.masked_fill using the Scalar overload, with complete physical finite floating
+      input, complete Boolean mask, a finite exactly representable Python scalar and complete same-dtype upstream.
+      Input and mask use ordinary broadcasting, so the public output may be larger than the input. Return the complete
+      public output and the complete input VJP after summing gradient contributions over broadcast input axes.
+    task_choice_required: false
+    basis: [AR.MASKED_FILL_TASK, AR.MASKED_FILL_VJP]
+    outputs: [out, grad]
+  torch210_where_tensor_autograd:
+    meaning: >-
+      PyTorch 2.10 public torch.where(condition,input,other) using the Tensor/Tensor overload, with a complete Boolean
+      condition, complete same-dtype physical finite floating data tensors and complete same-dtype upstream. All four
+      tensors use ordinary broadcasting. Return the complete public output and complete VJPs for both data tensors,
+      summing contributions over each data tensor's broadcast axes.
+    task_choice_required: false
+    basis: [AR.WHERE_TASK, AR.WHERE_VJP]
+    outputs: [out, grad_input, grad_other]
+  torch210_clamp_scalar_autograd:
+    meaning: >-
+      PyTorch 2.10 public functional torch.clamp using optional Python scalar min and max bounds, at least one present,
+      a complete physical finite floating input and complete same-dtype upstream. Return the complete output and input
+      VJP. The selected PyTorch subgradient passes upstream at coordinates exactly equal to either active boundary;
+      when min exceeds max the output is max and the complete input VJP is zero.
+    task_choice_required: false
+    basis: [AR.CLAMP_TASK, AR.CLAMP_VJP]
+    outputs: [out, grad]
+  torch210_extrema_tensor_autograd:
+    meaning: >-
+      PyTorch 2.10 public functional torch.maximum or torch.minimum using the Tensor/Tensor overload, with two
+      complete same-dtype physical finite floating tensors and complete same-dtype upstream on their broadcast
+      output. Return the complete output and both complete input VJPs. At equal input values PyTorch's selected
+      autograd rule gives half of upstream to each operand; each broadcast gradient is then summed to its source shape.
+    task_choice_required: false
+    basis: [AR.EXTREMA_TASK, AR.EXTREMA_VJP]
+    outputs: [out, grad_input, grad_other]
+outputs:
+  out: {shape: 'complete broadcast output shape; prims.fma requires three equal shapes', guarantee: exact}
+  grad: {shape: 'complete selected masked_fill or clamp input shape', guarantee: exact}
+  grad_input: {shape: 'complete selected where or extrema input shape', guarantee: exact}
+  grad_other: {shape: 'complete selected where or extrema other shape', guarantee: exact}
+comparison:
+  input_binding: >-
+    Tensor records are physical source values, not arbitrary mathematical reals labelled with a dtype. Boolean
+    condition and mask tensors are accepted only by where and masked_fill. Clamp bounds are optional Python scalars,
+    not tensors. The autograd profiles require explicit shape records for every tensor and upstream. Inputs and
+    outputs are otherwise dense.
+  complete_output: >-
+    check_output requires exactly the fields declared by the selected profile. Every tensor has t, v and shape.
+    It checks result dtype, every complete broadcast or input shape and every coordinate, including empty tensors.
+  equality: Exact rational equality with no tolerance.
+  test_evidence: Separate Fraction-based broadcasting and scalar formulas, plus PyTorch 2.10 dtype/shape cross-checks.
+  error_handling: Division or reciprocal by zero is domain_undefined; malformed calls are invalid_input; unreviewed variants are unsupported.
+decisions:
+- id: AR.SCHEMA
+  status: reviewed
+  statement: >-
+    The selected interfaces are the PyTorch 2.10 default functional tensor/scalar overloads named by covers.
+    add/sub/rsub use alpha; div optionally uses keyword-only rounding_mode; clamp uses scalar bounds; masked_fill
+    uses its scalar-value overload. Except for where's scalar branch overloads, the first data argument is a tensor;
+    where must still have at least one tensor branch to determine the reviewed dtype. In-place, out, tensor-bound clamp,
+    one-argument where and other overloads are outside this profile. prims.fma is the retained Inductor primitive and
+    requires three same-dtype, same-shape tensors here.
+  basis: [TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS, TS_INDUCTOR_PRIMS.FMA, TS_REFS.RSUB]
+- id: AR.FINITE
+  status: reviewed
+  statement: >-
+    This profile accepts only finite f16/bf16/f32/f64 tensor values exactly representable in the declared dtype.
+    All data tensors in a call share a dtype. Scalar data, alpha, fill values and clamp bounds are finite and exactly
+    representable in that dtype. This is the reviewed support boundary, not a claim that PyTorch lacks other variants.
+  basis: [T_TENSOR_ATTR.PROMOTION, TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS]
+- id: AR.REAL
+  status: reviewed
+  statement: >-
+    The task value is the exact real formula stated by the public operation. Floating operation rounding and output
+    conversion are measured separately in K-G. The result tensor keeps the common data dtype and has the documented broadcast shape.
+  basis: [T_ADD.DEF, T_SUB.DEF, T_MUL.DEF, T_DIV.TRUE, T_TENSOR_ATTR.PROMOTION]
+- id: AR.DIVISION
+  status: reviewed
+  statement: >-
+    div with no rounding mode is exact real division; trunc rounds the real quotient toward zero; floor and
+    floor_divide round it toward negative infinity. A zero divisor and reciprocal of zero have no real task value.
+  basis: [T_DIV.TRUE, T_DIV.TRUNC, T_DIV.FLOOR, T_FLOOR_DIVIDE.DEF, T_RECIP.DEF]
+- id: AR.SELECTION
+  status: reviewed
+  statement: >-
+    where selects the first data operand at true condition coordinates and the second otherwise. masked_fill selects
+    its scalar value at true mask coordinates. Conditions and masks must be boolean and broadcast to the data shape.
+  basis: [T_WHERE.DEF, T_MASKED_FILL.DEF, TS_REFS.MASKED_FILL]
+- id: AR.MASKED_FILL_TASK
+  status: reviewed
+  statement: >-
+    Select PyTorch 2.10 public out-of-place Tensor.masked_fill with a Python scalar value. The native schema separates
+    this functional Scalar overload from Tensor, out and in-place overloads. The official reference converts the
+    scalar to the input dtype, computes where(mask,value,input) under ordinary broadcasting and returns a new
+    contiguous tensor. This profile checks all returned values and unchanged input state; physical output stride and
+    aliasing remain runtime binding conditions rather than inferred numerical fields.
+  basis: [T_MASKED_FILL.DEF, TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS, TS_REFS.MASKED_FILL]
+- id: AR.MASKED_FILL_VJP
+  status: reviewed
+  statement: >-
+    For complete upstream U on the broadcast output, the derivative with respect to the input is zero where the
+    broadcast mask is true and U where it is false, summed back over every axis on which the input was broadcast.
+    This follows coordinate by coordinate from AR.MASKED_FILL_TASK. Boolean mask and Python scalar have no requested
+    gradient in this selected task.
+  basis: [AR.MASKED_FILL_TASK]
+- id: AR.WHERE_TASK
+  status: reviewed
+  statement: >-
+    Select PyTorch 2.10 public torch.where(condition,input,other) with the Tensor/Tensor native overload. Condition
+    is Boolean; input and other are physical same-dtype finite floating tensors. The official definition broadcasts
+    all three tensors and selects input at true coordinates and other at false coordinates. Scalar, out and
+    one-argument overloads are different tasks and remain outside this profile.
+  basis: [T_WHERE.DEF, TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS]
+- id: AR.WHERE_VJP
+  status: reviewed
+  statement: >-
+    For complete upstream U, input receives U exactly at true broadcast condition coordinates and zero elsewhere;
+    other receives U exactly at false coordinates and zero elsewhere. Each result is summed back over the axes on
+    which that data tensor was broadcast. This is the coordinate-wise transpose of AR.WHERE_TASK; condition has no
+    requested gradient.
+  basis: [AR.WHERE_TASK]
+- id: AR.CLAMP_TASK
+  status: reviewed
+  statement: >-
+    Select PyTorch 2.10 public functional torch.clamp with the Scalar native overload, no out tensor and at least one
+    finite exactly representable bound. The output is min(max(input,min),max), omitting either absent side. If both
+    bounds exist and min is greater than max, every output coordinate is max. Tensor bounds, clamp_min/clamp_max as
+    separately named public calls, in-place and out overloads are different tasks.
+  basis: [T_CLAMP.DEF, T_CLAMP.MINMAX, TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS]
+- id: AR.CLAMP_VJP
+  status: reviewed
+  statement: >-
+    PyTorch 2.10 explicitly chooses input subgradient one at coordinates equal to min or max. Thus the complete input
+    VJP is upstream where input is greater than or equal to an existing min and less than or equal to an existing max,
+    and zero elsewhere. If min exceeds max no coordinate satisfies both comparisons. Scalar bounds have no requested
+    gradient in this selected task.
+  basis: [AR.CLAMP_TASK, TS_AUTOGRAD_DERIVATIVES.CLAMP]
+- id: AR.EXTREMA_TASK
+  status: reviewed
+  statement: >-
+    Select PyTorch 2.10 public functional torch.maximum or torch.minimum with the Tensor/Tensor native overload.
+    Both operands are complete same-dtype finite floating tensors using ordinary broadcasting. Out, scalar,
+    reduction, fmax/fmin and special-value variants are different tasks and remain outside this profile.
+  basis: [T_MAXIMUM.DEF, T_MINIMUM.DEF, TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS]
+- id: AR.EXTREMA_VJP
+  status: reviewed
+  statement: >-
+    For maximum, a strict larger operand receives the full upstream; for minimum, a strict smaller operand receives
+    it. At equality PyTorch 2.10 explicitly gives half to each operand. Each broadcast-coordinate contribution is
+    summed back to the corresponding source shape. This is the selected versioned public autograd task.
+  basis: [AR.EXTREMA_TASK, TS_AUTOGRAD_DERIVATIVES.EXTREMA]
+clauses:
+- {id: AR.C1, basis: [T_ADD.DEF, T_SUB.DEF, TS_REFS.RSUB, T_MUL.DEF, AR.REAL], statement: 'add(a,b,alpha)=a+alpha*b; sub(a,b,alpha)=a-alpha*b; rsub(a,b,alpha)=b-alpha*a; mul(a,b)=a*b, with broadcasting', observes: [out], evidence_kind: definition}
+- {id: AR.C2, basis: [AR.DIVISION], statement: 'true, truncating and floor division use the selected real quotient rule; reciprocal is one divided by the input', observes: [out], evidence_kind: definition}
+- {id: AR.C3, basis: [T_NEG.DEF, T_ABS.DEF, T_SIGN.DEF], statement: 'neg=-x; abs=|x|; sign is -1, 0 or 1 according to x', observes: [out], evidence_kind: definition}
+- {id: AR.C4, basis: [TS_INDUCTOR_PRIMS.FMA], statement: 'prims.fma(a,b,c)=a*b+c without rounding after multiplication in the task formula', observes: [out], evidence_kind: definition}
+- {id: AR.C5, basis: [T_FLOOR.DEF, T_CEIL.DEF], statement: 'floor rounds toward negative infinity and ceil toward positive infinity', observes: [out], evidence_kind: definition}
+- {id: AR.C6, basis: [T_CLAMP.DEF, T_CLAMP.MINMAX], statement: 'clamp applies the lower then upper scalar bound; if min exceeds max every result is max; clamp_min and clamp_max apply one bound', observes: [out], evidence_kind: definition}
+- {id: AR.C7, basis: [T_MAXIMUM.DEF, T_MINIMUM.DEF], statement: 'maximum and minimum select the element-wise larger and smaller finite values', observes: [out], evidence_kind: definition}
+- {id: AR.C8, basis: [AR.SELECTION], statement: 'where and masked_fill use the complete boolean condition or mask after broadcasting', observes: [out], evidence_kind: definition}
+- {id: AR.C9, basis: [AR.SCHEMA, AR.FINITE], statement: 'only the selected finite, same-dtype, default functional calls and complete output are admitted', observes: [out], evidence_kind: definition}
+- {id: AR.C10, basis: [AR.MASKED_FILL_TASK], statement: 'the public scalar masked_fill output is where(mask,value,input) on the complete broadcast shape and the functional call leaves input, mask and upstream unchanged', observes: [out, grad], evidence_kind: definition}
+- {id: AR.C11, basis: [AR.MASKED_FILL_VJP], statement: 'the complete input VJP sums upstream values from unmasked broadcast output coordinates back to each input coordinate; masked coordinates contribute zero', observes: [out, grad], evidence_kind: derived}
+- {id: AR.C12, basis: [AR.WHERE_TASK], statement: 'public Tensor/Tensor where returns the complete three-way broadcast selection and leaves condition, input, other and upstream unchanged', observes: [out, grad_input, grad_other], evidence_kind: definition}
+- {id: AR.C13, basis: [AR.WHERE_VJP], statement: 'the two complete data VJPs route upstream through opposite condition branches and each sums back to its own input shape', observes: [out, grad_input, grad_other], evidence_kind: derived}
+- {id: AR.C14, basis: [AR.CLAMP_TASK], statement: 'public scalar-bound clamp returns every coordinate of lower-then-upper clipping and leaves input and upstream unchanged', observes: [out, grad], evidence_kind: definition}
+- {id: AR.C15, basis: [AR.CLAMP_VJP], statement: 'the complete input VJP passes upstream inside the inclusive selected bounds, including equality at either boundary, and is zero outside or everywhere when min exceeds max', observes: [out, grad], evidence_kind: definition}
+- {id: AR.C16, basis: [AR.EXTREMA_TASK], statement: 'public Tensor/Tensor maximum or minimum returns every coordinate of the selected broadcast extremum and leaves both inputs and upstream unchanged', observes: [out, grad_input, grad_other], evidence_kind: definition}
+- {id: AR.C17, basis: [AR.EXTREMA_VJP], statement: 'both complete VJPs route full upstream to the strict selected operand, split equality upstream equally, and reduce each broadcast gradient to its own input shape', observes: [out, grad_input, grad_other], evidence_kind: definition}
+examples:
+- {id: AR.E1, profile: real, clauses: [AR.C1], input: {op: aten.add, args: [{t: f32, v: [1, 2]}, {t: f32, v: [10, 20]}], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [21, 42]}}}
+- {id: AR.E2, profile: real, clauses: [AR.C1], input: {op: aten.add, args: [{t: f16, v: [[1], [2]]}, '1/2']}, expected: {outcome: value, fields: {out: [['3/2'], ['5/2']]}}}
+- {id: AR.E3, profile: real, clauses: [AR.C1], input: {op: aten.sub, args: [{t: bf16, v: [5, 1]}, {t: bf16, v: [2, 3]}], kwargs: {alpha: '1/2'}}, expected: {outcome: value, fields: {out: [4, '-1/2']}}}
+- {id: AR.E4, profile: real, clauses: [AR.C1], input: {op: aten.rsub, args: [{t: f64, v: [1, 2]}, 10], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [8, 6]}}}
+- {id: AR.E5, profile: real, clauses: [AR.C1], input: {op: aten.mul, args: [{t: f32, v: [[2, -3]]}, {t: f32, v: [['1/2'], [4]]}]}, expected: {outcome: value, fields: {out: [[1, '-3/2'], [8, -12]]}}}
+- {id: AR.E6, profile: real, clauses: [AR.C2], input: {op: aten.div, args: [{t: f32, v: [7, -7]}, 2]}, expected: {outcome: value, fields: {out: ['7/2', '-7/2']}}}
+- {id: AR.E7, profile: real, clauses: [AR.C2], input: {op: aten.div, args: [{t: f32, v: [7, -7]}, 2], kwargs: {rounding_mode: trunc}}, expected: {outcome: value, fields: {out: [3, -3]}}}
+- {id: AR.E8, profile: real, clauses: [AR.C2], input: {op: aten.div, args: [{t: f32, v: [7, -7]}, 2], kwargs: {rounding_mode: floor}}, expected: {outcome: value, fields: {out: [3, -4]}}}
+- {id: AR.E9, profile: real, clauses: [AR.C2], input: {op: aten.floor_divide, args: [{t: f64, v: [7, -7, '1/2']}, 2]}, expected: {outcome: value, fields: {out: [3, -4, 0]}}}
+- {id: AR.E10, profile: real, clauses: [AR.C2], input: {op: aten.div, args: [{t: f32, v: [1]}, 0]}, expected: {outcome: domain_undefined}}
+- {id: AR.E11, profile: real, clauses: [AR.C2], input: {op: aten.reciprocal, args: [{t: f16, v: [4, -2]}]}, expected: {outcome: value, fields: {out: ['1/4', '-1/2']}}}
+- {id: AR.E12, profile: real, clauses: [AR.C2], input: {op: aten.reciprocal, args: [{t: f32, v: [0]}]}, expected: {outcome: domain_undefined}}
+- {id: AR.E13, profile: real, clauses: [AR.C3], input: {op: aten.neg, args: [{t: f32, v: [3, '-1/2']}]}, expected: {outcome: value, fields: {out: [-3, '1/2']}}}
+- {id: AR.E14, profile: real, clauses: [AR.C3], input: {op: aten.abs, args: [{t: f32, v: [-3, 0, '5/2']}]}, expected: {outcome: value, fields: {out: [3, 0, '5/2']}}}
+- {id: AR.E15, profile: real, clauses: [AR.C3], input: {op: aten.sign, args: [{t: f32, v: [-3, 0, '5/2']}]}, expected: {outcome: value, fields: {out: [-1, 0, 1]}}}
+- {id: AR.E16, profile: real, clauses: [AR.C4], input: {op: prims.fma, args: [{t: f32, v: [2, '1/2']}, {t: f32, v: [3, 4]}, {t: f32, v: ['1/2', -1]}]}, expected: {outcome: value, fields: {out: ['13/2', 1]}}}
+- {id: AR.E17, profile: real, clauses: [AR.C5], input: {op: aten.floor, args: [{t: f32, v: ['5/2', '-5/2', 3]}]}, expected: {outcome: value, fields: {out: [2, -3, 3]}}}
+- {id: AR.E18, profile: real, clauses: [AR.C5], input: {op: aten.ceil, args: [{t: f32, v: ['5/2', '-5/2']}]}, expected: {outcome: value, fields: {out: [3, -2]}}}
+- {id: AR.E19, profile: real, clauses: [AR.C6], input: {op: aten.clamp, args: [{t: f32, v: [-2, 0, 5]}], kwargs: {min: -1, max: 3}}, expected: {outcome: value, fields: {out: [-1, 0, 3]}}}
+- {id: AR.E20, profile: real, clauses: [AR.C6], input: {op: aten.clamp, args: [{t: f32, v: [0, 5]}], kwargs: {min: 3, max: 1}}, expected: {outcome: value, fields: {out: [1, 1]}}}
+- {id: AR.E21, profile: real, clauses: [AR.C6], input: {op: aten.clamp_min, args: [{t: f32, v: [-2, 2]}, 0]}, expected: {outcome: value, fields: {out: [0, 2]}}}
+- {id: AR.E22, profile: real, clauses: [AR.C6], input: {op: aten.clamp_max, args: [{t: f32, v: [-2, 2]}, 0]}, expected: {outcome: value, fields: {out: [-2, 0]}}}
+- {id: AR.E23, profile: real, clauses: [AR.C7], input: {op: aten.maximum, args: [{t: f32, v: [[1], [-2]]}, {t: f32, v: [0, 3]}]}, expected: {outcome: value, fields: {out: [[1, 3], [0, 3]]}}}
+- {id: AR.E24, profile: real, clauses: [AR.C7], input: {op: aten.minimum, args: [{t: f32, v: [1, 2]}, {t: f32, v: [0, 3]}]}, expected: {outcome: value, fields: {out: [0, 2]}}}
+- {id: AR.E25, profile: real, clauses: [AR.C8], input: {op: aten.where, args: [{t: b8, v: [[true], [false]]}, {t: f32, v: [1, 2]}, {t: f32, v: [10, 20]}]}, expected: {outcome: value, fields: {out: [[1, 2], [10, 20]]}}}
+- {id: AR.E26, profile: real, clauses: [AR.C8], input: {op: aten.masked_fill, args: [{t: f32, v: [1, 2, 3]}, {t: b8, v: [false, true, false]}, '-1/2']}, expected: {outcome: value, fields: {out: [1, '-1/2', 3]}}}
+- {id: AR.E27, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f16, v: ['1/3']}, 1]}, expected: {outcome: invalid_input}}
+- {id: AR.E28, profile: real, clauses: [AR.C9], input: {op: aten.mul, args: [{t: i64, v: [2]}, 3]}, expected: {outcome: unsupported}}
+- {id: AR.E29, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f32, v: [inf]}, 1]}, expected: {outcome: unsupported}}
+- {id: AR.E30, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f16, v: [1]}, {t: f32, v: [2]}]}, expected: {outcome: unsupported}}
+- {id: AR.E31, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f32, v: [1]}, '1/3']}, expected: {outcome: invalid_input}}
+- {id: AR.E32, profile: real, clauses: [AR.C9], input: {op: prims.fma, args: [{t: f32, v: [[1], [2]]}, {t: f32, v: [3, 4]}, {t: f32, v: [[5], [6]]}]}, expected: {outcome: unsupported}}
+- {id: AR.E33, profile: real, clauses: [AR.C9], input: {op: aten.clamp, args: [{t: f32, v: [1]}]}, expected: {outcome: invalid_input}}
+- {id: AR.E34, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f32, v: [1]}, 2], kwargs: {out: {t: f32, v: [0]}}}, expected: {outcome: unsupported}}
+- id: AR.E35
+  profile: torch210_masked_fill_scalar_autograd
+  clauses: [AR.C10, AR.C11]
+  input:
+    op: torch.Tensor.masked_fill
+    input: {t: f32, shape: [1, 3], v: [[1, 2, 3]]}
+    mask: {t: b8, shape: [2, 3], v: [[true, false, true], [false, true, false]]}
+    value: -2
+    upstream: {t: f32, shape: [2, 3], v: [[1, 2, 3], [4, 5, 6]]}
+  expected: {outcome: value, fields: {out: [[-2, 2, -2], [1, -2, 3]], grad: [[4, 2, 6]]}}
+- id: AR.E36
+  profile: torch210_masked_fill_scalar_autograd
+  clauses: [AR.C10, AR.C11]
+  input:
+    op: torch.Tensor.masked_fill
+    input: {t: f64, shape: [2, 3], v: [[1, 2, 3], [4, 5, 6]]}
+    mask: {t: b8, shape: [2, 1], v: [[true], [false]]}
+    value: '1/2'
+    upstream: {t: f64, shape: [2, 3], v: [[1, 2, 3], [4, 5, 6]]}
+  expected: {outcome: value, fields: {out: [['1/2', '1/2', '1/2'], [4, 5, 6]], grad: [[0, 0, 0], [4, 5, 6]]}}
+- id: AR.E37
+  profile: torch210_masked_fill_scalar_autograd
+  clauses: [AR.C10]
+  input: {op: torch.Tensor.masked_fill, input: {t: f32, shape: [2], v: [1, 2]}, mask: {t: b8, shape: [2], v: [true, false]}, value: 0, upstream: {t: f32, shape: [1], v: [1]}}
+  expected: {outcome: invalid_input}
+- id: AR.E38
+  profile: torch210_masked_fill_scalar_autograd
+  clauses: [AR.C10]
+  input: {op: torch.Tensor.masked_fill_, input: {t: f32, shape: [2], v: [1, 2]}, mask: {t: b8, shape: [2], v: [true, false]}, value: 0, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E39
+  profile: torch210_masked_fill_scalar_autograd
+  clauses: [AR.C10]
+  input: {op: torch.Tensor.masked_fill, input: {t: f32, shape: [2], v: [1, 2]}, mask: {t: b8, shape: [2], v: [true, false]}, value: {t: f32, shape: [], v: 0}, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E40
+  profile: torch210_where_tensor_autograd
+  clauses: [AR.C12, AR.C13]
+  input:
+    op: torch.where
+    condition: {t: b8, shape: [2, 3], v: [[true, false, true], [false, true, false]]}
+    input: {t: f32, shape: [1, 3], v: [[1, 2, 3]]}
+    other: {t: f32, shape: [2, 1], v: [[10], [20]]}
+    upstream: {t: f32, shape: [2, 3], v: [[1, 2, 3], [4, 5, 6]]}
+  expected: {outcome: value, fields: {out: [[1, 10, 3], [20, 2, 20]], grad_input: [[1, 5, 3]], grad_other: [[2], [10]]}}
+- id: AR.E41
+  profile: torch210_where_tensor_autograd
+  clauses: [AR.C12, AR.C13]
+  input:
+    op: torch.where
+    condition: {t: b8, shape: [2, 1], v: [[true], [false]]}
+    input: {t: f64, shape: [2, 2], v: [[1, 2], [3, 4]]}
+    other: {t: f64, shape: [2], v: [30, 40]}
+    upstream: {t: f64, shape: [2, 2], v: [[1, 2], [3, 4]]}
+  expected: {outcome: value, fields: {out: [[1, 2], [30, 40]], grad_input: [[1, 2], [0, 0]], grad_other: [3, 4]}}
+- id: AR.E42
+  profile: torch210_where_tensor_autograd
+  clauses: [AR.C12]
+  input: {op: torch.where, condition: {t: b8, shape: [2], v: [true, false]}, input: {t: f32, shape: [2], v: [1, 2]}, other: {t: f32, shape: [2], v: [3, 4]}, upstream: {t: f32, shape: [1], v: [1]}}
+  expected: {outcome: invalid_input}
+- id: AR.E43
+  profile: torch210_where_tensor_autograd
+  clauses: [AR.C12]
+  input: {op: torch.where, condition: {t: b8, shape: [2], v: [true, false]}, input: 1, other: {t: f32, shape: [2], v: [3, 4]}, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E44
+  profile: torch210_where_tensor_autograd
+  clauses: [AR.C12]
+  input: {op: torch.where.out, condition: {t: b8, shape: [2], v: [true, false]}, input: {t: f32, shape: [2], v: [1, 2]}, other: {t: f32, shape: [2], v: [3, 4]}, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E45
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14, AR.C15]
+  input:
+    op: torch.clamp
+    input: {t: f32, shape: [5], v: [-2, -1, 0, 1, 2]}
+    min: -1
+    max: 1
+    upstream: {t: f32, shape: [5], v: [1, 2, 3, 4, 5]}
+  expected: {outcome: value, fields: {out: [-1, -1, 0, 1, 1], grad: [0, 2, 3, 4, 0]}}
+- id: AR.E46
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14, AR.C15]
+  input:
+    op: torch.clamp
+    input: {t: f16, shape: [3], v: [-1, 0, 1]}
+    min: 0
+    max: null
+    upstream: {t: f16, shape: [3], v: [1, 2, 3]}
+  expected: {outcome: value, fields: {out: [0, 0, 1], grad: [0, 2, 3]}}
+- id: AR.E47
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14, AR.C15]
+  input:
+    op: torch.clamp
+    input: {t: bf16, shape: [3], v: [-1, 0, 1]}
+    min: null
+    max: 0
+    upstream: {t: bf16, shape: [3], v: [1, 2, 3]}
+  expected: {outcome: value, fields: {out: [-1, 0, 0], grad: [1, 2, 0]}}
+- id: AR.E48
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14, AR.C15]
+  input:
+    op: torch.clamp
+    input: {t: f64, shape: [3], v: [-2, 0, 2]}
+    min: 1
+    max: -1
+    upstream: {t: f64, shape: [3], v: [1, 2, 3]}
+  expected: {outcome: value, fields: {out: [-1, -1, -1], grad: [0, 0, 0]}}
+- id: AR.E49
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14, AR.C15]
+  input:
+    op: torch.clamp
+    input: {t: f32, shape: [3], v: [-1, 0, 1]}
+    min: 0
+    max: 0
+    upstream: {t: f32, shape: [3], v: [1, 2, 3]}
+  expected: {outcome: value, fields: {out: [0, 0, 0], grad: [0, 2, 0]}}
+- id: AR.E50
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14]
+  input: {op: aten.clamp, input: {t: f32, shape: [2], v: [-1, 1]}, min: 0, max: 1, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E51
+  profile: torch210_clamp_scalar_autograd
+  clauses: [AR.C14]
+  input: {op: torch.clamp, input: {t: f32, shape: [2], v: [-1, 1]}, min: 0, max: 1, upstream: {t: f32, shape: [1], v: [1]}}
+  expected: {outcome: invalid_input}
+- id: AR.E52
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C16, AR.C17]
+  input:
+    op: torch.maximum
+    input: {t: f32, shape: [2, 1], v: [[1], [2]]}
+    other: {t: f32, shape: [1, 3], v: [[1, 0, 2]]}
+    upstream: {t: f32, shape: [2, 3], v: [[2, 4, 6], [8, 10, 12]]}
+  expected: {outcome: value, fields: {out: [[1, 1, 2], [2, 2, 2]], grad_input: [[5], [24]], grad_other: [[1, 0, 12]]}}
+- id: AR.E53
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C16, AR.C17]
+  input:
+    op: torch.minimum
+    input: {t: f64, shape: [2, 1], v: [[1], [2]]}
+    other: {t: f64, shape: [1, 3], v: [[1, 0, 2]]}
+    upstream: {t: f64, shape: [2, 3], v: [[2, 4, 6], [8, 10, 12]]}
+  expected: {outcome: value, fields: {out: [[1, 0, 1], [1, 0, 2]], grad_input: [[7], [6]], grad_other: [[9, 14, 6]]}}
+- id: AR.E54
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C16, AR.C17]
+  input:
+    op: torch.maximum
+    input: {t: bf16, shape: [1, 2], v: [[0, 1]]}
+    other: {t: bf16, shape: [2, 1], v: [[0], [1]]}
+    upstream: {t: bf16, shape: [2, 2], v: [[2, 4], [6, 8]]}
+  expected: {outcome: value, fields: {out: [[0, 1], [1, 1]], grad_input: [[1, 8]], grad_other: [[1], [10]]}}
+- id: AR.E55
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C17]
+  input:
+    op: torch.minimum
+    input: {t: f16, shape: [3], v: [1, 1, 1]}
+    other: {t: f16, shape: [3], v: [1, 1, 1]}
+    upstream: {t: f16, shape: [3], v: [2, 4, 6]}
+  expected: {outcome: value, fields: {out: [1, 1, 1], grad_input: [1, 2, 3], grad_other: [1, 2, 3]}}
+- id: AR.E56
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C16]
+  input: {op: aten.maximum, input: {t: f32, shape: [2], v: [1, 2]}, other: {t: f32, shape: [2], v: [2, 1]}, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E57
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C16]
+  input: {op: torch.maximum, input: {t: f32, shape: [2], v: [1, 2]}, other: 1, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: unsupported}
+- id: AR.E58
+  profile: torch210_extrema_tensor_autograd
+  clauses: [AR.C16]
+  input: {op: torch.minimum, input: {t: f32, shape: [2], v: [1, 2]}, other: {t: f32, shape: [2], v: [2, 1]}, upstream: {t: f32, shape: [1], v: [1]}}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['real: one selected default functional op with args/kwargs', 'masked_fill autograd: public op, complete input, Boolean mask, Python scalar value and complete upstream', 'where autograd: public op, complete Boolean condition, two complete data tensors and complete upstream', 'clamp autograd: public op, complete input, optional scalar bounds and complete upstream', 'extrema autograd: public maximum or minimum, two complete data tensors and complete upstream']
+  pre_state: [all inputs are unchanged]
+  post_state: [the complete output tensor; masked_fill and clamp autograd also return an input VJP; where and extrema autograd return both data VJPs]
+  observation_unit: every declared output coordinate together with dtype and shape
+domain:
+  valid: [exactly representable finite f16/bf16/f32/f64 values; same data dtype; documented broadcasting; representable finite scalars; complete same-dtype upstream for selected autograd profiles]
+  domain_undefined: [zero divisor in div or floor_divide; zero input to reciprocal]
+  invalid_input: [NaN; value not representable in its declared tensor dtype; scalar not representable in the data dtype; malformed call; nonboolean condition or mask; clamp without a bound]
+  unsupported: [integer, boolean data, float8, complex or infinite data; mixed data dtypes; pow; tensor clamp bounds; fma broadcasting; out or in-place variants; device, layout or aliasing effects]
+mutation_requirements:
+- {id: AR.M1, misreading: alpha is ignored in add and sub, witnesses: [AR.E1, AR.E3]}
+- {id: AR.M2, misreading: rsub does not reverse its operands, witnesses: [AR.E4]}
+- {id: AR.M3, misreading: floor division truncates toward zero, witnesses: [AR.E8]}
+- {id: AR.M4, misreading: reciprocal returns the input, witnesses: [AR.E11]}
+- {id: AR.M5, misreading: sign of zero is one, witnesses: [AR.E15]}
+- {id: AR.M6, misreading: fma omits its addend, witnesses: [AR.E16]}
+- {id: AR.M7, misreading: floor is implemented as ceil, witnesses: [AR.E17]}
+- {id: AR.M8, misreading: clamp with min greater than max returns min, witnesses: [AR.E20]}
+- {id: AR.M9, misreading: maximum and minimum are exchanged, witnesses: [AR.E23, AR.E24]}
+- {id: AR.M10, misreading: where selects the opposite branch, witnesses: [AR.E25]}
+- {id: AR.M11, misreading: masked_fill fills where the mask is false, witnesses: [AR.E26]}
+- {id: AR.M12, misreading: the finite profile accepts arbitrary rationals labelled as f16, witnesses: [AR.E27]}
+- {id: AR.M13, misreading: public masked_fill selects the fill value where the mask is false, witnesses: [AR.E35]}
+- {id: AR.M14, misreading: masked output coordinates pass upstream gradient to the input, witnesses: [AR.E35]}
+- {id: AR.M15, misreading: a broadcast input gradient is not summed back to the input shape, witnesses: [AR.E35]}
+- {id: AR.M16, misreading: the complete input gradient may be omitted, witnesses: [AR.E35]}
+- {id: AR.M17, misreading: public where exchanges its true and false data branches and their gradients, witnesses: [AR.E40]}
+- {id: AR.M18, misreading: a broadcast where input gradient is not summed back to the input shape, witnesses: [AR.E40]}
+- {id: AR.M19, misreading: both where data gradients use the true-condition branch, witnesses: [AR.E40]}
+- {id: AR.M20, misreading: the complete other gradient may be omitted, witnesses: [AR.E40]}
+- {id: AR.M21, misreading: clamp gives zero input gradient exactly at min and max, witnesses: [AR.E45]}
+- {id: AR.M22, misreading: the clamp input VJP ignores the upper bound, witnesses: [AR.E45]}
+- {id: AR.M23, misreading: clamp returns min when min exceeds max, witnesses: [AR.E48]}
+- {id: AR.M24, misreading: the complete clamp input gradient may be omitted, witnesses: [AR.E45]}
+- {id: AR.M25, misreading: equality upstream in maximum or minimum belongs entirely to the first operand, witnesses: [AR.E52, AR.E55]}
+- {id: AR.M26, misreading: maximum and minimum exchange their forward and strict-gradient branches, witnesses: [AR.E52, AR.E53]}
+- {id: AR.M27, misreading: an extrema input gradient is not summed back over broadcast axes, witnesses: [AR.E52]}
+- {id: AR.M28, misreading: the complete other gradient may be omitted from extrema, witnesses: [AR.E52]}
+nonclaims:
+- Floating operation rounding, output storage rounding and device instruction choice are numerical effects in K-G.
+- Mixed dtype promotion, integers and overflow, pow, complex values, NaN/inf behavior, signed zero, gradients other than the selected masked_fill, where, scalar-bound clamp and Tensor/Tensor extrema VJPs, in-place and out variants are not certified here.
+changes:
+- date: '2026-10-19'
+  change: >-
+    Add a PyTorch 2.10 public Tensor/Tensor maximum/minimum profile with complete forward and both broadcast VJPs,
+    including the official equal-value half split.
+  trigger: >-
+    A real FlagGems public-call audit found that the existing real profile covered extrema forward values but could
+    not judge a training call or the versioned PyTorch choice at equal operands.
+- date: '2026-10-19'
+  change: >-
+    Add a PyTorch 2.10 public scalar-bound clamp profile with complete forward and input VJP, explicitly preserving
+    PyTorch's inclusive boundary subgradient and the min-greater-than-max rule.
+  trigger: >-
+    A real common-operator audit found that the existing real profile covered clamp forward values but could not
+    judge a training call or distinguish the selected PyTorch boundary gradient from other legal mathematical choices.
+- date: '2026-10-19'
+  change: >-
+    Add a PyTorch 2.10 public Tensor/Tensor where profile with complete forward and both data VJPs, including separate
+    gradient reduction for independently broadcast input and other tensors.
+  trigger: >-
+    A real common-operator audit found that the existing real profile covered only the where forward selection and
+    could not judge a training call, branch-specific gradient routing or either data tensor's broadcast reduction.
+- date: '2026-10-19'
+  change: >-
+    Add a PyTorch 2.10 public scalar masked_fill profile with complete forward and input VJP, including input expansion
+    under ordinary broadcasting and gradient reduction back to the input shape.
+  trigger: >-
+    A real common-operator audit found that the existing real profile covered only an aten-style forward value and
+    could not judge a training call or implementations that incorrectly restrict which operand may broadcast.
+- date: '2026-10-18'
+  change: >-
+    Replace the active all-arithmetic draft with a finite same-dtype floating profile for twenty common pointwise
+    operations, complete output checking and physical input representability. Preserve the former broad contract under contracts/draft.
+  trigger: >-
+    The former profile treated integer arithmetic as unbounded exact arithmetic, admitted arbitrary rationals under
+    floating dtype labels, mixed unresolved pow and infinity choices with routine arithmetic, and had no complete output checker.

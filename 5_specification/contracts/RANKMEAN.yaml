@@ -6,10 +6,9 @@ review:
   status: reviewed_for_implementation
   date: '2026-10-15'
   reviewer: ChatGPT review of uploaded contract draft
-  input_package_sha256: a9a2a9123c2f39f5f76d1c82d61d70869bc0ec8236cce16d978f9556293d15a3
   scope: Contract content and explicit profiles, not all-domain oracle certification
 activation:
-  implementation_status: pending
+  implementation_status: validated
   runtime_binding_status: pending
   requires:
   - source_profile_matched
@@ -17,9 +16,10 @@ activation:
   - all_required_outputs_bound
   - reference_semantics_and_guarantees_validated
   - no_unresolved_contradiction
-  - contract_and_implementation_hashes_bound
+  - reviewed_contract_and_adapter_match_current
 profiles:
   base:
+    basis: [RM.TASK]
     meaning: 'One declared task: L=sum per-rank token loss sums / sum valid-token counts.'
     task_choice_required: true
 outputs:
@@ -246,11 +246,13 @@ domain:
   domain_undefined:
   - sum(n)==0, with all S zero
   invalid_input:
+  - missing required input fields or a non-mapping input
   - shape mismatch
   - negative or fractional counts
   - nonzero S paired with zero n
   - duplicate participant IDs
   unsupported:
+  - participant identifiers without a hashable representation
   - sequence-equal objectives
   - weighted means normalized by weight mass rather than token count
   - changing token membership or per-token losses across compared partitions
@@ -284,3 +286,8 @@ nonclaims:
 - Task-selection still required per runtime use, independent of code correctness.
 - Empty/unsupported/invalid are distinct outcomes; no finiteness filtering or drop-rank policy may be introduced
   silently.
+
+changes:
+- date: '2026-10-18'
+  change: Validate the rational reference and complete-output comparator; reject missing inputs and classify unsupported participant representations explicitly.
+  trigger: Source and implementation review in evidence/rankmean_implementation.md, plus independent token-level reconstruction in tests/test_rankmean_independent.py.

@@ -29,6 +29,10 @@ def _verdicts(report):
 def test_black_box_measures_the_total_and_finds_a_uniform_shift():
     rep = run_black_box(_Shifted(1e-4), dev=range(0, 8), conf=range(8, 40))
     assert rep["mode"] == "black-box" and "no decomposition" in rep["comparison"]
+    assert rep["reference_kind"] == "implementation_reference"
+    assert rep["semantic_verdict"] == "not_established"
+    assert rep["outputs"]["y"]["total_black_box"]["verdict_scope"] == \
+        "reference_difference; not a semantic verdict"
     assert _verdicts(rep)["R1"] == "DETECTED_NEGATIVE"  # R1 projects on -1/sqrt(n): a positive shift
     assert rep["outputs"]["y"]["special_values"]["k_vs_f_class_mismatch"] == 0
 

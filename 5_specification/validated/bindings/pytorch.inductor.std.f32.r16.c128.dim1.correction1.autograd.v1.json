@@ -1,0 +1,57 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.std.f32.r16.c128.dim1.correction1.autograd.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.func.grad_and_value(torch.std))",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "all generated Triton launches return the complete float32[16] corrected standard deviation and float32[16,128] input VJP",
+    "measure_call": "../calls/inductor_std.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "public_std_forward",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute public PyTorch 2.10 standard deviation along dimension one with correction one for the complete finite float32 input.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.std", "basis": "the public callable is torch.std"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/scalars/dim"},
+        {"target": "/kwargs/correction", "source": "/scalars/correction"},
+        {"target": "/kwargs/keepdim", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/y", "conversion": "tensor_record", "measure_output": "y"}
+      ]
+    },
+    {
+      "id": "public_std_input_vjp",
+      "contract": "REDUCE",
+      "profile": "real",
+      "task_statement": "Compute the complete input VJP of public PyTorch 2.10 corrected standard deviation against the received upstream tensor.",
+      "input_map": [
+        {"target": "/op", "literal": "vjp.aten.std", "basis": "the public autograd boundary differentiates torch.std"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/scalars/dim"},
+        {"target": "/kwargs/correction", "source": "/scalars/correction"},
+        {"target": "/kwargs/keepdim", "source": "/scalars/keepdim"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"},
+    {"argument": "upstream", "effect": "unchanged"}
+  ]
+}

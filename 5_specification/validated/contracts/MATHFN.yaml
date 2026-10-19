@@ -1,0 +1,123 @@
+schema_version: '1.2'
+id: MATHFN
+role: ATEN_MATHFN
+title: Common element-wise elementary functions, finite floating real-number semantics
+review:
+  status: reviewed_for_implementation
+  author: Claude (spec v3 author), 2026-10-16
+  reviewer: Codex independent source, domain, formula and implementation review
+  date: '2026-10-18'
+  scope: Dense finite f16/bf16/f32/f64 functional calls within the declared magnitude and real domains; device
+    approximations, output rounding and concrete kernel binding remain separate
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/mathfn_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.exp, aten.log, aten.log1p, aten.expm1, aten.sqrt, aten.rsqrt, aten.sin, aten.cos, aten.tanh, aten.sigmoid,
+  aten.erf]
+profiles:
+  real:
+    meaning: The selected PyTorch 2.10 functional operation applied element-wise to the exact values of one dense
+      finite f16/bf16/f32/f64 tensor, with |x| <= 100 and the function-specific real domain in MF.FINITE. The result is
+      the exact real mathematical value enclosed rigorously; device approximation and storage rounding are not part
+      of this task.
+    task_choice_required: false
+outputs:
+  out:
+    shape: exactly the input shape, including every empty dimension
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: A stored binary floating input is read as its exact rational value before applying the selected
+    function.
+  quality: No tolerance; exact values and independently computed enclosures must be contained in the returned
+    enclosure.
+  test_evidence: Independent high-precision Arb evaluation for every admitted function family, plus the separate
+    rational-series check for erf and exact boundary checks.
+  error_handling: NaN and malformed calls are invalid_input; non-floating tensors, float8, infinities, magnitudes above
+    100, out variants and unreviewed domains are unsupported; points outside a selected function's real domain are
+    domain_undefined.
+decisions:
+- id: MF.SCHEMA
+  status: reviewed
+  statement: 'This profile selects the functional one-input Tensor -> Tensor variants of exp, log, log1p, expm1,
+    sqrt, rsqrt, sin, cos, tanh, sigmoid and erf. In-place and out variants are different calls and are not accepted.
+    Output shape and floating dtype equal the input shape and dtype. The contract covers dense value semantics only;
+    sparse dispatch, aliasing and memory-format effects are outside its range.'
+  basis: [TS_NATIVE_FUNCTIONS.MATHFN_SCHEMAS, T_EXP.DEF, T_LOG.DEF, T_LOG1P.DEF, T_EXPM1.DEF, T_SQRT.DEF,
+    T_RSQRT.DEF, T_SIN.DEF, T_COS.DEF, T_TANH.DEF, T_SIGMOID.DEF, T_ERF.DEF]
+- id: MF.FINITE
+  status: reviewed
+  statement: 'The admitted input is one dense finite f16/bf16/f32/f64 tensor with |x| <= 100. Function domains are:
+    exp, expm1, sin, cos, tanh, sigmoid and erf accept the whole admitted interval; log requires x > 0; log1p requires
+    x > -1; sqrt requires x >= 0; rsqrt requires x > 0. Values outside these mathematical domains are undefined.
+    Infinity, float8, integer, boolean and complex behavior is not selected. The magnitude bound is a conservative
+    reference scope, not a claim about the public API.'
+  basis: [T_EXP.DEF, T_LOG.DEF, T_LOG1P.DEF, T_EXPM1.DEF, T_SQRT.DEF, T_RSQRT.DEF, T_SIN.DEF, T_COS.DEF,
+    T_TANH.DEF, T_SPECIAL.EXPIT, T_SPECIAL.ERF]
+- id: MF.FORMULAS
+  status: reviewed
+  statement: 'Element-wise formulas are exp(x)=e^x, log(x)=ln(x), log1p(x)=ln(1+x), expm1(x)=e^x-1,
+    sqrt(x), rsqrt(x)=1/sqrt(x), sin and cos in radians, tanh(x), sigmoid(x)=1/(1+e^-x), and
+    erf(x)=2/sqrt(pi) integral_0^x exp(-t^2) dt. These are mathematical tasks on exact input values; a device
+    approximation is compared separately.'
+  basis: [T_EXP.DEF, T_LOG.DEF, T_LOG1P.DEF, T_EXPM1.DEF, T_SPECIAL.EXPM1, T_SQRT.DEF, T_RSQRT.DEF, T_SIN.DEF,
+    T_COS.DEF, T_TANH.DEF, T_SIGMOID.DEF, T_SPECIAL.EXPIT, T_ERF.DEF, T_SPECIAL.ERF]
+clauses:
+- {id: MF.C1, basis: [MF.SCHEMA, MF.FORMULAS], statement: 'exp, log, log1p and expm1 use their declared natural-base formulas element-wise', observes: [out], evidence_kind: definition}
+- {id: MF.C2, basis: [MF.SCHEMA, MF.FORMULAS], statement: 'sqrt and rsqrt use the nonnegative square root and its reciprocal on their declared domains', observes: [out], evidence_kind: definition}
+- {id: MF.C3, basis: [MF.SCHEMA, MF.FORMULAS], statement: 'sin and cos take radians; tanh, sigmoid and erf use their declared formulas', observes: [out], evidence_kind: definition}
+- {id: MF.C4, basis: [MF.FINITE], statement: 'only finite f16/bf16/f32/f64 values with |x| <= 100 are admitted; function-specific domain failures are undefined and unreviewed types or ranges are unsupported', observes: [out], evidence_kind: definition}
+- {id: MF.C5, basis: [MF.SCHEMA], statement: 'the functional call has one tensor argument and returns the complete tensor with the same shape and dtype', observes: [out], evidence_kind: definition}
+examples:
+- {id: MF.E1, profile: real, clauses: [MF.C1], input: {op: aten.exp, args: [{t: f32, v: [0, 1, -1]}]}, expected: {outcome: value, fields: {out: [1, exp(1), exp(-1)]}}}
+- {id: MF.E2, profile: real, clauses: [MF.C1], input: {op: aten.log, args: [{t: f64, v: [1, 2, '1/2']}]}, expected: {outcome: value, fields: {out: [0, log(2), -log(2)]}}}
+- {id: MF.E3, profile: real, clauses: [MF.C1, MF.C4], input: {op: aten.log, args: [{t: f32, v: [-1]}]}, expected: {outcome: domain_undefined}}
+- {id: MF.E4, profile: real, clauses: [MF.C1], input: {op: aten.log1p, args: [{t: bf16, v: [0, 1, '-1/2']}]}, expected: {outcome: value, fields: {out: [0, log(2), -log(2)]}}}
+- {id: MF.E5, profile: real, clauses: [MF.C1, MF.C4], input: {op: aten.log1p, args: [{t: f32, v: [-1]}]}, expected: {outcome: domain_undefined}}
+- {id: MF.E6, profile: real, clauses: [MF.C1], input: {op: aten.expm1, args: [{t: f16, v: [0, 1, '-1/2']}]}, expected: {outcome: value, fields: {out: [0, exp(1)-1, exp(-1/2)-1]}}}
+- {id: MF.E7, profile: real, clauses: [MF.C2], input: {op: aten.sqrt, args: [{t: f32, v: [4, 2, 0, '1/4']}]}, expected: {outcome: value, fields: {out: [2, sqrt(2), 0, '1/2']}}}
+- {id: MF.E8, profile: real, clauses: [MF.C2, MF.C4], input: {op: aten.sqrt, args: [{t: f32, v: [-1]}]}, expected: {outcome: domain_undefined}}
+- {id: MF.E9, profile: real, clauses: [MF.C2], input: {op: aten.rsqrt, args: [{t: f32, v: [4, 2, '1/4']}]}, expected: {outcome: value, fields: {out: ['1/2', 1/sqrt(2), 2]}}}
+- {id: MF.E10, profile: real, clauses: [MF.C2, MF.C4], input: {op: aten.rsqrt, args: [{t: f32, v: [0]}]}, expected: {outcome: domain_undefined}}
+- {id: MF.E11, profile: real, clauses: [MF.C3], input: {op: aten.sin, args: [{t: f32, v: [0, 1, -2]}]}, expected: {outcome: value, fields: {out: [0, sin(1), -sin(2)]}}}
+- {id: MF.E12, profile: real, clauses: [MF.C3], input: {op: aten.cos, args: [{t: f32, v: [0, 1, -2]}]}, expected: {outcome: value, fields: {out: [1, cos(1), cos(2)]}}}
+- {id: MF.E13, profile: real, clauses: [MF.C3], input: {op: aten.tanh, args: [{t: f32, v: [0, 1, -1]}]}, expected: {outcome: value, fields: {out: [0, (exp(2)-1)/(exp(2)+1), -(exp(2)-1)/(exp(2)+1)]}}}
+- {id: MF.E14, profile: real, clauses: [MF.C3], input: {op: aten.sigmoid, args: [{t: f32, v: [0, 1, -1]}]}, expected: {outcome: value, fields: {out: ['1/2', 1/(1+exp(-1)), 1/(1+exp(1))]}}}
+- {id: MF.E15, profile: real, clauses: [MF.C3], input: {op: aten.erf, args: [{t: f32, v: [0, 1, -1]}]}, expected: {outcome: value, fields: {out: [0, erf(1), -erf(1)]}}}
+- {id: MF.E16, profile: real, clauses: [MF.C4], input: {op: aten.exp, args: [{t: i64, v: [0, 2]}]}, expected: {outcome: unsupported}}
+- {id: MF.E17, profile: real, clauses: [MF.C4], input: {op: aten.exp, args: [{t: f8e4m3, v: [1]}]}, expected: {outcome: unsupported}}
+- {id: MF.E18, profile: real, clauses: [MF.C4], input: {op: aten.exp, args: [{t: f32, v: [inf]}]}, expected: {outcome: unsupported}}
+- {id: MF.E19, profile: real, clauses: [MF.C4], input: {op: aten.exp, args: [{t: f32, v: [.nan]}]}, expected: {outcome: invalid_input}}
+- {id: MF.E20, profile: real, clauses: [MF.C4], input: {op: aten.sin, args: [{t: f32, v: [101]}]}, expected: {outcome: unsupported}}
+- {id: MF.E21, profile: real, clauses: [MF.C5], input: {op: aten.exp, args: [{t: f32, v: [1]}], kwargs: {out: {t: f32, v: [0]}}}, expected: {outcome: unsupported}}
+- {id: MF.E22, profile: real, clauses: [MF.C5], input: {op: aten.cos, args: [{t: f64, v: [[], []]}]}, expected: {outcome: value, fields: {out: [[], []]}}}
+signature:
+  inputs: ['op: one covered functional ATen name', 'args: one dense finite floating tensor']
+  pre_state: [the input tensor is unchanged]
+  post_state: [the complete output tensor]
+  observation_unit: every output coordinate together with output dtype and shape
+domain:
+  valid: [dense finite f16/bf16/f32/f64 values with absolute value at most 100 and within MF.FINITE]
+  domain_undefined: [log input <= 0, log1p input <= -1, sqrt input < 0, rsqrt input <= 0]
+  invalid_input: [NaN, malformed calls, wrong argument count]
+  unsupported: [integer, boolean, float8 or complex tensors, infinities, magnitude above 100, in-place or out variants,
+    sparse/layout/memory effects]
+mutation_requirements:
+- {id: MF.M1, misreading: log1p computed as log, witnesses: [MF.E4]}
+- {id: MF.M2, misreading: expm1 computed as exp, witnesses: [MF.E6]}
+- {id: MF.M3, misreading: rsqrt computed as sqrt, witnesses: [MF.E9]}
+- {id: MF.M4, misreading: 'sigmoid(x) computed as (1 + tanh(x))/2, which is sigmoid(2x)', witnesses: [MF.E14]}
+- {id: MF.M5, misreading: erf(x) computed as erf(x/sqrt(2)), witnesses: [MF.E15]}
+- {id: MF.M6, misreading: log in base 2, witnesses: [MF.E2]}
+- {id: MF.M7, misreading: sin of degrees, witnesses: [MF.E11]}
+- {id: MF.M8, misreading: exp(x) computed as exp(-x), witnesses: [MF.E1]}
+nonclaims:
+- Device approximation, output storage rounding, special values outside MF.FINITE, backward formulas, in-place and out variants.
+changes:
+- date: '2026-10-18'
+  change: Narrow the active contract to finite common floating functional calls with complete output checking; retain the
+    former integer, infinity and endpoint draft under contracts/draft.
+  trigger: Integer promotion was overstated as exact and several special-value conventions lacked enough source support;
+    unresolved edges must not block the common finite task.

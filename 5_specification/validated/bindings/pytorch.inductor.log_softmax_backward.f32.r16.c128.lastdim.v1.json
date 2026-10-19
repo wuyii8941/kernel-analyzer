@@ -1,0 +1,40 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "pytorch.inductor.log_softmax_backward.f32.r16.c128.lastdim.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "PyTorch Inductor",
+    "version": "2.10.0+cu128",
+    "callable": "torch.compile(torch.ops.aten._log_softmax_backward_data.default)",
+    "runtime_package": {
+      "distribution": "torch",
+      "version": "2.10.0+cu128"
+    },
+    "boundary": "generated Triton launch returns the complete float32[16,128] VJP from an explicit saved log-softmax output",
+    "measure_call": "../calls/inductor_log_softmax_backward.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "saved_output_log_softmax_backward",
+      "contract": "SOFTMAX",
+      "profile": "real",
+      "task_statement": "Compute the complete PyTorch 2.10 _log_softmax_backward_data result from an explicit finite float32 upstream and saved last-dimension log-softmax output.",
+      "input_map": [
+        {"target": "/op", "literal": "aten._log_softmax_backward_data", "basis": "the compiled callable is the ATen saved-output backward operation"},
+        {"target": "/args/0", "source": "/tensor_arguments/upstream/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "source": "/tensor_arguments/saved_output/before", "conversion": "tensor_record"},
+        {"target": "/args/2", "source": "/scalars/dim"},
+        {"target": "/args/3", "source": "/scalars/input_dtype"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/dx", "conversion": "tensor_record", "measure_output": "dx"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "upstream", "effect": "unchanged"},
+    {"argument": "saved_output", "effect": "unchanged"}
+  ]
+}

@@ -17,7 +17,7 @@ from mpmath import iv
 from kernel_spec import c_ce as K
 from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer, rational, to_iv, vector
 
-PROFILES = ("index_single_class", "index_kdim", "probability")
+PROFILES = ("index_single_class", "index_kdim", "probability", "liger_inplace_index_unsmoothed")
 KEYS = {"logits", "target", "weights", "eps", "ignore_index", "reduction", "upstream"}
 
 
@@ -49,6 +49,11 @@ def _inputs(profile, inp):
         targets = K.rows_of(tflat, N, C, D)
     else:
         ii = integer(inp["ignore_index"], "ignore_index")
+        if profile == "liger_inplace_index_unsmoothed":
+            if len(shape) != 2 or C < 2:
+                raise Unsupported("Liger in-place profile requires two-dimensional logits with at least two classes")
+            if eps != 0:
+                raise Unsupported("Liger in-place pilot covers unsmoothed class-index targets")
         if profile == "index_single_class" and C != 1:
             raise Unsupported("index_single_class covers C = 1 only (C >= 2: the CE pilot or index_kdim)")
         if profile == "index_kdim":
@@ -78,13 +83,28 @@ def reference(profile, inp):
     a = _inputs(profile, inp)
     rows = K.rows_of(a["flat"], a["N"], a["C"], a["D"])
     loss, grad = K.ce_rows(rows, a["targets"], a["w"], a["eps"], a["ii"], a["red"], a["prob"])
+    stored_grad = [list(row) for row in grad]
     if a["red"] == "none":
         grad = [[K.scale(g, a["uflat"][r]) for g in row] for r, row in enumerate(grad)]
         loss = K.nest(loss, a["lshape"])
     else:
         grad = [[K.scale(g, a["u"]) for g in row] for row in grad]
     gflat = K.unrows(grad, a["N"], a["C"], a["D"])
-    return Result("value", {"loss": loss, "gradient": K.nest(gflat, a["shape"])})
+    fields = {"loss": loss, "gradient": K.nest(gflat, a["shape"])}
+    if profile == "liger_inplace_index_unsmoothed":
+        # Forward stores the derivative in the logits buffer. Scalar backward
+        # scales that buffer in place; reduction='none' forms a new scaled
+        # tensor and leaves the public logits buffer at the unscaled derivative.
+        post = grad if a["red"] != "none" else stored_grad
+        post_flat = K.unrows(post, a["N"], a["C"], a["D"])
+        fields["post_logits"] = K.nest(post_flat, a["shape"])
+    return Result("value", fields)
+
+
+def check_output(profile, inp, observed):
+    """Compare every result and post-state field selected by the profile."""
+    from kernel_spec.compare import check_enclosed_output
+    return check_enclosed_output(reference(profile, inp).fields, observed)
 
 
 # ------------------------------------------------------------------ independent implementation for the mutants

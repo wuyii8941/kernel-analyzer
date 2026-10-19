@@ -1,0 +1,22 @@
+{
+  "call": "../calls/inductor_mse_loss.py:call",
+  "inputs": {
+    "x": {"sampler": {"normal": [0, 2]}, "shape": [32, 128], "dtype": "float32"},
+    "target": {"sampler": {"normal": [0, 2]}, "shape": [32, 128], "dtype": "float32"},
+    "upstream": {"sampler": {"normal": [0, 1]}, "shape": [], "dtype": "float32"},
+    "reduction": {"const": "mean"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["loss", "dx", "dtarget"],
+    "binding_plan": "../call_bindings/inductor_mse_loss.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 1200, "gpu_seconds": 1200, "case_timeout": 600, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

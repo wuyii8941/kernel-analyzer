@@ -1,0 +1,16 @@
+{
+  "purpose": "Separate public implementation batch fixed before execution; reuse existing references without tuning them to these outputs. This is not independently blinded acceptance.",
+  "candidate": "FlagGems 5.0.2 public torch calls with only the selected operation enabled",
+  "standard": "PyTorch 2.10.0+cu128 native CUDA, outside use_gems",
+  "scope": "forward, all returned values and indices, dtype and shape, all input tensors unchanged; no backward or statistical bias claim",
+  "shapes": [[3, 37], [5, 65]],
+  "seeds": [20261121, 20261122],
+  "cases": [
+    {"id": "topk_largest", "op": "topk", "contract": "SORT", "profile": "finite_unique", "kwargs": {"k": 7, "dim": 1, "largest": true, "sorted": true}, "input": "unique_rows", "expected_reference": "value"},
+    {"id": "topk_smallest", "op": "topk", "contract": "SORT", "profile": "finite_unique", "kwargs": {"k": 7, "dim": 1, "largest": false, "sorted": true}, "input": "unique_rows", "expected_reference": "value"},
+    {"id": "cumsum", "op": "cumsum", "contract": "REDUCE", "profile": "real", "kwargs": {"dim": 1}, "input": "dyadic", "expected_reference": "value"},
+    {"id": "gather", "op": "gather", "contract": "INDEX", "profile": "real", "kwargs": {"dim": 1}, "input": "dyadic_with_indices", "expected_reference": "value"},
+    {"id": "topk_ties", "op": "topk", "contract": "SORT", "profile": "finite_unique", "kwargs": {"k": 7, "dim": 1, "largest": true, "sorted": true}, "input": "ties", "expected_reference": "unsupported"},
+    {"id": "topk_unsorted", "op": "topk", "contract": "SORT", "profile": "finite_unique", "kwargs": {"k": 7, "dim": 1, "largest": true, "sorted": false}, "input": "unique_rows", "expected_reference": "unsupported"}
+  ]
+}

@@ -1,117 +1,87 @@
 schema_version: '1.2'
 id: CAST
 role: CAST
-title: Conversion between dtypes (prims.convert_element_type, aten._to_copy, Tensor.to)
+title: Finite conversion between the common binary floating dtypes
 review:
-  status: drafted
+  status: reviewed_for_implementation
   author: Claude (spec v3 author), 2026-10-16
-  date: '2026-10-16'
-  scope: The value a conversion delivers for an exact input; awaiting a review by someone who did not write it
+  reviewer: Codex independent source, domain, rounding and implementation review
+  date: '2026-10-18'
+  scope: Dense finite f16/bf16/f32/f64 value conversion under the selected IEEE roundTiesToEven profile; concrete kernel binding remains separate
 activation:
-  implementation_status: pending
+  implementation_status: validated
+  implementation_evidence: evidence/cast_implementation.md
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [prims.convert_element_type, aten._to_copy]
 profiles:
-  ieee:
-    meaning: 'A conversion to a floating dtype rounds to nearest, ties to even, in that format (float64, float32,
-      float16, bfloat16, float8_e5m2, float8_e4m3fn), subnormals exact; floating to integer truncates toward zero;
-      integer to floating rounds to nearest even; to bool is "nonzero"; bool to numbers is 0 / 1.'
-    task_choice_required: false
+  finite_rne:
+    meaning: Convert every exactly represented finite f16/bf16/f32/f64 input value to a selected target among the same four dtypes using IEEE 754 roundTiesToEven. The result must remain finite. Shape is preserved and every result is exact.
+    task_choice_required: true
+    basis: [CA.PROFILE, CA.SCHEMA, CA.RNE]
 outputs:
   out:
-    shape: the input shape
-    kind: discrete
+    shape: exactly the input shape, including every empty dimension
     guarantee: exact
 comparison:
-  input_binding: Tensor values are the exact values received.
-  quality: Exact equality; a conversion result is a single representable value.
-  test_evidence: Exact rational equality (the rounding oracle of specification_v2 is written from IEEE 754 and
-    cross-checked against numpy in test_oracle.py).
-  error_handling: Out-of-range conversions to integer types and overflow of a format without infinities are domain_undefined.
+  input_binding: Each input record denotes an already stored value and therefore must be exactly representable in its declared source dtype. The binding must name the target dtype and select roundTiesToEven.
+  quality: Exact equality of target dtype, shape and every converted coordinate; no tolerance.
+  test_evidence: Independent integer-arithmetic encoders cover all four admitted formats, their normal and subnormal boundaries, adjacent values and midpoint ties; retained PyTorch and Triton sources fix the call interfaces.
+  error_handling: NaN and malformed calls are invalid_input. Values or dtypes outside the reviewed finite floating scope, output overflow and unselected copy options are unsupported.
 decisions:
-- id: CA.RNE
-  status: drafted
-  statement: PyTorch does not name the rounding of floating-point conversions on Tensor.to. The contract uses IEEE 754's
-    default roundTiesToEven (CPU and CUDA conversion instructions use it). Alternative readings (truncation, ties
-    away) are listed as misreadings, not as profiles, because no PyTorch source states them.
+- id: CA.PROFILE
+  status: reviewed
+  statement: This contract explicitly selects IEEE 754 roundTiesToEven for finite binary floating conversion. PyTorch's public Tensor.to page does not by itself name that rounding direction, so a caller must bind this profile to a task or kernel that selects the same rule. Other legal conversion rules are not declared wrong by this contract.
   basis: [IEEE754.RNE, T_TO.DEF]
-- id: CA.OVERFLOW
-  status: drafted
-  statement: 'Overflow in round-to-nearest gives infinity of the sign of the value for formats with infinities (IEEE
-    754 section 7.4); for float8_e4m3fn, which has no infinity, the result is NaN (OCP OFP8) and therefore the real
-    target is domain_undefined. Non-saturating conversion is the default of Tensor.to.'
-  basis: [IEEE754.OVERFLOW, OCP_OFP8.E4M3, OCP_OFP8.CONVERT]
-- id: CA.INT_RANGE
-  status: drafted
-  statement: Floating to integer truncates toward zero; if the truncated value does not fit the integer type (or the
-    value is infinite) the behaviour is undefined (Tensor.to) and the real target is domain_undefined.
-  basis: [T_TO.TRUNC, IEEE754.CONVERT_INT]
+- id: CA.SCHEMA
+  status: reviewed
+  statement: prims.convert_element_type takes one tensor and one target dtype and creates a new tensor. The selected aten._to_copy form requires dtype and leaves layout, device, pin_memory and memory_format unset, with non_blocking false. Both preserve logical shape and do not modify the input.
+  basis: [TS_PRIMS.CONVERT_ELEMENT_TYPE, TS_NATIVE_FUNCTIONS.TO_COPY_SCHEMA]
+- id: CA.RNE
+  status: reviewed
+  statement: Every exact finite source value is rounded to the nearest representable target value; an exact midpoint selects the neighbor whose least-significant significand bit is even. Normal and subnormal target values use the same rule. Same-dtype and widening conversions are exact.
+  basis: [IEEE754.RNE]
+- id: CA.FINITE
+  status: reviewed
+  statement: Source and target dtypes are f16, bf16, f32 or f64. Inputs must be finite point values exactly representable in the declared source dtype, and the rounded target must be finite. Integer, boolean, float8, complex, NaN, infinities and target overflow remain outside this profile.
+  basis: [CA.PROFILE, CA.RNE]
 clauses:
-- {id: CA.C1, basis: [CA.RNE, IEEE754.RNE], statement: 'floating -> floating: round to nearest, ties to even; subnormals
-    exact', observes: [out], evidence_kind: definition}
-- {id: CA.C2, basis: [CA.OVERFLOW], statement: overflow gives +-inf (formats with infinities) or undefined (float8_e4m3fn),
-  observes: [out], evidence_kind: definition}
-- {id: CA.C3, basis: [T_TO.TRUNC, CA.INT_RANGE], statement: 'floating -> integer: truncate toward zero; out of range
-    undefined', observes: [out], evidence_kind: definition}
-- {id: CA.C4, basis: [CA.RNE, IEEE754.RNE], statement: 'integer -> floating: round to nearest even', observes: [out],
-  evidence_kind: definition}
-- {id: CA.C5, basis: [T_TO.DEF, T_LNOT.DEF], statement: 'to bool: nonzero is True (as in the logical operations); bool to
-    numbers: True = 1, False = 0', observes: [out], evidence_kind: definition}
+- {id: CA.C1, basis: [CA.RNE], statement: finite narrowing uses roundTiesToEven for normal and subnormal results, observes: [out], evidence_kind: definition}
+- {id: CA.C2, basis: [CA.RNE], statement: widening and same-dtype conversion preserve every exact input value, observes: [out], evidence_kind: definition}
+- {id: CA.C3, basis: [CA.SCHEMA], statement: the functional call returns one complete tensor with the target dtype and the exact input shape while leaving the input unchanged, observes: [out], evidence_kind: definition}
+- {id: CA.C4, basis: [CA.FINITE], statement: unrepresentable source records, nonfinite values, target overflow and unreviewed dtypes or options are refused before semantic comparison, observes: [out], evidence_kind: definition}
 examples:
-- {id: CA.E1, profile: ieee, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['1/3']}, bf16]},
-  expected: {outcome: value, fields: {out: ['171/512']}}, note: '1/3 = 1.0101010|1010..._2 * 2^-2; the dropped part exceeds
-    half an ulp, so the 8-bit significand rounds up to 1.0101011_2.'}
-- {id: CA.E2, profile: ieee, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['257/256', '259/256']},
-      bf16]}, expected: {outcome: value, fields: {out: [1, '65/64']}}, note: 'Both are exact ties: 1 + 2^-8 goes to the even
-    neighbour 1, 1 + 3*2^-8 to the even neighbour 1 + 2^-6.'}
-- {id: CA.E3, profile: ieee, clauses: [CA.C1, CA.C2], input: {op: prims.convert_element_type, args: [{t: f32, v: [70000,
-        65519, -70000]}, f16]}, expected: {outcome: value, fields: {out: [inf, 65504, -inf]}}, note: 'float16 max is 65504; values
-    at or above 65520 round to infinity.'}
-- {id: CA.E4, profile: ieee, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['1/33554432',
-        '3/67108864']}, f16]}, expected: {outcome: value, fields: {out: [0, '1/16777216']}}, note: '2^-25 is halfway between 0 and
-    the smallest subnormal 2^-24 (tie to even 0); 3 * 2^-26 = 0.75 * 2^-24 rounds to 2^-24.'}
-- {id: CA.E5, profile: ieee, clauses: [CA.C3], input: {op: prims.convert_element_type, args: [{t: f32, v: ['-5/2', '27/10', 3,
-        '-1/10']}, i64]}, expected: {outcome: value, fields: {out: [-2, 2, 3, 0]}}}
-- {id: CA.E6, profile: ieee, clauses: [CA.C3], input: {op: prims.convert_element_type, args: [{t: f32, v: [100000000000000000000]},
-      i32]}, expected: {outcome: domain_undefined}}
-- {id: CA.E7, profile: ieee, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: i64, v: [16777217, 16777219,
-        16777221]}, f32]}, expected: {outcome: value, fields: {out: [16777216, 16777220, 16777220]}}, note: 'Above 2^24 float32
-    spacing is 2; 2^24 + 1 ties to 2^24 (even significand), 2^24 + 3 ties to 2^24 + 4, 2^24 + 5 ties to 2^24 + 4.'}
-- {id: CA.E8, profile: ieee, clauses: [CA.C5], input: {op: prims.convert_element_type, args: [{t: f32, v: [0, '1/2', -inf]},
-      b8]}, expected: {outcome: value, fields: {out: [false, true, true]}}}
-- {id: CA.E9, profile: ieee, clauses: [CA.C5], input: {op: prims.convert_element_type, args: [{t: b8, v: [true, false]}, f32]},
-  expected: {outcome: value, fields: {out: [1, 0]}}}
-- {id: CA.E10, profile: ieee, clauses: [CA.C1, CA.C2], input: {op: prims.convert_element_type, args: [{t: f32, v: [460, -460]},
-      f8e4m3]}, expected: {outcome: value, fields: {out: [448, -448]}}, note: 'In [256, 512) the e4m3 spacing is 32; 460 is
-    nearer 448 than 480.'}
-- {id: CA.E11, profile: ieee, clauses: [CA.C2], input: {op: prims.convert_element_type, args: [{t: f32, v: [500]}, f8e4m3]},
-  expected: {outcome: domain_undefined}, note: 500 rounds to 512, beyond 448; e4m3fn has no infinity.}
-- {id: CA.E12, profile: ieee, clauses: [CA.C1], input: {op: aten._to_copy, args: [{t: f64, v: ['1/10']}], kwargs: {dtype: f32}},
-  expected: {outcome: value, fields: {out: ['13421773/134217728']}}, note: 'float32(0.1): 0.1 = 1.1001100110011001100110011|00..._2
-    * 2^-4; the 24-bit significand rounds up to 13421773 * 2^-27.'}
-- {id: CA.E13, profile: ieee, clauses: [CA.C2], input: {op: prims.convert_element_type, args: [{t: f32, v: [inf, -inf]}, bf16]},
-  expected: {outcome: value, fields: {out: [inf, -inf]}}}
+- {id: CA.E1, profile: finite_rne, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['515/512']}, bf16]}, expected: {outcome: value, fields: {out: ['129/128']}}}
+- {id: CA.E2, profile: finite_rne, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['257/256', '259/256']}, bf16]}, expected: {outcome: value, fields: {out: [1, '65/64']}}}
+- {id: CA.E3, profile: finite_rne, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['1/16777216', '1/33554432', '3/33554432']}, f16]}, expected: {outcome: value, fields: {out: ['1/16777216', 0, '1/8388608']}}}
+- {id: CA.E4, profile: finite_rne, clauses: [CA.C2], input: {op: prims.convert_element_type, args: [{t: f16, v: ['-3/2', '1/1024', '1/16777216']}, f64]}, expected: {outcome: value, fields: {out: ['-3/2', '1/1024', '1/16777216']}}}
+- {id: CA.E5, profile: finite_rne, clauses: [CA.C2, CA.C3], input: {op: aten._to_copy, args: [{t: bf16, v: [[1, '-1/2'], ['3/128', 0]]}], kwargs: {dtype: bf16}}, expected: {outcome: value, fields: {out: [[1, '-1/2'], ['3/128', 0]]}}}
+- {id: CA.E6, profile: finite_rne, clauses: [CA.C3], input: {op: prims.convert_element_type, args: [{t: f64, v: [], shape: [2, 0, 3]}, f32]}, expected: {outcome: value, fields: {out: [[], []]}}}
+- {id: CA.E7, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: f16, v: ['1/3']}, f32]}, expected: {outcome: invalid_input}}
+- {id: CA.E8, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: f32, v: [70000]}, f16]}, expected: {outcome: unsupported}}
+- {id: CA.E9, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: i64, v: [1]}, f32]}, expected: {outcome: unsupported}}
+- {id: CA.E10, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: f32, v: [inf]}, bf16]}, expected: {outcome: unsupported}}
+- {id: CA.E11, profile: finite_rne, clauses: [CA.C4], input: {op: aten._to_copy, args: [{t: f32, v: [1]}], kwargs: {dtype: f16, device: cuda}}, expected: {outcome: unsupported}}
+- {id: CA.E12, profile: finite_rne, clauses: [CA.C4], input: {op: aten._to_copy, args: [{t: f32, v: [1]}]}, expected: {outcome: unsupported}}
 signature:
-  inputs: ['op: prims.convert_element_type(x, dtype) or aten._to_copy(x, dtype=...)', 'x: tensor {t: dtype, v: values}']
-  pre_state: []
-  post_state: []
-  observation_unit: the converted tensor
+  inputs: ['op: prims.convert_element_type(x, dtype) or selected aten._to_copy(x, dtype=...)', 'x: one dense exactly represented finite f16/bf16/f32/f64 tensor', 'dtype: one admitted floating target dtype']
+  pre_state: [the complete input tensor]
+  post_state: [the complete converted output tensor; input unchanged]
+  observation_unit: target dtype, exact shape and every output coordinate
 domain:
-  valid: [exact real values and +-inf, integers, booleans; target dtypes f64 f32 f16 bf16 f8e5m2 f8e4m3 i64 i32 i16 i8
-      u8 b8]
-  domain_undefined: [floating to integer out of range or infinite, overflow to float8_e4m3fn]
-  invalid_input: [NaN values, unknown dtypes]
-  unsupported: [complex dtypes, saturating float8 conversion]
+  valid: [dense finite exactly represented f16/bf16/f32/f64 source values whose finite target conversion is selected]
+  domain_undefined: []
+  invalid_input: [NaN, malformed calls, a value not exactly representable in its declared source dtype]
+  unsupported: [integer, boolean, float8 or complex dtypes, infinities, target overflow, device or layout movement, pinning, memory-format changes, non_blocking copies, missing _to_copy dtype]
 mutation_requirements:
-- {id: CA.M1, misreading: truncation instead of round to nearest, witnesses: [CA.E1]}
-- {id: CA.M2, misreading: ties away from zero instead of ties to even, witnesses: [CA.E2]}
-- {id: CA.M3, misreading: overflow saturates to the largest finite value, witnesses: [CA.E3]}
-- {id: CA.M4, misreading: floating to integer rounds to nearest, witnesses: [CA.E5]}
-- {id: CA.M5, misreading: subnormal results flushed to zero, witnesses: [CA.E4]}
-- {id: CA.M6, misreading: integer to floating truncates, witnesses: [CA.E7]}
+- {id: CA.M1, misreading: narrowing truncates toward zero, witnesses: [CA.E1]}
+- {id: CA.M2, misreading: exact midpoint ties round away from zero, witnesses: [CA.E2]}
+- {id: CA.M3, misreading: subnormal target results flush to zero, witnesses: [CA.E3]}
+- {id: CA.M4, misreading: conversion keeps the source value instead of rounding to the target format, witnesses: [CA.E1]}
 nonclaims:
-- Whether a kernel performs a conversion where the program declares one is a question of K - G (numerical) or of
-  binding, not of this contract.
-changes: []
+- Integer, boolean, float8, complex and nonfinite conversion; output overflow; signed-zero or NaN payload behavior; storage layout, device transfer, aliasing and asynchronous scheduling; any concrete Triton cast whose binding has not selected finite_rne.
+changes:
+- date: '2026-10-18'
+  change: Narrow the active contract to exactly represented finite conversions among f16/bf16/f32/f64 with explicit roundTiesToEven task selection and complete output checking.
+  trigger: The broad draft treated several conversion families and PyTorch rounding choices as one universal answer without enough independent evidence.

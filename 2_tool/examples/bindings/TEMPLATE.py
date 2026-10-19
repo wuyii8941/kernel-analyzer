@@ -1,6 +1,7 @@
 """Binding template for `kernel-analyzer check` (see docs/binding_guide.md).
 
-Fill in NAME, IMPLEMENTATION, make_inputs and run.  Leave spec out for mode A (e_num only); define it for mode B.
+Fill in NAME, IMPLEMENTATION, make_inputs and run. Leave spec out for mode A (e_num only). An optional spec is an
+external numerical reference for screening; this binding interface does not certify it as the task ground truth.
 """
 import torch
 
@@ -26,5 +27,5 @@ def run(inputs):
 
 
 # def spec(inputs):
-#     """Optional (mode B): the task's mathematics in float64 on the same inputs."""
+#     """Optional screening reference in float64; not a rigorous enclosure or semantic certificate."""
 #     return {"y": f64_point_spec(math_in_float64(inputs["x"].double()).cpu().numpy())}

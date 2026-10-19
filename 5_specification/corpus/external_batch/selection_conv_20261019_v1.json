@@ -1,0 +1,19 @@
+{
+  "task": "Public finite float32 conv1d/conv2d with complete input, weight and present-bias VJP",
+  "reference": "Native PyTorch 2.10.0+cu128 plus existing CONV.real exact cross-correlation and derivatives; public rank/padding translation sourced from that release",
+  "limits": "Frozen before GPU execution. Development FlagGems 5.0.2; acceptance a different convolution implementation and dimensions/seeds. Both library families have been seen on other operators. Not a statistical bias verdict or formal kernel binding. Keep native gradients and all failures.",
+  "development": {"implementation": "flag_gems", "dimensions": [1, 5, 7], "seeds": [20261231, 20261232]},
+  "acceptance": {"implementation": "inductor", "dimensions": [2, 6, 8], "seeds": [20261301, 20261302]},
+  "cases": [
+    {"id": "conv1d_default", "kind": "conv1d", "cin": 2, "cout": 3, "kernel": [3]},
+    {"id": "conv1d_group_dilation", "kind": "conv1d", "cin": 2, "cout": 4, "kernel": [2], "bias": false, "options": {"groups": 2, "stride": 2, "padding": 1, "dilation": 2}},
+    {"id": "conv1d_same_unbatched", "kind": "conv1d", "cin": 2, "cout": 3, "kernel": [2], "unbatched": true, "options": {"padding": "same"}},
+    {"id": "conv2d_rectangular", "kind": "conv2d", "cin": 2, "cout": 3, "kernel": [2, 3], "options": {"stride": [1, 2], "padding": [1, 0]}},
+    {"id": "conv2d_groups_channels_last", "kind": "conv2d", "cin": 4, "cout": 6, "kernel": [2, 2], "channels_last": true, "options": {"groups": 2, "padding": 1}},
+    {"id": "conv2d_depthwise_dilation", "kind": "conv2d", "cin": 2, "cout": 4, "kernel": [2, 3], "bias": false, "options": {"groups": 2, "dilation": [2, 1], "padding": [1, 1]}},
+    {"id": "conv2d_same_even", "kind": "conv2d", "cin": 2, "cout": 3, "kernel": [2, 2], "options": {"padding": "same"}},
+    {"id": "conv2d_same_rectangular", "kind": "conv2d", "cin": 2, "cout": 3, "kernel": [2, 5], "options": {"padding": "same"}},
+    {"id": "conv2d_valid_unbatched", "kind": "conv2d", "cin": 2, "cout": 3, "kernel": [2, 3], "unbatched": true, "options": {"padding": "valid"}},
+    {"id": "conv2d_same_tuple_dilation", "kind": "conv2d", "cin": 2, "cout": 3, "kernel": [2, 3], "options": {"padding": "same", "dilation": [2, 1]}}
+  ]
+}

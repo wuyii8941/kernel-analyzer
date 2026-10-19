@@ -1,342 +1,358 @@
-"""Adapter for contracts/ADAFACTOR.yaml: one Adafactor step from an explicit pre-state to the full post-state, for
-torch.optim.Adafactor (PyTorch 2.10 box, profile torch210) and transformers.optimization.Adafactor 4.57.3 with a manual
-learning rate (profile hf_manual_lr).
-
-Tensors are nested lists of any rank >= 1. Rank >= 2 is factored over the last two dimensions (leading dimensions
-batched): row has the shape of the parameter without its last dimension, col the shape without its penultimate
-dimension, var = []. Rank 1: row = col = [], var has the parameter's shape. Mutants are separate code."""
+"""Reviewed strict-real state transition for one public PyTorch 2.10 Adafactor parameter."""
 from __future__ import annotations
 
 from fractions import Fraction
 
+from kernel_spec.compare import check_enclosed_output
 from kernel_spec.e1_optim import flag, hyper, state_dict
-from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer, rational
+from kernel_spec.num import Invalid, NotEstablished, Result, Undefined, Unsupported, integer, rational
 from kernel_spec.real import R, max_, min_, sqrt
 
 
-# ---------------------------------------------------------------- nested tensors
-def shape_of(x, what):
-    if not isinstance(x, list):
+VECTOR = "torch210_vector_real"
+FACTORED = "torch210_factored_real"
+PROFILES = {VECTOR, FACTORED}
+REQUIRED = {
+    "state", "gradient", "dtype", "lr", "beta2_decay", "eps1", "eps2", "d",
+    "weight_decay", "maximize",
+}
+OPTIONAL = {"foreach"}
+FLOAT_DTYPES = {"f16", "bf16", "f32", "f64"}
+STEP_DTYPES = {"i8", "i16", "i32", "i64", *FLOAT_DTYPES}
+FINFO_EPS = {
+    "f16": Fraction(1, 2**10),
+    "bf16": Fraction(1, 2**7),
+    "f32": Fraction(1, 2**23),
+    "f64": Fraction(1, 2**52),
+}
+MAX_EXACT_STEP = 10000
+
+
+def shape_of(value, what):
+    if not isinstance(value, list):
         return ()
-    if not x:
+    if not value:
         raise Invalid(f"{what}: empty dimension")
-    subs = [shape_of(e, what) for e in x]
-    if any(s != subs[0] for s in subs):
-        raise Invalid(f"{what}: ragged")
-    return (len(x),) + subs[0]
+    children = [shape_of(item, what) for item in value]
+    if any(child != children[0] for child in children):
+        raise Invalid(f"{what}: ragged tensor")
+    return (len(value),) + children[0]
 
 
-def read(x, shape, what):
-    if shape_of(x, what) != tuple(shape):
-        raise Invalid(f"{what}: shape {shape_of(x, what)}, expected {tuple(shape)}")
-    return _map(lambda e: rational(e, what), x)
+def _map(function, value):
+    return [_map(function, item) for item in value] if isinstance(value, list) else function(value)
 
 
-def _map(f, x):
-    return [_map(f, e) for e in x] if isinstance(x, list) else f(x)
+def _read(value, shape, what):
+    actual = shape_of(value, what)
+    if actual != tuple(shape):
+        raise Invalid(f"{what}: shape {actual}, expected {tuple(shape)}")
+    return _map(lambda item: rational(item, what), value)
 
 
-def flat(x):
-    return [z for e in x for z in flat(e)] if isinstance(x, list) else [x]
+def _flat(value):
+    return [item for child in value for item in _flat(child)] if isinstance(value, list) else [value]
 
 
-def mats(x):
-    """The list of trailing 2-D matrices of a rank >= 2 nested list (row-major over the leading dimensions)."""
-    return [x] if not isinstance(x[0][0], list) else [m for e in x for m in mats(e)]
+def _matrices(value):
+    """Return trailing two-dimensional matrices in leading-index order."""
+    return [value] if not isinstance(value[0][0], list) else [matrix for child in value for matrix in _matrices(child)]
 
 
-def vecs(x):
-    """The list of trailing 1-D vectors of a rank >= 1 nested list."""
-    return [x] if not isinstance(x[0], list) else [v for e in x for v in vecs(e)]
+def _rebuild(values, shape):
+    iterator = iter(values)
+
+    def build(sizes):
+        if len(sizes) == 1:
+            return [next(iterator) for _ in range(sizes[0])]
+        return [build(sizes[1:]) for _ in range(sizes[0])]
+
+    return build(tuple(shape))
 
 
-def rebuild(values, shape):
-    it = iter(values)
-
-    def go(s):
-        return [go(s[1:]) for _ in range(s[0])] if len(s) > 1 else [next(it) for _ in range(s[0])]
-    return go(tuple(shape))
+def _zeros(shape):
+    if len(shape) == 1:
+        return [Fraction(0) for _ in range(shape[0])]
+    return [_zeros(shape[1:]) for _ in range(shape[0])]
 
 
-def mean(xs):
-    return sum(xs, Fraction(0)) / len(xs) if all(isinstance(x, Fraction) for x in xs) else \
-        sum((R(x) for x in xs), R(0)) / R(len(xs))
+def _mean(values):
+    if all(isinstance(value, Fraction) for value in values):
+        return sum(values, Fraction(0)) / len(values)
+    return sum((R(value) for value in values), R(0)) / R(len(values))
 
 
-def rms(xs):
-    return sqrt(R(mean([x * x for x in xs]))) if all(isinstance(x, Fraction) for x in xs) else \
-        sqrt(sum((R(x) * R(x) for x in xs), R(0)) / R(len(xs)))
+def _rms(values):
+    return sqrt(R(_mean([value * value for value in values])))
 
 
-def one_minus_beta(t1, tau):
-    """t^tau (torch: one_minus_beta2_t; transformers: 1 - beta2t)."""
-    if t1 == 1 or tau == 0:
-        return Fraction(1)
-    if tau.denominator == 1:
-        return Fraction(t1) ** int(tau)
-    return R(t1) ** R(tau)
+def _strategy(inp):
+    value = inp.get("foreach")
+    if value is not None and type(value) is not bool:
+        raise Invalid("foreach must be true, false or null")
+    return value
 
 
-def lerp(old, new, c):
-    if isinstance(c, Fraction):
-        return old + c * (new - old)
-    return R(old) + R(c) * (R(new) - R(old))
-
-
-# ---------------------------------------------------------------- inputs
 def _inputs(profile, inp):
-    if profile not in ("torch210", "hf_manual_lr"):
+    if profile not in PROFILES:
         raise Unsupported(f"profile {profile!r}")
-    maximize = flag(inp, "maximize", default=False)
-    if profile == "hf_manual_lr" and maximize:
-        raise Invalid("transformers Adafactor has no maximize option")
-    st = state_dict(inp, {"theta", "row", "col", "var", "t"})
-    shape = shape_of(st["theta"], "theta")
-    if len(shape) < 1:
-        raise Invalid("a scalar parameter is outside this contract's shapes (rank >= 1)")
-    theta = read(st["theta"], shape, "theta")
-    if len(shape) >= 2:
-        row = read(st["row"], shape[:-1], "row")
-        col = read(st["col"], shape[:-2] + shape[-1:], "col")
-        if st["var"] != []:
-            raise Invalid("var must be [] for a factored parameter")
-        var = []
-        if any(z < 0 for z in flat(row) + flat(col)):
-            raise Invalid("negative factor")
+    if not isinstance(inp, dict) or any(not isinstance(key, str) for key in inp):
+        raise Invalid("Adafactor input must be a mapping with string field names")
+    missing = REQUIRED - set(inp)
+    if missing:
+        raise Invalid(f"Adafactor input is missing {sorted(missing)}")
+    extra = set(inp) - REQUIRED - OPTIONAL
+    if extra:
+        raise Unsupported(f"Adafactor fields outside the selected public task: {sorted(extra)}")
+    _strategy(inp)
+    maximize = flag(inp, "maximize")
+
+    dtype = inp["dtype"]
+    if dtype not in FLOAT_DTYPES:
+        raise Unsupported("the reviewed Adafactor profiles require dtype f16, bf16, f32 or f64")
+    eps1 = FINFO_EPS[dtype] if inp["eps1"] is None else rational(inp["eps1"], "eps1")
+    hp = hyper(inp, ("lr", "beta2_decay", "eps2", "d", "weight_decay"),
+               nonneg=("lr", "eps2", "weight_decay"))
+    hp["eps1"] = eps1
+    if eps1 < 0:
+        raise Invalid("eps1 must be null or >= 0")
+    if hp["beta2_decay"] > 0:
+        raise Invalid("beta2_decay must be <= 0")
+    if hp["d"] < 1:
+        raise Invalid("d must be >= 1")
+
+    state = state_dict(inp, {"theta", "row", "col", "var", "t"})
+    shape = shape_of(state["theta"], "theta")
+    if not shape:
+        raise Invalid("a scalar parameter is outside the reviewed profiles")
+    if profile == VECTOR and len(shape) != 1:
+        raise Invalid("the vector profile requires a rank-1 parameter")
+    if profile == FACTORED and len(shape) < 2:
+        raise Invalid("the factored profile requires a parameter of rank at least 2")
+    theta = _read(state["theta"], shape, "theta")
+
+    if state["t"] is None:
+        if state["row"] != [] or state["col"] != [] or state["var"] != []:
+            raise Invalid("an uninitialized Adafactor state must use row=col=var=[] and t=null")
+        row, col, var, step = [], [], [], None
     else:
-        if st["row"] != [] or st["col"] != []:
-            raise Invalid("row and col must be [] for a vector parameter")
-        row, col = [], []
-        var = read(st["var"], shape, "var")
-        if any(z < 0 for z in var):
-            raise Invalid("negative variance")
-    t = integer(st["t"], "t", lo=0)
-    g = inp.get("gradient", "missing")
-    if g == "missing":
-        raise Invalid("missing gradient")
-    g = None if g is None else read(g, shape, "gradient")
-    if profile == "torch210":
-        hp = hyper(inp, ("lr", "beta2_decay", "eps1", "eps2", "d", "weight_decay"),
-                   nonneg=("lr", "eps1", "eps2", "weight_decay"))
-        if hp["beta2_decay"] > 0 or hp["d"] < 1:
-            raise Invalid("beta2_decay must be <= 0 and d >= 1")
-    else:
-        hp = hyper(inp, ("lr", "decay_rate", "eps1", "eps2", "clip_threshold", "weight_decay"),
-                   nonneg=("lr", "eps1", "eps2", "weight_decay"))
-        if hp["clip_threshold"] <= 0:
-            raise Invalid("clip_threshold must be > 0")
-        if hp["decay_rate"] > 0:
-            raise Invalid("decay_rate must be <= 0 (beta2t in [0, 1))")
-    return shape, theta, row, col, var, t, g, hp, maximize
+        step = integer(state["t"], "t", lo=0)
+        if profile == VECTOR:
+            if state["row"] != [] or state["col"] != []:
+                raise Invalid("a vector Adafactor state must use row=col=[]")
+            row, col = [], []
+            var = _read(state["var"], shape, "var")
+            factors = _flat(var)
+        else:
+            if state["var"] != []:
+                raise Invalid("a factored Adafactor state must use var=[]")
+            row_shape = shape[:-1] + (1,)
+            col_shape = shape[:-2] + (1, shape[-1])
+            row = _read(state["row"], row_shape, "row")
+            col = _read(state["col"], col_shape, "col")
+            var = []
+            factors = _flat(row) + _flat(col)
+        if any(value < 0 for value in factors):
+            raise Invalid("Adafactor variance state must be nonnegative")
+
+    gradient_value = inp.get("gradient", "missing")
+    if gradient_value == "missing":
+        raise Invalid("missing gradient (use null for a parameter without gradient)")
+    gradient = None if gradient_value is None else _read(gradient_value, shape, "gradient")
+    return shape, theta, row, col, var, step, gradient, hp, maximize
 
 
-def _out(shape, theta, row, col, var, t):
-    return Result("value", {"theta": theta, "row": row, "col": col, "var": var, "t": t})
+def _one_minus_beta(step, decay):
+    if step > MAX_EXACT_STEP:
+        raise NotEstablished("exact Adafactor step power exceeds the declared reference budget")
+    if step == 1 or decay == 0:
+        return Fraction(1)
+    if decay.denominator == 1:
+        return Fraction(step) ** decay.numerator
+    return R(step) ** R(decay)
 
 
-# ---------------------------------------------------------------- reference
-def reference(profile, inp):
-    shape, theta, row, col, var, t, g, hp, maximize = _inputs(profile, inp)
-    if g is None:
-        return _out(shape, theta, row, col, var, t)
-    if maximize:
-        g = _map(lambda z: -z, g)
-    return (_torch if profile == "torch210" else _hf)(shape, theta, row, col, var, t, g, hp)
+def _lerp(old, target, weight):
+    if isinstance(weight, Fraction):
+        return old + weight * (target - old)
+    return R(old) + R(weight) * (R(target) - R(old))
 
 
-def _torch(shape, theta, row, col, var, t, g, hp):
-    t1 = t + 1
-    c = one_minus_beta(t1, hp["beta2_decay"])
-    rho = min_(R(hp["lr"]), R(1) / sqrt(R(t1)))
-    alpha = max_(R(hp["eps2"]), rms(flat(theta))) * rho
+def _initialized(profile, shape, row, col, var, step):
+    if step is not None:
+        return row, col, var, step
+    if profile == VECTOR:
+        return [], [], _zeros(shape), 0
+    return _zeros(shape[:-1] + (1,)), _zeros(shape[:-2] + (1, shape[-1])), [], 0
+
+
+def _selected_fields(profile, theta, row, col, var, step):
+    if profile == VECTOR:
+        return {"theta": theta, "var": var, "t": step}
+    return {"theta": theta, "row": row, "col": col, "t": step}
+
+
+def _reference(profile, inp, mode=None):
+    shape, theta, row, col, var, step, gradient, hp, maximize = _inputs(profile, inp)
+    if gradient is None and mode != "none_as_zero":
+        return Result("value", _selected_fields(profile, theta, row, col, var, step))
+    row, col, var, step0 = _initialized(profile, shape, row, col, var, step)
+    if gradient is None:
+        gradient = _zeros(shape)
+    if maximize and mode != "maximize_ignored":
+        gradient = _map(lambda value: -value, gradient)
+
+    step1 = step0 + 1
+    beta_step = step0 if mode == "old_step_in_beta" else step1
+    if beta_step == 0:
+        raise Undefined("the old-step Adafactor reading attempts zero to a non-positive power")
+    weight = _one_minus_beta(beta_step, hp["beta2_decay"])
+    rho_cap = Fraction(1, 100) if mode == "paper_rho_cap" else hp["lr"]
+    rho = min_(R(rho_cap), R(1) / sqrt(R(step1)))
+    theta_values = _flat(theta)
+    decayed = [value * (1 - hp["lr"] * hp["weight_decay"]) for value in theta_values]
+    alpha_values = decayed if mode == "alpha_after_decay" else theta_values
+    alpha = max_(R(hp["eps2"]), _rms(alpha_values)) * rho
     eps1 = hp["eps1"]
-    if len(shape) >= 2:
-        rows_new, cols_new, U = [], [], []
-        for G, Rv, Cv in zip(mats(g), vecs(row) if len(shape) > 2 else [row], _cols(col, shape)):
-            n, m = len(G), len(G[0])
-            Rn = [lerp(Rv[i], mean([G[i][j] ** 2 for j in range(m)]), c) for i in range(n)]
-            Cn = [lerp(Cv[j], mean([G[i][j] ** 2 for i in range(n)]), c) for j in range(m)]
-            mR = mean(Rn)
-            mR_r = R(mR)
-            if mR_r < R(eps1) and any((R(Rn[i]) * R(Cn[j])).sign() != 0 for i in range(n) for j in range(m)):
-                raise Undefined("eps1 clamp of the row-factor mean is active (decision AF.CLAMP)")
-            den = max_(mR_r, R(eps1))
-            if den.sign() == 0:
-                raise Undefined("zero row factors with eps1 = 0: V = 0/0")
-            for i in range(n):
-                for j in range(m):
-                    V = R(Rn[i]) * R(Cn[j]) / den
-                    U.append(R(G[i][j]) / _denom(V, eps1, G[i][j]))
-            rows_new.append(Rn), cols_new.append(Cn)
-        row_out = rebuild([z for r in rows_new for z in r], shape[:-1])
-        col_out = rebuild([z for cc in cols_new for z in cc], shape[:-2] + shape[-1:])
-        var_out = []
+
+    if profile == VECTOR:
+        targets = [value * value + (eps1 if mode == "eps1_added" else 0) for value in gradient]
+        var_new = [_lerp(old, target, weight) for old, target in zip(var, targets)]
+        updates = []
+        for received, estimate in zip(gradient, var_new):
+            floor = R(estimate) if mode == "eps1_added" else max_(R(estimate), R(eps1 * eps1))
+            if floor.sign() == 0:
+                raise Undefined("Adafactor update has zero variance and zero eps1")
+            updates.append(R(received) / sqrt(floor))
+        row_new, col_new = [], []
     else:
-        var_out = [lerp(v, gi * gi, c) for v, gi in zip(var, g)]
-        U = [R(gi) / _denom(R(v), eps1, gi) for v, gi in zip(var_out, g)]
-        row_out, col_out = [], []
-    scale = max_(R(1), rms(U) / R(hp["d"]))
-    th = [R(x * (1 - hp["lr"] * hp["weight_decay"])) - alpha * u / scale for x, u in zip(flat(theta), U)]
-    return _out(shape, rebuild(th, shape), row_out, col_out, var_out, t1)
+        gradients = _matrices(gradient)
+        row_matrices = _matrices(row)
+        col_matrices = _matrices(col)
+        original_batches = len(gradients)
+        if mode == "flatten_leading" and original_batches > 1:
+            gradients = [[line for matrix in gradients for line in matrix]]
+            row_matrices = [[[value] for value in _flat(row)]]
+            col_matrices = [[list(_matrices(col)[0][0])]]
 
+        row_batches, col_batches, updates = [], [], []
+        for grad_matrix, row_matrix, col_matrix in zip(gradients, row_matrices, col_matrices):
+            rows, columns = len(grad_matrix), len(grad_matrix[0])
+            row_targets = []
+            for i in range(rows):
+                values = [grad_matrix[i][j] ** 2 for j in range(columns)]
+                reduction = sum(values, Fraction(0)) if mode == "sums_in_state" else _mean(values)
+                row_targets.append(reduction + (eps1 if mode == "eps1_added" else 0))
+            col_targets = []
+            for j in range(columns):
+                values = [grad_matrix[i][j] ** 2 for i in range(rows)]
+                reduction = sum(values, Fraction(0)) if mode == "sums_in_state" else _mean(values)
+                col_targets.append(reduction + (eps1 if mode == "eps1_added" else 0))
+            row_batch = [_lerp(row_matrix[i][0], row_targets[i], weight) for i in range(rows)]
+            col_batch = [_lerp(col_matrix[0][j], col_targets[j], weight) for j in range(columns)]
+            row_batches.append(row_batch)
+            col_batches.append(col_batch)
 
-def _cols(col, shape):
-    return vecs(col) if len(shape) > 2 else [col]
-
-
-def _denom(V, eps1, gij):
-    if V.sign() == 0 and eps1 == 0:
-        raise Undefined("max(sqrt(V), eps1) = 0")
-    return max_(sqrt(V), R(eps1))
-
-
-def _hf(shape, theta, row, col, var, t, g, hp):
-    t1 = t + 1
-    c = one_minus_beta(t1, hp["decay_rate"])        # 1 - beta2t
-    e1 = hp["eps1"]
-    if len(shape) >= 2:
-        rows_new, cols_new, U = [], [], []
-        for G, Rv, Cv in zip(mats(g), vecs(row) if len(shape) > 2 else [row], _cols(col, shape)):
-            n, m = len(G), len(G[0])
-            Rn = [lerp(Rv[i], mean([G[i][j] ** 2 + e1 for j in range(m)]), c) for i in range(n)]
-            Cn = [lerp(Cv[j], mean([G[i][j] ** 2 + e1 for i in range(n)]), c) for j in range(m)]
-            mR = R(mean(Rn))
-            for i in range(n):
-                for j in range(m):
-                    if R(Rn[i]).sign() == 0 or R(Cn[j]).sign() == 0:
-                        raise Undefined("zero factor (rsqrt of 0)")
-                    U.append(R(G[i][j]) / sqrt(R(Rn[i]) / mR * R(Cn[j])))
-            rows_new.append(Rn), cols_new.append(Cn)
-        row_out = rebuild([z for r in rows_new for z in r], shape[:-1])
-        col_out = rebuild([z for cc in cols_new for z in cc], shape[:-2] + shape[-1:])
-        var_out = []
-    else:
-        var_out = [lerp(v, gi * gi + e1, c) for v, gi in zip(var, g)]
-        if any(R(v).sign() == 0 for v in var_out):
-            raise Undefined("zero second moment (rsqrt of 0)")
-        U = [R(gi) / sqrt(R(v)) for v, gi in zip(var_out, g)]
-        row_out, col_out = [], []
-    scale = max_(rms(U) / R(hp["clip_threshold"]), R(1))
-    lr = hp["lr"]
-    th = [R(x - hp["weight_decay"] * lr * x) - R(lr) * u / scale for x, u in zip(flat(theta), U)]
-    return _out(shape, rebuild(th, shape), row_out, col_out, var_out, t1)
-
-
-# ---------------------------------------------------------------- independent mutants (torch210 unless stated)
-def _mut(profile, inp, mis):
-    shape, theta, row, col, var, t, g, hp, maximize = _inputs(profile, inp)
-    if g is None:
-        if mis != "none_as_zero":
-            return _out(shape, theta, row, col, var, t)
-        g = _map(lambda z: Fraction(0), theta)
-    if maximize and mis != "maximize_ignored":
-        g = _map(lambda z: -z, g)
-    if profile == "hf_manual_lr":
-        return _mut_hf(shape, theta, row, col, var, t, g, hp, mis)
-    t1 = t + 1
-    tb = t if mis == "old_step_in_beta" else t1
-    tau = hp["beta2_decay"]
-    c = R(1) if tb == 1 else (R(tb) ** R(tau) if tb > 0 else R(1))
-    cap = Fraction(1, 100) if mis == "paper_rho_cap" else hp["lr"]
-    rho = min_(R(cap), R(1) / sqrt(R(t1)))
-    th_flat = flat(theta)
-    dec = [x * (1 - hp["lr"] * hp["weight_decay"]) for x in th_flat]
-    alpha = max_(R(hp["eps2"]), rms(dec if mis == "alpha_after_decay" else th_flat)) * rho
-    e1 = R(hp["eps1"])
-    if len(shape) >= 2:
-        Gs = mats(g)
-        if mis == "flatten_leading":                  # factor a (prod(leading)*n, m) matrix instead of batching
-            Gs = [[r for M in Gs for r in M]]
-            Rs, Cs = [flat(row)], [[Fraction(0)] * shape[-1]]
-        else:
-            Rs = vecs(row) if len(shape) > 2 else [row]
-            Cs = _cols(col, shape)
-        U, rows_new, cols_new = [], [], []
-        for G, Rv, Cv in zip(Gs, Rs, Cs):
-            n, m = len(G), len(G[0])
-            red = (lambda xs: sum(xs, Fraction(0))) if mis == "sums_in_state" else (lambda xs: mean(xs))
-            Rn = [R(Rv[i]) * (R(1) - c) + c * R(red([G[i][j] ** 2 for j in range(m)])) for i in range(n)]
-            Cn = [R(Cv[j]) * (R(1) - c) + c * R(red([G[i][j] ** 2 for i in range(n)])) for j in range(m)]
-            if mis == "sums_in_state":
-                den = max_(sum(Rn, R(0)), e1)
+            if mode in {"sums_in_state", "sum_denominator"}:
+                normalizer = sum((R(value) for value in row_batch), R(0))
             else:
-                den = max_(sum(Rn, R(0)) / R(n), e1)
-            for i in range(n):
-                for j in range(m):
-                    V = Rn[i] * Cn[j] / den
-                    U.append(R(G[i][j]) / max_(sqrt(V), e1))
-            rows_new.append(Rn), cols_new.append(Cn)
-        if mis == "flatten_leading":
-            row_out, col_out = rebuild(rows_new[0], shape[:-1]), rebuild(cols_new[0] * (len(flat(col)) // shape[-1]),
-                                                                        shape[:-2] + shape[-1:])
+                normalizer = R(_mean(row_batch))
+            if mode != "eps1_added":
+                normalizer = max_(normalizer, R(eps1))
+            if normalizer.sign() == 0:
+                raise Undefined("Adafactor factored variance has a zero normalizer")
+            for i in range(rows):
+                for j in range(columns):
+                    estimate = R(row_batch[i]) * R(col_batch[j]) / normalizer
+                    floor = estimate if mode == "eps1_added" else max_(estimate, R(eps1 * eps1))
+                    if floor.sign() == 0:
+                        raise Undefined("Adafactor update has zero variance and zero eps1")
+                    updates.append(R(grad_matrix[i][j]) / sqrt(floor))
+
+        if mode == "flatten_leading" and original_batches > 1:
+            col_batches = [col_batches[0] for _ in range(original_batches)]
+        row_shape = shape[:-1] + (1,)
+        col_shape = shape[:-2] + (1, shape[-1])
+        row_values = [value for batch in row_batches for value in batch]
+        col_values = [value for batch in col_batches for value in batch]
+        row_new = _rebuild(row_values, row_shape)
+        col_new = _rebuild(col_values, col_shape)
+        var_new = []
+
+    scale = R(1) if mode == "no_clipping" else max_(R(1), _rms(updates) / R(hp["d"]))
+    bases = theta_values if mode == "decay_lost" else decayed
+    theta_new = _rebuild([R(base) - alpha * update / scale for base, update in zip(bases, updates)], shape)
+    if mode == "squeezed_state" and profile == FACTORED and len(shape) == 2:
+        row_new = [line[0] for line in row_new]
+        col_new = col_new[0]
+    return Result("value", _selected_fields(profile, theta_new, row_new, col_new, var_new, step1))
+
+
+def reference(profile, inp):
+    return _reference(profile, inp)
+
+
+def _observed_tensor(value, name, shape, dtype):
+    if isinstance(value, dict):
+        if set(value) != {"t", "v", "shape"} or value.get("t") != dtype \
+                or value.get("shape") != list(shape):
+            raise Invalid(f"observed {name} tensor record has the wrong dtype or shape")
+        value = value["v"]
+    return _read(value, shape, f"observed {name}")
+
+
+def _observed_step(value):
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        if set(value) != {"t", "v", "shape"} or value.get("t") not in STEP_DTYPES \
+                or value.get("shape") != []:
+            raise Invalid("observed t tensor record has the wrong shape")
+        value = value["v"]
+    return integer(value, "observed t", lo=0)
+
+
+def check_output(profile, inp, observed):
+    """Require the complete public state; nonpoint formula enclosures remain not established."""
+    shape, *_ = _inputs(profile, inp)
+    expected_keys = {"theta", "var", "t"} if profile == VECTOR else {"theta", "row", "col", "t"}
+    if not isinstance(observed, dict) or set(observed) != expected_keys:
+        return False
+    try:
+        dtype = inp["dtype"]
+        candidate = {"theta": _observed_tensor(observed["theta"], "theta", shape, dtype),
+                     "t": _observed_step(observed["t"])}
+        if profile == VECTOR:
+            candidate["var"] = [] if observed["var"] == [] else \
+                _observed_tensor(observed["var"], "var", shape, dtype)
         else:
-            row_out = rebuild([z for r in rows_new for z in r], shape[:-1])
-            col_out = rebuild([z for cc in cols_new for z in cc], shape[:-2] + shape[-1:])
-        var_out = []
-    else:
-        if mis == "eps1_added":
-            var_out = [R(v) * (R(1) - c) + c * R(gi * gi + hp["eps1"]) for v, gi in zip(var, g)]
-            U = [R(gi) / sqrt(v) for v, gi in zip(var_out, g)]
-        else:
-            var_out = [R(v) * (R(1) - c) + c * R(gi * gi) for v, gi in zip(var, g)]
-            U = [R(gi) / max_(sqrt(v), e1) for v, gi in zip(var_out, g)]
-        row_out, col_out = [], []
-    scale = R(1) if mis == "no_clipping" else max_(R(1), rms(U) / R(hp["d"]))
-    base = th_flat if mis == "decay_lost" else dec
-    th = [R(x) - alpha * u / scale for x, u in zip(base, U)]
-    return _out(shape, rebuild(th, shape), row_out, col_out, var_out, t1)
+            row_shape = shape[:-1] + (1,)
+            col_shape = shape[:-2] + (1, shape[-1])
+            candidate["row"] = [] if observed["row"] == [] else \
+                _observed_tensor(observed["row"], "row", row_shape, dtype)
+            candidate["col"] = [] if observed["col"] == [] else \
+                _observed_tensor(observed["col"], "col", col_shape, dtype)
+    except Invalid:
+        return False
+    return check_enclosed_output(reference(profile, inp).fields, candidate)
 
 
-def _mut_hf(shape, theta, row, col, var, t, g, hp, mis):
-    t1 = t + 1
-    tau = hp["decay_rate"]
-    c = R(1) if t1 == 1 else R(t1) ** R(tau)
-    e1 = hp["eps1"]
-    lr = R(hp["lr"])
-    if len(shape) >= 2:
-        U, rows_new, cols_new = [], [], []
-        for G, Rv, Cv in zip(mats(g), vecs(row) if len(shape) > 2 else [row], _cols(col, shape)):
-            n, m = len(G), len(G[0])
-            Rn = [R(Rv[i]) * (R(1) - c) + c * R(mean([G[i][j] ** 2 + e1 for j in range(m)])) for i in range(n)]
-            Cn = [R(Cv[j]) * (R(1) - c) + c * R(mean([G[i][j] ** 2 + e1 for i in range(n)])) for j in range(m)]
-            mR = sum(Rn, R(0)) / R(n)
-            for i in range(n):
-                for j in range(m):
-                    V = Rn[i] * Cn[j] if mis == "hf_row_not_normalized" else Rn[i] / mR * Cn[j]
-                    U.append(R(G[i][j]) / sqrt(V))
-            rows_new.append(Rn), cols_new.append(Cn)
-        row_out = rebuild([z for r in rows_new for z in r], shape[:-1])
-        col_out = rebuild([z for cc in cols_new for z in cc], shape[:-2] + shape[-1:])
-        var_out = []
-    else:
-        var_out = [R(v) * (R(1) - c) + c * R(gi * gi + e1) for v, gi in zip(var, g)]
-        U = [R(gi) / sqrt(v) for v, gi in zip(var_out, g)]
-        row_out, col_out = [], []
-    scale = max_(rms(U) / R(hp["clip_threshold"]), R(1))
-    wd = R(hp["weight_decay"])
-    if mis == "hf_decay_after_update":
-        th = [(R(x) - lr * u / scale) * (R(1) - wd * lr) for x, u in zip(flat(theta), U)]
-    else:
-        th = [R(x) - wd * lr * R(x) - lr * u / scale for x, u in zip(flat(theta), U)]
-    return _out(shape, rebuild(th, shape), row_out, col_out, var_out, t1)
-
-
-def _m(kind):
-    return lambda profile, inp: _mut(profile, inp, kind)
+def _mutant(mode):
+    return lambda profile, inp: _reference(profile, inp, mode)
 
 
 MUTANTS = {
-    "AF.M1": _m("sums_in_state"),
-    "AF.M2": _m("alpha_after_decay"),
-    "AF.M3": _m("decay_lost"),
-    "AF.M4": _m("eps1_added"),
-    "AF.M5": _m("no_clipping"),
-    "AF.M6": _m("paper_rho_cap"),
-    "AF.M7": _m("old_step_in_beta"),
-    "AF.M8": _m("maximize_ignored"),
-    "AF.M9": _m("none_as_zero"),
-    "AF.M10": _m("flatten_leading"),
-    "AF.M11": _m("hf_row_not_normalized"),
-    "AF.M12": _m("hf_decay_after_update"),
+    "AF.M1": _mutant("sums_in_state"),
+    "AF.M2": _mutant("alpha_after_decay"),
+    "AF.M3": _mutant("decay_lost"),
+    "AF.M4": _mutant("eps1_added"),
+    "AF.M5": _mutant("no_clipping"),
+    "AF.M6": _mutant("paper_rho_cap"),
+    "AF.M7": _mutant("old_step_in_beta"),
+    "AF.M8": _mutant("maximize_ignored"),
+    "AF.M9": _mutant("none_as_zero"),
+    "AF.M10": _mutant("flatten_leading"),
+    "AF.M11": _mutant("sum_denominator"),
+    "AF.M12": _mutant("squeezed_state"),
 }
 READINGS = {}

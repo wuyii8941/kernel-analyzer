@@ -1,0 +1,53 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.rprop.f32.4096.warm.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 warm-state Rprop transition",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "sixteen Triton programs update every parameter and optimizer-vector coordinate, then one program increments the scalar step",
+    "measure_call": "../calls/triton_rprop.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "one_parameter_rprop_step",
+      "contract": "RPROP",
+      "profile": "torch210_dense_real",
+      "task_statement": "Perform one complete public torch.optim.Rprop transition on one received dense float32 parameter with existing prev and step_size state at step 4, using maximize, and return every public post-state at step 5.",
+      "input_map": [
+        {"target": "/state/theta", "source": "/tensor_arguments/theta/before", "conversion": "tensor_values"},
+        {"target": "/state/prev", "source": "/tensor_arguments/prev/before", "conversion": "tensor_values"},
+        {"target": "/state/eta", "source": "/tensor_arguments/eta/before", "conversion": "tensor_values"},
+        {"target": "/state/t", "source": "/tensor_arguments/t/before", "conversion": "tensor_values"},
+        {"target": "/gradient", "source": "/tensor_arguments/gradient/before", "conversion": "tensor_values"},
+        {"target": "/dtype", "literal": "f32", "basis": "all parameter, gradient and optimizer-vector tensors are float32"},
+        {"target": "/lr", "literal": 0.125, "basis": "the warm-state public group retains the exact binary learning rate 0.125"},
+        {"target": "/etaminus", "literal": 0.5, "basis": "the kernel halves step sizes after a sign change"},
+        {"target": "/etaplus", "literal": 1.5, "basis": "the kernel multiplies step sizes by 1.5 when signs agree"},
+        {"target": "/step_min", "literal": 0.03125, "basis": "the kernel clamps to the exact binary lower bound 0.03125"},
+        {"target": "/step_max", "literal": 0.75, "basis": "the kernel clamps to the exact binary upper bound 0.75"},
+        {"target": "/maximize", "literal": true, "basis": "the kernel negates the received gradient before sign logic"},
+        {"target": "/foreach", "literal": false, "basis": "the bound task is one complete parameter transition"},
+        {"target": "/capturable", "literal": false, "basis": "the selected public transition is noncapturable"},
+        {"target": "/differentiable", "literal": false, "basis": "the selected public transition is nondifferentiable"}
+      ],
+      "output_map": [
+        {"target": "/theta", "source": "/tensor_arguments/theta/after", "conversion": "tensor_values", "measure_output": "theta"},
+        {"target": "/prev", "source": "/tensor_arguments/prev/after", "conversion": "tensor_values", "measure_output": "prev"},
+        {"target": "/eta", "source": "/tensor_arguments/eta/after", "conversion": "tensor_values", "measure_output": "eta"},
+        {"target": "/t", "source": "/tensor_arguments/t/after", "conversion": "tensor_values", "measure_output": "t"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "theta", "effect": "output", "task": "one_parameter_rprop_step", "target": "/theta"},
+    {"argument": "gradient", "effect": "unchanged"},
+    {"argument": "prev", "effect": "output", "task": "one_parameter_rprop_step", "target": "/prev"},
+    {"argument": "eta", "effect": "output", "task": "one_parameter_rprop_step", "target": "/eta"},
+    {"argument": "t", "effect": "output", "task": "one_parameter_rprop_step", "target": "/t"}
+  ]
+}

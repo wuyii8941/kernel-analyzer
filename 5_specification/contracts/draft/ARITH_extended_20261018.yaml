@@ -1,0 +1,173 @@
+schema_version: '1.2'
+id: ARITH
+role: ATEN_ARITH
+title: Element-wise arithmetic, rounding functions, clamping and selection (ATen operations), real-number semantics
+review:
+  status: drafted
+  author: Claude (spec v3 author), 2026-10-16
+  date: '2026-10-16'
+  scope: Real-number semantics of the documented operations; awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.add, aten.sub, aten.rsub, aten.mul, aten.div, aten.neg, aten.reciprocal, aten.abs, aten.sign, aten.pow,
+  prims.fma, aten.floor, aten.ceil, aten.clamp, aten.clamp_min, aten.clamp_max, aten.maximum, aten.minimum, aten.where,
+  aten.masked_fill, aten.floor_divide]
+profiles:
+  real:
+    meaning: Values are exact reals (rationals, with +inf / -inf only where an operation has that limit); integer
+      and boolean tensors are exact; no rounding happens inside these operations.
+    task_choice_required: false
+outputs:
+  out:
+    shape: the broadcast shape of the operands
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Tensor values are the exact values received (a binary float is its exact rational value).
+  quality: No tolerance. Exact results are compared exactly; transcendental results do not occur in this contract.
+  test_evidence: Exact rational equality.
+  error_handling: Undefined real operations are domain_undefined; arguments outside the documented domain are invalid_input.
+decisions:
+- id: AR.ZERO_POW
+  status: drafted
+  statement: x ** 0 = 1 for every x, including 0 ** 0. torch.pow does not state it; IEEE 754 pow(x, +-0) = 1 and the
+    empty-product convention agree. Alternative (0 ** 0 undefined) rejected because both sources give 1.
+  basis: [IEEE754.POW0, T_POW.DEF]
+- id: AR.NEG_BASE
+  status: drafted
+  statement: A negative base with a non-integer exponent has no real value (principal branch x ** y = exp(y log x));
+    domain_undefined. torch.pow returns NaN there; the contract does not demand NaN.
+  basis: [T_POW.DEF]
+- id: AR.REAL_LIMITS
+  status: drafted
+  statement: Infinite operands are allowed where the real operation has a limit (inf + finite = inf, max(-inf, x) =
+    x); inf - inf, 0 * inf, x / 0 and inf / inf are domain_undefined. NaN is not a real value and is invalid input.
+  basis: [T_ADD.DEF, T_MUL.DEF, T_DIV.TRUE]
+clauses:
+- {id: AR.C1, basis: [T_ADD.DEF, T_TENSOR_ATTR.PROMOTION], statement: 'add(a, b, alpha) = a + alpha*b, broadcast',
+  observes: [out], evidence_kind: definition}
+- {id: AR.C2, basis: [T_SUB.DEF, TS_REFS.RSUB], statement: 'sub(a, b, alpha) = a - alpha*b; rsub(a, b, alpha) = b - alpha*a',
+  observes: [out], evidence_kind: definition}
+- {id: AR.C3, basis: [T_MUL.DEF], statement: mul(a, b) = a*b, observes: [out], evidence_kind: definition}
+- {id: AR.C4, basis: [T_DIV.TRUE], statement: 'div(a, b) = a/b; integer operands are promoted (true division); b = 0 is
+    domain_undefined', observes: [out], evidence_kind: definition}
+- {id: AR.C5, basis: [T_DIV.TRUNC, T_DIV.FLOOR, T_FLOOR_DIVIDE.DEF], statement: 'div(..., trunc) rounds the quotient toward
+    zero; div(..., floor) and floor_divide round it down; an integer division by zero is invalid input', observes: [out],
+  evidence_kind: definition}
+- {id: AR.C6, basis: [T_NEG.DEF, T_RECIP.DEF, T_ABS.DEF, T_SIGN.DEF], statement: 'neg = -x; reciprocal = 1/x (x = 0
+    undefined); abs = |x|; sign = -1, 0 or 1', observes: [out], evidence_kind: definition}
+- {id: AR.C7, basis: [T_POW.DEF, AR.ZERO_POW, AR.NEG_BASE], statement: 'pow(x, y) = x**y; integer exponents exact;
+    x**0 = 1; negative base with non-integer exponent undefined', observes: [out], evidence_kind: definition}
+- {id: AR.C8, basis: [TS_INDUCTOR_PRIMS.FMA], statement: 'prims.fma(a, b, c) = a*b + c', observes: [out],
+  evidence_kind: definition}
+- {id: AR.C9, basis: [T_FLOOR.DEF, T_CEIL.DEF], statement: floor and ceil to integers; integer tensors unchanged,
+  observes: [out], evidence_kind: definition}
+- {id: AR.C10, basis: [T_CLAMP.DEF, T_CLAMP.MINMAX], statement: 'clamp = min(max(x, lo), hi); lo > hi gives hi;
+    clamp_min / clamp_max bound one side', observes: [out], evidence_kind: definition}
+- {id: AR.C11, basis: [T_MAXIMUM.DEF, T_MINIMUM.DEF, AR.REAL_LIMITS], statement: element-wise maximum / minimum,
+  observes: [out], evidence_kind: definition}
+- {id: AR.C12, basis: [T_WHERE.DEF, T_MASKED_FILL.DEF], statement: 'where(c, a, b) picks a where c is true;
+    masked_fill(x, m, v) puts v where m is true', observes: [out], evidence_kind: definition}
+- {id: AR.C13, basis: [AR.REAL_LIMITS], statement: 'inf - inf, 0*inf and x/0 are domain_undefined', observes: [out],
+  evidence_kind: definition}
+examples:
+- {id: AR.E1, profile: real, clauses: [AR.C1], input: {op: aten.add, args: [{t: f32, v: [1, 2]}, {t: f32, v: [10, 20]}],
+    kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [21, 42]}}}
+- {id: AR.E2, profile: real, clauses: [AR.C1], input: {op: aten.add, args: [{t: f32, v: [[1], [2]]}, '1/3']},
+  expected: {outcome: value, fields: {out: [['4/3'], ['7/3']]}}}
+- {id: AR.E3, profile: real, clauses: [AR.C2], input: {op: aten.sub, args: [{t: f32, v: [5, 1]}, {t: f32, v: [2, 3]}],
+    kwargs: {alpha: '1/2'}}, expected: {outcome: value, fields: {out: [4, '-1/2']}}}
+- {id: AR.E4, profile: real, clauses: [AR.C2], input: {op: aten.rsub, args: [{t: f32, v: [1, 2]}, 10], kwargs: {alpha: 2}},
+  expected: {outcome: value, fields: {out: [8, 6]}}}
+- {id: AR.E5, profile: real, clauses: [AR.C3], input: {op: aten.mul, args: [{t: f32, v: [[2, -3]]}, {t: f32, v: [['1/2'],
+        [4]]}]}, expected: {outcome: value, fields: {out: [[1, '-3/2'], [8, -12]]}}}
+- {id: AR.E6, profile: real, clauses: [AR.C4], input: {op: aten.div, args: [{t: i64, v: [7, -7]}, {t: i64, v: [2, 2]}]},
+  expected: {outcome: value, fields: {out: ['7/2', '-7/2']}}}
+- {id: AR.E7, profile: real, clauses: [AR.C5], input: {op: aten.div, args: [{t: f32, v: [7, -7]}, 2], kwargs: {rounding_mode: trunc}},
+  expected: {outcome: value, fields: {out: [3, -3]}}}
+- {id: AR.E8, profile: real, clauses: [AR.C5], input: {op: aten.div, args: [{t: i64, v: [7, -7]}, 2], kwargs: {rounding_mode: floor}},
+  expected: {outcome: value, fields: {out: [3, -4]}}}
+- {id: AR.E34, profile: real, clauses: [AR.C5], input: {op: aten.floor_divide, args: [{t: f32, v: [7, -7, '1/2']}, 2]},
+  expected: {outcome: value, fields: {out: [3, -4, 0]}}}
+- {id: AR.E9, profile: real, clauses: [AR.C4, AR.C13], input: {op: aten.div, args: [{t: f32, v: [1]}, {t: f32, v: [0]}]},
+  expected: {outcome: domain_undefined}}
+- {id: AR.E10, profile: real, clauses: [AR.C5], input: {op: aten.div, args: [{t: i64, v: [1]}, {t: i64, v: [0]}], kwargs: {
+      rounding_mode: trunc}}, expected: {outcome: invalid_input}}
+- {id: AR.E11, profile: real, clauses: [AR.C6], input: {op: aten.neg, args: [{t: f32, v: [3, '-1/2']}]}, expected: {
+    outcome: value, fields: {out: [-3, '1/2']}}}
+- {id: AR.E12, profile: real, clauses: [AR.C6], input: {op: aten.reciprocal, args: [{t: i64, v: [4, -2]}]}, expected: {
+    outcome: value, fields: {out: ['1/4', '-1/2']}}}
+- {id: AR.E13, profile: real, clauses: [AR.C6, AR.C13], input: {op: aten.reciprocal, args: [{t: f32, v: [0]}]},
+  expected: {outcome: domain_undefined}}
+- {id: AR.E14, profile: real, clauses: [AR.C6], input: {op: aten.abs, args: [{t: f32, v: [-3, 0, '5/2']}]}, expected: {
+    outcome: value, fields: {out: [3, 0, '5/2']}}}
+- {id: AR.E15, profile: real, clauses: [AR.C6], input: {op: aten.sign, args: [{t: f32, v: [-3, 0, '5/2']}]}, expected: {
+    outcome: value, fields: {out: [-1, 0, 1]}}}
+- {id: AR.E16, profile: real, clauses: [AR.C7], input: {op: aten.pow, args: [{t: f32, v: [2, -3, '1/2']}, 2]}, expected: {
+    outcome: value, fields: {out: [4, 9, '1/4']}}}
+- {id: AR.E17, profile: real, clauses: [AR.C7], input: {op: aten.pow, args: [{t: f32, v: [0, 5]}, 0]}, expected: {outcome: value,
+    fields: {out: [1, 1]}}}
+- {id: AR.E18, profile: real, clauses: [AR.C7], input: {op: aten.pow, args: [{t: f32, v: [4]}, '1/2']}, expected: {
+    outcome: value, fields: {out: [2]}}, note: The reference encloses exp(log(4)/2); 2 must lie in the enclosure.}
+- {id: AR.E19, profile: real, clauses: [AR.C7], input: {op: aten.pow, args: [{t: f32, v: [-8]}, '1/3']}, expected: {
+    outcome: domain_undefined}}
+- {id: AR.E20, profile: real, clauses: [AR.C7], input: {op: aten.pow, args: [{t: f32, v: [2]}, -2]}, expected: {outcome: value,
+    fields: {out: ['1/4']}}}
+- {id: AR.E21, profile: real, clauses: [AR.C8], input: {op: prims.fma, args: [{t: f32, v: [2, '1/3']}, {t: f32, v: [3, 3]},
+      {t: f32, v: ['1/2', -1]}]}, expected: {outcome: value, fields: {out: ['13/2', 0]}}}
+- {id: AR.E22, profile: real, clauses: [AR.C9], input: {op: aten.floor, args: [{t: f32, v: ['5/2', '-5/2', 3]}]},
+  expected: {outcome: value, fields: {out: [2, -3, 3]}}}
+- {id: AR.E23, profile: real, clauses: [AR.C9], input: {op: aten.ceil, args: [{t: f32, v: ['5/2', '-5/2']}]}, expected: {
+    outcome: value, fields: {out: [3, -2]}}}
+- {id: AR.E24, profile: real, clauses: [AR.C10], input: {op: aten.clamp, args: [{t: f32, v: [-2, 0, 5]}], kwargs: {min: -1,
+      max: 3}}, expected: {outcome: value, fields: {out: [-1, 0, 3]}}}
+- {id: AR.E25, profile: real, clauses: [AR.C10], input: {op: aten.clamp, args: [{t: f32, v: [0, 5]}], kwargs: {min: 3,
+      max: 1}}, expected: {outcome: value, fields: {out: [1, 1]}}}
+- {id: AR.E26, profile: real, clauses: [AR.C10], input: {op: aten.clamp_min, args: [{t: f32, v: [-2, 2]}, 0]}, expected: {
+    outcome: value, fields: {out: [0, 2]}}}
+- {id: AR.E27, profile: real, clauses: [AR.C10], input: {op: aten.clamp_max, args: [{t: f32, v: [-2, 2]}, 0]}, expected: {
+    outcome: value, fields: {out: [-2, 0]}}}
+- {id: AR.E28, profile: real, clauses: [AR.C11], input: {op: aten.maximum, args: [{t: f32, v: [1, -inf]}, {t: f32, v: [0,
+        -5]}]}, expected: {outcome: value, fields: {out: [1, -5]}}}
+- {id: AR.E29, profile: real, clauses: [AR.C11], input: {op: aten.minimum, args: [{t: f32, v: [1, 2]}, {t: f32, v: [0,
+        3]}]}, expected: {outcome: value, fields: {out: [0, 2]}}}
+- {id: AR.E30, profile: real, clauses: [AR.C12], input: {op: aten.where, args: [{t: b8, v: [true, false]}, {t: f32, v: [1,
+        2]}, {t: f32, v: [10, 20]}]}, expected: {outcome: value, fields: {out: [1, 20]}}}
+- {id: AR.E31, profile: real, clauses: [AR.C12], input: {op: aten.masked_fill, args: [{t: f32, v: [1, 2, 3]}, {t: b8, v: [
+          false, true, false]}, -inf]}, expected: {outcome: value, fields: {out: [1, -inf, 3]}}}
+- {id: AR.E32, profile: real, clauses: [AR.C13], input: {op: aten.add, args: [{t: f32, v: [inf]}, {t: f32, v: [-inf]}]},
+  expected: {outcome: domain_undefined}}
+- {id: AR.E33, profile: real, clauses: [AR.C1, AR.C13], input: {op: aten.add, args: [{t: f32, v: [inf, -inf]}, 5]},
+  expected: {outcome: value, fields: {out: [inf, -inf]}}}
+signature:
+  inputs: ['op: one of the covered ATen names', 'args / kwargs: tensors {t: dtype, v: values} and scalars as documented']
+  pre_state: []
+  post_state: []
+  observation_unit: the result tensor of one operation
+domain:
+  valid: [real values (rationals, +-inf where the operation has a limit), integers, booleans; broadcastable shapes]
+  domain_undefined: [division by zero, inf - inf, 0 * inf, negative base with a non-integer exponent]
+  invalid_input: [non-broadcastable shapes, NaN values, integer division by zero, boolean negation or subtraction,
+    unknown division rounding modes, negative scalar integer exponent for an integer result]
+  not_established:
+  - Negative integer tensor exponents require a reviewed integer-result convention; the evaluator does not
+    replace the integer result with a floating reciprocal.
+  unsupported: [complex dtypes, boolean power, rounded boolean division]
+mutation_requirements:
+- {id: AR.M1, misreading: floor division computed as truncation, witnesses: [AR.E8]}
+- {id: AR.M2, misreading: rsub operands not swapped, witnesses: [AR.E4]}
+- {id: AR.M3, misreading: clamp with min > max returns min, witnesses: [AR.E25]}
+- {id: AR.M4, misreading: sign(0) = 1, witnesses: [AR.E15]}
+- {id: AR.M5, misreading: 0 ** 0 = 0, witnesses: [AR.E17]}
+- {id: AR.M6, misreading: alpha ignored, witnesses: [AR.E1, AR.E3]}
+- {id: AR.M7, misreading: true division of integers truncates, witnesses: [AR.E6]}
+- {id: AR.M8, misreading: where picks the other branch, witnesses: [AR.E30]}
+- {id: AR.M9, misreading: masked_fill fills where the mask is false, witnesses: [AR.E31]}
+nonclaims:
+- Floating-point rounding of a device kernel is the numerical question (K - G); this contract states the real target.
+- NaN-propagation behaviour of the device is not a real-number property and is not judged here.
+changes:
+- {date: '2026-10-16', change: 'added aten.floor_divide (FlagGems corpus) to covers, clause AR.C5 and example AR.E34',
+  trigger: 'operator found in the frozen inventory (composition corpus gems.floor_divide), source T_FLOOR_DIVIDE'}

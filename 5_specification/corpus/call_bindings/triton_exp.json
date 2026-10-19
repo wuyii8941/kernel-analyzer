@@ -1,0 +1,33 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.exp.f32.1024.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 element-wise exponential",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with four Triton programs covering one contiguous 1024-element tensor",
+    "measure_call": "../calls/triton_exp.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "exp",
+      "contract": "MATHFN",
+      "profile": "real",
+      "task_statement": "Exact real element-wise exponential of every received finite float32 value.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.exp", "basis": "selected functional exponential task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

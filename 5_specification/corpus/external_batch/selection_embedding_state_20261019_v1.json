@@ -1,0 +1,15 @@
+{
+  "task": "Public F.embedding with max_norm: complete out, dense dweight and full weight_after; indices and upstream unchanged",
+  "reference": "Native PyTorch 2.10.0+cu128 CUDA public implementation, same physical inputs and options. A versioned numerical comparison, not a rigorous mathematical oracle for renormalisation.",
+  "scope": "float32 weights/upstream, repeated int64 indices, sparse=false; renormalisation is no-grad and may execute through native ATen even in the Triton-based candidates",
+  "development": {"implementation": "flag_gems", "weight_shape": [11, 7], "index_shape": [2, 5], "seeds": [20261129, 20261130]},
+  "acceptance": {"implementation": "inductor", "weight_shape": [13, 17], "index_shape": [3, 5], "seeds": [20261201, 20261202]},
+  "cases": [
+    {"id": "l2", "padding_idx": null, "scale_grad_by_freq": false, "max_norm": 1.0, "norm_type": 2.0},
+    {"id": "padding_zero", "padding_idx": 0, "scale_grad_by_freq": false, "max_norm": 1.0, "norm_type": 2.0},
+    {"id": "padding_last_frequency", "padding_idx": -1, "scale_grad_by_freq": true, "max_norm": 1.0, "norm_type": 2.0},
+    {"id": "l1", "padding_idx": null, "scale_grad_by_freq": false, "max_norm": 2.0, "norm_type": 1.0},
+    {"id": "zero_bound", "padding_idx": null, "scale_grad_by_freq": false, "max_norm": 0.0, "norm_type": 2.0},
+    {"id": "below_bound", "padding_idx": null, "scale_grad_by_freq": false, "max_norm": 20.0, "norm_type": 2.0}
+  ]
+}

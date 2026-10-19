@@ -12,6 +12,8 @@ from kernel_analyzer.reference_eval.emulate import HardwareOracle, _compare, emu
 from kernel_analyzer.reference_eval.ttir_parser import parse_ttir  # noqa: E402
 
 cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+fp8_cuda = pytest.mark.skipif(not torch.cuda.is_available() or torch.cuda.get_device_capability() < (8, 9),
+                              reason="device FP8 conversion needs sm_89 or newer")
 
 
 def _capture(fn):
@@ -345,9 +347,9 @@ def test_reshaped_product_reduction_and_broadcast_quotient():
     assert r["nodes"].get("reduce_tree_fused")
 
 
-@cuda
+@fp8_cuda
 def test_fp8_conversion_clamp_and_directed_fma_with_flushed_zeros():
-    """sm_86's software fp8 e5m2 conversion rounds ties away from zero (a bf16 tie such as 0.5625 goes to 0.625, not
+    """The device fp8 e5m2 conversion rounds ties away from zero (a bf16 tie such as 0.5625 goes to 0.625, not
     to the even 0.5); tt.clampf's min / max have their own signed-zero rule; an fma rounding down whose operands flush
     to zero gives +0 (the outward interval of an exact zero must not round to the smallest subnormal)."""
     import triton

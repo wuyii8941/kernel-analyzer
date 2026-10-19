@@ -1,0 +1,295 @@
+{
+  "purpose": "Development check of actual public loss parameters and complete outputs; not independent acceptance",
+  "prior_exposure": "attorch loss source and initial mean beta/delta=0.5 results already reviewed. beta=0 equality behavior suspected from source before execution.",
+  "selection_rule": "Select all three documented reductions and zero/positive/non-binary-exact thresholds before running; retain all failures.",
+  "standard_reference": "Installed PyTorch 2.10.0+cu128 public functions, CUDA float32, autocast disabled. This is an implementation reference, not a rigorous mathematical oracle.",
+  "shapes": [
+    [
+      4,
+      32
+    ],
+    [
+      3,
+      17
+    ]
+  ],
+  "seeds": [
+    20261019,
+    20261020
+  ],
+  "upstream": [
+    1.0,
+    -2.0
+  ],
+  "boundary_inputs": "Integer multiples of 1/8; loss calls include differences 0, +1/2, -1/2, +2, -2. Unary calls include 0, +1/2, -1/2, +2, -2. These are diagnostic samples, not a training distribution.",
+  "repositories": {
+    "attorch": {
+      "path": ".cache/untrusted/attorch_src/repo",
+      "url": "https://github.com/BobMcDear/attorch",
+      "commit": "67c2772baf33913ef51c2d1064f746ca17b63749",
+      "license": "MIT",
+      "task_sources": [
+        "attorch/p_loss_layers.py",
+        "tests/test_p_loss_layers.py",
+        "attorch/softmax_layers.py",
+        "tests/test_softmax_layers.py"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "attorch_smooth_l1_beta_0p0_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'none', 'beta': 0.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p0_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'sum', 'beta': 0.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p0_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'mean', 'beta': 0.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p1_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'none', 'beta': 0.1})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "beta": 0.1
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p1_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'sum', 'beta': 0.1})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "beta": 0.1
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p1_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'mean', 'beta': 0.1})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "beta": 0.1
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p5_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'none', 'beta': 0.5})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "beta": 0.5
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p5_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'sum', 'beta': 0.5})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "beta": 0.5
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_0p5_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'mean', 'beta': 0.5})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "beta": 0.5
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_2p0_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'none', 'beta': 2.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "beta": 2.0
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_2p0_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'sum', 'beta': 2.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "beta": 2.0
+      }
+    },
+    {
+      "id": "attorch_smooth_l1_beta_2p0_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "smooth_l1",
+      "entry": "attorch.SmoothL1Loss({'reduction': 'mean', 'beta': 2.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "beta": 2.0
+      }
+    },
+    {
+      "id": "attorch_huber_delta_0p1_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'none', 'delta': 0.1})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "delta": 0.1
+      }
+    },
+    {
+      "id": "attorch_huber_delta_0p1_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'sum', 'delta': 0.1})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "delta": 0.1
+      }
+    },
+    {
+      "id": "attorch_huber_delta_0p1_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'mean', 'delta': 0.1})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "delta": 0.1
+      }
+    },
+    {
+      "id": "attorch_huber_delta_0p5_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'none', 'delta': 0.5})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "delta": 0.5
+      }
+    },
+    {
+      "id": "attorch_huber_delta_0p5_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'sum', 'delta': 0.5})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "delta": 0.5
+      }
+    },
+    {
+      "id": "attorch_huber_delta_0p5_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'mean', 'delta': 0.5})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "delta": 0.5
+      }
+    },
+    {
+      "id": "attorch_huber_delta_2p0_none",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'none', 'delta': 2.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "none",
+        "delta": 2.0
+      }
+    },
+    {
+      "id": "attorch_huber_delta_2p0_sum",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'sum', 'delta': 2.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "sum",
+        "delta": 2.0
+      }
+    },
+    {
+      "id": "attorch_huber_delta_2p0_mean",
+      "split": "development",
+      "library": "attorch",
+      "op": "huber",
+      "entry": "attorch.HuberLoss({'reduction': 'mean', 'delta': 2.0})",
+      "contract": "HUBER",
+      "parameters": {
+        "reduction": "mean",
+        "delta": 2.0
+      }
+    }
+  ],
+  "revision": "parameter_v1: explicit public constructor parameters shared by candidate, standard and mathematical queries",
+  "upstream_rule": "Scalar losses use the listed scalar upstream. Nonscalar outputs use upstream * ((flat_index % 7) - 3) / 4 at every coordinate."
+}

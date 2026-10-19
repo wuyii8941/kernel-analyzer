@@ -1,0 +1,141 @@
+schema_version: '1.2'
+id: OPT4BIT
+role: ADAM
+title: torchao 0.16 AdamW4bit - AdamW step with block-wise 4-bit quantised optimizer states, conditioned on the
+  dequantised pre-state
+review:
+  status: drafted
+  author: Claude (spec v3 author, group E1_optim), 2026-10-17
+  date: '2026-10-17'
+  scope: One optimizer step on one parameter tensor (flattened); the quantisation map and rules are part of the task
+    (reference program torchao 0.16.0); awaiting a review by someone who did not write it
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [torchao.optim.AdamW4bit, torchao.optim.subclass_4bit.OptimState4bit]
+profiles:
+  torchao016:
+    meaning: 'torchao 0.16.0 AdamW4bit, amsgrad=False: AdamW step from the dequantised states, the update computed from
+      the unquantised new moments, then the new moments stored through the block-wise 4-bit maps (signed dynamic map for
+      m, linear map without zero for v) when the tensor passes the size gate; otherwise plain states.'
+    task_choice_required: false
+outputs:
+  theta:
+    shape: '[d]'
+    guarantee: rigorous_enclosure
+  m:
+    shape: '[d] stored first moment (dequantised: qmap[code]*scale)'
+    guarantee: exact
+  v:
+    shape: '[d] stored second moment (dequantised)'
+    guarantee: exact
+  t:
+    shape: scalar integer
+    guarantee: exact
+comparison:
+  input_binding: All values are the exactly received rationals; the maps are the exact binary32 constants of the source.
+  quality: No tolerance; stored states exact, theta a strict enclosure.
+  test_evidence: Exact equality or containment.
+  error_handling: Inputs validated before evaluation.
+decisions:
+- id: Q4.TASK
+  status: drafted
+  statement: 'For this optimizer the quantisation of the states is part of the task (B008: both quantised moments
+    shrink the step, a design trade-off, not a deviation). The contract is conditioned on the dequantised pre-state:
+    m and v are the values the codes and scales decode to; codes and scales themselves are not observed (any encoding
+    that decodes to the same values is equivalent for the next step). Alternative (judge AdamW4bit against real AdamW,
+    ADAMW.base) rejected for this optimizer: the quantiser is its defining feature; that comparison measures B008, not
+    correctness.'
+  basis: [AO_ADAM.ADAMW4BIT, AO_ADAM.STEP, AO_SUBCLASS_4BIT.COPY]
+- id: Q4.MAPS
+  status: drafted
+  statement: 'Maps: signed = create_dynamic_map(True, 3, 4) (16 binary32 constants from -0.8875 to 1, including 0),
+    unsigned = k/16, k = 1..16 (no zero). Block-wise: the flattened tensor is cut into blocks of block_size; scale =
+    max(absmax of the block, binary32(1e-12)); code = largest index with qmap[code] <= x/scale (0 if none), moved to the
+    next code iff the residual is at least half the gap (ties up). Evaluated exactly on the real moments; the binary32
+    evaluation in the device is numerical (K - f).'
+  basis: [AO_SUBCLASS_4BIT.QMAPS, AO_QUANT_UTILS.DYNAMIC_MAP, AO_QUANT_UTILS.SCALE, AO_QUANT_UTILS.QUANT4,
+    AO_QUANT_UTILS.DEQUANT]
+- id: Q4.GATE
+  status: drafted
+  statement: 'States are quantised only if numel >= 4096 and numel % block_size == 0 (torchao follows bitsandbytes);
+    otherwise they are plain tensors and the step is AdamW (the parameter is then judged by ADAMW.base). The threshold
+    is the input min_quant_numel (default 4096, the source constant) so that examples can be small; a binding of a real
+    run uses 4096.'
+  basis: [AO_ADAM.BUFFER]
+clauses:
+- {id: Q4.C1, basis: [AO_ADAM.STEP, PAW.MOMENTS, PAW.CORRECTION, PAW.DECAY, PAW.UPDATE], statement: 'm_f = beta1*m +
+    (1-beta1)*g, v_f = beta2*v + (1-beta2)*g**2 from the dequantised pre-state; theta_new = theta*(1-lr*wd) -
+    lr*(m_f/(1-beta1**t_new))/(sqrt(v_f/(1-beta2**t_new)) + eps), using m_f and v_f (not the stored values)',
+  observes: [theta, t], evidence_kind: definition}
+- {id: Q4.C2, basis: [Q4.MAPS, Q4.TASK], statement: 'stored m = Q_signed(m_f), stored v = Q_unsigned(v_f), block-wise',
+  observes: [m, v], evidence_kind: definition}
+- {id: Q4.C3, basis: [Q4.GATE], statement: 'below the size gate (or numel not a multiple of block_size) m_f and v_f are
+    stored unchanged', observes: [m, v], evidence_kind: definition}
+- {id: Q4.C4, basis: [T_ZERO_GRAD.SKIP, AO_ADAM.SR_FLAG], statement: gradient None skips the parameter, observes: [theta,
+    m, v, t], evidence_kind: definition}
+examples:
+- id: Q4.E1
+  profile: torchao016
+  clauses: [Q4.C1, Q4.C2]
+  input: {state: {theta: [1, 1, 1, 1], m: [0, 0, 0, 0], v: [0, 0, 0, 0], t: 0}, gradient: [1, 1/2, -2, 1/8], lr: 1/10,
+    beta1: 1/2, beta2: 1/2, eps: 0, weight_decay: 0, block_size: 2, min_quant_numel: 4}
+  expected: {outcome: value, fields: {theta: ['9/10', '9/10', '11/10', '9/10'], m: ['1/2', '7/32', '-14889779/16777216',
+        '5200937/67108864'], v: ['1/2', '1/8', 2, '1/8'], t: 1}}
+  note: 'm_f = [1/2, 1/4, -1, 1/16], v_f = [1/2, 1/8, 2, 1/128]; block scales 1/2 and 1 (m), 1/2 and 2 (v); x = 1/2 ->
+    0.4375; x = -1 -> lowest code -0.8875 (binary32); x = 1/16 -> 0.0775 (binary32); v: 1/256 of the scale -> 1/16
+    (no zero code), stored 1/8 instead of 1/128. theta uses m_f and v_f: one lr step of sign(g).'
+- id: Q4.E2
+  profile: torchao016
+  clauses: [Q4.C1, Q4.C3]
+  input: {state: {theta: [1, 1, 1, 1], m: [0, 0, 0, 0], v: [0, 0, 0, 0], t: 0}, gradient: [1, 1/2, -2, 1/8], lr: 1/10,
+    beta1: 1/2, beta2: 1/2, eps: 0, weight_decay: 0, block_size: 2, min_quant_numel: 8}
+  expected: {outcome: value, fields: {theta: ['9/10', '9/10', '11/10', '9/10'], m: ['1/2', '1/4', -1, '1/16'],
+      v: ['1/2', '1/8', 2, '1/128'], t: 1}}
+- id: Q4.E3
+  profile: torchao016
+  clauses: [Q4.C1, Q4.C2]
+  input: {state: {theta: [1, 1], m: [0, 0], v: [2, 3/16], t: 1}, gradient: [0, 0], lr: 1/10, beta1: 1/2, beta2: 1/2,
+    eps: 0, weight_decay: 0, block_size: 2, min_quant_numel: 2}
+  expected: {outcome: value, fields: {theta: [1, 1], m: [0, 0], v: [1, '1/8'], t: 2}}
+  note: v_f = [1, 3/32], scale 1; 3/32 is the midpoint of 1/16 and 1/8 and rounds up; the zero m block stores 0.
+- id: Q4.E4
+  profile: torchao016
+  clauses: [Q4.C4]
+  input: {state: {theta: [1, 1], m: [1, 0], v: [2, 3/16], t: 1}, gradient: null, lr: 1/10, beta1: 1/2, beta2: 1/2,
+    eps: 0, weight_decay: 0, block_size: 2, min_quant_numel: 2}
+  expected: {outcome: value, fields: {theta: [1, 1], m: [1, 0], v: [2, '3/16'], t: 1}}
+- id: Q4.N1
+  profile: torchao016
+  clauses: [Q4.C1]
+  input: {state: {theta: [1, 1], m: [0, 0], v: [0, 0], t: 0}, gradient: [1, 1], lr: 1/10, beta1: 1/2, beta2: 1/2,
+    eps: 0, weight_decay: 0, block_size: 2, min_quant_numel: 2, amsgrad: true}
+  expected: {outcome: unsupported}
+  note: amsgrad was not tested with AdamW4bit.
+signature:
+  inputs: ['gradient [d] or None', lr, beta1, beta2, eps, weight_decay, 'block_size (default 128)', 'min_quant_numel
+      (default 4096)']
+  pre_state: ['theta [d]', 'm [d] dequantised', 'v [d] dequantised', t nonnegative integer]
+  post_state: ['theta [d]', 'm [d] stored (dequantised)', 'v [d] stored (dequantised)', t]
+  observation_unit: one parameter tensor (flattened), one optimizer step
+domain:
+  valid: [d >= 1, finite rationals, v >= 0, '0 <= beta1, beta2 < 1', 'lr, eps, weight_decay >= 0']
+  domain_undefined: ['sqrt(v_hat) + eps = 0']
+  invalid_input: [length mismatch, negative v, NaN or infinite values]
+  unsupported: [amsgrad=True (not tested), the codes and scales themselves (not observed)]
+mutation_requirements:
+- {id: Q4.M1, misreading: update computed from the re-read (quantised) states, witnesses: [Q4.E1]}
+- {id: Q4.M2, misreading: one scale for the whole tensor instead of per block, witnesses: [Q4.E1]}
+- {id: Q4.M3, misreading: code rounded down instead of to the nearest (ties up), witnesses: [Q4.E1, Q4.E3]}
+- {id: Q4.M4, misreading: 'unsigned map with a zero code (linspace(0, 1, 16))', witnesses: [Q4.E1]}
+- {id: Q4.M5, misreading: 'no quantisation (real AdamW states; the B008 baseline)', witnesses: [Q4.E1]}
+- {id: Q4.M6, misreading: size gate ignored (small tensors quantised), witnesses: [Q4.E2]}
+nonclaims:
+- Agreement is agreement with the torchao 0.16.0 reference program; no documentation states the maps.
+- Codes, scales and the packing of two codes per byte are not observed; binary32 evaluation of the scaled values is
+  numerical (K - f).
+- Training effects of the quantisation (B008, about lr x 0.7) are outside the contract.
+- A rejected mutant witnesses a particular error; rejecting all listed mutants does not prove completeness.
+changes: []

@@ -1,0 +1,597 @@
+schema_version: '1.2'
+id: A1_LINEAR
+role: LINEAR_ATTENTION_RECURRENCE
+title: Selected linear-attention and delta recurrence cores, complete state and VJP (draft migration)
+review:
+  status: drafted
+  author: Codex, 2026-10-18
+  date: '2026-10-18'
+  scope: Prepared migration of the isolated A1 draft; needs independent source and implementation review. Local
+    FLA support copies have unverified upstream revision.
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires:
+  - source_profile_matched
+  - input_contract_validated
+  - all_required_outputs_bound
+  - reference_semantics_and_guarantees_validated
+  - no_unresolved_contradiction
+  - reviewed_contract_and_adapter_match_current
+covers:
+- Explicitly selected single-head mathematical recurrence regions, including variable-length sequences and full
+  VJP; not a full FLA API or model layer
+profiles:
+  unnormalized_core:
+    meaning: S_t=S_{t-1}+k_t v_t^T; o_t=scale*S_t^T q_t. No denominator or Z state.
+    basis:
+    - A1.TASK
+    - A1_LOCAL_LINEAR.RECURRENCE
+    task_choice_required: true
+  normalized_core:
+    meaning: Same S update, Z_t=Z_{t-1}+k_t; o_t=scale*S_t^T*q_t/(scale*dot(q_t,Z_t)+epsilon). epsilon is mandatory,
+      nonnegative and fixed for differentiation.
+    basis:
+    - A1.TASK
+    - A1.NORMALIZATION
+    - A1_LOCAL_LINEAR.NORMALIZED
+    - A1_LOCAL_NORMALIZE.STATE
+    task_choice_required: true
+  scalar_decay_core:
+    meaning: A_t=a_t*S_{t-1}; S_t=A_t+k_t*v_t^T; o_t=scale*S_t^T*q_t.
+    basis:
+    - A1.TASK
+    - A1_LOCAL_SCALAR.RECURRENCE
+    - A1.GATE
+    task_choice_required: true
+  diagonal_decay_core:
+    meaning: A_t=diag(a_t)*S_{t-1}; S_t=A_t+k_t*v_t^T; o_t=scale*S_t^T*q_t.
+    basis:
+    - A1.TASK
+    - A1_LOCAL_GLA.RECURRENCE
+    - A1.GATE
+    task_choice_required: true
+  delta_core:
+    meaning: A_t=S_{t-1}; S_t=A_t+beta_t*k_t*(v_t-A_t^T*k_t)^T; o_t=scale*S_t^T*q_t. beta is scalar per token, supplied
+      directly.
+    basis:
+    - A1.TASK
+    - A1_LOCAL_DELTA.RECURRENCE
+    task_choice_required: true
+  gated_delta_core:
+    meaning: A_t=a_t*S_{t-1}; S_t=A_t+beta_t*k_t*(v_t-A_t^T*k_t)^T; o_t=scale*S_t^T*q_t.
+    basis:
+    - A1.TASK
+    - GDN_PAPER.EQ10
+    - FLA_GDR_NAIVE.RECURRENT
+    - A1.GATE
+    task_choice_required: true
+  kda_core:
+    meaning: A_t=diag(a_t)*S_{t-1}; S_t=A_t+beta_t*k_t*(v_t-A_t^T*k_t)^T; o_t=scale*S_t^T*q_t. Decay precedes correction.
+    basis:
+    - A1.TASK
+    - A1_LOCAL_KDA.RECURRENCE
+    - A1.GATE
+    task_choice_required: true
+outputs:
+  result:
+    shape: Complete named record described by signature; every output and state coordinate is required
+    guarantee: rigorous_enclosure
+comparison:
+  input_binding: Exact supplied finite values; binary floats denote their exact rational values. Explicit scale
+    and epsilon are fixed task parameters.
+  quality: Exact rationals when possible, outward enclosures otherwise; no tolerance.
+  test_evidence: Example compatibility and independent exact matrix/gradient checks do not establish general certification.
+  error_handling: Invalid structure rejects the complete query; zero normalized denominator is undefined; unsupported
+    API features are not guessed.
+decisions:
+- id: A1.TASK
+  status: needs_binding
+  statement: The caller must select the exact recurrence subtask and bind every input, state and output. A role/family
+    name is insufficient. Retained local implementations support the written updates but have not been independently
+    tied to an upstream revision. No complete Katharopoulos paper algorithm is claimed, and no default feature map
+    is selected. Direct finite decay/beta values describe this algebraic task, not every model parameterization.
+  basis:
+  - A1_LOCAL_LINEAR.RECURRENCE
+  - A1_LOCAL_LINEAR.NORMALIZED
+  - A1_LOCAL_NORMALIZE.STATE
+  - A1_LOCAL_SCALAR.RECURRENCE
+  - A1_LOCAL_GLA.RECURRENCE
+  - A1_LOCAL_DELTA.RECURRENCE
+  - GDN_PAPER.EQ10
+  - FLA_GDR_NAIVE.RECURRENT
+  - A1_LOCAL_KDA.RECURRENCE
+- id: A1.SCALE
+  status: drafted
+  statement: All paths use real 1/sqrt(K) by default; an explicit scale instead uses its exactly supplied value.
+    K is positive. Floating computation of the default belongs to the numerical execution question and must be selected
+    consistently at binding.
+  basis:
+  - A1_LOCAL_LINEAR.RECURRENCE
+  - A1_LOCAL_SCALAR.RECURRENCE
+- id: A1.GATE
+  status: needs_binding
+  statement: gate_parameterization defaults to direct. Explicit ln means a=exp(g), log2 means a=2^g; the argument
+    named a then carries g and gradients are dg. Changing the base changes the task unless the input is correspondingly
+    transformed. Unknown bases reject. No automatic sigmoid, softplus or beta conversion.
+  basis:
+  - A1_LOCAL_SCALAR.RECURRENCE
+  - A1_LOCAL_GLA.RECURRENCE
+  - A1_LOCAL_KDA.RECURRENCE
+- id: A1.NORMALIZATION
+  status: needs_binding
+  statement: q and k are the supplied core vectors, after any feature map selected outside this region.
+    The retained local implementation adds the literal 1e-10 after scaling the query-key sum.
+    This contract generalizes that constant only by explicit task choice of epsilon; it does not
+    attribute arbitrary epsilon to the paper or the full FLA API. The denominator is
+    scale*dot(q,Z)+epsilon, not scale*(dot(q,Z)+epsilon). Cancelling scale requires
+    rescaling epsilon and a nonzero scale. A binding must specify the exact value of epsilon,
+    including any conversion of a source-language literal, and the q/k transformations.
+  basis:
+  - A1_LOCAL_LINEAR.NORMALIZED
+  - A1_LOCAL_NORMALIZE.STATE
+- id: A1.VJP
+  status: drafted
+  statement: Differentiate sum_t dot(dO_t,o_t)+dot(dST,S_T), plus dot(dZT,Z_T) for normalized_core, with respect
+    to every supplied core tensor; scale and epsilon fixed. k occurs in both delta write and residual. Varlen has
+    one cotangent per declared final state, including empty segments.
+  basis:
+  - A1.TASK
+  - A1_LOCAL_NORMALIZE.STATE
+clauses:
+- id: A1.C1
+  basis:
+  - A1.TASK
+  - A1_LOCAL_LINEAR.RECURRENCE
+  statement: S_t=S_{t-1}+k_t v_t^T; o_t=scale*S_t^T q_t. No denominator or Z state.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C2
+  basis:
+  - A1.TASK
+  - A1.NORMALIZATION
+  - A1_LOCAL_LINEAR.NORMALIZED
+  - A1_LOCAL_NORMALIZE.STATE
+  statement: Same S update, Z_t=Z_{t-1}+k_t; o_t=scale*S_t^T*q_t/(scale*dot(q_t,Z_t)+epsilon). epsilon is mandatory,
+    nonnegative and fixed for differentiation.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C3
+  basis:
+  - A1.TASK
+  - A1_LOCAL_SCALAR.RECURRENCE
+  statement: A_t=a_t*S_{t-1}; S_t=A_t+k_t*v_t^T; o_t=scale*S_t^T*q_t.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C4
+  basis:
+  - A1.TASK
+  - A1_LOCAL_GLA.RECURRENCE
+  statement: A_t=diag(a_t)*S_{t-1}; S_t=A_t+k_t*v_t^T; o_t=scale*S_t^T*q_t.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C5
+  basis:
+  - A1.TASK
+  - A1_LOCAL_DELTA.RECURRENCE
+  statement: A_t=S_{t-1}; S_t=A_t+beta_t*k_t*(v_t-A_t^T*k_t)^T; o_t=scale*S_t^T*q_t. beta is scalar per token, supplied
+    directly.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C6
+  basis:
+  - A1.TASK
+  - GDN_PAPER.EQ10
+  - FLA_GDR_NAIVE.RECURRENT
+  statement: A_t=a_t*S_{t-1}; S_t=A_t+beta_t*k_t*(v_t-A_t^T*k_t)^T; o_t=scale*S_t^T*q_t.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C7
+  basis:
+  - A1.TASK
+  - A1_LOCAL_KDA.RECURRENCE
+  statement: A_t=diag(a_t)*S_{t-1}; S_t=A_t+beta_t*k_t*(v_t-A_t^T*k_t)^T; o_t=scale*S_t^T*q_t. Decay precedes correction.
+  observes:
+  - result
+  evidence_kind: definition
+- id: A1.C8
+  basis:
+  - A1.VJP
+  statement: Full VJP includes all output and final-state cotangents.
+  observes:
+  - result
+  evidence_kind: derived
+- id: A1.C9
+  basis:
+  - A1.SCALE
+  statement: Common default scale on every path.
+  observes:
+  - result
+  evidence_kind: derived
+- id: A1.C10
+  basis:
+  - A1.TASK
+  statement: Varlen preserves every state position, including empty segments.
+  observes:
+  - result
+  evidence_kind: derived
+- id: A1.C11
+  basis:
+  - A1.TASK
+  statement: Reject malformed complete query before calculating partial results.
+  observes:
+  - result
+  evidence_kind: derived
+examples:
+- id: A1.E13
+  profile: normalized_core
+  clauses:
+  - A1.C2
+  input:
+    operation: forward
+    q: [[1]]
+    k: [[1]]
+    v: [[1]]
+    scale: 2
+    epsilon: 1
+  expected:
+    outcome: value
+    fields:
+      result:
+        out: [[2/3]]
+        state: [[1]]
+        zstate: [1]
+- id: A1.E1
+  profile: unnormalized_core
+  clauses:
+  - A1.C1
+  input:
+    operation: forward
+    q: &id001
+    - - 1
+    k: &id002
+    - - 1
+    v:
+    - - 3
+      - 4
+    S0:
+    - - 2
+      - 5
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 5
+          - 9
+        state:
+        - - 5
+          - 9
+- id: A1.E2
+  profile: normalized_core
+  clauses:
+  - A1.C2
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: &id003
+    - - 3
+    S0:
+    - - 2
+    Z0:
+    - 4
+    epsilon: 0
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 1
+        state:
+        - - 5
+        zstate:
+        - 5
+- id: A1.E3
+  profile: scalar_decay_core
+  clauses:
+  - A1.C3
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: *id003
+    a:
+    - 0
+    S0:
+    - - 7
+    chunk_size: 2
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 3
+        state:
+        - - 3
+- id: A1.E4
+  profile: diagonal_decay_core
+  clauses:
+  - A1.C4
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: *id003
+    a:
+    - - 1/2
+    S0:
+    - - 2
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 4
+        state:
+        - - 4
+- id: A1.E5
+  profile: delta_core
+  clauses:
+  - A1.C5
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: *id003
+    beta:
+    - 1/2
+    S0:
+    - - 2
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 5/2
+        state:
+        - - 5/2
+- id: A1.E6
+  profile: gated_delta_core
+  clauses:
+  - A1.C6
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: *id003
+    beta:
+    - 1/2
+    a:
+    - 1/2
+    S0:
+    - - 2
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 2
+        state:
+        - - 2
+- id: A1.E7
+  profile: kda_core
+  clauses:
+  - A1.C7
+  input:
+    operation: forward
+    q:
+    - - 1
+      - 0
+    k:
+    - - 1
+      - 1
+    v:
+    - - 0
+    beta:
+    - 1
+    a:
+    - - 2
+      - 3
+    S0:
+    - - 1
+    - - 2
+    scale: 1
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - -6
+        state:
+        - - -6
+        - - -2
+- id: A1.E8
+  profile: normalized_core
+  clauses:
+  - A1.C8
+  input:
+    operation: backward
+    q: *id001
+    k: *id002
+    v: *id003
+    dO:
+    - - 1
+    dST:
+    - - 2
+    dZT:
+    - 3
+    S0:
+    - - 2
+    Z0:
+    - 4
+    epsilon: 0
+  expected:
+    outcome: value
+    fields:
+      result:
+        dq:
+        - - 0
+        dk:
+        - - 47/5
+        dv:
+        - - 11/5
+        dS0:
+        - - 11/5
+        dZ0:
+        - 14/5
+- id: A1.E9
+  profile: unnormalized_core
+  clauses:
+  - A1.C9
+  input:
+    operation: forward
+    q:
+    - - 1
+      - 0
+      - 0
+      - 0
+    k:
+    - - 1
+      - 0
+      - 0
+      - 0
+    v: *id003
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 3/2
+        state:
+        - - 3
+        - - 0
+        - - 0
+        - - 0
+- id: A1.E10
+  profile: unnormalized_core
+  clauses:
+  - A1.C10
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: *id003
+    cu_seqlens:
+    - 0
+    - 0
+    - 1
+    S0_list:
+    - - - 7
+    - - - 2
+  expected:
+    outcome: value
+    fields:
+      result:
+        out:
+        - - 5
+        states:
+        - - - 7
+        - - - 5
+- id: A1.E11
+  profile: normalized_core
+  clauses:
+  - A1.C11
+  input:
+    operation: forward
+    q: *id001
+    k: *id002
+    v: *id003
+    epsilon: 0
+    Z0:
+    - 1
+    - 2
+  expected:
+    outcome: invalid_input
+- id: A1.E12
+  profile: normalized_core
+  clauses:
+  - A1.C2
+  input:
+    operation: forward
+    q:
+    - - 0
+    k: *id002
+    v: *id003
+    epsilon: 0
+  expected:
+    outcome: domain_undefined
+signature:
+  inputs:
+  - 'operation: forward or backward; q/k [T,K], v [T,V]; K,V positive'
+  - profile selects the exact subtask; epsilon mandatory only for normalized_core
+  - a [T] for scalar/gated_delta, [T,K] for diagonal/KDA; gate_parameterization direct/ln/log2
+  - beta [T] direct for delta profiles; no per-value beta in this draft
+  - optional cu_seqlens [N+1], starts 0, nondecreasing, ends T; N>=1
+  - backward requires dO [T,V]; optional dST/dZT or their per-sequence lists
+  - optional positive integer chunk_size only for forward linear/normalized/decay cores
+  pre_state:
+  - S0 [K,V], or S0_list [N,K,V], defaults to zero; required for all-empty tokens to determine dimensions
+  - normalized Z0 [K], or Z0_list [N,K], defaults to zero; cannot substitute for S dimensions
+  post_state:
+  - 'forward: out [T,V] and state [K,V] (states [N,K,V] for varlen); normalized additionally zstate [K] or zstates
+    [N,K]'
+  - 'backward: dq/dk [T,K], dv [T,V], dS0 [K,V] or dS0_list [N,K,V]; normalized adds dZ0 [K] or dZ0_list [N,K]'
+  - decay/gated profiles add da or dg in the supplied gate shape; delta profiles add dbeta [T]
+  observation_unit: One selected region, one head, every declared sequence and all states; no inferred API layout
+    or storage aliasing
+domain:
+  valid:
+  - Finite exact inputs, matching tensor dimensions and complete state pools; empty segments retained
+  - Direct a and beta may be any finite supplied value under explicitly selected algebraic task; log inputs finite
+  - epsilon >=0; normalized denominators nonzero
+  domain_undefined:
+  - Any normalized output has zero denominator
+  invalid_input:
+  - Missing required input; malformed dimensions, counts, boundaries or cotangents; negative epsilon
+  unsupported:
+  - Unknown profile/operation/base/keyword; discarded or unbound outputs
+  - Feature-map selection, full paper/model algorithm, implicit q/k normalization, sigmoid beta, multihead expansion,
+    reverse scan, transposed state or storage effects
+  - Delta chunked diagnostic evaluation; full FLA API compatibility
+mutation_requirements:
+- id: A1.M6
+  misreading: Multiply epsilon by scale as if it were inside the query-key sum
+  witnesses:
+  - A1.E13
+- id: A1.M1
+  misreading: Drop supplied S0
+  witnesses:
+  - A1.E1
+- id: A1.M2
+  misreading: Drop final-state cotangents
+  witnesses:
+  - A1.E8
+- id: A1.M3
+  misreading: Use unit default scale
+  witnesses:
+  - A1.E9
+- id: A1.M4
+  misreading: Drop supplied Z0
+  witnesses:
+  - A1.E2
+- id: A1.M5
+  misreading: Return only first value coordinate
+  witnesses:
+  - A1.E1
+nonclaims:
+- All source/task decisions remain pending independent review; development checks cannot activate this contract.
+- This contract is the only current A1 entry; historical drafts/v2_5 is not a fallback.
+- A kernel binding must establish which region, profile, input transformation, outputs and memory states are being
+  compared.

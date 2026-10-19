@@ -1,0 +1,20 @@
+{
+  "call": "../calls/triton_matmul.py:call",
+  "inputs": {
+    "a": {"sampler": {"normal": [0, 1]}, "shape": [16, 32], "dtype": "float32"},
+    "b": {"sampler": {"normal": [0, 1]}, "shape": [32, 16], "dtype": "float32"}
+  },
+  "compare": {
+    "mode": "contract",
+    "measure": ["out"],
+    "binding_plan": "../call_bindings/triton_matmul.json",
+    "specification_root": "../.."
+  },
+  "units": {"development": 8, "confirmation": 16, "seed_offset": 0},
+  "alpha": 0.05,
+  "budget": {"cpu_seconds": 600, "gpu_seconds": 600, "case_timeout": 300, "max_units": 24},
+  "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+  "multiplicity": "Holm within each rule class",
+  "reference_classes_allowed": ["complete_composed"],
+  "resolution": {"ulp_fraction": 0.125, "max_level": 3}
+}

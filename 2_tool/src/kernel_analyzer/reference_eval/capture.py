@@ -22,6 +22,7 @@ import dataclasses
 import hashlib
 import json
 import os
+import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -72,7 +73,11 @@ class CapturedLaunch:
     implicit: list = field(default_factory=list)
     # False: recorded by a recorder with execute=False -- the kernel did not run, the "after" copies are the operands
     # before the launch (ex-ante analyses such as bias_predict)
-    executed: bool = True
+    executed: Optional[bool] = True  # None: older saved capture has no execution evidence
+    implicit_recorded: bool = True  # False: older saved capture may have omitted indirect operands
+    # Actual Python caller locations at launch time; None for older captures.
+    # Locations only: no locals, argument values, or copied source lines.
+    call_stack: Optional[list] = None
 
     def ttir_params(self) -> list:
         """Arguments that are parameters of the TTIR function, in order."""
@@ -426,6 +431,8 @@ class TritonLaunchRecorder(contextlib.AbstractContextManager):
             metadata=metadata, libtriton_sha256=self._libtriton,
             environment={"triton": triton.__version__, "torch": torch.__version__,
                          "device": torch.cuda.get_device_name(torch.cuda.current_device())})
+        record.call_stack = [{"file": frame.filename, "line": frame.lineno, "function": frame.name}
+                             for frame in traceback.extract_stack(limit=64)[:-1]]
         record._src = (names, signature)  # for _after: the same flattening of the arguments
         for j, t in enumerate(self.implicit_tensors):
             item = CapturedArg(-1 - j, f"implicit{j}", "tensor", False, None, dtype=str(t.dtype).replace("torch.", ""),
@@ -486,15 +493,18 @@ def save_launch(launch: CapturedLaunch, directory: Path) -> Path:
     for key, text in launch.asm.items():
         (directory / "ir" / f"kernel.{key}").write_text(text)
     operands = {}
-    args_json = []
-    for arg in launch.args:
-        entry = {k: v for k, v in dataclasses.asdict(arg).items() if k not in ("before", "after", "window")}
-        args_json.append(_jsonable(entry))
-        if arg.before is not None:
-            operands[f"{arg.index}.before"] = arg.before
-            operands[f"{arg.index}.after"] = arg.after
-        if arg.window is not None:
-            operands[f"{arg.index}.window"] = torch.as_tensor(arg.window)
+    def encode_args(args, prefix=""):
+        entries = []
+        for arg in args:
+            entry = {k: v for k, v in dataclasses.asdict(arg).items() if k not in ("before", "after", "window")}
+            entries.append(_jsonable(entry))
+            for phase in ("before", "after", "window"):
+                value = getattr(arg, phase)
+                if value is not None:
+                    operands[f"{prefix}{arg.index}.{phase}"] = torch.as_tensor(value)
+        return entries
+    args_json = encode_args(launch.args)
+    implicit_json = encode_args(launch.implicit, "implicit.")
     torch.save(operands, directory / "operands.pt")
     manifest = {
         "schema": "kernel-analyzer-triton-capture-v1",
@@ -503,6 +513,10 @@ def save_launch(launch: CapturedLaunch, directory: Path) -> Path:
         "kernel_hash": launch.kernel_hash,
         "grid": list(launch.grid),
         "args": args_json,
+        "implicit": implicit_json,
+        "implicit_recorded": launch.implicit_recorded,
+        "executed": launch.executed,
+        "call_stack": launch.call_stack,
         "ir_files": {key: f"ir/kernel.{key}" for key in launch.asm},
         "ir_sha256": {key: hashlib.sha256(text.encode()).hexdigest() for key, text in launch.asm.items()},
         "cubin_sha256": launch.cubin_sha256,
@@ -530,18 +544,21 @@ def load_launch(directory: Path) -> CapturedLaunch:
     directory = Path(directory)
     manifest = json.loads((directory / "launch.json").read_text())
     operands = torch.load(directory / "operands.pt", weights_only=True)
-    args = []
-    for entry in manifest["args"]:
-        entry = dict(entry)
-        for key in ("shape", "stride"):
-            if entry.get(key) is not None:
-                entry[key] = tuple(entry[key])
-        arg = CapturedArg(**entry)
-        arg.before = operands.get(f"{arg.index}.before")
-        arg.after = operands.get(f"{arg.index}.after")
-        window = operands.get(f"{arg.index}.window")
-        arg.window = None if window is None else window.numpy()
-        args.append(arg)
+    def decode_args(entries, prefix=""):
+        args = []
+        for entry in entries:
+            entry = dict(entry)
+            for key in ("shape", "stride"):
+                if entry.get(key) is not None:
+                    entry[key] = tuple(entry[key])
+            arg = CapturedArg(**entry)
+            arg.before = operands.get(f"{prefix}{arg.index}.before")
+            arg.after = operands.get(f"{prefix}{arg.index}.after")
+            window = operands.get(f"{prefix}{arg.index}.window")
+            arg.window = None if window is None else window.numpy()
+            args.append(arg)
+        return args
+    args = decode_args(manifest["args"])
     asm = {key: (directory / path).read_text() for key, path in manifest["ir_files"].items()}
     for key, digest in manifest["ir_sha256"].items():
         if hashlib.sha256(asm[key].encode()).hexdigest() != digest:
@@ -550,7 +567,10 @@ def load_launch(directory: Path) -> CapturedLaunch:
         index=manifest["index"], kernel_name=manifest["kernel_name"], kernel_hash=manifest["kernel_hash"],
         grid=tuple(manifest["grid"]), args=args, asm=asm, cubin_sha256=manifest["cubin_sha256"],
         metadata=manifest["metadata"], libtriton_sha256=manifest["libtriton_sha256"],
-        environment=manifest.get("environment", {}))
+        environment=manifest.get("environment", {}),
+        implicit=decode_args(manifest.get("implicit", []), "implicit."),
+        implicit_recorded="implicit" in manifest and manifest.get("implicit_recorded", True) is True,
+        executed=manifest.get("executed"), call_stack=manifest.get("call_stack"))
     launch.directory = directory  # the package, for its compiled artifacts (cubin / SASS)
     return launch
 
@@ -590,6 +610,8 @@ def replay(launch: CapturedLaunch, kernel=None, device: str = "cuda") -> dict:
 
     import torch
 
+    if launch.implicit or not launch.implicit_recorded:
+        raise ValueError("replay requires a complete mapping of indirect addresses")
     kernel = kernel if kernel is not None else getattr(launch, "kernel", None)
     if kernel is None:
         raise ValueError("no compiled kernel available for replay")
@@ -628,6 +650,10 @@ def check_replay(launch: CapturedLaunch, kernel=None, times: int = 2) -> dict:
 
     import torch
 
+    if type(times) is not int or times <= 0:
+        raise ValueError("replay count must be a positive integer")
+    if launch.executed is not True:
+        raise ValueError("replay comparison requires evidence that the captured launch executed")
     expected = {arg.storage_ptr: arg.after for arg in launch.args if arg.kind == "tensor"}
     outputs = [replay(launch, kernel) for _ in range(times)]
     per_replay = [{str(ptr): bool(torch.equal(out[ptr], expected[ptr])) for ptr in out} for out in outputs]

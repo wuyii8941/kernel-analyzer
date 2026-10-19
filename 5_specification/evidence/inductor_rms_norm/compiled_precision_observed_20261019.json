@@ -1,0 +1,59 @@
+{
+  "task": "PyTorch public RMSNorm forward and complete x/weight VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_per_fused__fused_rms_norm_div_expand_mul_ones_like_pow_sub_sum_0",
+    "triton_per_fused__fused_rms_norm_expand_mul_ones_like_sum_1"
+  ],
+  "generated_triton_kernel_count": 2,
+  "generated_precision_lines": [
+    "#   y => add, mean, mul, mul_1, pow_1, rsqrt",
+    "#   %add : Tensor \"f32[16, 1][1, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.add.Scalar](args = (%mean, 1e-05), kwargs = {})",
+    "#   %rsqrt : Tensor \"f32[16, 1][1, 1]cuda:0\"[num_users=4] = call_function[target=torch.ops.aten.rsqrt.default](args = (%add,), kwargs = {})",
+    "#   %mul : Tensor \"f32[16, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%arg0_1, %rsqrt), kwargs = {})",
+    "#   %mul_8 : Tensor \"f32[16, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%rsqrt, %mul_4), kwargs = {})",
+    "#   %pow_2 : Tensor \"f32[16, 1][1, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.pow.Tensor_Scalar](args = (%rsqrt, 3), kwargs = {})",
+    "tmp18 = 1e-05",
+    "tmp20 = libdevice.rsqrt(tmp19)",
+    "#   y => add, mean, pow_1, rsqrt",
+    "#   %add : Tensor \"f32[16, 1][1, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.add.Scalar](args = (%mean, 1e-05), kwargs = {})",
+    "#   %rsqrt : Tensor \"f32[16, 1][1, 1]cuda:0\"[num_users=4] = call_function[target=torch.ops.aten.rsqrt.default](args = (%add,), kwargs = {})",
+    "#   %mul_9 : Tensor \"f32[16, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%arg0_1, %rsqrt), kwargs = {})",
+    "tmp7 = 1e-05",
+    "tmp9 = libdevice.rsqrt(tmp8)"
+  ],
+  "rows": [
+    {
+      "name": "y",
+      "shape": [
+        16,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 4.76837158203125e-07
+    },
+    {
+      "name": "dx",
+      "shape": [
+        16,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 4.76837158203125e-07
+    },
+    {
+      "name": "dweight",
+      "shape": [
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 1.3113021850585938e-06
+    }
+  ],
+  "inputs_unchanged": true,
+  "inspection_passed": true
+}

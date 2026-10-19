@@ -1,0 +1,222 @@
+schema_version: '1.2'
+id: F2_MX
+role: MX_BLOCK_QUANTIZATION
+title: torchao 0.16.0 finite MXFP8 FLOOR conversion
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: Finite physical f32/bf16 input, last-axis blocks of32, E4M3/E5M2 elements, non-swizzled E8M0 scales
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers:
+- The complete numerical scale codes and element values returned by torchao 0.16.0 to_mx with its default FLOOR mode in the reviewed finite MXFP8 subset
+profiles:
+  torchao016_mxfp8_floor:
+    meaning: >-
+      Split the final input dimension into blocks of32. For each block use torchao 0.16.0 FLOOR scale calculation,
+      return the E8M0 byte code, divide by the implementation's reconstructed scale and convert every element to
+      E4M3 or E5M2 with finite saturation and nearest-even rounding.
+    task_choice_required: false
+    basis: [MX16.TASK, MX16.SCALE, MX16.FORMAT, MX16.SHAPE]
+outputs:
+  scale_codes: {shape: 'input shape with the last dimension divided by32', guarantee: exact}
+  elements: {shape: 'input shape', guarantee: exact}
+comparison:
+  input_binding: >-
+    x contains exact physical finite f32 or bf16 values; elem_format, block_size, scaling_mode and scale layout are
+    all explicit. This profile fixes block_size=32, scaling_mode=floor and is_swizzled_scales=false.
+  complete_output: Every E8M0 byte code and every numerical FP8 element coordinate is required with dtype and shape.
+  quality: Exact equality. No tolerance and no replacement of the released code-0 divisor behavior by ideal real arithmetic.
+  test_evidence: >-
+    Independent bit-field scale derivation and integer format enumeration; comparison with installed torchao 0.16.0
+    on normal, zero, subnormal, two-block, f32 and bf16 inputs; complete-output and rejection checks.
+  error_handling: >-
+    Malformed shape, nonphysical finite values and Boolean metadata are invalid_input. Special values, other dtypes,
+    other scale modes, FP4/FP6, nonstandard block sizes and swizzled scale storage are unsupported.
+decisions:
+- id: MX16.TASK
+  status: reviewed
+  statement: >-
+    The correctness target is the installed torchao 0.16.0 to_mx interface in its default FLOOR mode. This is a
+    versioned framework task, not a claim that FLOOR is the only legal OCP conversion and not an automatic target for
+    every kernel whose name contains MX.
+  basis: [TORCHAO016_MX_TENSOR.INTERFACE, TORCHAO016_MX_CONFIG.MODES, TORCHAO016_MX_CONFIG.SCOPE]
+- id: MX16.SCALE
+  status: reviewed
+  statement: >-
+    For each block, torchao reads the float32 exponent field of amax, subtracts the element format's maximum-power
+    exponent and clamps the E8M0 exponent. The returned byte is exponent+127. Its released implementation uses
+    2^-126 as the conversion divisor when the returned code is0, although E8M0 code0 denotes2^-127; the reference
+    preserves this observable version-specific boundary behavior.
+  basis: [TORCHAO016_MX_TENSOR.FLOOR, TORCHAO016_MX_TENSOR.ZERO_BOUNDARY,
+    TORCHAO016_MX_CONSTANTS.E8M0]
+- id: MX16.FORMAT
+  status: reviewed
+  statement: >-
+    The reviewed element formats are E4M3 with maximum448 and maximum-power exponent8, and E5M2 with maximum57344
+    and maximum-power exponent15. The normalized value is clamped to the finite range and rounded to nearest even.
+  basis: [TORCHAO016_MX_TENSOR.FORMATS, TORCHAO016_MX_CONSTANTS.MXFP8,
+    OCP_OFP8.E4M3, OCP_OFP8.E5M2, OCP_OFP8.CONVERT]
+- id: MX16.SHAPE
+  status: reviewed
+  statement: >-
+    This profile fixes the MX block size at32, groups only the final logical dimension, requires an exact multiple,
+    and returns ordinary non-swizzled scales. Arbitrary axes, partial blocks and physical swizzles require separate
+    profiles and bindings.
+  basis: [TORCHAO016_MX_TENSOR.OUTPUT, TORCHAO016_MX_CONSTANTS.BLOCK]
+clauses:
+- {id: MX.C1, basis: [MX16.SCALE], statement: 'Every block scale code is the complete torchao 0.16 FLOOR result, including exponent clamping and code-0 boundary behavior.', observes: [scale_codes], evidence_kind: definition}
+- {id: MX.C2, basis: [MX16.FORMAT], statement: 'Every normalized input coordinate is finitely saturated and converted to the selected MXFP8 element format with nearest-even rounding.', observes: [elements], evidence_kind: definition}
+- {id: MX.C3, basis: [MX16.SHAPE], statement: 'Consecutive final-dimension groups of32 determine each scale; every block and element coordinate is returned.', observes: [scale_codes, elements], evidence_kind: definition}
+- {id: MX.C4, basis: [MX16.TASK, MX16.SHAPE], statement: 'The complete reviewed public parameters and physical input constraints are checked before evaluation.', observes: [scale_codes, elements], evidence_kind: derived}
+examples:
+- id: MX.E1
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C1, MX.C2]
+  input: &base
+    x:
+    - &e4row [500, 1, '-3/4', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    input_dtype: f32
+    elem_format: e4m3
+    block_size: 32
+    scaling_mode: floor
+    is_swizzled_scales: false
+  expected:
+    outcome: value
+    fields:
+      scale_codes: [[127]]
+      elements:
+      - [448, 1, '-3/4', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+- id: MX.E2
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C1, MX.C2]
+  input:
+    <<: *base
+    x:
+    - [70000, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    elem_format: e5m2
+  expected:
+    outcome: value
+    fields:
+      scale_codes: [[128]]
+      elements:
+      - [32768, '1/2', '-1/2', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+- id: MX.E3
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C3]
+  input:
+    <<: *base
+    x:
+    - *e4row
+    - &ones [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  expected:
+    outcome: value
+    fields:
+      scale_codes: [[127], [119]]
+      elements:
+      - [448, 1, '-3/4', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      - [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]
+- id: MX.E4
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C1, MX.C3]
+  input:
+    <<: *base
+    x:
+    - &zeros [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  expected:
+    outcome: value
+    fields: {scale_codes: [[0]], elements: [*zeros]}
+- id: MX.E5
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C1]
+  input:
+    <<: *base
+    x:
+    - &subnorm ['1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728', '1/170141183460469231731687303715884105728']
+  expected:
+    outcome: value
+    fields:
+      scale_codes: [[0]]
+      elements:
+      - ['1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2', '1/2']
+- id: MX.E6
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input: {<<: *base, input_dtype: bf16}
+  expected:
+    outcome: value
+    fields:
+      scale_codes: [[127]]
+      elements:
+      - [448, 1, '-3/4', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+- id: MX.E7
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input: {<<: *base, x: [1, 1]}
+  expected: {outcome: invalid_input}
+- id: MX.E8
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input: {<<: *base, scaling_mode: rceil}
+  expected: {outcome: unsupported}
+- id: MX.E9
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input: {<<: *base, is_swizzled_scales: true}
+  expected: {outcome: unsupported}
+- id: MX.E10
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input: {<<: *base, elem_format: e2m1}
+  expected: {outcome: unsupported}
+- id: MX.E11
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input:
+    <<: *base
+    x: [['1/3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+  expected: {outcome: invalid_input}
+- id: MX.E12
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input:
+    <<: *base
+    x: [['inf', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+  expected: {outcome: unsupported}
+- id: MX.E13
+  profile: torchao016_mxfp8_floor
+  clauses: [MX.C4]
+  input: {<<: *base, block_size: 16}
+  expected: {outcome: unsupported}
+signature:
+  inputs:
+  - 'x: contiguous logical tensor of exact physical finite f32 or bf16 values; final dimension is a positive multiple of32'
+  - 'input_dtype: f32 or bf16; elem_format: e4m3 or e5m2'
+  - 'block_size=32, scaling_mode=floor, is_swizzled_scales=false'
+  pre_state: [complete read-only x]
+  post_state: [complete scale_codes and elements; x unchanged]
+  observation_unit: Every E8M0 code and every numerical FP8 element with dtype and shape
+domain:
+  valid:
+  - Finite physical f32/bf16 values in a rectangular tensor with at least one dimension
+  - Final dimension is a positive multiple of32; E4M3 or E5M2; ordinary scale layout
+  invalid_input: [missing or extra fields, ragged or scalar x, nonphysical values, Boolean metadata, nonmultiple final dimension]
+  unsupported: [special values, other input or element dtypes, RCEIL/CEIL/EVEN, FP4/FP6, partial blocks, arbitrary axes, swizzled scales, strides, aliasing and gradients]
+mutation_requirements:
+- {id: MX.M1, misreading: replace every scale code by the unit-scale code127, witnesses: [MX.E2, MX.E3]}
+- {id: MX.M2, misreading: drop the last element coordinate, witnesses: [MX.E1]}
+- {id: MX.M3, misreading: use the first block scale for every block, witnesses: [MX.E3]}
+- {id: MX.M4, misreading: use the other MXFP8 element format, witnesses: [MX.E1, MX.E2]}
+nonclaims:
+- This profile specifies torchao 0.16.0 FLOOR behavior. It does not declare RCEIL, CEIL or EVEN incorrect and does not certify every OCP MX implementation.
+- Numerical FP8 values are observed; signed-zero payload distinctions, NaN payloads, byte packing, swizzled layouts and device storage effects are outside this profile.
+- A real kernel still requires a complete binding of input dtype, block membership, scale mode, returned codes and every element coordinate before this reference can support a semantic verdict.
+changes:
+- date: '2026-10-19'
+  change: Replace the broad unverified two-formula draft with one versioned torchao 0.16.0 default FLOOR interface and its exact released code-0 boundary behavior.
+  trigger: The previous contract mixed logical extensions with two legal scale choices and lacked a retained versioned task interface.

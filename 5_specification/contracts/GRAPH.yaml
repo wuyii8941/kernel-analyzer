@@ -1,7 +1,7 @@
 schema_version: '1.2'
 id: GRAPH
 role: PROGRAM
-title: An ATen graph (a program or a compiled kernel's graph fragment) as the composition of the base contracts
+title: A functional ATen value graph as the composition of the base contracts
 review:
   status: drafted
   author: Claude (spec v3 author), 2026-10-16
@@ -12,17 +12,19 @@ activation:
   implementation_status: pending
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [graph]
 profiles:
   eager:
     meaning: Nodes are evaluated in topological order, each operation by the base contract that covers it (ARITH MATHFN
-      LOGIC CAST LAYOUT INDEX REDUCE SOFTMAX MATMUL CONV RANDOM); every conversion in the graph rounds as CAST says, as
-      the program is written.
+      LOGIC CAST LAYOUT INDEX REDUCE SOFTMAX MATMUL CONV RANDOM ACT SORT), plus the restricted aten.full allocation
+      described by GR.EFFECTS; every conversion in the graph rounds as CAST says, as the program is written. General
+      storage mutation and alias effects are outside this profile; only local updates satisfying GR.EFFECTS may be
+      replaced by their post-value.
     task_choice_required: false
 outputs:
   out:
-    shape: the list of the graph's output values
+    shape: the list of the graph's output values, or an exact set of complete output lists for ambiguous sorting or scatter choices
     kind: discrete
     guarantee: rigorous_enclosure
 readings:
@@ -38,6 +40,27 @@ comparison:
   error_handling: An undefined value makes only the nodes that use it undefined; an output that depends on it is
     domain_undefined. An operation outside the base contracts is unsupported.
 decisions:
+- id: GR.EFFECTS
+  status: drafted
+  statement: 'T_INDEX_PUT.DEF says index_put_ modifies self and returns self. The INDEX standalone post-value and the
+    LAYOUT value-only operations do not specify how all aliases change in an enclosing graph. Until that state mapping
+    is implemented, updates to inputs or shared allocations are unsupported. A restricted exception is a fresh
+    aten.full allocation without out or other unimplemented allocation options, whose sole occurrence as a reference
+    is the destination of one index_put_. It cannot be returned, aliased, read elsewhere, or used as indices/values.
+    Its only observable effect is the returned updated value, so replacing that update with functional index_put
+    preserves the graph outputs. The reference-use check and allocation evidence must precede replacement.
+    All other cases remain unsupported; blanket renaming is not valid functionalisation.'
+  basis: [T_INDEX_PUT.DEF, T_FULL.DEF, T_FX.NODES]
+- id: GR.JOINT_CHOICES
+  status: drafted
+  statement: 'Each sorting node chooses one complete legal index tensor: indices within a row are distinct, and every
+    use of that node observes the same choice. Separate nodes may choose separately. Small finite choices are evaluated
+    jointly and returned as complete output alternatives, never a product of marginal index sets. Enumeration beyond
+    the implementation budget or alternatives that cannot be represented as an exact finite set are not_established.
+    For scatter, each duplicated target may select one of its source values (T_SCATTER.DUP); the complete tensor
+    is selected once per node and every consumer observes that same selection. Lazy point queries do not enumerate
+    such shared choices and return not_established at ambiguous coordinates.'
+  basis: [T_FX.NODES, T_SORT.STABLE, T_TOPK.TIES, T_SCATTER.DUP]
 - id: GR.IDENTITY
   status: drafted
   statement: The f of a graph is the program's own computation as written (identity of the source - reference program);
@@ -51,7 +74,9 @@ decisions:
     per node.
   basis: [T_FX.NODES]
 clauses:
-- {id: GR.C1, basis: [T_FX.NODES, GR.IDENTITY], statement: 'nodes are evaluated in order: placeholders are inputs, each
+- {id: GR.C5, basis: [GR.EFFECTS], statement: 'graphs containing index_put_ require explicit mutation and alias semantics
+    unless the local allocation and sole-use conditions of GR.EFFECTS establish equivalence to its returned post-value', observes: [out], evidence_kind: derived}
+- {id: GR.C1, basis: [T_FX.NODES, GR.IDENTITY, GR.JOINT_CHOICES], statement: 'nodes are evaluated in order: placeholders are inputs, each
     call_function applies its operation (base-contract semantics) to its arguments, the outputs are returned',
   observes: [out], evidence_kind: definition}
 - {id: GR.C2, basis: [T_FX.NODES, GR.POISON], statement: undefined values poison only their consumers, observes: [out],
@@ -64,8 +89,8 @@ examples:
 - {id: GR.E1, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [1, 2]}}, nodes: [{name: a, op: aten.mul,
           args: [{ref: x}, 2]}, {name: b, op: aten.add, args: [{ref: a}, 1]}], outputs: [b]}}, expected: {outcome: value, fields: {
       out: [[3, 5]]}}}
-- {id: GR.E2, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [[3, 4]]}}, nodes: [{name: p, op: aten.pow,
-          args: [{ref: x}, 2]}, {name: m, op: aten.mean, args: [{ref: p}, [-1], true]}, {name: e, op: aten.add, args: [{ref: m},
+- {id: GR.E2, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [[3, 4]]}}, nodes: [{name: p, op: aten.mul,
+          args: [{ref: x}, {ref: x}]}, {name: m, op: aten.mean, args: [{ref: p}, [-1], true]}, {name: e, op: aten.add, args: [{ref: m},
             0]}, {name: r, op: aten.rsqrt, args: [{ref: e}]}, {name: y, op: aten.mul, args: [{ref: x}, {ref: r}]}], outputs: [y]}},
   expected: {outcome: value, fields: {out: [[[3*sqrt(2)/5, 4*sqrt(2)/5]]]}}, note: An RMSNorm fragment without weight; mean
     of squares 25/2, rsqrt sqrt(2)/5.}
@@ -78,23 +103,49 @@ examples:
     fields: {out: [[6]]}}}
 - {id: GR.E5, profile: eager, clauses: [GR.C2], input: {graph: {inputs: {x: {t: f32, v: [-1]}}, nodes: [{name: l, op: aten.log,
           args: [{ref: x}]}, {name: z, op: aten.mul, args: [{ref: l}, 0]}], outputs: [z]}}, expected: {outcome: domain_undefined}}
-- {id: GR.E6, profile: eager, clauses: [GR.C3], input: {graph: {inputs: {x: {t: f32, v: [[1, 3]]}}, nodes: [{name: vm, op: aten.var_mean,
-          args: [{ref: x}, [1]], kwargs: {correction: 0, keepdim: true}}, {name: v, op: operator.getitem, args: [{ref: vm}, 0]},
-        {name: m, op: operator.getitem, args: [{ref: vm}, 1]}, {name: s, op: aten.sub, args: [{ref: m}, {ref: v}]}], outputs: [s]}},
-  expected: {outcome: value, fields: {out: [[[1]]]}}, note: 'variance 1, mean 2; mean - var = 1.'}
+- {id: GR.E6, profile: eager, clauses: [GR.C3], input: {graph: {inputs: {x: {t: f32, v: [[1, 3]]}}, nodes: [{name: mx, op: aten.max,
+          args: [{ref: x}, 1, true]}, {name: v, op: operator.getitem, args: [{ref: mx}, 0]},
+        {name: i, op: operator.getitem, args: [{ref: mx}, 1]}, {name: s, op: aten.sub, args: [{ref: i}, {ref: v}]}], outputs: [s]}},
+  expected: {outcome: value, fields: {out: [[[-2]]]}}, note: 'maximum 3 at index 1; index - value = -2.'}
 - {id: GR.E7, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [1]}}, nodes: [{name: a, op: aten.mul, args: [
             {ref: w}, 2]}], outputs: [a]}}, expected: {outcome: invalid_input}, note: A reference to a value that is not defined
     earlier.}
+- {id: GR.E8, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [[0, 1, 2]]}}, nodes: [{name: s, op: aten._softmax,
+          args: [{ref: x}, -1, false]}, {name: t, op: aten.topk, args: [{ref: s}, 2]}, {name: v, op: operator.getitem, args: [
+            {ref: t}, 0]}, {name: i, op: operator.getitem, args: [{ref: t}, 1]}], outputs: [v, i]}}, expected: {outcome: value,
+    fields: {out: [[[exp(2)/(1+exp(1)+exp(2)), exp(1)/(1+exp(1)+exp(2))]], [[2, 1]]]}}, note: 'top-2 router: the softmax
+    probabilities are enclosures, their order is decided by the enclosures (SORT changes 2026-10-18).'}
+- {id: GR.E9, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [2, 2]}},
+    nodes: [{name: i, op: aten.argsort, args: [{ref: x}]}], outputs: [i]}},
+    expected: {outcome: value, fields: {out: {set: [[[0, 1]], [[1, 0]]]}}},
+    note: 'Complete permutations; [0,0] and [1,1] are not allowed (GR.JOINT_CHOICES).'}
+- {id: GR.E10, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [2, 2]}},
+    nodes: [{name: i, op: aten.argsort, args: [{ref: x}]},
+            {name: z, op: aten.sub, args: [{ref: i}, {ref: i}]}], outputs: [z]}},
+    expected: {outcome: value, fields: {out: [[0, 0]]}}, note: 'Both uses read the same selected index tensor.'}
+- {id: GR.E11, profile: eager, clauses: [GR.C5], input: {graph: {inputs: {x: {t: f32, v: [0]}},
+    nodes: [{name: u, op: aten.index_put_, args: [{ref: x}, [{t: i64, v: [0]}], {t: f32, v: [9]}]}],
+    outputs: [x]}}, expected: {outcome: unsupported}, note: 'The mutation affects x even if u is unused; returning old x is incorrect.'}
+- {id: GR.E12, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [0]}},
+    nodes: [{name: s, op: aten.scatter, args: [{ref: x}, 0, {t: i64, v: [0, 0]}, {t: f32, v: [1, 3]}]},
+            {name: z, op: aten.sub, args: [{ref: s}, {ref: s}]}], outputs: [z]}},
+    expected: {outcome: value, fields: {out: [[0]]}}, note: Both reads use the same scatter result.}
+- {id: GR.E13, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [0]}},
+    nodes: [{name: s, op: aten.scatter, args: [{ref: x}, 0, {t: i64, v: [0, 0]}, {t: f32, v: [1, 3]}]}],
+    outputs: [s, s]}}, expected: {outcome: value, fields: {out: {set: [[[1], [1]], [[3], [3]]]}}}}
 signature:
   inputs: ['graph: {inputs: {name: tensor}, nodes: [{name, op, args, kwargs}], outputs: [names]}']
   pre_state: []
   post_state: []
   observation_unit: the graph's output values
 domain:
-  valid: [graphs in topological order whose operations are covered by the base contracts]
+  valid: [functional value graphs in topological order whose operations are covered by the base contracts]
   domain_undefined: [an output that depends on an undefined real value]
-  invalid_input: [references to unknown or later values, duplicate node names]
-  unsupported: [operations not covered by a base contract]
+  invalid_input: [references to unknown or later values including unused nodes and graph outputs,
+    duplicate node names or node names that overwrite inputs, malformed node and output sequences,
+    noninteger reference indices, operator.getitem calls without exactly two positional arguments]
+  unsupported: [operations not covered by a base contract, in-place index_put_ without mutation and alias semantics,
+    extra graph or node fields or reference metadata not represented by the functional value contract]
 mutation_requirements:
 - {id: GR.M1, misreading: conversions in the graph ignored under the eager profile, witnesses: [GR.E3]}
 - {id: GR.M2, misreading: any undefined node makes every output undefined, witnesses: [GR.E4]}
@@ -103,4 +154,51 @@ mutation_requirements:
     GR.E6]}
 nonclaims:
 - A graph's f checks lowering fidelity of a compiled kernel, not the model author's intent (GR.IDENTITY).
-changes: []
+changes:
+- date: '2026-10-18'
+  change: >-
+    Support the GR.EFFECTS single-use fresh-full allocation case through an explicit
+    functional_value_graph check shared by full and lazy evaluation. Preserve the
+    original graph and return per-update allocation/use evidence. Static operation-name
+    coverage still excludes index_put_; a name alone cannot establish the conditions.
+  trigger: >-
+    The captured embedding task has one fresh full allocation consumed only by an
+    accumulating index_put_. Retained T_FULL and T_INDEX_PUT specify allocation and
+    returned post-state. tests/test_graph_local_update.py compares every output with
+    independent native mutation and rejects external inputs, aliases, returned old
+    names, update-value reuse and out parameters. General mutation remains unsupported.
+- date: '2026-10-18'
+  change: >-
+    Lazy tensor shapes and queried coordinates require integer components without
+    truncation. Shapes must be nonnegative; coordinates must have the declared rank
+    and lie within every dimension. Invalid queries are rejected before cache lookup,
+    input reads or budget accounting. Element counts use exact integer products.
+  trigger: >-
+    tests/test_lazy_coordinates.py reproduced truncated shapes and queries, unchecked
+    bounds, invalid cache hits and overflowing element counts. This validates the
+    coordinate interface, not the unqueried values or completeness of a kernel binding.
+- date: '2026-10-18'
+  change: >-
+    Reject unimplemented graph, node and reference fields before execution in both
+    full and lazy evaluation. Reference indices must be integers; operator.getitem
+    requires exactly two positional arguments. State declarations and other supplied
+    information cannot be silently discarded to obtain a functional value result.
+  trigger: >-
+    tests/test_graph_structure.py reproduced ignored reference metadata, extra getitem
+    arguments and graph/node state fields. These are representation checks for the
+    declared GRAPH input format, not additional mathematical task assumptions.
+- date: '2026-10-18'
+  change: >-
+    Full and lazy evaluation share graph structure validation before evaluating any
+    node. Input and node names cannot be overwritten; references must point to an
+    input or earlier node, including unused nodes and declared outputs. Lazy inputs
+    may still be supplied separately, and repeated output references remain legal.
+  trigger: >-
+    tests/test_graph_structure.py reproduced silent name overwriting and unclassified
+    missing references in lazy evaluation. This implements the existing topological
+    graph domain; it does not establish operation semantics or kernel binding.
+- {date: '2026-10-18', change: 'Preserve shared scatter choices in full graph outputs; refuse ambiguous lazy point queries explicitly.', trigger: 'T_SCATTER.DUP and tests/test_scatter_choices.py'}
+- {date: '2026-10-18', change: 'Reject graph index_put_ in eager and lazy paths rather than silently preserving stale input/alias values; functional index_put remains supported.', trigger: 'T_INDEX_PUT.DEF and tests/test_graph_mutation.py'}
+- {date: '2026-10-18', change: 'base contracts listed in profile eager now name ACT (already in kernel_spec/graph.py:BASE_CONTRACTS,
+    omitted from the text) and SORT (added: sort / argsort / topk, with enclosure elements as in SORT changes); example
+    GR.E8', trigger: 'essential_phase2b/moe_block needs torch.topk (k = 2) inside the program (gap in corpus/bindings/E2_program.json)'}

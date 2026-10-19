@@ -1,0 +1,41 @@
+{
+  "task": "PyTorch corrected standard deviation and input VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_per_fused_div_eq_expand_masked_fill_mean_mul_ones_like_std_sub_unsqueeze_0"
+  ],
+  "generated_triton_kernel_count": 1,
+  "generated_code_has_sqrt_or_rsqrt": true,
+  "generated_code_uses_tl_sqrt_rn": true,
+  "generated_code_has_zero_std_branch": true,
+  "generated_code_has_gradient_scale_literal": true,
+  "gradient_scale": {
+    "task_factor_before_division_by_two_std": "2/127",
+    "generated_decimal_literal": "0.015748031496062992",
+    "value_after_float32_conversion": 0.015748031437397003,
+    "float32_minus_task": "-1/17045651456"
+  },
+  "outputs": {
+    "y": {
+      "shape": [
+        16
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "strictly_positive": true,
+      "max_abs_compiled_minus_eager": 2.384185791015625e-07
+    },
+    "dx": {
+      "shape": [
+        16,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 1.1175870895385742e-08
+    }
+  },
+  "inputs_unchanged": true,
+  "inspection_passed": true
+}

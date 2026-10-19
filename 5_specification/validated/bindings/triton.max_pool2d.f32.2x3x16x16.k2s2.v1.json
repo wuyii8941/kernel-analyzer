@@ -1,0 +1,38 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.max_pool2d.f32.2x3x16x16.k2s2.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 2x2 stride-2 max_pool2d values",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with 384 Triton programs producing every value of one contiguous 2x3x8x8 output from one contiguous 2x3x16x16 input",
+    "measure_call": "../calls/triton_max_pool2d.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "max_pool2d_values",
+      "contract": "POOL",
+      "profile": "finite_max2d_values",
+      "task_statement": "Return every forward value of zero-padded-by-zero, floor-mode 2x2 maximum pooling with stride 2 and dilation 1 over the received physical finite contiguous float32 NCHW tensor.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.max_pool2d", "basis": "selected ATen functional values task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": [2, 2], "basis": "the kernel reads a 2x2 window"},
+        {"target": "/args/2", "literal": [2, 2], "basis": "successive outputs advance two input positions"},
+        {"target": "/args/3", "literal": [0, 0], "basis": "every loaded coordinate is inside the unpadded input"},
+        {"target": "/args/4", "literal": [1, 1], "basis": "successive window elements are adjacent"},
+        {"target": "/args/5", "literal": false, "basis": "the output uses the floor-mode 8x8 grid"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

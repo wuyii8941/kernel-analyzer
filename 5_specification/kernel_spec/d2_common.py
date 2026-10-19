@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from .num import Invalid, integer, rational
+from .num import Invalid, integer, rational, require_fields
 from .real import NEG, POS, R
 
 
@@ -71,7 +71,8 @@ def flag(inp, key, default=False):
     return v
 
 
-def check_keys(inp, allowed):
+def check_keys(inp, allowed, required=()):
+    require_fields(inp, required)
     extra = set(inp) - set(allowed)
     if extra:
         raise Invalid(f"unknown input fields {sorted(extra)}")

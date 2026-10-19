@@ -1,0 +1,37 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.mixtral_top2.f32.t128.e8.d32.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 Mixtral top-2 routing and supplied-expert combination",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch writes the complete selected mask, dense routing weights and combined output",
+    "measure_call": "../calls/triton_mixtral_top2.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "mixtral_top2_routing_and_combination",
+      "contract": "MOE",
+      "profile": "mixtral_top2_real",
+      "task_statement": "Select the top two of eight distinct logits per token, renormalise their weights and combine supplied float32 expert outputs.",
+      "input_map": [
+        {"target": "/router_logits", "source": "/tensor_arguments/router_logits/before", "conversion": "tensor_values"},
+        {"target": "/expert_outputs", "source": "/tensor_arguments/expert_outputs/before", "conversion": "tensor_values"},
+        {"target": "/dtype", "literal": "f32", "basis": "both tensor inputs are float32"}
+      ],
+      "output_map": [
+        {"target": "/selected", "source": "/returns/selected", "conversion": "tensor_record", "measure_output": "selected"},
+        {"target": "/weights", "source": "/returns/weights", "conversion": "tensor_record", "measure_output": "weights"},
+        {"target": "/out", "source": "/returns/out", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "router_logits", "effect": "unchanged"},
+    {"argument": "expert_outputs", "effect": "unchanged"}
+  ]
+}

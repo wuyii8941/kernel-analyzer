@@ -1,0 +1,48 @@
+{
+  "task": "PyTorch public exact-form GELU forward and complete input VJP",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "generated_triton_kernel_names": [
+    "triton_poi_fused_expand_gelu_gelu_backward_mul_ones_like_0"
+  ],
+  "generated_triton_kernel_count": 1,
+  "generated_precision_lines": [
+    "# Topologically Sorted Source Nodes: [y, _autograd_grad], Original ATen: [aten.gelu, aten.ones_like, aten.expand, aten.mul, aten.gelu_backward]",
+    "#   %mul_1 : Tensor \"f32[32, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%arg0_1, 0.7071067811865476), kwargs = {})",
+    "#   %erf : Tensor \"f32[32, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.erf.default](args = (%mul_1,), kwargs = {})",
+    "#   %expand : Tensor \"f32[32, 128][0, 0]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.expand.default](args = (%full, [32, 128]), kwargs = {})",
+    "#   %mul_5 : Tensor \"f32[32, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%arg0_1, 0.7071067811865476), kwargs = {})",
+    "#   %erf_1 : Tensor \"f32[32, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.erf.default](args = (%mul_5,), kwargs = {})",
+    "#   %exp : Tensor \"f32[32, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.exp.default](args = (%mul_8,), kwargs = {})",
+    "#   %mul_9 : Tensor \"f32[32, 128][128, 1]cuda:0\"[num_users=1] = call_function[target=torch.ops.aten.mul.Tensor](args = (%exp, 0.3989422804014327), kwargs = {})",
+    "tmp3 = 0.7071067811865476",
+    "tmp5 = libdevice.erf(tmp4)",
+    "tmp15 = libdevice.exp(tmp14)",
+    "tmp16 = 0.3989422804014327",
+    "# Topologically Sorted Source Nodes: [y, _autograd_grad], Original ATen: [aten.gelu, aten.ones_like, aten.expand, aten.mul, aten.gelu_backward]"
+  ],
+  "rows": [
+    {
+      "name": "y",
+      "shape": [
+        32,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 4.76837158203125e-07
+    },
+    {
+      "name": "dx",
+      "shape": [
+        32,
+        128
+      ],
+      "dtype": "torch.float32",
+      "finite": true,
+      "max_abs_compiled_minus_eager": 2.384185791015625e-07
+    }
+  ],
+  "inputs_unchanged": true,
+  "inspection_passed": true
+}

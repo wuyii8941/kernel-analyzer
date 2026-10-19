@@ -1,0 +1,36 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.sort_unique.f32.32x32.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 ascending row sort with original indices",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with 32 Triton programs sorting every row of one contiguous 32x32 input and returning the complete values and int64 original indices",
+    "measure_call": "../calls/triton_sort_unique.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "ascending_row_sort",
+      "contract": "SORT",
+      "profile": "finite_unique",
+      "task_statement": "Sort every row of the received physical finite contiguous float32 matrix in ascending order and return every ordered value and its unique original column index; every received row has pairwise distinct values.",
+      "input_map": [
+        {"target": "/op", "literal": "aten.sort", "basis": "selected functional integer-dimension sort task"},
+        {"target": "/args/0", "source": "/tensor_arguments/x/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": 1, "basis": "the public task sorts rows along dimension one"},
+        {"target": "/args/2", "literal": false, "basis": "the public task is ascending"}
+      ],
+      "output_map": [
+        {"target": "/out/0", "source": "/returns/values", "conversion": "tensor_record", "measure_output": "values"},
+        {"target": "/out/1", "source": "/returns/indices", "conversion": "tensor_record", "measure_output": "indices"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "x", "effect": "unchanged"}
+  ]
+}

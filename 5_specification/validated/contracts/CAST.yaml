@@ -1,0 +1,87 @@
+schema_version: '1.2'
+id: CAST
+role: CAST
+title: Finite conversion between the common binary floating dtypes
+review:
+  status: reviewed_for_implementation
+  author: Claude (spec v3 author), 2026-10-16
+  reviewer: Codex independent source, domain, rounding and implementation review
+  date: '2026-10-18'
+  scope: Dense finite f16/bf16/f32/f64 value conversion under the selected IEEE roundTiesToEven profile; concrete kernel binding remains separate
+activation:
+  implementation_status: validated
+  implementation_evidence: evidence/cast_implementation.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [prims.convert_element_type, aten._to_copy]
+profiles:
+  finite_rne:
+    meaning: Convert every exactly represented finite f16/bf16/f32/f64 input value to a selected target among the same four dtypes using IEEE 754 roundTiesToEven. The result must remain finite. Shape is preserved and every result is exact.
+    task_choice_required: true
+    basis: [CA.PROFILE, CA.SCHEMA, CA.RNE]
+outputs:
+  out:
+    shape: exactly the input shape, including every empty dimension
+    guarantee: exact
+comparison:
+  input_binding: Each input record denotes an already stored value and therefore must be exactly representable in its declared source dtype. The binding must name the target dtype and select roundTiesToEven.
+  quality: Exact equality of target dtype, shape and every converted coordinate; no tolerance.
+  test_evidence: Independent integer-arithmetic encoders cover all four admitted formats, their normal and subnormal boundaries, adjacent values and midpoint ties; retained PyTorch and Triton sources fix the call interfaces.
+  error_handling: NaN and malformed calls are invalid_input. Values or dtypes outside the reviewed finite floating scope, output overflow and unselected copy options are unsupported.
+decisions:
+- id: CA.PROFILE
+  status: reviewed
+  statement: This contract explicitly selects IEEE 754 roundTiesToEven for finite binary floating conversion. PyTorch's public Tensor.to page does not by itself name that rounding direction, so a caller must bind this profile to a task or kernel that selects the same rule. Other legal conversion rules are not declared wrong by this contract.
+  basis: [IEEE754.RNE, T_TO.DEF]
+- id: CA.SCHEMA
+  status: reviewed
+  statement: prims.convert_element_type takes one tensor and one target dtype and creates a new tensor. The selected aten._to_copy form requires dtype and leaves layout, device, pin_memory and memory_format unset, with non_blocking false. Both preserve logical shape and do not modify the input.
+  basis: [TS_PRIMS.CONVERT_ELEMENT_TYPE, TS_NATIVE_FUNCTIONS.TO_COPY_SCHEMA]
+- id: CA.RNE
+  status: reviewed
+  statement: Every exact finite source value is rounded to the nearest representable target value; an exact midpoint selects the neighbor whose least-significant significand bit is even. Normal and subnormal target values use the same rule. Same-dtype and widening conversions are exact.
+  basis: [IEEE754.RNE]
+- id: CA.FINITE
+  status: reviewed
+  statement: Source and target dtypes are f16, bf16, f32 or f64. Inputs must be finite point values exactly representable in the declared source dtype, and the rounded target must be finite. Integer, boolean, float8, complex, NaN, infinities and target overflow remain outside this profile.
+  basis: [CA.PROFILE, CA.RNE]
+clauses:
+- {id: CA.C1, basis: [CA.RNE], statement: finite narrowing uses roundTiesToEven for normal and subnormal results, observes: [out], evidence_kind: definition}
+- {id: CA.C2, basis: [CA.RNE], statement: widening and same-dtype conversion preserve every exact input value, observes: [out], evidence_kind: definition}
+- {id: CA.C3, basis: [CA.SCHEMA], statement: the functional call returns one complete tensor with the target dtype and the exact input shape while leaving the input unchanged, observes: [out], evidence_kind: definition}
+- {id: CA.C4, basis: [CA.FINITE], statement: unrepresentable source records, nonfinite values, target overflow and unreviewed dtypes or options are refused before semantic comparison, observes: [out], evidence_kind: definition}
+examples:
+- {id: CA.E1, profile: finite_rne, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['515/512']}, bf16]}, expected: {outcome: value, fields: {out: ['129/128']}}}
+- {id: CA.E2, profile: finite_rne, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['257/256', '259/256']}, bf16]}, expected: {outcome: value, fields: {out: [1, '65/64']}}}
+- {id: CA.E3, profile: finite_rne, clauses: [CA.C1], input: {op: prims.convert_element_type, args: [{t: f32, v: ['1/16777216', '1/33554432', '3/33554432']}, f16]}, expected: {outcome: value, fields: {out: ['1/16777216', 0, '1/8388608']}}}
+- {id: CA.E4, profile: finite_rne, clauses: [CA.C2], input: {op: prims.convert_element_type, args: [{t: f16, v: ['-3/2', '1/1024', '1/16777216']}, f64]}, expected: {outcome: value, fields: {out: ['-3/2', '1/1024', '1/16777216']}}}
+- {id: CA.E5, profile: finite_rne, clauses: [CA.C2, CA.C3], input: {op: aten._to_copy, args: [{t: bf16, v: [[1, '-1/2'], ['3/128', 0]]}], kwargs: {dtype: bf16}}, expected: {outcome: value, fields: {out: [[1, '-1/2'], ['3/128', 0]]}}}
+- {id: CA.E6, profile: finite_rne, clauses: [CA.C3], input: {op: prims.convert_element_type, args: [{t: f64, v: [], shape: [2, 0, 3]}, f32]}, expected: {outcome: value, fields: {out: [[], []]}}}
+- {id: CA.E7, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: f16, v: ['1/3']}, f32]}, expected: {outcome: invalid_input}}
+- {id: CA.E8, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: f32, v: [70000]}, f16]}, expected: {outcome: unsupported}}
+- {id: CA.E9, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: i64, v: [1]}, f32]}, expected: {outcome: unsupported}}
+- {id: CA.E10, profile: finite_rne, clauses: [CA.C4], input: {op: prims.convert_element_type, args: [{t: f32, v: [inf]}, bf16]}, expected: {outcome: unsupported}}
+- {id: CA.E11, profile: finite_rne, clauses: [CA.C4], input: {op: aten._to_copy, args: [{t: f32, v: [1]}], kwargs: {dtype: f16, device: cuda}}, expected: {outcome: unsupported}}
+- {id: CA.E12, profile: finite_rne, clauses: [CA.C4], input: {op: aten._to_copy, args: [{t: f32, v: [1]}]}, expected: {outcome: unsupported}}
+signature:
+  inputs: ['op: prims.convert_element_type(x, dtype) or selected aten._to_copy(x, dtype=...)', 'x: one dense exactly represented finite f16/bf16/f32/f64 tensor', 'dtype: one admitted floating target dtype']
+  pre_state: [the complete input tensor]
+  post_state: [the complete converted output tensor; input unchanged]
+  observation_unit: target dtype, exact shape and every output coordinate
+domain:
+  valid: [dense finite exactly represented f16/bf16/f32/f64 source values whose finite target conversion is selected]
+  domain_undefined: []
+  invalid_input: [NaN, malformed calls, a value not exactly representable in its declared source dtype]
+  unsupported: [integer, boolean, float8 or complex dtypes, infinities, target overflow, device or layout movement, pinning, memory-format changes, non_blocking copies, missing _to_copy dtype]
+mutation_requirements:
+- {id: CA.M1, misreading: narrowing truncates toward zero, witnesses: [CA.E1]}
+- {id: CA.M2, misreading: exact midpoint ties round away from zero, witnesses: [CA.E2]}
+- {id: CA.M3, misreading: subnormal target results flush to zero, witnesses: [CA.E3]}
+- {id: CA.M4, misreading: conversion keeps the source value instead of rounding to the target format, witnesses: [CA.E1]}
+nonclaims:
+- Integer, boolean, float8, complex and nonfinite conversion; output overflow; signed-zero or NaN payload behavior; storage layout, device transfer, aliasing and asynchronous scheduling; any concrete Triton cast whose binding has not selected finite_rne.
+changes:
+- date: '2026-10-18'
+  change: Narrow the active contract to exactly represented finite conversions among f16/bf16/f32/f64 with explicit roundTiesToEven task selection and complete output checking.
+  trigger: The broad draft treated several conversion families and PyTorch rounding choices as one universal answer without enough independent evidence.

@@ -27,19 +27,60 @@ def _dot(a, b):
     return s
 
 
+def _alpha_rows(alpha,K):
+    # Parsed scalar gates (GDR) or key-wise gates (KDA).
+    return alpha if isinstance(alpha,list) else [alpha]*K
+
+
 def recurrent(q, k, v, alpha, beta, scale, h0):
-    """q, k: T x K; v: T x V; alpha, beta: length T; h0: K x V (copied). Returns (o: T x V, h_T: K x V)."""
+    """Parsed R inputs: q/k T x K, v T x V, beta T, alpha T or T x K.
+
+    Key-wise alpha applies before delta correction (KDA). Scalar alpha is GDR.
+    h0 K x V is copied; returns (o T x V, h_T K x V).
+    """
     K = len(h0)
     V = len(h0[0]) if K else 0
     h = [row[:] for row in h0]
     outs = []
     for t in range(len(q)):
-        h = [[alpha[t] * h[i][j] for j in range(V)] for i in range(K)]
+        rows=_alpha_rows(alpha[t],K)
+        h = [[rows[i] * h[i][j] for j in range(V)] for i in range(K)]
         kh = [_dot([k[t][i] for i in range(K)], [h[i][j] for i in range(K)]) for j in range(V)]   # h^T k_t
         u = [beta[t] * (v[t][j] - kh[j]) for j in range(V)]
         h = [[h[i][j] + k[t][i] * u[j] for j in range(V)] for i in range(K)]
         outs.append([scale * _dot(q[t], [h[i][j] for i in range(K)]) for j in range(V)])
     return outs, h
+
+
+def backward(q,k,v,alpha,beta,scale,h0,dO,dHT):
+    """VJP of outputs and final state for already validated R-valued inputs.
+
+    alpha is scalar per token or a vector per key; dalpha preserves that shape.
+    beta is scalar per token. No gate/normalization parameterization is implied.
+    """
+    K,V=len(h0),len(h0[0]);T=len(q)
+    states=[h0];decayed=[];residuals=[]
+    for t in range(T):
+        rows=_alpha_rows(alpha[t],K)
+        A=[[rows[i]*states[-1][i][j] for j in range(V)] for i in range(K)]
+        residual=[v[t][j]-_dot(k[t],[A[i][j] for i in range(K)]) for j in range(V)]
+        states.append([[A[i][j]+beta[t]*k[t][i]*residual[j] for j in range(V)] for i in range(K)])
+        decayed.append(A);residuals.append(residual)
+    dq,dk,dv,da,db=([None]*T for _ in range(5));carry=dHT
+    for t in reversed(range(T)):
+        dq[t]=[scale*_dot(states[t+1][i],dO[t]) for i in range(K)]
+        G=[[carry[i][j]+scale*q[t][i]*dO[t][j] for j in range(V)] for i in range(K)]
+        # S=A+beta*k*(v-k^T*A)^T, so both occurrences of k contribute.
+        kG=[_dot(k[t],[G[i][j] for i in range(K)]) for j in range(V)]
+        dr=[beta[t]*x for x in kG]
+        dA=[[G[i][j]-k[t][i]*dr[j] for j in range(V)] for i in range(K)]
+        dk[t]=[beta[t]*_dot(G[i],residuals[t])-_dot(decayed[t][i],dr) for i in range(K)]
+        dv[t]=dr;db[t]=_dot(kG,residuals[t])
+        rowgrad=[_dot(dA[i],states[t][i]) for i in range(K)]
+        da[t]=rowgrad if isinstance(alpha[t],list) else _dot(rowgrad,[R(1)]*K)
+        rows=_alpha_rows(alpha[t],K)
+        carry=[[rows[i]*dA[i][j] for j in range(V)] for i in range(K)]
+    return {'dq':dq,'dk':dk,'dv':dv,'dalpha':da,'dbeta':db,'dS0':carry}
 
 
 def chunked(q, k, v, alpha, beta, scale, h0, C, carry_decay=True):

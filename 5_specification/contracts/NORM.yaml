@@ -4,25 +4,35 @@ role: NORM
 title: LayerNorm, RMSNorm (and the x_hat (offset + w) variant) and GroupNorm with their statistics and VJPs, real-number
   semantics
 review:
-  status: drafted
+  status: reviewed_for_implementation
   author: Claude (spec v3 author, group C_act_norm_loss), 2026-10-17
-  date: '2026-10-17'
-  scope: Forward values, returned statistics and VJPs of the documented normalisations; awaiting a review by someone
-    who did not write it
+  date: '2026-10-18'
+  reviewer: Codex independent source, formula, domain and implementation review
+  scope: Forward values, returned statistics and VJPs in the declared profiles; device rounding and concrete kernel
+    binding remain separate
 activation:
-  implementation_status: pending
+  implementation_status: validated
+  implementation_evidence: evidence/norm_implementation.md
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
-    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, contract_and_implementation_hashes_bound]
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [torch.nn.LayerNorm, torch.nn.functional.layer_norm, aten.native_layer_norm, aten.native_layer_norm_backward,
   torch.nn.RMSNorm, torch.nn.functional.rms_norm, torch.nn.GroupNorm, torch.nn.functional.group_norm,
   aten.native_group_norm, aten.native_group_norm_backward, liger.LigerLayerNormFunction, liger.LigerRMSNormFunction,
   liger.LigerGroupNormFunction, transformers.GemmaRMSNorm, transformers.Qwen3NextRMSNorm]
 profiles:
   torch:
-    meaning: torch.nn.LayerNorm / RMSNorm / GroupNorm as documented (eps inside the square root, biased variance,
-      contiguous channel groups), with the returned statistics and the VJP against an explicit upstream.
+    meaning: The full/native LayerNorm, RMSNorm or GroupNorm real-number task (eps inside the square root, biased
+      variance, contiguous channel groups), including returned statistics and the VJP against an explicit upstream.
+      A public-call binding must use torch_autograd because torch.nn.functional.group_norm has an additional input
+      rejection before the native operation.
     task_choice_required: false
+  torch_autograd:
+    meaning: The same real-number LayerNorm, RMSNorm or GroupNorm task observed through a public forward-and-backward
+      call. The complete external result is y and the VJP; saved mean/rstd used only inside backward are not public
+      outputs of this profile. The public PyTorch GroupNorm batch-size rejection is part of this profile.
+    task_choice_required: false
+    outputs: [y, grad]
   rms_offset:
     meaning: The RMSNorm variant y = x * rstd * (offset + w) declared by Gemma / Qwen3-Next (offset 1) and Liger's offset
       argument; a different declared function, not a reading of torch.nn.RMSNorm (decision NM.OFFSET).
@@ -44,18 +54,20 @@ comparison:
   quality: No tolerance; statistics are exact rationals, 1/sqrt(var + eps) exact when rational and otherwise a rigorous
     enclosure.
   test_evidence: Hand / sympy derivations (forward from the documented formula, VJP by symbolic differentiation).
-  error_handling: Shape violations are invalid_input; var + eps = 0 is domain_undefined.
+  error_handling: Shape and public-interface violations are invalid_input; a normalisation radicand that is not
+    positive is domain_undefined.
 decisions:
 - id: NM.VJP
-  status: drafted
+  status: reviewed
   statement: 'grad is the VJP of y with respect to x, weight and bias against the explicit upstream g (y''s shape):
     for one normalisation set of n values with x_hat = (x - mean) r, r = 1/sqrt(var + eps), h = g w: dx = r (h -
     mean(h) - x_hat mean(h x_hat)); RMSNorm (x_hat = x r): dx = r (h - x_hat mean(h x_hat)); dweight = sum over the
     sets of g x_hat, dbias = sum of g, per parameter element (LayerNorm / RMSNorm) or per channel (GroupNorm). Derived
     by differentiating the documented forward; agrees with torch''s native_layer_norm_backward decomposition.'
-  basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF, NORM_TS_DECOMP.LN_BWD]
+  basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF, NORM_TS_DECOMP.LN_BWD,
+    NORM_TS_DECOMP.RMS_BWD, NORM_LIGER_LN.BWD, NORM_LIGER_RMS.BWD, NORM_LIGER_GN.BWD]
 - id: NM.SAVED
-  status: drafted
+  status: reviewed
   statement: The pages document only y. The statistics the operations return (aten.native_layer_norm /
     native_group_norm return (y, mean, rstd); Liger stores Mean / RSTD; RMSNorm kernels store rstd) are reported in
     saved as mean and rstd = 1/sqrt(var + eps) per set (RMSNorm - rstd = 1/sqrt(mean(x^2) + eps)). This rests on the
@@ -63,14 +75,14 @@ decisions:
     omit the statistics) rejected because the tested kernels write mean / rstd.
   basis: [NORM_TS_REFS.NORMALIZE, NORM_TS_REFS.GROUP, NORM_LIGER_LN.DEF, NORM_LIGER_RMS.DEF]
 - id: NM.RMS_EPS
-  status: drafted
+  status: reviewed
   statement: eps is an explicit input of every query. For RMSNorm eps=None means torch.finfo(x.dtype).eps; which dtype
     (the input's, or an upcast compute dtype) is a fact of the call that the binding states (v2.4 NORM-A1); e.g. the
     FlagGems rms_norm call passes no eps, so the binding uses 2^-23 / 2^-10 / 2^-7 for float32 / float16 / bfloat16
     inputs. No default is guessed by the reference.
   basis: [T_RMSNORM.EPS, T_RMSNORM_F.DEF]
 - id: NM.OFFSET
-  status: drafted
+  status: reviewed
   statement: The (offset + w) form (Gemma and Qwen3-Next HF modules use 1.0 + weight with the weight initialised to
     zero; Liger's offset argument) is a different declared function, kept in its own profile rms_offset with the offset
     as an explicit input; the model definition selects it (task binding). Bug B004 - Liger 0.7.0's instance patch for
@@ -78,21 +90,32 @@ decisions:
     profile.
   basis: [NORM_HF_QWEN3NEXT.OFFSET, NORM_HF_GEMMA.OFFSET, NORM_LIGER_RMS.OFFSET, NORM_LIGER_RMS.DEF]
 - id: NM.GN_GROUPS
-  status: drafted
+  status: reviewed
   statement: Group k holds the contiguous channels k C/G ... (k+1) C/G - 1. The page says the channels are separated
     into num_groups groups of C/G channels without naming the assignment; torch's reference (reshape to [N, G, C/G,
     inner]) and Liger (view(batch, G, -1)) both use contiguous blocks. Alternative (channel c in group c mod G) has no
     source and is mutant NM.M6.
   basis: [T_GROUPNORM.DEF, NORM_TS_REFS.GROUP, NORM_LIGER_GN.DEF]
 - id: NM.ZERO_VAR
-  status: drafted
+  status: reviewed
   statement: A constant normalisation set has var = 0; with eps > 0 the result is finite (x_hat = 0, y = bias, finite
-    VJP). var + eps = 0 (eps = 0 and a constant set; RMSNorm - eps = 0 and an all-zero set) makes 1/sqrt(0) undefined -
-    domain_undefined, with no requirement on the device output. An empty normalisation set has no mean -
-    domain_undefined.
+    VJP). A nonpositive variance/second-moment plus eps has no real reciprocal square root and is domain_undefined,
+    with no requirement on the device output. An empty normalisation set has no mean and is also domain_undefined.
   basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF]
+- id: NM.EPS_DOMAIN
+  status: reviewed
+  statement: eps is the exact value added inside the square root. The documented formula and the PyTorch public
+    wrappers do not impose eps >= 0; a negative eps is therefore in the real task domain when every resulting
+    variance/second-moment plus eps is positive. Zero or a negative radicand is domain_undefined.
+  basis: [T_LAYERNORM.DEF, T_RMSNORM.DEF, T_GROUPNORM.DEF, NORM_TS_FUNC.NORM_CALLS]
+- id: NM.GROUP_PUBLIC
+  status: reviewed
+  statement: The torch_autograd profile follows the public torch.nn.functional.group_norm boundary, which rejects
+    exactly when (N*C/num_groups)*product(spatial dimensions) equals one before invoking the native operation. The
+    full torch profile represents the native task and does not add this public-wrapper rejection.
+  basis: [NORM_TS_FUNC.GROUP_PUBLIC, NORM_TS_REFS.GROUP]
 - id: NM.CASTS
-  status: drafted
+  status: reviewed
   statement: Precision choices of implementations (Liger casting_mode llama / gemma / none, the HF modules' float32
     computation and cast back) are rounding steps of the program, not part of the real target; every casting mode
     binds to the same profile.
@@ -120,11 +143,15 @@ clauses:
 - {id: NM.C9, basis: [NM.VJP], statement: 'group_norm VJP - per (sample, group) dx = r (h - mean(h) - x_hat mean(h
     x_hat)), h = g w_c; dweight_c, dbias_c summed over samples and positions of channel c', observes: [grad],
   evidence_kind: derived}
-- {id: NM.C10, basis: [NM.ZERO_VAR], statement: 'constant set with eps > 0 gives x_hat = 0; var + eps = 0 is
-    domain_undefined', observes: [y, saved, grad], evidence_kind: definition}
+- {id: NM.C10, basis: [NM.ZERO_VAR], statement: 'constant set with eps > 0 gives x_hat = 0; a nonpositive
+    variance/second-moment plus eps is domain_undefined', observes: [y, saved, grad], evidence_kind: definition}
 - {id: NM.C11, basis: [T_LAYERNORM.DEF, T_GROUPNORM.DEF, T_GROUPNORM.SHAPE], statement: 'normalized_shape that is not
     the trailing shape, C not divisible by num_groups, parameter shapes that do not match are invalid_input',
   observes: [y], evidence_kind: definition}
+- {id: NM.C12, basis: [NM.EPS_DOMAIN], statement: 'negative eps remains valid when every normalisation radicand is
+    positive; a nonpositive radicand is domain_undefined', observes: [y, saved, grad], evidence_kind: definition}
+- {id: NM.C13, basis: [NM.GROUP_PUBLIC], statement: 'torch_autograd group_norm applies the public PyTorch batch-size
+    rejection; the full/native torch profile does not', observes: [y, grad], evidence_kind: definition}
 examples:
 - id: NM.E1
   profile: torch
@@ -282,6 +309,37 @@ examples:
       grad: {x: [[['-1/3', '2/3', '-1/3'], ['11*sqrt(21)/147', '-10*sqrt(21)/147', '-sqrt(21)/147'], ['-4*sqrt(21)/147',
             '-4*sqrt(21)/147', '8*sqrt(21)/147']]], weight: ['-sqrt(21)/7', 0, '-4*sqrt(21)/7']}
   note: (batch, seq, hidden) input as in the tested calls; weight without bias
+- id: NM.E18
+  profile: torch_autograd
+  clauses: [NM.C4, NM.C5]
+  input: {op: rms_norm, x: [[2, 4]], normalized_shape: [2], weight: [1, 3], eps: 6, upstream: [[2, -1]]}
+  expected:
+    outcome: value
+    fields:
+      y: [['1/2', 3]]
+      grad: {x: [['5/8', '-1/2']], weight: [1, -1]}
+  note: Public autograd boundary; rstd is internal saved data and is not an external output.
+- id: NM.E19
+  profile: torch
+  clauses: [NM.C1, NM.C3, NM.C12]
+  input: {op: layer_norm, x: [[-1, 1]], normalized_shape: [2], weight: null, bias: null, eps: '-3/4', upstream: [[1, 0]]}
+  expected:
+    outcome: value
+    fields: {y: [[-2, 2]], saved: {mean: [0], rstd: [2]}, grad: {x: [[-3, 3]]}}
+  note: Negative eps is valid here because the biased variance is 1 and the radicand is 1/4.
+- {id: NM.E20, profile: torch, clauses: [NM.C12], input: {op: layer_norm, x: [[-1, 1]], normalized_shape: [2],
+    weight: null, bias: null, eps: -1, upstream: [[1, 0]]}, expected: {outcome: domain_undefined}}
+- id: NM.E21
+  profile: torch
+  clauses: [NM.C8, NM.C9, NM.C13]
+  input: {op: group_norm, x: [[1]], num_groups: 1, weight: null, bias: null, eps: '1/4', upstream: [[1]]}
+  expected:
+    outcome: value
+    fields: {y: [[0]], saved: {mean: [[1]], rstd: [[2]]}, grad: {x: [[0]]}}
+  note: The native operation has a defined single-value result.
+- {id: NM.E22, profile: torch_autograd, clauses: [NM.C13], input: {op: group_norm, x: [[1]], num_groups: 1,
+    weight: null, bias: null, eps: '1/4', upstream: [[1]]}, expected: {outcome: invalid_input},
+    note: The public wrapper rejects before calling the native operation.}
 signature:
   inputs: ['op: layer_norm | rms_norm | group_norm', 'x: nested list (layer/rms: (*, normalized_shape); group: (N, C,
       *))', 'normalized_shape (layer/rms) or num_groups (group)', 'weight, bias: nested lists or null (rms_norm has no
@@ -290,12 +348,14 @@ signature:
   post_state: []
   observation_unit: 'one normalisation call: y, saved statistics and the complete VJP. aten.native_layer_norm(x,
     normalized_shape, w, b, eps) = (y, mean, rstd) and aten.native_group_norm(x, w, b, N, C, HxW, G, eps) = (y, mean,
-    rstd) map to y and saved; their backward ops (with output_mask) map to grad'
+    rstd) map to y and saved; their backward ops (with output_mask) map to grad. Profile torch_autograd observes the
+    public y and VJP boundary and does not expose saved statistics.'
 domain:
-  valid: [exact rational inputs of consistent shapes, eps >= 0]
-  domain_undefined: [var + eps = 0, empty normalisation set]
+  valid: [exact rational inputs of consistent shapes for which every variance/second-moment plus eps is positive]
+  domain_undefined: [nonpositive variance/second-moment plus eps, empty normalisation set]
   invalid_input: [normalized_shape that is not the trailing shape of x, num_channels not divisible by num_groups,
-    parameter shapes that do not match, negative eps, missing or extra fields]
+    parameter shapes that do not match, the public GroupNorm batch-size rejection in torch_autograd, missing or extra
+    fields]
   unsupported: [ops outside the profile (rms_offset has rms_norm only), infinite or NaN values]
 mutation_requirements:
 - {id: NM.M1, misreading: unbiased variance (n - 1) in the normalisation, witnesses: [NM.E1]}
@@ -312,9 +372,20 @@ mutation_requirements:
 - {id: NM.M11, misreading: GroupNorm affine parameters per group instead of per channel, witnesses: [NM.E11]}
 - {id: NM.M12, misreading: dweight from the first normalisation set only, witnesses: [NM.E1]}
 - {id: NM.M13, misreading: constant set treated as undefined although eps > 0, witnesses: [NM.E3]}
+- {id: NM.M14, misreading: negative eps rejected even when every radicand is positive, witnesses: [NM.E19]}
 nonclaims:
 - Floating-point rounding, including the casts of Liger's casting modes and of the HF modules, is the numerical question
   K - G (decision NM.CASTS).
 - The saved statistics and the offset variant rest on torch sources and reference programs (Liger, HF transformers),
   not on the documentation pages; agreement with them is agreement with those programs.
-changes: []
+changes:
+- date: '2026-10-18'
+  change: Added torch_autograd with the complete public output y and VJP while retaining saved statistics in the
+    native/full profile.
+  trigger: A real Liger RMSNorm forward/backward call exposed y and parameter/input gradients but kept rstd internal;
+    requiring rstd at that public boundary incorrectly rejected an otherwise complete binding.
+- date: '2026-10-18'
+  change: Separated the public GroupNorm input rejection from the native/full profile and replaced the unsupported
+    eps >= 0 restriction with the real formula's positive-radicand domain.
+  trigger: PyTorch 2.10 accepts negative eps when the radicand remains positive, while public group_norm and
+    aten.native_group_norm differ on the single-value configuration.

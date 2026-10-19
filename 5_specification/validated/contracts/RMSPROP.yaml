@@ -1,0 +1,221 @@
+schema_version: '1.2'
+id: RMSPROP
+role: RMSPROP
+title: Strict-real torch.optim.RMSprop transition for one dense parameter tensor
+review:
+  status: reviewed_for_implementation
+  author: OpenAI Codex, independent implementation review
+  date: '2026-10-19'
+  scope: PyTorch 2.10 public RMSprop, one dense real parameter tensor and one step with complete optional state
+activation:
+  implementation_status: validated
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.optim.RMSprop]
+profiles:
+  torch210_dense_real:
+    meaning: >-
+      One public PyTorch 2.10 torch.optim.RMSprop step for one dense real parameter tensor. The complete parameter and
+      optional optimizer pre-state, gradient presence, all algorithmic options and public execution choices are
+      explicit. Capturable or differentiable execution, tensor learning rates and internal functional calls are
+      outside this profile.
+    task_choice_required: false
+    basis: [RM.TASK, RM.ORDER]
+outputs:
+  theta: {shape: '[d] complete parameter post-state', guarantee: rigorous_enclosure}
+  v: {shape: '[d] complete square-average post-state, or [] when state remains uninitialized', guarantee: exact}
+  gave: {shape: '[d] complete centered gradient-average post-state, or [] when absent', guarantee: exact}
+  b: {shape: '[d] complete momentum-buffer post-state, or [] when absent', guarantee: rigorous_enclosure}
+  t: {shape: scalar nonnegative integer or null when state remains uninitialized, guarantee: exact}
+comparison:
+  input_binding: >-
+    All arithmetic values are the exactly received rationals. state is the complete per-parameter pre-state;
+    v=[], gave=[], b=[], t=null means PyTorch has not lazily initialized state for this parameter.
+  complete_output: The complete parameter, square average, optional centered average, optional momentum buffer and step are required.
+  quality: Square and centered averages and step are exact; parameter and momentum-buffer coordinates are outward real enclosures.
+  test_evidence: Independent coordinate checks and direct PyTorch 2.10 comparisons cover cold and warm state, centered mode, momentum, maximize, decay and foreach choices.
+  error_handling: Malformed calls are invalid_input; legal tasks outside this dense real noncapturable and nondifferentiable profile receive no answer.
+decisions:
+- id: RM.TASK
+  status: reviewed
+  statement: >-
+    Select one public torch.optim.RMSprop step. Internal functional calls, closures, sparse or complex gradients,
+    tensor learning rates, capturable or differentiable execution and multi-parameter orchestration are separate tasks.
+  basis: [T_RMSPROP_OPT.PAGE, TS_RMSPROP.PAGE, TS_RMSPROP.STRATEGIES]
+- id: RM.STATE
+  status: reviewed
+  statement: >-
+    State is initialized only for a parameter with a present gradient. It always contains step and square_avg;
+    momentum_buffer exists only for positive momentum and grad_avg exists only in centered mode. A null gradient
+    neither creates nor changes state.
+  basis: [T_RMSPROP_OPT.INIT, TS_RMSPROP.LAZY_STATE, TS_RMSPROP.STATE_KEYS, TS_RMSPROP.NONE, T_ZERO_GRAD.SKIP]
+- id: RM.ORDER
+  status: reviewed
+  statement: >-
+    The selected order is maximize handling, step increment, coupled weight decay, square-average update, optional
+    centered-average update and subtraction, square root, eps addition, optional momentum-buffer update, then the
+    parameter update. The source resolves the public algorithm box's omitted maximize line.
+  basis: [T_RMSPROP_OPT.L2, T_RMSPROP_OPT.SQUARE_AVG, T_RMSPROP_OPT.CENTERED,
+    T_RMSPROP_OPT.EPS, T_RMSPROP_OPT.UPDATE, T_RMSPROP_OPT.MAXIMIZE, TS_RMSPROP.STEP]
+clauses:
+- {id: RM.C1, basis: [RM.ORDER, T_RMSPROP_OPT.L2, TS_RMSPROP.STEP], statement: 'The processed gradient is g=(-gradient if maximize else gradient)+weight_decay*theta_old; maximize is applied before coupled decay.', observes: [theta, v, gave, b], evidence_kind: definition}
+- {id: RM.C2, basis: [T_RMSPROP_OPT.SQUARE_AVG, TS_RMSPROP.STEP], statement: 'For a present gradient, t_new=t_old+1 and v_new=alpha*v_old+(1-alpha)*g^2; absent state first initializes v_old=0 and t_old=0.', observes: [v, t], evidence_kind: definition}
+- {id: RM.C3, basis: [T_RMSPROP_OPT.CENTERED, TS_RMSPROP.STEP], statement: 'In centered mode gave_new=alpha*gave_old+(1-alpha)*g and adjusted=v_new-gave_new^2; otherwise gave is absent and adjusted=v_new.', observes: [theta, gave], evidence_kind: definition}
+- {id: RM.C4, basis: [T_RMSPROP_OPT.EPS, T_RMSPROP_OPT.UPDATE, TS_RMSPROP.STEP], statement: 'D=sqrt(adjusted)+eps. With positive momentum b_new=momentum*b_old+g/D and theta_new=theta_old-lr*b_new; with zero momentum b is absent and theta_new=theta_old-lr*g/D.', observes: [theta, b], evidence_kind: definition}
+- {id: RM.C5, basis: [TS_RMSPROP.NONE, T_ZERO_GRAD.SKIP], statement: 'gradient=null leaves every field unchanged and does not initialize absent state; a zero gradient performs the full step including decay and increments step.', observes: [theta, v, gave, b, t], evidence_kind: definition}
+- {id: RM.C6, basis: [TS_RMSPROP.VALIDATION, TS_RMSPROP.STRATEGIES, RM.TASK], statement: 'foreach false/true/null selects an implementation of the same transition; capturable and differentiable must be false. Public PyTorch validates alpha only as nonnegative.', observes: [theta, v, gave, b, t], evidence_kind: definition}
+examples:
+- id: RM.E1
+  profile: torch210_dense_real
+  clauses: [RM.C2, RM.C4]
+  input: &cold
+    state: {theta: [1], v: [], gave: [], b: [], t: null}
+    gradient: [2]
+    lr: 1/10
+    alpha: 3/4
+    eps: 0
+    weight_decay: 0
+    momentum: 0
+    centered: false
+    maximize: false
+  expected: {outcome: value, fields: {theta: [4/5], v: [1], gave: [], b: [], t: 1}}
+- id: RM.E2
+  profile: torch210_dense_real
+  clauses: [RM.C4]
+  input: {<<: *cold, eps: 1}
+  expected: {outcome: value, fields: {theta: [9/10], v: [1], gave: [], b: [], t: 1}}
+- id: RM.E3
+  profile: torch210_dense_real
+  clauses: [RM.C1, RM.C2, RM.C3, RM.C4]
+  input: {state: {theta: [1], v: [2], gave: [1], b: [1], t: 3}, gradient: [1], lr: 1/10, alpha: 1/2,
+    eps: 0, weight_decay: 1, momentum: 1/2, centered: true, maximize: false}
+  expected: {outcome: value, fields: {theta: ['19/20-2*sqrt(3)/15'], v: [3], gave: [3/2], b: ['1/2+4*sqrt(3)/3'], t: 4}}
+- id: RM.E4
+  profile: torch210_dense_real
+  clauses: [RM.C1, RM.C2, RM.C4]
+  input: {<<: *cold, weight_decay: 1/2, maximize: true}
+  expected: {outcome: value, fields: {theta: [6/5], v: [9/16], gave: [], b: [], t: 1}}
+- id: RM.E5
+  profile: torch210_dense_real
+  clauses: [RM.C1, RM.C3, RM.C4]
+  input: {state: {theta: [0], v: [1], gave: [0], b: [1], t: 1}, gradient: [1], lr: 1, alpha: 1/2,
+    eps: 0, weight_decay: 0, momentum: 1, centered: true, maximize: true}
+  expected: {outcome: value, fields: {theta: ['-1+2*sqrt(3)/3'], v: [1], gave: [-1/2], b: ['1-2*sqrt(3)/3'], t: 2}}
+- id: RM.E6
+  profile: torch210_dense_real
+  clauses: [RM.C5]
+  input: {<<: *cold, gradient: null}
+  expected: {outcome: value, fields: {theta: [1], v: [], gave: [], b: [], t: null}}
+- id: RM.E7
+  profile: torch210_dense_real
+  clauses: [RM.C3, RM.C5]
+  input: {state: {theta: [1], v: [1], gave: [1/2], b: [], t: 2}, gradient: [0], lr: 1/10, alpha: 1/2,
+    eps: 0, weight_decay: 0, momentum: 0, centered: true, maximize: false}
+  expected: {outcome: value, fields: {theta: [1], v: [1/2], gave: [1/4], b: [], t: 3}}
+- id: RM.E8
+  profile: torch210_dense_real
+  clauses: [RM.C3]
+  input: {state: {theta: [1], v: [0], gave: [1], b: [], t: 1}, gradient: [0], lr: 1/10, alpha: 1/2,
+    eps: 1/10, weight_decay: 0, momentum: 0, centered: true, maximize: false}
+  expected: {outcome: domain_undefined}
+- id: RM.E9
+  profile: torch210_dense_real
+  clauses: [RM.C4]
+  input: {<<: *cold, gradient: [0]}
+  expected: {outcome: domain_undefined}
+- id: RM.E10
+  profile: torch210_dense_real
+  clauses: [RM.C2, RM.C3, RM.C4]
+  input: {<<: *cold, centered: true, momentum: 1/2}
+  expected: {outcome: value, fields: {theta: ['1-2*sqrt(3)/15'], v: [1], gave: [1/2], b: ['4*sqrt(3)/3'], t: 1}}
+- id: RM.E11
+  profile: torch210_dense_real
+  clauses: [RM.C5]
+  input: {state: {theta: [1], v: [1], gave: [], b: [], t: 2}, gradient: null, lr: 1/10, alpha: 1/2,
+    eps: 0, weight_decay: 0, momentum: 0, centered: false, maximize: false}
+  expected: {outcome: value, fields: {theta: [1], v: [1], gave: [], b: [], t: 2}}
+- id: RM.E12
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {state: {theta: [1], v: [2], gave: [], b: [], t: 1}, gradient: [0], lr: 1/10, alpha: 2,
+    eps: 1, weight_decay: 0, momentum: 0, centered: false, maximize: false}
+  expected: {outcome: value, fields: {theta: [1], v: [4], gave: [], b: [], t: 2}}
+- id: RM.E13
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, alpha: 2, eps: 1}
+  expected: {outcome: domain_undefined}
+- id: RM.E14
+  profile: torch210_dense_real
+  clauses: [RM.C2]
+  input: {state: {theta: [1], v: [], gave: [], b: [], t: 0}, gradient: [1], lr: 1, alpha: 0,
+    eps: 0, weight_decay: 0, momentum: 0, centered: false, maximize: false}
+  expected: {outcome: invalid_input}
+- id: RM.E15
+  profile: torch210_dense_real
+  clauses: [RM.C3]
+  input: {state: {theta: [1], v: [1], gave: [0], b: [], t: 1}, gradient: [1], lr: 1, alpha: 0,
+    eps: 0, weight_decay: 0, momentum: 0, centered: false, maximize: false}
+  expected: {outcome: invalid_input}
+- id: RM.E16
+  profile: torch210_dense_real
+  clauses: [RM.C4]
+  input: {state: {theta: [1], v: [1], gave: [], b: [0], t: 1}, gradient: [1], lr: 1, alpha: 0,
+    eps: 0, weight_decay: 0, momentum: 0, centered: false, maximize: false}
+  expected: {outcome: invalid_input}
+- id: RM.E17
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, foreach: true, capturable: false, differentiable: false}
+  expected: {outcome: value, fields: {theta: [4/5], v: [1], gave: [], b: [], t: 1}}
+- id: RM.E18
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, capturable: true}
+  expected: {outcome: unsupported}
+- id: RM.E19
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, differentiable: true}
+  expected: {outcome: unsupported}
+- id: RM.E20
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, fused: true}
+  expected: {outcome: unsupported}
+- id: RM.E21
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, centered: 1}
+  expected: {outcome: invalid_input}
+- id: RM.E22
+  profile: torch210_dense_real
+  clauses: [RM.C6]
+  input: {<<: *cold, alpha: -1}
+  expected: {outcome: invalid_input}
+signature:
+  inputs: ['complete gradient vector or null', lr, alpha, eps, weight_decay, momentum, centered, maximize,
+    'optional foreach/capturable/differentiable']
+  pre_state: ['complete theta vector', 'complete v/gave/b and t, or v=gave=b=[] and t=null for absent state']
+  post_state: ['complete theta, v, gave, b and t including explicit absence']
+  observation_unit: one dense real parameter tensor and all its optimizer state across one public RMSprop step
+domain:
+  valid: [d >= 1, finite exact rational values, initialized complete state or explicit absent state, v/lr/alpha/eps/weight_decay/momentum >= 0, Boolean centered/maximize, foreach false/true/null, capturable=false, differentiable=false]
+  domain_undefined: [negative centered square estimate, negative uncentered square estimate allowed by alpha greater than one, 'sqrt(adjusted)+eps=0']
+  invalid_input: [missing fields, incomplete or extra state fields, state length mismatch, initialized state inconsistent with centered or momentum, nonfinite values, non-Boolean flags, negative public hyperparameters]
+  unsupported: [undeclared top-level task fields, sparse or complex gradients, tensor learning rate, capturable or differentiable execution, closure and loss result, internal functional call, multiple parameters or parameter groups, device rounding and layouts]
+mutation_requirements:
+- {id: RM.M1, misreading: place eps inside the square root, witnesses: [RM.E2]}
+- {id: RM.M2, misreading: centered mode subtracts the square of the old gradient average, witnesses: [RM.E3]}
+- {id: RM.M3, misreading: ignore centered mode in the denominator, witnesses: [RM.E3]}
+- {id: RM.M4, misreading: negate maximize after adding weight decay, witnesses: [RM.E4]}
+- {id: RM.M5, misreading: multiply lr into the momentum buffer, witnesses: [RM.E3]}
+- {id: RM.M6, misreading: treat a null gradient as a zero gradient, witnesses: [RM.E6, RM.E11]}
+- {id: RM.M7, misreading: subtract gave rather than gave squared, witnesses: [RM.E3]}
+- {id: RM.M8, misreading: do not advance the step state, witnesses: [RM.E1]}
+- {id: RM.M9, misreading: create a fictitious gave state when centered is disabled, witnesses: [RM.E1]}
+- {id: RM.M10, misreading: create a fictitious momentum buffer when momentum is zero, witnesses: [RM.E1]}
+- {id: RM.M11, misreading: update theta but leave all optimizer state unchanged, witnesses: [RM.E1, RM.E3]}
+- {id: RM.M12, misreading: add weight decay only after updating the square statistics, witnesses: [RM.E4]}

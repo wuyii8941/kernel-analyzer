@@ -1,0 +1,35 @@
+{
+  "schema": "triton-call-binding-v1",
+  "id": "triton.clip_grad_value.f32.4096.c0p75.v1",
+  "status": "reviewed",
+  "unresolved": [],
+  "subject": {
+    "library": "Triton",
+    "version": "3.6.0",
+    "callable": "direct Triton float32 in-place gradient value clipping for one buffer",
+    "runtime_package": {"distribution": "triton", "version": "3.6.0"},
+    "boundary": "one launch with sixteen Triton programs reading and writing every coordinate of one contiguous 4096-element gradient buffer in place",
+    "measure_call": "../calls/triton_clip_grad_value.py:call"
+  },
+  "launch_scope": "all_triton_launches_within_call",
+  "tasks": [
+    {
+      "id": "single_gradient_value_clipping",
+      "contract": "CLIP",
+      "profile": "finite_value_single_gradient",
+      "task_statement": "Update the complete received physical finite float32 gradient buffer in place by clamping every coordinate to the closed interval [-0.75, 0.75].",
+      "input_map": [
+        {"target": "/op", "literal": "torch.nn.utils.clip_grad_value_", "basis": "selected one-gradient value-clipping state task"},
+        {"target": "/args/0", "source": "/tensor_arguments/grad/before", "conversion": "tensor_record"},
+        {"target": "/args/1", "literal": 0.75, "basis": "the kernel uses the exact binary clipping bound 0.75"},
+        {"target": "/kwargs/foreach", "literal": false, "basis": "the direct kernel corresponds to the selected non-foreach implementation"}
+      ],
+      "output_map": [
+        {"target": "/out", "source": "/tensor_arguments/grad/after", "conversion": "tensor_record", "measure_output": "out"}
+      ]
+    }
+  ],
+  "state_map": [
+    {"argument": "grad", "effect": "output", "task": "single_gradient_value_clipping", "target": "/out"}
+  ]
+}
