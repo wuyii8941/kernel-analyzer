@@ -1,0 +1,5878 @@
+[
+ {
+  "overload": "_adaptive_avg_pool2d.default",
+  "schema": "aten::_adaptive_avg_pool2d(Tensor self, SymInt[2] output_size) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_adaptive_avg_pool2d_backward.default",
+  "schema": "aten::_adaptive_avg_pool2d_backward(Tensor grad_output, Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_adaptive_avg_pool3d.default",
+  "schema": "aten::_adaptive_avg_pool3d(Tensor self, SymInt[3] output_size) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_cdist_forward.default",
+  "schema": "aten::_cdist_forward(Tensor x1, Tensor x2, float p, int? compute_mode) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_embedding_bag.default",
+  "schema": "aten::_embedding_bag(Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False, int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_fft_r2c.default",
+  "schema": "aten::_fft_r2c(Tensor self, int[] dim, int normalization, bool onesided) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_local_scalar_dense.default",
+  "schema": "aten::_local_scalar_dense(Tensor self) -> Scalar",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_log_softmax.default",
+  "schema": "aten::_log_softmax(Tensor self, int dim, bool half_to_float) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "SOFTMAX",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 136,
+   "domain_undefined": 21
+  },
+  "dtypes": {
+   "f32": {
+    "value": 43,
+    "domain_undefined": 7
+   },
+   "bf16": {
+    "value": 43,
+    "domain_undefined": 7
+   },
+   "f64": {
+    "value": 43,
+    "domain_undefined": 7
+   },
+   "i64": {
+    "value": 7
+   }
+  },
+  "diagnostic": {
+   "compared": 4390,
+   "max_rel": 1.278732898339212e-09,
+   "over_1e-9": 1
+  },
+  "notes": [
+   "f32: domain_undefined: log_softmax of a row that is all -inf or has +inf",
+   "f32: domain_undefined: log_softmax of a row that is all -inf or has +inf",
+   "f32: domain_undefined: log_softmax of a row that is all -inf or has +inf",
+   "f32: domain_undefined: log_softmax of a row that is all -inf or has +inf",
+   "f32: domain_undefined: log_softmax of a row that is all -inf or has +inf",
+   "f32: domain_undefined: log_softmax of a row that is all -inf or has +inf"
+  ]
+ },
+ {
+  "overload": "_native_batch_norm_legit.default",
+  "schema": "aten::_native_batch_norm_legit(Tensor input, Tensor? weight, Tensor? bias, Tensor(a!) running_mean, Tensor(b!) running_var, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_native_batch_norm_legit.no_stats",
+  "schema": "aten::_native_batch_norm_legit.no_stats(Tensor input, Tensor? weight, Tensor? bias, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_native_batch_norm_legit_no_training.default",
+  "schema": "aten::_native_batch_norm_legit_no_training(Tensor input, Tensor? weight, Tensor? bias, Tensor running_mean, Tensor running_var, float momentum, float eps) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_pdist_forward.default",
+  "schema": "aten::_pdist_forward(Tensor self, float p=2.) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_softmax.default",
+  "schema": "aten::_softmax(Tensor self, int dim, bool half_to_float) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "SOFTMAX",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 164
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "value": 14
+   }
+  },
+  "diagnostic": {
+   "compared": 6038,
+   "max_rel": 2.0630453501663884e-15,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "_to_copy.default",
+  "schema": "aten::_to_copy(Tensor self, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, bool non_blocking=False, MemoryFormat? memory_format=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "CAST",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": null
+   }
+  ],
+  "probe": {
+   "input not representable: argument type layout": 134,
+   "not_established": 45,
+   "input not representable: argument type device": 13,
+   "input not representable: argument type memory_format": 8
+  },
+  "dtypes": {
+   "f32": {
+    "input not representable: argument type layout": 50
+   },
+   "f64": {
+    "input not representable: argument type layout": 50
+   },
+   "i64": {
+    "not_established": 15,
+    "input not representable: argument type layout": 14,
+    "input not representable: argument type device": 13,
+    "input not representable: argument type memory_format": 8
+   },
+   "bf16": {
+    "input not representable: argument type layout": 20,
+    "not_established": 30
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: not_established: refused: profile must be a nonblank name; profile outputs: unknown profile; unknown profile None",
+   "i64: not_established: refused: profile must be a nonblank name; profile outputs: unknown profile; unknown profile None",
+   "i64: not_established: refused: profile must be a nonblank name; profile outputs: unknown profile; unknown profile None",
+   "i64: not_established: refused: profile must be a nonblank name; profile outputs: unknown profile; unknown profile None",
+   "i64: not_established: refused: profile must be a nonblank name; profile outputs: unknown profile; unknown profile None",
+   "i64: not_established: refused: profile must be a nonblank name; profile outputs: unknown profile; unknown profile None"
+  ]
+ },
+ {
+  "overload": "abs.default",
+  "schema": "aten::abs(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 195,
+   "unsupported": 4
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 4,
+    "value": 45
+   }
+  },
+  "diagnostic": {
+   "compared": 17403,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "acos.default",
+  "schema": "aten::acos(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "acosh.default",
+  "schema": "aten::acosh(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "adaptive_avg_pool1d.default",
+  "schema": "aten::adaptive_avg_pool1d(Tensor self, int[1] output_size) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "add.Scalar",
+  "schema": "aten::add.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "invalid_input": 58,
+   "value": 110,
+   "unsupported": 32
+  },
+  "dtypes": {
+   "f32": {
+    "invalid_input": 22,
+    "value": 28
+   },
+   "bf16": {
+    "invalid_input": 22,
+    "value": 28
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "invalid_input": 14,
+    "value": 4,
+    "unsupported": 32
+   }
+  },
+  "diagnostic": {
+   "compared": 3961,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: invalid_input: right operand=3022314549036573/302231454903657293676544 is not exactly representable as f32",
+   "f32: invalid_input: right operand=3022314549036573/302231454903657293676544 is not exactly representable as f32",
+   "f32: invalid_input: right operand=3022314549036573/302231454903657293676544 is not exactly representable as f32",
+   "f32: invalid_input: right operand=3022314549036573/302231454903657293676544 is not exactly representable as f32",
+   "f32: invalid_input: right operand=3022314549036573/302231454903657293676544 is not exactly representable as f32",
+   "f32: invalid_input: right operand=3022314549036573/302231454903657293676544 is not exactly representable as f32"
+  ]
+ },
+ {
+  "overload": "add.Tensor",
+  "schema": "aten::add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 166,
+   "unsupported": 34
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 34,
+    "value": 16
+   }
+  },
+  "diagnostic": {
+   "compared": 5676,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "addmm.default",
+  "schema": "aten::addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATMUL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 17
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 17
+   }
+  },
+  "diagnostic": {
+   "compared": 1944,
+   "max_rel": 5.672651617593412e-15,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: c dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: c dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: c dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: c dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: c dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: c dtype 'i64' is outside the finite floating MATMUL profile"
+  ]
+ },
+ {
+  "overload": "alias.default",
+  "schema": "aten::alias(Tensor(a) self) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 48
+  },
+  "dtypes": {
+   "f32": {
+    "value": 16
+   },
+   "bf16": {
+    "value": 16
+   },
+   "f64": {
+    "value": 16
+   }
+  },
+  "diagnostic": {
+   "compared": 132,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "amax.default",
+  "schema": "aten::amax(Tensor self, int[1] dim=[], bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 50
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 242,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "amin.default",
+  "schema": "aten::amin(Tensor self, int[1] dim=[], bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 50
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 242,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "any.default",
+  "schema": "aten::any(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 4
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 4
+   }
+  },
+  "diagnostic": {
+   "compared": 150,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "any.dim",
+  "schema": "aten::any.dim(Tensor self, int dim, bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 109,
+   "unsupported": 9
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 298,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "any.dims",
+  "schema": "aten::any.dims(Tensor self, int[]? dim=None, bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 28
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 7
+   },
+   "bf16": {
+    "unsupported": 7
+   },
+   "f64": {
+    "unsupported": 7
+   },
+   "i64": {
+    "unsupported": 7
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: dimension-list truth reductions are outside the reviewed profile",
+   "f32: unsupported: dimension-list truth reductions are outside the reviewed profile",
+   "f32: unsupported: dimension-list truth reductions are outside the reviewed profile",
+   "f32: unsupported: dimension-list truth reductions are outside the reviewed profile",
+   "f32: unsupported: dimension-list truth reductions are outside the reviewed profile",
+   "f32: unsupported: dimension-list truth reductions are outside the reviewed profile"
+  ]
+ },
+ {
+  "overload": "arange.start_step",
+  "schema": "aten::arange.start_step(Scalar start, Scalar end, Scalar step=1, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "argmax.default",
+  "schema": "aten::argmax(Tensor self, int? dim=None, bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 84,
+   "unsupported": 71,
+   "input not representable: NaN tensor value (no real-number encoding)": 45
+  },
+  "dtypes": {
+   "f32": {
+    "value": 28,
+    "input not representable: NaN tensor value (no real-number encoding)": 15,
+    "unsupported": 7
+   },
+   "bf16": {
+    "value": 28,
+    "input not representable: NaN tensor value (no real-number encoding)": 15,
+    "unsupported": 7
+   },
+   "f64": {
+    "value": 28,
+    "input not representable: NaN tensor value (no real-number encoding)": 15,
+    "unsupported": 7
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 168,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "argmin.default",
+  "schema": "aten::argmin(Tensor self, int? dim=None, bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 84,
+   "unsupported": 71,
+   "input not representable: NaN tensor value (no real-number encoding)": 45
+  },
+  "dtypes": {
+   "f32": {
+    "value": 28,
+    "input not representable: NaN tensor value (no real-number encoding)": 15,
+    "unsupported": 7
+   },
+   "bf16": {
+    "value": 28,
+    "input not representable: NaN tensor value (no real-number encoding)": 15,
+    "unsupported": 7
+   },
+   "f64": {
+    "value": 28,
+    "input not representable: NaN tensor value (no real-number encoding)": 15,
+    "unsupported": 7
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 168,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "as_strided.default",
+  "schema": "aten::as_strided(Tensor(a) self, SymInt[] size, SymInt[] stride, SymInt? storage_offset=None) -> Tensor(a)",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "asin.default",
+  "schema": "aten::asin(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "asinh.default",
+  "schema": "aten::asinh(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "atan.default",
+  "schema": "aten::atan(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "atan2.default",
+  "schema": "aten::atan2(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "atan2.out",
+  "schema": "aten::atan2.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "atanh.default",
+  "schema": "aten::atanh(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "avg_pool1d.default",
+  "schema": "aten::avg_pool1d(Tensor self, int[1] kernel_size, int[1] stride=[], int[1] padding=[0], bool ceil_mode=False, bool count_include_pad=True) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "avg_pool2d.default",
+  "schema": "aten::avg_pool2d(Tensor self, int[2] kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False, bool count_include_pad=True, int? divisor_override=None) -> Tensor",
+  "correspondence": "alias",
+  "reason": "torch.nn.functional.avg_pool2d dispatches aten.avg_pool2d",
+  "contracts": [
+   {
+    "id": "POOL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "finite_max2d_values"
+   }
+  ],
+  "probe": {
+   "contract interface is not an ATen call (needs a call mapping)": 104
+  },
+  "dtypes": {
+   "f32": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   },
+   "bf16": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   },
+   "f64": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   },
+   "i64": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "avg_pool2d_backward.default",
+  "schema": "aten::avg_pool2d_backward(Tensor grad_output, Tensor self, int[2] kernel_size, int[2] stride, int[2] padding, bool ceil_mode, bool count_include_pad, int? divisor_override) -> Tensor",
+  "correspondence": "alias",
+  "reason": "the VJP of torch.nn.functional.avg_pool2d (profile finite_avg2d_autograd)",
+  "contracts": [
+   {
+    "id": "POOL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "finite_max2d_values"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "avg_pool3d.default",
+  "schema": "aten::avg_pool3d(Tensor self, int[3] kernel_size, int[3] stride=[], int[3] padding=0, bool ceil_mode=False, bool count_include_pad=True, int? divisor_override=None) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "bitwise_and.Scalar",
+  "schema": "aten::bitwise_and.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "bitwise_and.Tensor",
+  "schema": "aten::bitwise_and.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 18,
+   "value": 12
+  },
+  "dtypes": {
+   "i64": {
+    "unsupported": 18
+   },
+   "f32": {
+    "value": 4
+   },
+   "bf16": {
+    "value": 4
+   },
+   "f64": {
+    "value": 4
+   }
+  },
+  "diagnostic": {
+   "compared": 300,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "bitwise_not.default",
+  "schema": "aten::bitwise_not(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 3
+  },
+  "dtypes": {
+   "i64": {
+    "unsupported": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "bitwise_or.Scalar",
+  "schema": "aten::bitwise_or.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "bitwise_or.Tensor",
+  "schema": "aten::bitwise_or.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 18
+  },
+  "dtypes": {
+   "i64": {
+    "unsupported": 18
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "bitwise_xor.Scalar",
+  "schema": "aten::bitwise_xor.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "bitwise_xor.Tensor",
+  "schema": "aten::bitwise_xor.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "bmm.default",
+  "schema": "aten::bmm(Tensor self, Tensor mat2) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATMUL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 15
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 15
+   }
+  },
+  "diagnostic": {
+   "compared": 37749,
+   "max_rel": 1.177815203222209e-13,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile"
+  ]
+ },
+ {
+  "overload": "cat.default",
+  "schema": "aten::cat(Tensor[] tensors, int dim=0) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 163,
+   "unsupported": 36,
+   "invalid_input": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 36,
+    "value": 13,
+    "invalid_input": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 6897,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: tensors[0] dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: tensors[0] dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: tensors[0] dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: tensors[0] dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: tensors[0] dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: tensors[0] dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "ceil.default",
+  "schema": "aten::ceil(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 3,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 1
+   },
+   "bf16": {
+    "value": 1
+   },
+   "f64": {
+    "value": 1
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 1200,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "clamp.Tensor",
+  "schema": "aten::clamp.Tensor(Tensor self, Tensor? min=None, Tensor? max=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 28
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 7
+   },
+   "bf16": {
+    "unsupported": 7
+   },
+   "f64": {
+    "unsupported": 7
+   },
+   "i64": {
+    "unsupported": 7
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: tensor-valued min is outside the selected scalar overload",
+   "f32: unsupported: tensor-valued min is outside the selected scalar overload",
+   "f32: unsupported: tensor-valued min is outside the selected scalar overload",
+   "f32: unsupported: tensor-valued max is outside the selected scalar overload",
+   "f32: unsupported: tensor-valued min is outside the selected scalar overload",
+   "f32: unsupported: min dtype 'i32' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "clamp.default",
+  "schema": "aten::clamp(Tensor self, Scalar? min=None, Scalar? max=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 8
+  },
+  "dtypes": {
+   "f32": {
+    "value": 2
+   },
+   "bf16": {
+    "value": 2
+   },
+   "f64": {
+    "value": 2
+   },
+   "i64": {
+    "value": 2
+   }
+  },
+  "diagnostic": {
+   "compared": 52,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "clone.default",
+  "schema": "aten::clone(Tensor self, *, MemoryFormat? memory_format=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "input not representable: argument type memory_format": 63,
+   "value": 93,
+   "unsupported": 20,
+   "input not representable: dtype torch.complex64": 24
+  },
+  "dtypes": {
+   "f32": {
+    "input not representable: argument type memory_format": 19,
+    "value": 31
+   },
+   "bf16": {
+    "input not representable: argument type memory_format": 19,
+    "value": 31
+   },
+   "f64": {
+    "input not representable: argument type memory_format": 19,
+    "value": 31
+   },
+   "i64": {
+    "input not representable: argument type memory_format": 6,
+    "unsupported": 20,
+    "input not representable: dtype torch.complex64": 24
+   }
+  },
+  "diagnostic": {
+   "compared": 2244,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "col2im.default",
+  "schema": "aten::col2im(Tensor self, SymInt[2] output_size, int[2] kernel_size, int[2] dilation, int[2] padding, int[2] stride) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "constant_pad_nd.default",
+  "schema": "aten::constant_pad_nd(Tensor self, SymInt[] pad, Scalar value=0) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 50
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 28962,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "convolution.default",
+  "schema": "aten::convolution(Tensor input, Tensor weight, Tensor? bias, SymInt[] stride, SymInt[] padding, SymInt[] dilation, bool transposed, SymInt[] output_padding, SymInt groups) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "CONV",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 146,
+   "value": 54
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 32,
+    "value": 18
+   },
+   "bf16": {
+    "unsupported": 32,
+    "value": 18
+   },
+   "f64": {
+    "unsupported": 32,
+    "value": 18
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 462,
+   "max_rel": 1.2153574575852518e-15,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: transposed convolution",
+   "f32: unsupported: transposed convolution",
+   "f32: unsupported: transposed convolution",
+   "f32: unsupported: transposed convolution",
+   "f32: unsupported: transposed convolution",
+   "f32: unsupported: transposed convolution"
+  ]
+ },
+ {
+  "overload": "convolution_backward.default",
+  "schema": "aten::convolution_backward(Tensor grad_output, Tensor input, Tensor weight, SymInt[]? bias_sizes, SymInt[] stride, SymInt[] padding, SymInt[] dilation, bool transposed, SymInt[] output_padding, SymInt groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "CONV",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "copy.default",
+  "schema": "aten::copy(Tensor self, Tensor src, bool non_blocking=False) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "cos.default",
+  "schema": "aten::cos(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 103,
+   "unsupported": 3
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 3
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 863,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "cosh.default",
+  "schema": "aten::cosh(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "cumsum.default",
+  "schema": "aten::cumsum(Tensor self, int dim, *, ScalarType? dtype=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 93,
+   "unsupported": 27
+  },
+  "dtypes": {
+   "f32": {
+    "value": 30
+   },
+   "bf16": {
+    "value": 30
+   },
+   "f64": {
+    "value": 30
+   },
+   "i64": {
+    "unsupported": 27,
+    "value": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 6002,
+   "max_rel": 0.00390625,
+   "over_1e-9": 21
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "diagonal.default",
+  "schema": "aten::diagonal(Tensor(a) self, int offset=0, int dim1=0, int dim2=1) -> Tensor(a)",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "div.Scalar",
+  "schema": "aten::div.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 156,
+   "invalid_input": 12,
+   "unsupported": 32
+  },
+  "dtypes": {
+   "f32": {
+    "value": 44,
+    "invalid_input": 6
+   },
+   "bf16": {
+    "value": 44,
+    "invalid_input": 6
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 32,
+    "value": 18
+   }
+  },
+  "diagnostic": {
+   "compared": 1527,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: invalid_input: right operand=4728779608739021/2251799813685248 is not exactly representable as f32",
+   "f32: invalid_input: right operand=4728779608739021/2251799813685248 is not exactly representable as f32",
+   "f32: invalid_input: right operand=4728779608739021/2251799813685248 is not exactly representable as f32",
+   "f32: invalid_input: right operand=4728779608739021/2251799813685248 is not exactly representable as f32",
+   "f32: invalid_input: right operand=4728779608739021/2251799813685248 is not exactly representable as f32",
+   "f32: invalid_input: right operand=4728779608739021/2251799813685248 is not exactly representable as f32"
+  ]
+ },
+ {
+  "overload": "div.Scalar_mode",
+  "schema": "aten::div.Scalar_mode(Tensor self, Scalar other, *, str? rounding_mode) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "div.Tensor",
+  "schema": "aten::div.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 122,
+   "value": 78
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 27,
+    "value": 23
+   },
+   "bf16": {
+    "unsupported": 27,
+    "value": 23
+   },
+   "f64": {
+    "unsupported": 41,
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 27,
+    "value": 23
+   }
+  },
+  "diagnostic": {
+   "compared": 166,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: b dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: b dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: b dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: b dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: b dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: b dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "div.Tensor_mode",
+  "schema": "aten::div.Tensor_mode(Tensor self, Tensor other, *, str? rounding_mode) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 54,
+   "unsupported": 18
+  },
+  "dtypes": {
+   "f32": {
+    "value": 18
+   },
+   "bf16": {
+    "value": 18
+   },
+   "f64": {
+    "value": 18
+   },
+   "i64": {
+    "unsupported": 18
+   }
+  },
+  "diagnostic": {
+   "compared": 9486,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "elu.default",
+  "schema": "aten::elu(Tensor self, Scalar alpha=1, Scalar scale=1, Scalar input_scale=1) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "embedding.default",
+  "schema": "aten::embedding(Tensor weight, Tensor indices, SymInt padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "EMB",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch210_dense_real"
+   },
+   {
+    "id": "INDEX",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "contract interface is not an ATen call (needs a call mapping)": 30
+  },
+  "dtypes": {
+   "f32": {
+    "contract interface is not an ATen call (needs a call mapping)": 10
+   },
+   "bf16": {
+    "contract interface is not an ATen call (needs a call mapping)": 10
+   },
+   "f64": {
+    "contract interface is not an ATen call (needs a call mapping)": 10
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "embedding_dense_backward.default",
+  "schema": "aten::embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "EMB",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch210_dense_real"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "empty.memory_format",
+  "schema": "aten::empty.memory_format(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, MemoryFormat? memory_format=None) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "empty_strided.default",
+  "schema": "aten::empty_strided(SymInt[] size, SymInt[] stride, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "eq.Scalar",
+  "schema": "aten::eq.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 54,
+   "unsupported": 24
+  },
+  "dtypes": {
+   "f32": {
+    "value": 21,
+    "unsupported": 6
+   },
+   "f64": {
+    "value": 21,
+    "unsupported": 6
+   },
+   "bf16": {
+    "value": 12
+   },
+   "i64": {
+    "unsupported": 12
+   }
+  },
+  "diagnostic": {
+   "compared": 132,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: special comparison scalars are outside the real profile",
+   "f32: unsupported: special comparison scalars are outside the real profile",
+   "f32: unsupported: special comparison scalars are outside the real profile",
+   "f32: unsupported: special comparison scalars are outside the real profile",
+   "f32: unsupported: special comparison scalars are outside the real profile",
+   "f32: unsupported: special comparison scalars are outside the real profile"
+  ]
+ },
+ {
+  "overload": "eq.Tensor",
+  "schema": "aten::eq.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 27
+  },
+  "dtypes": {
+   "f32": {
+    "value": 45
+   },
+   "bf16": {
+    "value": 45
+   },
+   "f64": {
+    "value": 45
+   },
+   "i64": {
+    "unsupported": 27,
+    "value": 15
+   }
+  },
+  "diagnostic": {
+   "compared": 17148,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "erf.default",
+  "schema": "aten::erf(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 15,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 4
+   },
+   "bf16": {
+    "value": 4
+   },
+   "f64": {
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 1,
+    "value": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 1284,
+   "max_rel": 1.1102230331020308e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "exp.default",
+  "schema": "aten::exp(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 147,
+   "unsupported": 39
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 47
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 39
+   }
+  },
+  "diagnostic": {
+   "compared": 5747,
+   "max_rel": 1.8910409788511044e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "expand.default",
+  "schema": "aten::expand(Tensor(a) self, SymInt[] size, *, bool implicit=False) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 93,
+   "unsupported": 107
+  },
+  "dtypes": {
+   "f32": {
+    "value": 31,
+    "unsupported": 19
+   },
+   "bf16": {
+    "value": 31,
+    "unsupported": 19
+   },
+   "f64": {
+    "value": 31,
+    "unsupported": 19
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 1998,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "expm1.default",
+  "schema": "aten::expm1(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 3,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 1
+   },
+   "bf16": {
+    "value": 1
+   },
+   "f64": {
+    "value": 1
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 1200,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "fill.Scalar",
+  "schema": "aten::fill.Scalar(Tensor self, Scalar value) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "flip.default",
+  "schema": "aten::flip(Tensor self, int[] dims) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "floor.default",
+  "schema": "aten::floor(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 3,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 1
+   },
+   "bf16": {
+    "value": 1
+   },
+   "f64": {
+    "value": 1
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 1200,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "fmod.Scalar",
+  "schema": "aten::fmod.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "fmod.Tensor",
+  "schema": "aten::fmod.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "full.default",
+  "schema": "aten::full(SymInt[] size, Scalar fill_value, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "full_like.default",
+  "schema": "aten::full_like(Tensor self, Scalar fill_value, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, MemoryFormat? memory_format=None) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "gather.default",
+  "schema": "aten::gather(Tensor self, int dim, Tensor index, *, bool sparse_grad=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "INDEX",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 107,
+   "unsupported": 17
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 7,
+    "unsupported": 5
+   },
+   "i64": {
+    "unsupported": 12
+   }
+  },
+  "diagnostic": {
+   "compared": 341,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "bf16: unsupported: idx must use int64 in the reviewed INDEX profile",
+   "bf16: unsupported: idx must use int64 in the reviewed INDEX profile",
+   "bf16: unsupported: idx must use int64 in the reviewed INDEX profile",
+   "bf16: unsupported: scalar gather is outside the reviewed profile",
+   "bf16: unsupported: scalar gather is outside the reviewed profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating INDEX profile"
+  ]
+ },
+ {
+  "overload": "ge.Scalar",
+  "schema": "aten::ge.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 100,
+   "unsupported": 72
+  },
+  "dtypes": {
+   "f32": {
+    "value": 32,
+    "unsupported": 18
+   },
+   "bf16": {
+    "value": 18,
+    "unsupported": 18
+   },
+   "f64": {
+    "value": 32,
+    "unsupported": 18
+   },
+   "i64": {
+    "value": 18,
+    "unsupported": 18
+   }
+  },
+  "diagnostic": {
+   "compared": 100,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i32' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i32' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i32' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i32' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i32' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i32' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "ge.Tensor",
+  "schema": "aten::ge.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 27,
+   "unsupported": 9
+  },
+  "dtypes": {
+   "f32": {
+    "value": 9
+   },
+   "bf16": {
+    "value": 9
+   },
+   "f64": {
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 4743,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "gelu.default",
+  "schema": "aten::gelu(Tensor self, *, str approximate=\"none\") -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ACT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch"
+   }
+  ],
+  "probe": {
+   "value": 24
+  },
+  "dtypes": {
+   "f32": {
+    "value": 8
+   },
+   "bf16": {
+    "value": 8
+   },
+   "f64": {
+    "value": 8
+   }
+  },
+  "diagnostic": {
+   "compared": 2400,
+   "max_rel": 1.6364503254663485e-14,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "grid_sampler_2d.default",
+  "schema": "aten::grid_sampler_2d(Tensor input, Tensor grid, int interpolation_mode, int padding_mode, bool align_corners) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "gt.Scalar",
+  "schema": "aten::gt.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 16
+  },
+  "dtypes": {
+   "f32": {
+    "value": 8
+   },
+   "f64": {
+    "value": 8
+   }
+  },
+  "diagnostic": {
+   "compared": 16,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "gt.Tensor",
+  "schema": "aten::gt.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 60,
+   "unsupported": 36
+  },
+  "dtypes": {
+   "f32": {
+    "value": 12,
+    "unsupported": 27
+   },
+   "bf16": {
+    "value": 9
+   },
+   "f64": {
+    "value": 39
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 4963,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "hardtanh.default",
+  "schema": "aten::hardtanh(Tensor self, Scalar min_val=-1, Scalar max_val=1) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "index.Tensor",
+  "schema": "aten::index.Tensor(Tensor self, Tensor?[] indices) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "index_put.default",
+  "schema": "aten::index_put(Tensor self, Tensor?[] indices, Tensor values, bool accumulate=False) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "index_select.default",
+  "schema": "aten::index_select(Tensor self, int dim, Tensor index) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "INDEX",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 8,
+   "value": 12
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 1,
+    "value": 4
+   },
+   "bf16": {
+    "unsupported": 1,
+    "value": 4
+   },
+   "f64": {
+    "unsupported": 1,
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 5
+   }
+  },
+  "diagnostic": {
+   "compared": 168,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: scalar index_select is outside the reviewed profile",
+   "bf16: unsupported: scalar index_select is outside the reviewed profile",
+   "f64: unsupported: scalar index_select is outside the reviewed profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating INDEX profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating INDEX profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating INDEX profile"
+  ]
+ },
+ {
+  "overload": "isinf.default",
+  "schema": "aten::isinf(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "isnan.default",
+  "schema": "aten::isnan(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 110
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 50
+   },
+   "f64": {
+    "unsupported": 50
+   },
+   "bf16": {
+    "unsupported": 9
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: the real profile does not cover isnan",
+   "f32: unsupported: the real profile does not cover isnan",
+   "f32: unsupported: the real profile does not cover isnan",
+   "f32: unsupported: the real profile does not cover isnan",
+   "f32: unsupported: the real profile does not cover isnan",
+   "f32: unsupported: the real profile does not cover isnan"
+  ]
+ },
+ {
+  "overload": "le.Scalar",
+  "schema": "aten::le.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 110,
+   "value": 90
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 26,
+    "value": 24
+   },
+   "bf16": {
+    "unsupported": 26,
+    "value": 24
+   },
+   "f64": {
+    "unsupported": 26,
+    "value": 24
+   },
+   "i64": {
+    "unsupported": 32,
+    "value": 18
+   }
+  },
+  "diagnostic": {
+   "compared": 114,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "bf16: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "bf16: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "le.Tensor",
+  "schema": "aten::le.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 57,
+   "value": 87
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 12,
+    "value": 24
+   },
+   "bf16": {
+    "unsupported": 12,
+    "value": 24
+   },
+   "f64": {
+    "unsupported": 12,
+    "value": 24
+   },
+   "i64": {
+    "unsupported": 21,
+    "value": 15
+   }
+  },
+  "diagnostic": {
+   "compared": 11667,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "leaky_relu.default",
+  "schema": "aten::leaky_relu(Tensor self, Scalar negative_slope=0.01) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "log.default",
+  "schema": "aten::log(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 179,
+   "unsupported": 19,
+   "domain_undefined": 2
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 19,
+    "value": 29,
+    "domain_undefined": 2
+   }
+  },
+  "diagnostic": {
+   "compared": 641,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "log10.default",
+  "schema": "aten::log10(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "log1p.default",
+  "schema": "aten::log1p(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 2,
+   "domain_undefined": 1,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 1
+   },
+   "bf16": {
+    "domain_undefined": 1
+   },
+   "f64": {
+    "value": 1
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 800,
+   "max_rel": 2.1136272903224869e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "bf16: domain_undefined: log1p requires x > -1",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "log2.default",
+  "schema": "aten::log2(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "logical_and.default",
+  "schema": "aten::logical_and(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 27,
+   "unsupported": 9
+  },
+  "dtypes": {
+   "f32": {
+    "value": 9
+   },
+   "bf16": {
+    "value": 9
+   },
+   "f64": {
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 4743,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "logical_not.default",
+  "schema": "aten::logical_not(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 9,
+   "unsupported": 3
+  },
+  "dtypes": {
+   "f32": {
+    "value": 3
+   },
+   "bf16": {
+    "value": 3
+   },
+   "f64": {
+    "value": 3
+   },
+   "i64": {
+    "unsupported": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 63,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "logical_or.default",
+  "schema": "aten::logical_or(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 27,
+   "unsupported": 9
+  },
+  "dtypes": {
+   "f32": {
+    "value": 9
+   },
+   "bf16": {
+    "value": 9
+   },
+   "f64": {
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 4743,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "logical_xor.default",
+  "schema": "aten::logical_xor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "lt.Scalar",
+  "schema": "aten::lt.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 462,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "lt.Tensor",
+  "schema": "aten::lt.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 57,
+   "value": 27
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 12,
+    "value": 9
+   },
+   "bf16": {
+    "unsupported": 12,
+    "value": 9
+   },
+   "f64": {
+    "unsupported": 12,
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 21
+   }
+  },
+  "diagnostic": {
+   "compared": 4743,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "masked_scatter.default",
+  "schema": "aten::masked_scatter(Tensor self, Tensor mask, Tensor source) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "max.dim",
+  "schema": "aten::max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 12,
+   "unsupported": 4
+  },
+  "dtypes": {
+   "f32": {
+    "value": 4
+   },
+   "bf16": {
+    "value": 4
+   },
+   "f64": {
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 4
+   }
+  },
+  "diagnostic": {
+   "compared": 312,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "max_pool2d_with_indices.default",
+  "schema": "aten::max_pool2d_with_indices(Tensor self, int[2] kernel_size, int[2] stride=[], int[2] padding=0, int[2] dilation=1, bool ceil_mode=False) -> (Tensor, Tensor)",
+  "correspondence": "alias",
+  "reason": "torch.nn.functional.max_pool2d(return_indices=True) dispatches it",
+  "contracts": [
+   {
+    "id": "POOL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "finite_max2d_values"
+   }
+  ],
+  "probe": {
+   "contract interface is not an ATen call (needs a call mapping)": 200
+  },
+  "dtypes": {
+   "f32": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   },
+   "bf16": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   },
+   "f64": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   },
+   "i64": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "max_pool2d_with_indices_backward.default",
+  "schema": "aten::max_pool2d_with_indices_backward(Tensor grad_output, Tensor self, int[2] kernel_size, int[2] stride, int[2] padding, int[2] dilation, bool ceil_mode, Tensor indices) -> Tensor",
+  "correspondence": "alias",
+  "reason": "the VJP of max_pool2d (profile torch210_unique_max2d_autograd)",
+  "contracts": [
+   {
+    "id": "POOL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "finite_max2d_values"
+   }
+  ],
+  "probe": {
+   "contract interface is not an ATen call (needs a call mapping)": 150
+  },
+  "dtypes": {
+   "f32": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   },
+   "bf16": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   },
+   "f64": {
+    "contract interface is not an ATen call (needs a call mapping)": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "max_pool3d_with_indices.default",
+  "schema": "aten::max_pool3d_with_indices(Tensor self, int[3] kernel_size, int[3] stride=[], int[3] padding=0, int[3] dilation=1, bool ceil_mode=False) -> (Tensor, Tensor)",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "maximum.default",
+  "schema": "aten::maximum(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 170,
+   "unsupported": 30
+  },
+  "dtypes": {
+   "f32": {
+    "value": 44,
+    "unsupported": 6
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 44,
+    "unsupported": 6
+   },
+   "i64": {
+    "unsupported": 18,
+    "value": 32
+   }
+  },
+  "diagnostic": {
+   "compared": 9810,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "mean.default",
+  "schema": "aten::mean(Tensor self, *, ScalarType? dtype=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 194
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "value": 44
+   }
+  },
+  "diagnostic": {
+   "compared": 194,
+   "max_rel": 2.339317100635984e-16,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "mean.dim",
+  "schema": "aten::mean.dim(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 1230,
+   "max_rel": 4.331693815192167e-15,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "min.dim",
+  "schema": "aten::min.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 12,
+   "unsupported": 4
+  },
+  "dtypes": {
+   "f32": {
+    "value": 4
+   },
+   "bf16": {
+    "value": 4
+   },
+   "f64": {
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 4
+   }
+  },
+  "diagnostic": {
+   "compared": 312,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "minimum.default",
+  "schema": "aten::minimum(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 78,
+   "unsupported": 18
+  },
+  "dtypes": {
+   "f32": {
+    "value": 28
+   },
+   "bf16": {
+    "value": 20
+   },
+   "f64": {
+    "value": 28
+   },
+   "i64": {
+    "unsupported": 18,
+    "value": 2
+   }
+  },
+  "diagnostic": {
+   "compared": 9542,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "mm.default",
+  "schema": "aten::mm(Tensor self, Tensor mat2) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATMUL",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 194,
+   "unsupported": 6
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "value": 44,
+    "unsupported": 6
+   }
+  },
+  "diagnostic": {
+   "compared": 2029,
+   "max_rel": 1.3211967991122477e-14,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating MATMUL profile"
+  ]
+ },
+ {
+  "overload": "mul.Scalar",
+  "schema": "aten::mul.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 152,
+   "unsupported": 28,
+   "invalid_input": 20
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 40,
+    "invalid_input": 10
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "value": 12,
+    "unsupported": 28,
+    "invalid_input": 10
+   }
+  },
+  "diagnostic": {
+   "compared": 932,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "mul.Tensor",
+  "schema": "aten::mul.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 88,
+   "unsupported": 112
+  },
+  "dtypes": {
+   "f32": {
+    "value": 35,
+    "unsupported": 15
+   },
+   "bf16": {
+    "value": 24,
+    "unsupported": 26
+   },
+   "f64": {
+    "value": 14,
+    "unsupported": 36
+   },
+   "i64": {
+    "unsupported": 35,
+    "value": 15
+   }
+  },
+  "diagnostic": {
+   "compared": 4901,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "native_dropout.default",
+  "schema": "aten::native_dropout(Tensor input, float p, bool? train) -> (Tensor, Tensor)",
+  "correspondence": "random",
+  "reason": "random stream; RANDOM contract conditions on the drawn values (forward not admitted)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "native_group_norm.default",
+  "schema": "aten::native_group_norm(Tensor input, Tensor? weight, Tensor? bias, SymInt N, SymInt C, SymInt HxW, int group, float eps) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "NORM",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch"
+   }
+  ],
+  "probe": {
+   "contract interface is not an ATen call (needs a call mapping)": 63
+  },
+  "dtypes": {
+   "f32": {
+    "contract interface is not an ATen call (needs a call mapping)": 21
+   },
+   "bf16": {
+    "contract interface is not an ATen call (needs a call mapping)": 21
+   },
+   "f64": {
+    "contract interface is not an ATen call (needs a call mapping)": 21
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "native_group_norm_backward.default",
+  "schema": "aten::native_group_norm_backward(Tensor grad_out, Tensor input, Tensor mean, Tensor rstd, Tensor? weight, SymInt N, SymInt C, SymInt HxW, int group, bool[3] output_mask) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "NORM",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "native_layer_norm.default",
+  "schema": "aten::native_layer_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight, Tensor? bias, float eps) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "NORM",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch"
+   }
+  ],
+  "probe": {
+   "contract interface is not an ATen call (needs a call mapping)": 78
+  },
+  "dtypes": {
+   "f32": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   },
+   "bf16": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   },
+   "f64": {
+    "contract interface is not an ATen call (needs a call mapping)": 26
+   }
+  },
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "native_layer_norm_backward.default",
+  "schema": "aten::native_layer_norm_backward(Tensor grad_out, Tensor input, SymInt[] normalized_shape, Tensor mean, Tensor rstd, Tensor? weight, Tensor? bias, bool[3] output_mask) -> (Tensor, Tensor, Tensor)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "NORM",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "ne.Scalar",
+  "schema": "aten::ne.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 87,
+   "unsupported": 105
+  },
+  "dtypes": {
+   "f32": {
+    "value": 23,
+    "unsupported": 27
+   },
+   "bf16": {
+    "value": 23,
+    "unsupported": 27
+   },
+   "f64": {
+    "value": 23,
+    "unsupported": 27
+   },
+   "i64": {
+    "value": 18,
+    "unsupported": 24
+   }
+  },
+  "diagnostic": {
+   "compared": 147,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "f32: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "ne.Tensor",
+  "schema": "aten::ne.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LOGIC",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 99,
+   "unsupported": 9,
+   "input not representable: NaN tensor value (no real-number encoding)": 33
+  },
+  "dtypes": {
+   "f32": {
+    "value": 33,
+    "input not representable: NaN tensor value (no real-number encoding)": 11
+   },
+   "bf16": {
+    "value": 33,
+    "input not representable: NaN tensor value (no real-number encoding)": 11
+   },
+   "f64": {
+    "value": 33,
+    "input not representable: NaN tensor value (no real-number encoding)": 11
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 5346,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile",
+   "i64: unsupported: a dtype 'i64' is outside the reviewed LOGIC real profile"
+  ]
+ },
+ {
+  "overload": "neg.default",
+  "schema": "aten::neg(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 152,
+   "unsupported": 40
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 40,
+    "value": 2
+   }
+  },
+  "diagnostic": {
+   "compared": 2462,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "nonzero.default",
+  "schema": "aten::nonzero(Tensor self) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "permute.default",
+  "schema": "aten::permute(Tensor(a) self, int[] dims) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 147,
+   "unsupported": 47
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 47
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 47
+   }
+  },
+  "diagnostic": {
+   "compared": 2363,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "pow.Scalar",
+  "schema": "aten::pow.Scalar(Scalar self, Tensor exponent) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "pow.Tensor_Scalar",
+  "schema": "aten::pow.Tensor_Scalar(Tensor self, Scalar exponent) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "pow.Tensor_Tensor",
+  "schema": "aten::pow.Tensor_Tensor(Tensor self, Tensor exponent) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "prod.default",
+  "schema": "aten::prod(Tensor self, *, ScalarType? dtype=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 39,
+   "unsupported": 13
+  },
+  "dtypes": {
+   "f32": {
+    "value": 13
+   },
+   "bf16": {
+    "value": 13
+   },
+   "f64": {
+    "value": 13
+   },
+   "i64": {
+    "unsupported": 13
+   }
+  },
+  "diagnostic": {
+   "compared": 39,
+   "max_rel": 5.795634610449096e-58,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "prod.dim_int",
+  "schema": "aten::prod.dim_int(Tensor self, int dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 114,
+   "unsupported": 50,
+   "input not representable: NaN tensor value (no real-number encoding)": 36
+  },
+  "dtypes": {
+   "f32": {
+    "value": 38,
+    "input not representable: NaN tensor value (no real-number encoding)": 12
+   },
+   "bf16": {
+    "value": 38,
+    "input not representable: NaN tensor value (no real-number encoding)": 12
+   },
+   "f64": {
+    "value": 38,
+    "input not representable: NaN tensor value (no real-number encoding)": 12
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 1182,
+   "max_rel": 0.009410575816505834,
+   "over_1e-9": 4
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "rand.default",
+  "schema": "aten::rand(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "random",
+  "reason": "random stream; RANDOM contract conditions on the drawn values (forward not admitted)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "randn.default",
+  "schema": "aten::randn(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "random",
+  "reason": "random stream; RANDOM contract conditions on the drawn values (forward not admitted)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "randperm.default",
+  "schema": "aten::randperm(SymInt n, *, ScalarType? dtype=4, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "random",
+  "reason": "random stream; RANDOM contract conditions on the drawn values (forward not admitted)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "reciprocal.default",
+  "schema": "aten::reciprocal(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 36,
+   "unsupported": 12
+  },
+  "dtypes": {
+   "f32": {
+    "value": 12
+   },
+   "bf16": {
+    "value": 12
+   },
+   "f64": {
+    "value": 12
+   },
+   "i64": {
+    "unsupported": 12
+   }
+  },
+  "diagnostic": {
+   "compared": 2046,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "reflection_pad1d.default",
+  "schema": "aten::reflection_pad1d(Tensor self, SymInt[2] padding) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "reflection_pad2d.default",
+  "schema": "aten::reflection_pad2d(Tensor self, SymInt[4] padding) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "reflection_pad3d.default",
+  "schema": "aten::reflection_pad3d(Tensor self, SymInt[6] padding) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "relu.default",
+  "schema": "aten::relu(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ACT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "torch"
+   }
+  ],
+  "probe": {
+   "value": 12,
+   "unsupported": 4
+  },
+  "dtypes": {
+   "f32": {
+    "value": 4
+   },
+   "bf16": {
+    "value": 4
+   },
+   "f64": {
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 4
+   }
+  },
+  "diagnostic": {
+   "compared": 843,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: ACT profiles require floating tensor inputs, got 'i64'",
+   "i64: unsupported: ACT profiles require floating tensor inputs, got 'i64'",
+   "i64: unsupported: ACT profiles require floating tensor inputs, got 'i64'",
+   "i64: unsupported: ACT profiles require floating tensor inputs, got 'i64'"
+  ]
+ },
+ {
+  "overload": "remainder.Scalar",
+  "schema": "aten::remainder.Scalar(Tensor self, Scalar other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "remainder.Tensor",
+  "schema": "aten::remainder.Tensor(Tensor self, Tensor other) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "repeat.default",
+  "schema": "aten::repeat(Tensor self, SymInt[] repeats) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "replication_pad2d.default",
+  "schema": "aten::replication_pad2d(Tensor self, SymInt[4] padding) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "replication_pad3d.default",
+  "schema": "aten::replication_pad3d(Tensor self, SymInt[6] padding) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "resize_.default",
+  "schema": "aten::resize_(Tensor(a!) self, SymInt[] size, *, MemoryFormat? memory_format=None) -> Tensor(a!)",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "round.default",
+  "schema": "aten::round(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "rsqrt.default",
+  "schema": "aten::rsqrt(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 18,
+   "value": 12
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 5,
+    "value": 4
+   },
+   "bf16": {
+    "unsupported": 5,
+    "value": 4
+   },
+   "f64": {
+    "unsupported": 5,
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 63,
+   "max_rel": 1.8693913590732703e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "bf16: unsupported: a contains a value with magnitude above 100"
+  ]
+ },
+ {
+  "overload": "scalar_tensor.default",
+  "schema": "aten::scalar_tensor(Scalar s, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "scatter.src",
+  "schema": "aten::scatter.src(Tensor self, int dim, Tensor index, Tensor src) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "scatter.value",
+  "schema": "aten::scatter.value(Tensor self, int dim, Tensor index, Scalar value) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "scatter_add.default",
+  "schema": "aten::scatter_add(Tensor self, int dim, Tensor index, Tensor src) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "scatter_reduce.two",
+  "schema": "aten::scatter_reduce.two(Tensor self, int dim, Tensor index, Tensor src, str reduce, *, bool include_self=True) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "select.int",
+  "schema": "aten::select.int(Tensor(a) self, int dim, SymInt index) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 50
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 150,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "select_scatter.default",
+  "schema": "aten::select_scatter(Tensor self, Tensor src, int dim, SymInt index) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 15,
+   "unsupported": 5
+  },
+  "dtypes": {
+   "f32": {
+    "value": 5
+   },
+   "bf16": {
+    "value": 5
+   },
+   "f64": {
+    "value": 5
+   },
+   "i64": {
+    "unsupported": 5
+   }
+  },
+  "diagnostic": {
+   "compared": 1515,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "sigmoid.default",
+  "schema": "aten::sigmoid(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 9,
+   "unsupported": 3
+  },
+  "dtypes": {
+   "f32": {
+    "value": 3
+   },
+   "bf16": {
+    "value": 3
+   },
+   "f64": {
+    "value": 3
+   },
+   "i64": {
+    "unsupported": 3
+   }
+  },
+  "diagnostic": {
+   "compared": 63,
+   "max_rel": 1.9708587587907133e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "sign.default",
+  "schema": "aten::sign(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 3,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 1
+   },
+   "bf16": {
+    "value": 1
+   },
+   "f64": {
+    "value": 1
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 1200,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "sin.default",
+  "schema": "aten::sin(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 23,
+   "unsupported": 1
+  },
+  "dtypes": {
+   "f32": {
+    "value": 11
+   },
+   "bf16": {
+    "value": 1
+   },
+   "f64": {
+    "value": 11
+   },
+   "i64": {
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 1260,
+   "max_rel": 1.1151707275923303e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "sinh.default",
+  "schema": "aten::sinh(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "slice.Tensor",
+  "schema": "aten::slice.Tensor(Tensor(a) self, int dim=0, SymInt? start=None, SymInt? end=None, SymInt step=1) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 150,
+   "unsupported": 50
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 900,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "slice_scatter.default",
+  "schema": "aten::slice_scatter(Tensor self, Tensor src, int dim=0, SymInt? start=None, SymInt? end=None, SymInt step=1) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 27,
+   "unsupported": 9
+  },
+  "dtypes": {
+   "f32": {
+    "value": 9
+   },
+   "bf16": {
+    "value": 9
+   },
+   "f64": {
+    "value": 9
+   },
+   "i64": {
+    "unsupported": 9
+   }
+  },
+  "diagnostic": {
+   "compared": 216000,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "sort.default",
+  "schema": "aten::sort(Tensor self, int dim=-1, bool descending=False) -> (Tensor values, Tensor indices)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "SORT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "finite_unique"
+   }
+  ],
+  "probe": {
+   "value": 143,
+   "unsupported": 57
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "bf16": {
+    "unsupported": 7,
+    "value": 43
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 11380,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "bf16: unsupported: equal values in one selected row are outside the finite_unique profile",
+   "bf16: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "bf16: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "bf16: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating SORT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating SORT profile"
+  ]
+ },
+ {
+  "overload": "split_with_sizes.default",
+  "schema": "aten::split_with_sizes(Tensor(a -> *) self, SymInt[] split_sizes, int dim=0) -> Tensor(a)[]",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 21,
+   "unsupported": 7
+  },
+  "dtypes": {
+   "f32": {
+    "value": 7
+   },
+   "bf16": {
+    "value": 7
+   },
+   "f64": {
+    "value": 7
+   },
+   "i64": {
+    "unsupported": 7
+   }
+  },
+  "diagnostic": {
+   "compared": 2625,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "sqrt.default",
+  "schema": "aten::sqrt(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 184,
+   "unsupported": 16
+  },
+  "dtypes": {
+   "f32": {
+    "value": 43,
+    "unsupported": 7
+   },
+   "bf16": {
+    "value": 49,
+    "unsupported": 1
+   },
+   "f64": {
+    "value": 43,
+    "unsupported": 7
+   },
+   "i64": {
+    "value": 49,
+    "unsupported": 1
+   }
+  },
+  "diagnostic": {
+   "compared": 1779,
+   "max_rel": 2.16863771564173e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100",
+   "f32: unsupported: a contains a value with magnitude above 100"
+  ]
+ },
+ {
+  "overload": "squeeze.dim",
+  "schema": "aten::squeeze.dim(Tensor(a) self, int dim) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 126,
+   "unsupported": 74
+  },
+  "dtypes": {
+   "f32": {
+    "value": 42,
+    "unsupported": 8
+   },
+   "bf16": {
+    "value": 42,
+    "unsupported": 8
+   },
+   "f64": {
+    "value": 42,
+    "unsupported": 8
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 135045,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "squeeze.dims",
+  "schema": "aten::squeeze.dims(Tensor(a) self, int[] dim) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 18,
+   "unsupported": 6
+  },
+  "dtypes": {
+   "f32": {
+    "value": 6
+   },
+   "bf16": {
+    "value": 6
+   },
+   "f64": {
+    "value": 6
+   },
+   "i64": {
+    "unsupported": 6
+   }
+  },
+  "diagnostic": {
+   "compared": 306,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "sub.Scalar",
+  "schema": "aten::sub.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 136,
+   "value": 32,
+   "invalid_input": 12
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 42,
+    "value": 8
+   },
+   "bf16": {
+    "unsupported": 26,
+    "value": 8,
+    "invalid_input": 6
+   },
+   "f64": {
+    "unsupported": 42,
+    "value": 8
+   },
+   "i64": {
+    "unsupported": 26,
+    "value": 8,
+    "invalid_input": 6
+   }
+  },
+  "diagnostic": {
+   "compared": 32,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "bf16: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "bf16: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "sub.Tensor",
+  "schema": "aten::sub.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 144,
+   "unsupported": 56
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 38,
+    "unsupported": 12
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 44,
+    "value": 6
+   }
+  },
+  "diagnostic": {
+   "compared": 5231,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite ARITH profile"
+  ]
+ },
+ {
+  "overload": "sum.dim_IntList",
+  "schema": "aten::sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 165,
+   "unsupported": 35
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "unsupported": 35,
+    "value": 15
+   }
+  },
+  "diagnostic": {
+   "compared": 512,
+   "max_rel": 2.6480595506425045e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite floating REDUCE profile"
+  ]
+ },
+ {
+  "overload": "sym_is_contiguous.default",
+  "schema": "aten::sym_is_contiguous(Tensor self, MemoryFormat memory_format=0) -> SymBool",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "sym_numel.default",
+  "schema": "aten::sym_numel(Tensor self) -> SymInt",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "sym_size.int",
+  "schema": "aten::sym_size.int(Tensor self, int dim) -> SymInt",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "sym_storage_offset.default",
+  "schema": "aten::sym_storage_offset(Tensor self) -> SymInt",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "sym_stride.int",
+  "schema": "aten::sym_stride.int(Tensor self, int dim) -> SymInt",
+  "correspondence": "structure_storage",
+  "reason": "no arithmetic formula; carried by structure/storage semantics (not verified here)",
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "tan.default",
+  "schema": "aten::tan(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "tanh.default",
+  "schema": "aten::tanh(Tensor self) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "MATHFN",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 12,
+   "unsupported": 4
+  },
+  "dtypes": {
+   "f32": {
+    "value": 4
+   },
+   "bf16": {
+    "value": 4
+   },
+   "f64": {
+    "value": 4
+   },
+   "i64": {
+    "unsupported": 4
+   }
+  },
+  "diagnostic": {
+   "compared": 1263,
+   "max_rel": 1.7108679545603006e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite MATHFN profile"
+  ]
+ },
+ {
+  "overload": "topk.default",
+  "schema": "aten::topk(Tensor self, SymInt k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor values, Tensor indices)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "SORT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "finite_unique"
+   }
+  ],
+  "probe": {
+   "value": 15,
+   "unsupported": 41
+  },
+  "dtypes": {
+   "f32": {
+    "value": 7,
+    "unsupported": 7
+   },
+   "bf16": {
+    "value": 1,
+    "unsupported": 13
+   },
+   "f64": {
+    "value": 7,
+    "unsupported": 7
+   },
+   "i64": {
+    "unsupported": 14
+   }
+  },
+  "diagnostic": {
+   "compared": 2700,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "f32: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "f32: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "f32: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "f32: unsupported: rank-zero sorting is outside the reviewed SORT profile",
+   "f32: unsupported: rank-zero sorting is outside the reviewed SORT profile"
+  ]
+ },
+ {
+  "overload": "trunc.default",
+  "schema": "aten::trunc(Tensor self) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "unsqueeze.default",
+  "schema": "aten::unsqueeze(Tensor(a) self, int dim) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 194,
+   "unsupported": 6
+  },
+  "dtypes": {
+   "f32": {
+    "value": 50
+   },
+   "bf16": {
+    "value": 50
+   },
+   "f64": {
+    "value": 50
+   },
+   "i64": {
+    "value": 44,
+    "unsupported": 6
+   }
+  },
+  "diagnostic": {
+   "compared": 1348,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "i64: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "upsample_bilinear2d.vec",
+  "schema": "aten::upsample_bilinear2d.vec(Tensor input, SymInt[]? output_size, bool align_corners, float[]? scale_factors) -> Tensor",
+  "correspondence": "none",
+  "reason": null,
+  "contracts": [],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "upsample_nearest2d.vec",
+  "schema": "aten::upsample_nearest2d.vec(Tensor input, SymInt[]? output_size, float[]? scale_factors) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "INTERP",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": null
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "var.correction",
+  "schema": "aten::var.correction(Tensor self, int[1]? dim=None, *, Scalar? correction=None, bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 33,
+   "unsupported": 15
+  },
+  "dtypes": {
+   "f32": {
+    "value": 11,
+    "unsupported": 5
+   },
+   "bf16": {
+    "value": 11,
+    "unsupported": 5
+   },
+   "f64": {
+    "value": 11,
+    "unsupported": 5
+   }
+  },
+  "diagnostic": {
+   "compared": 234,
+   "max_rel": 4.728134633059015e-16,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: only variance correction 0 or 1 is selected",
+   "f32: unsupported: only variance correction 0 or 1 is selected",
+   "f32: unsupported: only variance correction 0 or 1 is selected",
+   "f32: unsupported: only variance correction 0 or 1 is selected",
+   "f32: unsupported: only variance correction 0 or 1 is selected",
+   "bf16: unsupported: only variance correction 0 or 1 is selected"
+  ]
+ },
+ {
+  "overload": "var.dim",
+  "schema": "aten::var.dim(Tensor self, int[1]? dim, bool unbiased=True, bool keepdim=False) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "REDUCE",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {},
+  "dtypes": {},
+  "diagnostic": {
+   "compared": 0,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": []
+ },
+ {
+  "overload": "view.default",
+  "schema": "aten::view(Tensor(a) self, SymInt[] size) -> Tensor(a)",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "LAYOUT",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "value": 78,
+   "unsupported": 122
+  },
+  "dtypes": {
+   "f32": {
+    "value": 26,
+    "unsupported": 24
+   },
+   "bf16": {
+    "value": 26,
+    "unsupported": 24
+   },
+   "f64": {
+    "value": 26,
+    "unsupported": 24
+   },
+   "i64": {
+    "unsupported": 50
+   }
+  },
+  "diagnostic": {
+   "compared": 114,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile",
+   "f32: unsupported: a dtype 'i64' is outside the finite LAYOUT profile"
+  ]
+ },
+ {
+  "overload": "where.self",
+  "schema": "aten::where.self(Tensor condition, Tensor self, Tensor other) -> Tensor",
+  "correspondence": "direct",
+  "reason": null,
+  "contracts": [
+   {
+    "id": "ARITH",
+    "review": "reviewed_for_implementation",
+    "implementation": "validated",
+    "profile": "real"
+   }
+  ],
+  "probe": {
+   "unsupported": 68,
+   "input not representable: NaN tensor value (no real-number encoding)": 18,
+   "value": 114
+  },
+  "dtypes": {
+   "f32": {
+    "unsupported": 10,
+    "input not representable: NaN tensor value (no real-number encoding)": 9,
+    "value": 31
+   },
+   "bf16": {
+    "unsupported": 10,
+    "value": 40
+   },
+   "f64": {
+    "unsupported": 10,
+    "input not representable: NaN tensor value (no real-number encoding)": 9,
+    "value": 31
+   },
+   "i64": {
+    "unsupported": 38,
+    "value": 12
+   }
+  },
+  "diagnostic": {
+   "compared": 7989,
+   "max_rel": 0.0,
+   "over_1e-9": 0
+  },
+  "notes": [
+   "f32: unsupported: b contains infinity outside the finite ARITH profile",
+   "f32: unsupported: b contains infinity outside the finite ARITH profile",
+   "f32: unsupported: b contains infinity outside the finite ARITH profile",
+   "f32: unsupported: b contains infinity outside the finite ARITH profile",
+   "f32: unsupported: b contains infinity outside the finite ARITH profile",
+   "f32: unsupported: b contains infinity outside the finite ARITH profile"
+  ]
+ }
+]
