@@ -1,0 +1,567 @@
+{
+ "root": ".cache/sufficiency/E1",
+ "model_configs": {
+  "attempted": 52,
+  "capture_rc": {
+   "0": 47,
+   "1": 4,
+   "timeout": 1
+  },
+  "failed": [
+   "RWKV__rwkv-4-world-169m/bf16: 1",
+   "RWKV__rwkv-4-world-169m/fp32tf32: 1",
+   "google__gemma-4-E2B/bf16: 1",
+   "google__gemma-4-E2B/fp32tf32: 1",
+   "state-spaces__mamba-130m-hf/fp32tf32: timeout"
+  ]
+ },
+ "units_captured": 2221,
+ "verify": {
+  "bit_identical": 2060,
+  "mismatch": 98,
+  "not_established": 46,
+  "partial": 17
+ },
+ "candidate_coverage": {
+  "k": 1677,
+  "n": 2221,
+  "wilson": [
+   0.7551,
+   0.7367,
+   0.7725
+  ]
+ },
+ "dynamic_set": {
+  "n": 400,
+  "of": 2221,
+  "seed": 20261019
+ },
+ "complete_reference": {
+  "admitted_strict": {
+   "k": 0,
+   "n": 400,
+   "wilson": [
+    0.0,
+    0.0,
+    0.0095
+   ],
+   "reason": "GRAPH (composition) is drafted, not validated"
+  },
+  "development_drafted_GRAPH": {
+   "k": 176,
+   "n": 400,
+   "wilson": [
+    0.44,
+    0.3922,
+    0.489
+   ]
+  }
+ },
+ "bias_query_available": {
+  "k": 0,
+  "n": 400,
+  "reason": "no automatic route from compiled units to the contract measurement mode"
+ },
+ "classes": {
+  "implementation extension needed": {
+   "k": 159,
+   "wilson": [
+    0.3975,
+    0.3507,
+    0.4462
+   ]
+  },
+  "manual binding needed": {
+   "k": 110,
+   "wilson": [
+    0.275,
+    0.2335,
+    0.3207
+   ]
+  },
+  "new or modified task contract needed": {
+   "k": 89,
+   "wilson": [
+    0.2225,
+    0.1845,
+    0.2658
+   ]
+  },
+  "run or evidence insufficient": {
+   "k": 42,
+   "wilson": [
+    0.105,
+    0.0786,
+    0.1389
+   ]
+  }
+ },
+ "reasons": {
+  "implementation extension needed | only the composition contract GRAPH is not admitted (complete reference evaluated)": 141,
+  "new or modified task contract needed | operations without a contract: aten.pow": 38,
+  "run or evidence insufficient | over the 600 s budget": 37,
+  "manual binding needed | call parameter mapping not established: launcher grid is not resolved": 27,
+  "manual binding needed | output type or shape mapping not established: out_ptr0 -> prepare_softmax_online_default": 19,
+  "manual binding needed | call parameter mapping not established: scalar ks0 is not a resolved literal": 14,
+  "new or modified task contract needed | operations without a contract: prims.iota": 12,
+  "manual binding needed | input type or shape mapping not established: prepare_softmax_online_default": 12,
+  "new or modified task contract needed | operations without a contract: aten.scalar_tensor,prims.iota": 10,
+  "new or modified task contract needed | operations without a contract: prims.inductor_lookup_seed,prims.inductor_random": 10,
+  "new or modified task contract needed | operations without a contract: aten.index": 9,
+  "implementation extension needed | tool refuses a reference without bit-identical K-G (verify: mismatch)": 8,
+  "implementation extension needed | reference not_established": 5,
+  "manual binding needed | provenance binding incomplete: placeholder getitem_9 matches 0 parameters": 5,
+  "run or evidence insufficient | no graph fragment / kernel source": 5,
+  "manual binding needed | provenance binding incomplete: write to parameter arg_A recorded as input": 4,
+  "new or modified task contract needed | operations without a contract: aten.index_put_,aten.pow": 4,
+  "manual binding needed | call parameter mapping not established: scalar xnumel is not a resolved literal": 4,
+  "manual binding needed | provenance binding incomplete: placeholder primals_2 matches 0 parameters": 3,
+  "implementation extension needed | tool refuses a reference without bit-identical K-G (verify: not_established)": 3,
+  "manual binding needed | provenance binding incomplete: placeholder mm_default matches 0 parameters": 2,
+  "implementation extension needed | tool refuses a reference without bit-identical K-G (verify: partial)": 2,
+  "new or modified task contract needed | operations without a contract: aten.pow,prims.inductor_lookup_seed,prims.inductor_random": 2,
+  "manual binding needed | provenance binding incomplete: placeholder getitem_1 matches 0 parameters": 2,
+  "new or modified task contract needed | operations without a contract: prims.inductor_lookup_seed,prims.inductor_random,prims.iota": 2,
+  "manual binding needed | provenance binding incomplete: placeholder primals_1 matches 0 parameters": 2,
+  "manual binding needed | provenance binding incomplete: placeholder add_12 matches 0 parameters": 1,
+  "manual binding needed | input type or shape mapping not established: select_scatter_default_1": 1,
+  "manual binding needed | provenance binding incomplete: placeholder mm_7 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder primals_27 matches 0 parameters": 1,
+  "manual binding needed | output type or shape mapping not established: out_ptr0 -> sum_13": 1,
+  "new or modified task contract needed | operations without a contract: aten.index_put_": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf101 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder getitem_17 matches 0 parameters": 1,
+  "manual binding needed | no provenance for the captured kernel source": 1,
+  "manual binding needed | input type or shape mapping not established: mm_27": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf97 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf51 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder tangents_2 matches 0 parameters": 1,
+  "manual binding needed | provenance binding incomplete: placeholder getitem_15 matches 0 parameters": 1,
+  "manual binding needed | input type or shape mapping not established: div_2": 1,
+  "new or modified task contract needed | operations without a contract: aten.scatter_add": 1,
+  "manual binding needed | output type or shape mapping not established: out_ptr0 -> sum_49": 1,
+  "manual binding needed | provenance binding incomplete: placeholder buf107 matches 0 parameters": 1
+ },
+ "groups": {
+  "model": {
+   "EleutherAI__gpt-neo-125m/bf16": {
+    "new or modified task contract needed": 1,
+    "_n": 5,
+    "_complete_dev": 2,
+    "manual binding needed": 2,
+    "implementation extension needed": 2
+   },
+   "EleutherAI__gpt-neo-125m/fp32tf32": {
+    "new or modified task contract needed": 4,
+    "_n": 7,
+    "_complete_dev": 2,
+    "implementation extension needed": 2,
+    "manual binding needed": 1
+   },
+   "EleutherAI__pythia-410m/bf16": {
+    "implementation extension needed": 5,
+    "_n": 6,
+    "_complete_dev": 6,
+    "new or modified task contract needed": 1
+   },
+   "EleutherAI__pythia-410m/fp32tf32": {
+    "run or evidence insufficient": 5,
+    "_n": 7,
+    "_complete_dev": 1,
+    "implementation extension needed": 1,
+    "new or modified task contract needed": 1
+   },
+   "FacebookAI__roberta-base/bf16": {
+    "implementation extension needed": 7,
+    "_n": 8,
+    "_complete_dev": 4,
+    "new or modified task contract needed": 1
+   },
+   "FacebookAI__roberta-base/fp32tf32": {
+    "manual binding needed": 1,
+    "_n": 5,
+    "_complete_dev": 1,
+    "new or modified task contract needed": 1,
+    "implementation extension needed": 1,
+    "run or evidence insufficient": 2
+   },
+   "Qwen__Qwen2.5-0.5B-Instruct/bf16": {
+    "new or modified task contract needed": 2,
+    "_n": 6,
+    "_complete_dev": 4,
+    "manual binding needed": 2,
+    "implementation extension needed": 2
+   },
+   "Qwen__Qwen2.5-0.5B-Instruct/fp32tf32": {
+    "new or modified task contract needed": 4,
+    "_n": 8,
+    "_complete_dev": 2,
+    "manual binding needed": 2,
+    "run or evidence insufficient": 1,
+    "implementation extension needed": 1
+   },
+   "Qwen__Qwen3-1.7B/bf16": {
+    "implementation extension needed": 4,
+    "_n": 6,
+    "_complete_dev": 5,
+    "run or evidence insufficient": 1,
+    "new or modified task contract needed": 1
+   },
+   "Qwen__Qwen3-1.7B/fp32tf32": {
+    "run or evidence insufficient": 1,
+    "_n": 5,
+    "_complete_dev": 1,
+    "manual binding needed": 2,
+    "new or modified task contract needed": 2
+   },
+   "Qwen__Qwen3-VL-Reranker-2B/bf16": {
+    "implementation extension needed": 3,
+    "_n": 9,
+    "_complete_dev": 5,
+    "manual binding needed": 3,
+    "run or evidence insufficient": 1,
+    "new or modified task contract needed": 2
+   },
+   "Qwen__Qwen3-VL-Reranker-2B/fp32tf32": {
+    "run or evidence insufficient": 3,
+    "_n": 10,
+    "_complete_dev": 3,
+    "manual binding needed": 2,
+    "new or modified task contract needed": 4,
+    "implementation extension needed": 1
+   },
+   "TinyLlama__TinyLlama-1.1B-Chat-v1.0/bf16": {
+    "implementation extension needed": 2,
+    "_n": 5,
+    "_complete_dev": 3,
+    "run or evidence insufficient": 1,
+    "new or modified task contract needed": 2
+   },
+   "TinyLlama__TinyLlama-1.1B-Chat-v1.0/fp32tf32": {
+    "implementation extension needed": 2,
+    "_n": 6,
+    "_complete_dev": 5,
+    "new or modified task contract needed": 3,
+    "manual binding needed": 1
+   },
+   "allenai__OLMoE-1B-7B-0125/bf16": {
+    "implementation extension needed": 3,
+    "_n": 6,
+    "_complete_dev": 4,
+    "manual binding needed": 2,
+    "new or modified task contract needed": 1
+   },
+   "allenai__OLMoE-1B-7B-0125/fp32tf32": {
+    "implementation extension needed": 1,
+    "_n": 4,
+    "_complete_dev": 3,
+    "new or modified task contract needed": 2,
+    "manual binding needed": 1
+   },
+   "bigscience__bloom-560m/bf16": {
+    "implementation extension needed": 4,
+    "_n": 9,
+    "_complete_dev": 5,
+    "manual binding needed": 2,
+    "new or modified task contract needed": 2,
+    "run or evidence insufficient": 1
+   },
+   "bigscience__bloom-560m/fp32tf32": {
+    "implementation extension needed": 6,
+    "_n": 8,
+    "_complete_dev": 5,
+    "run or evidence insufficient": 2
+   },
+   "deepseek-ai__DeepSeek-R1-0528-Qwen3-8B/bf16": {
+    "new or modified task contract needed": 2,
+    "_n": 7,
+    "_complete_dev": 3,
+    "run or evidence insufficient": 2,
+    "manual binding needed": 2,
+    "implementation extension needed": 1
+   },
+   "deepseek-ai__DeepSeek-R1-0528-Qwen3-8B/fp32tf32": {
+    "implementation extension needed": 2,
+    "_n": 10,
+    "_complete_dev": 4,
+    "run or evidence insufficient": 1,
+    "manual binding needed": 5,
+    "new or modified task contract needed": 2
+   },
+   "facebook__opt-350m/bf16": {
+    "new or modified task contract needed": 4,
+    "_n": 5,
+    "_complete_dev": 2,
+    "implementation extension needed": 1
+   },
+   "facebook__opt-350m/fp32tf32": {
+    "manual binding needed": 1,
+    "_n": 3,
+    "_complete_dev": 0,
+    "new or modified task contract needed": 1,
+    "run or evidence insufficient": 1
+   },
+   "google-bert__bert-base-uncased/bf16": {
+    "implementation extension needed": 2,
+    "_n": 3,
+    "_complete_dev": 2,
+    "manual binding needed": 1
+   },
+   "google-bert__bert-base-uncased/fp32tf32": {
+    "implementation extension needed": 7,
+    "_n": 10,
+    "_complete_dev": 5,
+    "run or evidence insufficient": 2,
+    "manual binding needed": 1
+   },
+   "google__electra-small-discriminator/bf16": {
+    "new or modified task contract needed": 2,
+    "_n": 8,
+    "_complete_dev": 5,
+    "implementation extension needed": 5,
+    "manual binding needed": 1
+   },
+   "google__electra-small-discriminator/fp32tf32": {
+    "new or modified task contract needed": 1,
+    "_n": 8,
+    "_complete_dev": 2,
+    "run or evidence insufficient": 2,
+    "manual binding needed": 3,
+    "implementation extension needed": 2
+   },
+   "google__gemma-3-4b-pt/bf16": {
+    "new or modified task contract needed": 2,
+    "_n": 5,
+    "_complete_dev": 3,
+    "manual binding needed": 1,
+    "implementation extension needed": 2
+   },
+   "google__gemma-3-4b-pt/fp32tf32": {
+    "new or modified task contract needed": 6,
+    "_n": 12,
+    "_complete_dev": 2,
+    "run or evidence insufficient": 2,
+    "manual binding needed": 1,
+    "implementation extension needed": 3
+   },
+   "google__t5-small/bf16": {
+    "new or modified task contract needed": 7,
+    "_n": 16,
+    "_complete_dev": 6,
+    "implementation extension needed": 5,
+    "manual binding needed": 4
+   },
+   "google__t5-small/fp32tf32": {
+    "new or modified task contract needed": 6,
+    "_n": 16,
+    "_complete_dev": 8,
+    "run or evidence insufficient": 3,
+    "implementation extension needed": 5,
+    "manual binding needed": 2
+   },
+   "ibm-granite__granite-3.1-1b-a400m-base/bf16": {
+    "new or modified task contract needed": 2,
+    "_n": 10,
+    "_complete_dev": 6,
+    "manual binding needed": 3,
+    "run or evidence insufficient": 1,
+    "implementation extension needed": 4
+   },
+   "ibm-granite__granite-3.1-1b-a400m-base/fp32tf32": {
+    "implementation extension needed": 7,
+    "_n": 64,
+    "_complete_dev": 6,
+    "new or modified task contract needed": 9,
+    "manual binding needed": 46,
+    "run or evidence insufficient": 2
+   },
+   "meta-llama__Llama-3.2-3B/bf16": {
+    "implementation extension needed": 4,
+    "_n": 5,
+    "_complete_dev": 4,
+    "manual binding needed": 1
+   },
+   "meta-llama__Llama-3.2-3B/fp32tf32": {
+    "implementation extension needed": 2,
+    "_n": 4,
+    "_complete_dev": 3,
+    "manual binding needed": 1,
+    "new or modified task contract needed": 1
+   },
+   "microsoft__Phi-4-mini-instruct/bf16": {
+    "implementation extension needed": 4,
+    "_n": 6,
+    "_complete_dev": 4,
+    "new or modified task contract needed": 2
+   },
+   "microsoft__Phi-4-mini-instruct/fp32tf32": {
+    "new or modified task contract needed": 1,
+    "_n": 5,
+    "_complete_dev": 1,
+    "implementation extension needed": 1,
+    "run or evidence insufficient": 2,
+    "manual binding needed": 1
+   },
+   "microsoft__deberta-v3-small/bf16": {
+    "implementation extension needed": 4,
+    "_n": 5,
+    "_complete_dev": 2,
+    "manual binding needed": 1
+   },
+   "microsoft__deberta-v3-small/fp32tf32": {
+    "manual binding needed": 3,
+    "_n": 8,
+    "_complete_dev": 2,
+    "new or modified task contract needed": 2,
+    "run or evidence insufficient": 1,
+    "implementation extension needed": 2
+   },
+   "mistralai__Ministral-3-3B-Base-2512/bf16": {
+    "implementation extension needed": 5,
+    "_n": 6,
+    "_complete_dev": 5,
+    "manual binding needed": 1
+   },
+   "mistralai__Ministral-3-3B-Base-2512/fp32tf32": {
+    "manual binding needed": 1,
+    "_n": 5,
+    "_complete_dev": 3,
+    "implementation extension needed": 4
+   },
+   "openai-community__gpt2/bf16": {
+    "manual binding needed": 2,
+    "_n": 6,
+    "_complete_dev": 4,
+    "implementation extension needed": 4
+   },
+   "openai-community__gpt2/fp32tf32": {
+    "new or modified task contract needed": 2,
+    "_n": 7,
+    "_complete_dev": 0,
+    "run or evidence insufficient": 2,
+    "implementation extension needed": 2,
+    "manual binding needed": 1
+   },
+   "prajjwal1__bert-tiny/bf16": {
+    "new or modified task contract needed": 2,
+    "_n": 6,
+    "_complete_dev": 2,
+    "implementation extension needed": 2,
+    "manual binding needed": 2
+   },
+   "prajjwal1__bert-tiny/fp32tf32": {
+    "manual binding needed": 1,
+    "_n": 3,
+    "_complete_dev": 2,
+    "implementation extension needed": 2
+   },
+   "state-spaces__mamba-130m-hf/bf16": {
+    "manual binding needed": 2,
+    "_n": 29,
+    "_complete_dev": 26,
+    "implementation extension needed": 26,
+    "new or modified task contract needed": 1
+   },
+   "tiiuae__falcon-rw-1b/bf16": {
+    "implementation extension needed": 2,
+    "_n": 2,
+    "_complete_dev": 2
+   },
+   "tiiuae__falcon-rw-1b/fp32tf32": {
+    "implementation extension needed": 2,
+    "_n": 6,
+    "_complete_dev": 1,
+    "run or evidence insufficient": 3,
+    "manual binding needed": 1
+   }
+  },
+  "structure": {
+   "per": {
+    "new or modified task contract needed": 37,
+    "_n": 90,
+    "_complete_dev": 24,
+    "implementation extension needed": 19,
+    "manual binding needed": 32,
+    "run or evidence insufficient": 2
+   },
+   "poi": {
+    "implementation extension needed": 83,
+    "_n": 113,
+    "_complete_dev": 89,
+    "new or modified task contract needed": 11,
+    "run or evidence insufficient": 8,
+    "manual binding needed": 11
+   },
+   "red": {
+    "manual binding needed": 21,
+    "_n": 100,
+    "_complete_dev": 61,
+    "new or modified task contract needed": 29,
+    "implementation extension needed": 50
+   },
+   "tem": {
+    "new or modified task contract needed": 12,
+    "_n": 97,
+    "_complete_dev": 2,
+    "manual binding needed": 46,
+    "run or evidence insufficient": 32,
+    "implementation extension needed": 7
+   }
+  },
+  "semantic": {
+   "elementwise_layout": {
+    "implementation extension needed": 77,
+    "_n": 104,
+    "_complete_dev": 83,
+    "new or modified task contract needed": 8,
+    "run or evidence insufficient": 9,
+    "manual binding needed": 10
+   },
+   "index_scatter": {
+    "new or modified task contract needed": 16,
+    "_n": 32,
+    "_complete_dev": 4,
+    "implementation extension needed": 3,
+    "manual binding needed": 13
+   },
+   "inplace_state": {
+    "new or modified task contract needed": 5,
+    "_n": 5,
+    "_complete_dev": 0
+   },
+   "matmul": {
+    "new or modified task contract needed": 13,
+    "_n": 99,
+    "_complete_dev": 2,
+    "manual binding needed": 47,
+    "run or evidence insufficient": 32,
+    "implementation extension needed": 7
+   },
+   "normalization": {
+    "new or modified task contract needed": 20,
+    "_n": 27,
+    "_complete_dev": 8,
+    "implementation extension needed": 7
+   },
+   "random": {
+    "new or modified task contract needed": 14,
+    "_n": 14,
+    "_complete_dev": 0
+   },
+   "reduction": {
+    "new or modified task contract needed": 61,
+    "_n": 156,
+    "_complete_dev": 89,
+    "implementation extension needed": 74,
+    "manual binding needed": 18,
+    "run or evidence insufficient": 3
+   },
+   "softmax": {
+    "manual binding needed": 34,
+    "_n": 38,
+    "_complete_dev": 0,
+    "new or modified task contract needed": 4
+   }
+  }
+ }
+}
