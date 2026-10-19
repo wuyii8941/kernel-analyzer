@@ -157,3 +157,10 @@ cut-cross-entropy 25.1.1（已安装于 liger 环境，仓库此前从未使用�
   NORM rms_offset、RANKMEAN 等没有已审阅的真实调用绑定，无法构造 M7 用例。
 - E4 S1 / S3 不新跑：按仓库已有记录整理为 `results/E4_real_defects_20261019.md`。严格满足 S3 两个条件的只有
   一例（TorchInductor clamp 跨调用参数复用），不属于 M1–M7，S3 不足以给出任何机制的检出率。
+- 2026-10-19 偏差 D1（评价脚本，不改冻结对象）：`bind_inductor.py` 要求 Inductor 代码目录位于其所在仓库之内，
+  而运行目录放在主仓库 `.cache/sufficiency/`，从 F 的 worktree 调用时全部候选匹配失败（ValueError，路径不在仓库
+  子路径内）。改为从主仓库检出调用 bind / merge / dynamic 三个阶段；调用前核对主仓库中全部冻结对象与 F 逐字节相同
+  （`git diff --quiet 7115198` 且无未提交改动）。失败产物移入各运行目录的 `failed_harness_20261019/`，不删除。
+  捕获与 K−Gπ 核对不受影响，不重跑。
+- E3 新模型 ESM2-650M 两个配置捕获失败：流水线把层数截为 2 层，而 ESM 的 contact head 需要全部层的权重
+  （state_dict 尺寸不符）。这是冻结流水线自身的限制，按「运行或证据不足」留在分母中，不改流水线补跑。
