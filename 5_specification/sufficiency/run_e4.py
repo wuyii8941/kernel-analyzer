@@ -115,6 +115,9 @@ def main():
     spec = a.root / "spec"
     if not spec.exists():
         shutil.copytree(a.spec_src, spec)
+    # the M6 input generators are referenced as ../../sufficiency/e4_cases.py:<fn> from corpus/measure_cases
+    (spec / "sufficiency").mkdir(exist_ok=True)
+    shutil.copy2(HERE / "e4_cases.py", spec / "sufficiency" / "e4_cases.py")
     out = a.root / "results.jsonl"
     done = {json.loads(l)["id"] for l in open(out)} if out.exists() else set()
     tool = a.spec_src.parent / "2_tool"
