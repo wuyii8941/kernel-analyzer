@@ -172,3 +172,9 @@ cut-cross-entropy 25.1.1（已安装于 liger 环境，仓库此前从未使用�
   2.10.0，而这些绑定计划固定 2.10.0+cu128。核实 `/data1/tzh/envs/hf_ga_5190`（torch 2.10.0+cu128、Triton 3.6.0、
   yaml、python-flint）能正常完成未修改的基础绑定 inductor_var 的正式测量后，只在该环境中重跑这 21 例，结果单独保存
   （`.cache/sufficiency/E4_env/`），其余 145 例保持 liger 环境的结果。
+- 2026-10-20 偏差 D4（看到 E4 结果之后追加的探索性分析，不改登记的判定）：Inductor 基础上的 6 个正常对照被判「检出」。
+  用同一 harness 测量未修改的 9 个基础绑定（`sufficiency/run_e4_baselines.py`，`.cache/sufficiency/E4_baselines/`），
+  发现 var、layer_norm、rms_norm、group_norm、gelu_erf 的基础程序本身已有 Gπ−f 排除零的坐标（相对差 1e-13 到 1e-9，
+  来自 float32 eps、rsqrtf、1/√2 等舍入后的常数），avg_pool2d 基础程序反向有已知的除数缺陷（相对差 0.134）。
+  在这些基础上，二元规则无法区分用例与基础。登记的判定照原样报告；另外列出每例与其基础的最大相对 Gπ−f 差作对比，
+  只报告数值，不事后设阈值。
