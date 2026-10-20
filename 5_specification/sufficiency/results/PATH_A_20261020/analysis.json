@@ -1,0 +1,486 @@
+{
+ "workloads": {
+  "bert_tiny_bf16": {
+   "t1": true,
+   "calls": 333,
+   "keys": 85,
+   "candidate_keys": 38,
+   "candidate_calls": 112,
+   "launches_outside_recorded_calls": 0,
+   "launches": 125,
+   "keys_over_cap": 0
+  },
+  "bert_tiny_fp32": {
+   "t1": true,
+   "calls": 331,
+   "keys": 82,
+   "candidate_keys": 38,
+   "candidate_calls": 108,
+   "launches_outside_recorded_calls": 0,
+   "launches": 117,
+   "keys_over_cap": 0
+  },
+  "gpt2_bf16": {
+   "t1": true,
+   "calls": 285,
+   "keys": 107,
+   "candidate_keys": 47,
+   "candidate_calls": 111,
+   "launches_outside_recorded_calls": 0,
+   "launches": 117,
+   "keys_over_cap": 0
+  },
+  "gpt2_fp32": {
+   "t1": true,
+   "calls": 283,
+   "keys": 105,
+   "candidate_keys": 49,
+   "candidate_calls": 118,
+   "launches_outside_recorded_calls": 0,
+   "launches": 126,
+   "keys_over_cap": 1
+  },
+  "qwen25_05b_bf16": {
+   "t1": true,
+   "calls": 541,
+   "keys": 154,
+   "candidate_keys": 63,
+   "candidate_calls": 209,
+   "launches_outside_recorded_calls": 0,
+   "launches": 222,
+   "keys_over_cap": 7
+  },
+  "qwen25_05b_fp32": {
+   "t1": true,
+   "calls": 511,
+   "keys": 158,
+   "candidate_keys": 82,
+   "candidate_calls": 250,
+   "launches_outside_recorded_calls": 0,
+   "launches": 257,
+   "keys_over_cap": 7
+  },
+  "trigger_D18": {
+   "t1": true,
+   "calls": 1,
+   "keys": 1,
+   "candidate_keys": 1,
+   "candidate_calls": 1,
+   "launches_outside_recorded_calls": 0,
+   "launches": 1,
+   "keys_over_cap": 0
+  },
+  "trigger_D20": {
+   "t1": true,
+   "calls": 1,
+   "keys": 1,
+   "candidate_keys": 1,
+   "candidate_calls": 1,
+   "launches_outside_recorded_calls": 0,
+   "launches": 2,
+   "keys_over_cap": 0
+  },
+  "trigger_D3": {
+   "t1": true,
+   "calls": 1,
+   "keys": 1,
+   "candidate_keys": 1,
+   "candidate_calls": 1,
+   "launches_outside_recorded_calls": 0,
+   "launches": 1,
+   "keys_over_cap": 0
+  },
+  "trigger_D5": {
+   "t1": true,
+   "calls": 1,
+   "keys": 1,
+   "candidate_keys": 1,
+   "candidate_calls": 1,
+   "launches_outside_recorded_calls": 0,
+   "launches": 1,
+   "keys_over_cap": 0
+  },
+  "trigger_D8": {
+   "t1": true,
+   "calls": 5,
+   "keys": 4,
+   "candidate_keys": 3,
+   "candidate_calls": 3,
+   "launches_outside_recorded_calls": 0,
+   "launches": 4,
+   "keys_over_cap": 0
+  }
+ },
+ "classes": {
+  "usable as is": {
+   "k": 126,
+   "wilson": [
+    0.3975,
+    0.3451,
+    0.4523
+   ]
+  },
+  "run or evidence insufficient": {
+   "k": 92,
+   "wilson": [
+    0.2902,
+    0.243,
+    0.3425
+   ]
+  },
+  "new contract needed": {
+   "k": 65,
+   "wilson": [
+    0.205,
+    0.1643,
+    0.2529
+   ]
+  },
+  "outside contract scope": {
+   "k": 30,
+   "wilson": [
+    0.0946,
+    0.0671,
+    0.1319
+   ]
+  },
+  "specification matching needed (step 2)": {
+   "k": 4,
+   "wilson": [
+    0.0126,
+    0.0049,
+    0.032
+   ]
+  }
+ },
+ "classes_call_weighted": {
+  "usable as is": {
+   "k": 526,
+   "share": 0.5793
+  },
+  "run or evidence insufficient": {
+   "k": 165,
+   "share": 0.1817
+  },
+  "new contract needed": {
+   "k": 134,
+   "share": 0.1476
+  },
+  "outside contract scope": {
+   "k": 60,
+   "share": 0.0661
+  },
+  "specification matching needed (step 2)": {
+   "k": 23,
+   "share": 0.0253
+  }
+ },
+ "reasons": {
+  "usable as is | ARITH/real: all outputs complete, no coordinate excludes zero": 62,
+  "run or evidence insufficient | applicability not decided (MATMUL/real): over budget": 54,
+  "usable as is | REDUCE/real: all outputs complete, no coordinate excludes zero": 19,
+  "usable as is | MATMUL/real: all outputs complete, no coordinate excludes zero": 18,
+  "run or evidence insufficient | applicability not decided (SOFTMAX/real): over budget": 12,
+  "new contract needed | no validated contract covers aten.embedding_backward": 12,
+  "new contract needed | no validated contract covers aten.pow": 10,
+  "run or evidence insufficient | capture size limit (200 MB)": 7,
+  "new contract needed | no validated contract covers aten.pad": 6,
+  "new contract needed | no validated contract covers aten.nll_loss_forward": 6,
+  "run or evidence insufficient | recorded arguments not serializable: TypeError: cannot pickle 'module' object": 6,
+  "new contract needed | no validated contract covers aten.nll_loss_backward": 6,
+  "usable as is | INDEX/real: all outputs complete, no coordinate excludes zero": 6,
+  "new contract needed | no validated contract covers aten.slice_backward": 6,
+  "outside contract scope | no candidate profile applies: MATHFN/real: unsupported: a contains a value with magnitude above 100": 5,
+  "specification matching needed (step 2) | contract interface is not an ATen call: NORM": 4,
+  "outside contract scope | reference not complete under ACT/torch: out: evaluated reference complete_rate=None": 4,
+  "new contract needed | no validated contract covers aten.native_dropout": 4,
+  "new contract needed | no validated contract covers aten.arange": 4,
+  "outside contract scope | no candidate profile applies: ARITH/real: unsupported: a dtype 'i64' is outside the finite ARITH profile": 4,
+  "usable as is | ACT/torch: all outputs complete, no coordinate excludes zero": 4,
+  "usable as is | LAYOUT/real: all outputs complete, no coordinate excludes zero": 4,
+  "run or evidence insufficient | applicability not decided (LAYOUT/real): binding: ContractBindingError: public output depends on tensor state ": 4,
+  "outside contract scope | no candidate profile applies: ARITH/real: invalid_input: right operand=6369051672525773/18014398509481984 is n": 4,
+  "run or evidence insufficient | applicability not decided (ARITH/real): over budget": 3,
+  "usable as is | MATHFN/real: all outputs complete, no coordinate excludes zero": 3,
+  "new contract needed | no validated contract covers aten.zeros": 3,
+  "outside contract scope | no candidate profile applies: INDEX/real: unsupported: a dtype 'i64' is outside the finite floating INDEX prof": 2,
+  "usable as is | ACT/torch: 49152 coordinates with G_pi - f excluding zero": 2,
+  "outside contract scope | no candidate profile applies: INDEX/real: unsupported: nondefault embedding padding_idx is outside this forwar": 2,
+  "new contract needed | no validated contract covers aten._scaled_dot_product_efficient_attention_backward": 2,
+  "run or evidence insufficient | applicability not decided (INDEX/real): over budget": 2,
+  "outside contract scope | no candidate profile applies: ARITH/real: invalid_input: right operand=6444110634811895/144115188075855872 is ": 2,
+  "outside contract scope | no candidate profile applies: ARITH/real: invalid_input: right operand=7186705221432913/9007199254740992 is no": 2,
+  "run or evidence insufficient | applicability not decided (ACT/torch): over budget": 2,
+  "outside contract scope | no candidate profile applies: ARITH/real: invalid_input: right operand=4722366482869645/4722366482869645213696": 2,
+  "run or evidence insufficient | applicability not decided (REDUCE/real): binding: ContractBindingError: public output depends on tensor state ": 2,
+  "usable as is | SOFTMAX/real: all outputs complete, no coordinate excludes zero": 2,
+  "new contract needed | no validated contract covers aten.scalar_tensor": 2,
+  "outside contract scope | no candidate profile applies: ARITH/real: unsupported: b contains infinity outside the finite ARITH profile": 2,
+  "usable as is | ACT/torch: 196413 coordinates with G_pi - f excluding zero": 1,
+  "usable as is | RANDOM/finite_backward: 44316 coordinates with G_pi - f excluding zero": 1,
+  "usable as is | ACT/torch: 196404 coordinates with G_pi - f excluding zero": 1,
+  "usable as is | RANDOM/finite_backward: 43719 coordinates with G_pi - f excluding zero": 1,
+  "usable as is | RANDOM/finite_backward: 263202 coordinates with G_pi - f excluding zero": 1,
+  "usable as is | RANDOM/finite_backward: 263232 coordinates with G_pi - f excluding zero": 1,
+  "new contract needed | no validated contract covers aten._scaled_dot_product_flash_attention_backward": 1,
+  "new contract needed | no validated contract covers aten._scaled_dot_product_flash_attention": 1,
+  "new contract needed | no validated contract covers aten.ones": 1,
+  "outside contract scope | no candidate profile applies: LAYOUT/real: unsupported: a dtype 'b8' is outside the finite LAYOUT profile": 1,
+  "new contract needed | no validated contract covers aten.repeat_interleave": 1
+ },
+ "verdicts": {
+  "consistent": 118,
+  "detected": 8
+ },
+ "by_op": {
+  "aten._log_softmax.default": {
+   "run or evidence insufficient": 6
+  },
+  "aten._log_softmax_backward_data.default": {
+   "run or evidence insufficient": 6
+  },
+  "aten._safe_softmax.default": {
+   "usable as is": 1
+  },
+  "aten._scaled_dot_product_efficient_attention_backward.default": {
+   "new contract needed": 2
+  },
+  "aten._scaled_dot_product_flash_attention.default": {
+   "new contract needed": 1
+  },
+  "aten._scaled_dot_product_flash_attention_backward.default": {
+   "new contract needed": 1
+  },
+  "aten._softmax_backward_data.default": {
+   "usable as is": 1
+  },
+  "aten.add.Tensor": {
+   "usable as is": 20,
+   "run or evidence insufficient": 6,
+   "outside contract scope": 7
+  },
+  "aten.addmm.default": {
+   "usable as is": 6,
+   "run or evidence insufficient": 14
+  },
+  "aten.arange.default": {
+   "new contract needed": 4
+  },
+  "aten.bmm.default": {
+   "run or evidence insufficient": 4
+  },
+  "aten.cat.default": {
+   "usable as is": 4,
+   "run or evidence insufficient": 4
+  },
+  "aten.cos.default": {
+   "outside contract scope": 2
+  },
+  "aten.div.Scalar": {
+   "usable as is": 2
+  },
+  "aten.embedding.default": {
+   "outside contract scope": 2,
+   "usable as is": 6,
+   "run or evidence insufficient": 4
+  },
+  "aten.embedding_backward.default": {
+   "new contract needed": 12
+  },
+  "aten.gather.default": {
+   "outside contract scope": 2
+  },
+  "aten.gelu.default": {
+   "usable as is": 4
+  },
+  "aten.gelu_backward.default": {
+   "outside contract scope": 4
+  },
+  "aten.mean.dim": {
+   "usable as is": 2
+  },
+  "aten.mm.default": {
+   "run or evidence insufficient": 38,
+   "usable as is": 12
+  },
+  "aten.mul.Scalar": {
+   "usable as is": 6,
+   "outside contract scope": 4
+  },
+  "aten.mul.Tensor": {
+   "usable as is": 29,
+   "outside contract scope": 4
+  },
+  "aten.native_dropout.default": {
+   "new contract needed": 4
+  },
+  "aten.native_dropout_backward.default": {
+   "usable as is": 4
+  },
+  "aten.native_layer_norm.default": {
+   "specification matching needed (step 2)": 3
+  },
+  "aten.native_layer_norm_backward.default": {
+   "specification matching needed (step 2)": 1
+  },
+  "aten.neg.default": {
+   "usable as is": 5
+  },
+  "aten.nll_loss_backward.default": {
+   "new contract needed": 6
+  },
+  "aten.nll_loss_forward.default": {
+   "new contract needed": 6
+  },
+  "aten.ones.default": {
+   "new contract needed": 1
+  },
+  "aten.ones_like.default": {
+   "run or evidence insufficient": 6
+  },
+  "aten.pad.default": {
+   "new contract needed": 6
+  },
+  "aten.pow.Tensor_Scalar": {
+   "new contract needed": 10
+  },
+  "aten.repeat_interleave.self_int": {
+   "new contract needed": 1
+  },
+  "aten.rsqrt.default": {
+   "usable as is": 2
+  },
+  "aten.scalar_tensor.default": {
+   "new contract needed": 2
+  },
+  "aten.silu.default": {
+   "usable as is": 2
+  },
+  "aten.silu_backward.default": {
+   "run or evidence insufficient": 2
+  },
+  "aten.sin.default": {
+   "outside contract scope": 2
+  },
+  "aten.slice_backward.default": {
+   "new contract needed": 6
+  },
+  "aten.sum.dim_IntList": {
+   "usable as is": 17,
+   "run or evidence insufficient": 2
+  },
+  "aten.tanh.default": {
+   "usable as is": 1,
+   "outside contract scope": 1
+  },
+  "aten.tanh_backward.default": {
+   "usable as is": 2
+  },
+  "aten.tril.default": {
+   "outside contract scope": 1
+  },
+  "aten.where.self": {
+   "outside contract scope": 1
+  },
+  "aten.zeros.default": {
+   "new contract needed": 3
+  }
+ },
+ "by_workload": {
+  "bert_tiny_bf16": {
+   "usable as is": 18,
+   "outside contract scope": 4,
+   "run or evidence insufficient": 7,
+   "new contract needed": 7,
+   "specification matching needed (step 2)": 2
+  },
+  "bert_tiny_fp32": {
+   "usable as is": 18,
+   "outside contract scope": 4,
+   "run or evidence insufficient": 7,
+   "new contract needed": 8,
+   "specification matching needed (step 2)": 1
+  },
+  "gpt2_bf16": {
+   "run or evidence insufficient": 20,
+   "new contract needed": 10,
+   "usable as is": 14,
+   "outside contract scope": 3
+  },
+  "gpt2_fp32": {
+   "run or evidence insufficient": 20,
+   "new contract needed": 11,
+   "usable as is": 13,
+   "outside contract scope": 4,
+   "specification matching needed (step 2)": 1
+  },
+  "qwen25_05b_bf16": {
+   "run or evidence insufficient": 11,
+   "new contract needed": 15,
+   "outside contract scope": 4,
+   "usable as is": 33
+  },
+  "qwen25_05b_fp32": {
+   "run or evidence insufficient": 27,
+   "new contract needed": 14,
+   "outside contract scope": 11,
+   "usable as is": 30
+  }
+ },
+ "triggers": {
+  "trigger_D18": [
+   {
+    "op": "aten.upsample_nearest2d.default",
+    "class": "specification matching needed (step 2)",
+    "verdict": null,
+    "reason": "contract interface is not an ATen call: INTERP"
+   }
+  ],
+  "trigger_D20": [
+   {
+    "op": "aten.argmax.default",
+    "class": "usable as is",
+    "verdict": "detected",
+    "reason": "REDUCE/real: 3 coordinates with G_pi - f excluding zero"
+   }
+  ],
+  "trigger_D3": [
+   {
+    "op": "aten.addmm.default",
+    "class": "outside contract scope",
+    "verdict": "not_established",
+    "reason": "reference not complete under MATMUL/real: out: evaluated reference complete_rate=0.9921875"
+   }
+  ],
+  "trigger_D5": [
+   {
+    "op": "aten.rms_norm.default",
+    "class": "new contract needed",
+    "verdict": null,
+    "reason": "no validated contract covers aten.rms_norm"
+   }
+  ],
+  "trigger_D8": [
+   {
+    "op": "aten.avg_pool2d.default",
+    "class": "new contract needed",
+    "verdict": null,
+    "reason": "no validated contract covers aten.avg_pool2d"
+   },
+   {
+    "op": "aten.ones_like.default",
+    "class": "new contract needed",
+    "verdict": null,
+    "reason": "no validated contract covers aten.ones_like"
+   },
+   {
+    "op": "aten.avg_pool2d_backward.default",
+    "class": "new contract needed",
+    "verdict": null,
+    "reason": "no validated contract covers aten.avg_pool2d_backward"
+   }
+  ]
+ },
+ "candidate_keys": 317,
+ "candidate_calls": 908
+}
