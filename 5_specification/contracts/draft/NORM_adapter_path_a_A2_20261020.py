@@ -7,6 +7,10 @@ against the upstream (x, and weight / bias when given).
 
 The reference is kernel_spec.c_norm (exact statistics, enclosure of 1/sqrt). The mutants are an independent compact
 implementation (below) with one misreading switched on each.
+
+Profile aten_native is the ATen-call interface (kernel_spec.aten_adapter.make_reference) for aten.native_layer_norm,
+aten.native_layer_norm_backward and aten.rms_norm: input {op, args, kwargs}, output out = the ATen return (semantics in
+kernel_spec.norm_emb_nll_aten); its mutants NM.M15-NM.M21 are independent implementations below.
 """
 from __future__ import annotations
 
@@ -21,7 +25,10 @@ from kernel_spec import c_norm as CN
 from kernel_spec import norm_emb_nll_aten as NA
 from kernel_spec import real as rl
 from kernel_spec.aten_adapter import make_reference
-from kernel_spec.registry import CONTRACTS
+from pathlib import Path
+
+# The staged contract next to this adapter (stage/<X>/adapters/NORM.py -> stage/<X>/contracts/NORM.yaml).
+CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
 from kernel_spec.num import Invalid, Result, Undefined, Unsupported, integer, rational
 from kernel_spec.real import R
 

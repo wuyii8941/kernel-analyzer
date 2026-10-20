@@ -190,7 +190,10 @@ decisions:
     parameter dtypes. The dtype of the returned mean / rstd is not documented and differs between PyTorch 2.10
     backends for reduced-precision inputs (CPU - the input dtype; CUDA - float32), so it is metadata, not part of the
     real target; a complete-output check accepts the input dtype or float32 for these two positions. The values are
-    the exact statistics in every case.
+    the exact statistics in every case. Likewise the dtype of mean / rstd passed to aten.native_layer_norm_backward is
+    not part of the task - the backward reads their exact values whatever floating dtype they have (PyTorch 2.10 eager
+    on CPU accepts bfloat16 statistics for bfloat16 input, the CUDA kernel requires float32 statistics and raises
+    otherwise; this backend restriction is recorded in the evidence note and does not change the task).
   basis: [NEN_REFS.NATIVE_LN, NEN_LAYER_NORM_CPP.STATS, NEN_DECOMP.LN_BWD]
 clauses:
 - {id: NM.C1, basis: [T_LAYERNORM.DEF, T_LAYERNORM.VAR, T_LAYERNORM.AFFINE, T_LAYERNORM_F.DEF], statement: 'layer_norm

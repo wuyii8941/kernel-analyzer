@@ -16,7 +16,10 @@ from kernel_spec import norm_emb_nll_aten as NA
 from kernel_spec.aten_adapter import make_output_checker, make_reference
 from kernel_spec.num import Undefined
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
+from pathlib import Path
+
+# The staged contract next to this adapter (stage/<X>/adapters/NLL.py -> stage/<X>/contracts/NLL.yaml).
+CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
 
 PROFILE = "aten_real"
 COVERS = yaml.safe_load((CONTRACTS / "NLL.yaml").read_text())["covers"]
