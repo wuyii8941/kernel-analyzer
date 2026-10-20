@@ -55,7 +55,7 @@ def extra_exclude(name):
     return sorted({f["flaggems_function"] for f in json.loads(RUN_FAILURES.read_text()) if f["workload"] == name})
 
 
-def stage_record(root, only):
+def stage_record(root, only, protocol="A2"):
     (root / "rec").mkdir(parents=True, exist_ok=True)
     for i, (name, args) in enumerate(WORKLOADS):
         ex = extra_exclude(name)
@@ -66,7 +66,8 @@ def stage_record(root, only):
             continue
         t = time.time()
         try:
-            p = subprocess.run([PY, str(HERE / "record_workload.py"), *args, "--out", str(out)], cwd=REPO,
+            p = subprocess.run([PY, str(HERE / "record_workload.py"), *args, "--protocol", protocol, "--out", str(out)],
+                               cwd=REPO,
                                env=dict(ENV, CUDA_VISIBLE_DEVICES=GPUS[i % len(GPUS)]), capture_output=True, text=True,
                                timeout=3600)
             rc, tail = p.returncode, (p.stdout.strip().splitlines() or [""])[-1] if p.returncode == 0 else p.stderr[-600:]
@@ -75,7 +76,26 @@ def stage_record(root, only):
         log(root, {"stage": "record", "workload": name, "rc": rc, "tail": tail, "seconds": round(time.time() - t)})
 
 
-def stage_bind(root, workers, only):
+# G12 (A2): the recorded ATen operation through which each excluded FlagGems function is replayed
+REPLAY_THROUGH = {"_flash_attention_forward": "aten._scaled_dot_product_flash_attention.default"}
+
+
+def replay_ops(name):
+    """recorded op -> excluded FlagGems function to replay on it (run failures of deviation D-A3)."""
+    if not RUN_FAILURES.exists():
+        return {}
+    out = {}
+    for f in json.loads(RUN_FAILURES.read_text()):
+        if f["workload"] == name:
+            fn = f["flaggems_function"]
+            registered = {"flash_attention_forward": "_flash_attention_forward",
+                          "layer_norm_backward": "native_layer_norm_backward", "layer_norm": "native_layer_norm"}
+            reg = registered.get(fn, fn)
+            out[REPLAY_THROUGH.get(reg, f["aten"])] = fn
+    return out
+
+
+def stage_bind(root, workers, only, protocol="v1"):
     spec = root / "spec"
     if not spec.exists():
         shutil.copytree(SPEC_SRC, spec, ignore=shutil.ignore_patterns("__pycache__", "sufficiency"))
@@ -84,22 +104,28 @@ def stage_bind(root, workers, only):
     for wdir in sorted((root / "rec").iterdir()):
         if only and wdir.name not in only or not (wdir / "keys.jsonl").exists():
             continue
+        replay = replay_ops(wdir.name) if protocol == "A2" else {}
         for line in open(wdir / "keys.jsonl"):
             k = json.loads(line)
             if k["launches"]:
-                jobs.append((wdir, k["key"]))
+                jobs.append((wdir, k["key"], None))
+            elif k["op"] in replay:
+                jobs.append((wdir, k["key"], replay[k["op"]]))
 
     def one(i_job):
-        i, (wdir, key) = i_job
-        out = root / "results" / f"{wdir.name}__{key}.json"
+        i, (wdir, key, enable) = i_job
+        out = root / "results" / (f"{wdir.name}__{key}.json" if enable is None else
+                                  f"{wdir.name}__{key}__enable_{enable}.json")
         if out.exists():
             return
         t = time.time()
         try:
             p = subprocess.run([PY, str(HERE / "bind_key.py"), "--workload", str(wdir), "--key", str(key),
-                                "--spec", str(spec), "--out", str(out)], cwd=REPO,
+                                "--spec", str(spec), "--out", str(out), "--protocol", protocol,
+                                "--timeout", "2000" if protocol == "A2" else "700",
+                                *(["--enable", enable] if enable else [])], cwd=REPO,
                                env=dict(ENV, CUDA_VISIBLE_DEVICES=GPUS[i % len(GPUS)]), capture_output=True, text=True,
-                               timeout=4000)
+                               timeout=9000 if protocol == "A2" else 4000)
             rc, err = p.returncode, p.stderr[-600:]
         except subprocess.TimeoutExpired:
             rc, err = "timeout", ""
@@ -173,12 +199,13 @@ def main():
     ap.add_argument("--stage", choices=("record", "bind", "analyze", "all"), default="all")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--only", nargs="*")
+    ap.add_argument("--protocol", choices=("v1", "A2"), default="A2")
     a = ap.parse_args()
     a.root.mkdir(parents=True, exist_ok=True)
     if a.stage in ("record", "all"):
-        stage_record(a.root, a.only)
+        stage_record(a.root, a.only, a.protocol)
     if a.stage in ("bind", "all"):
-        stage_bind(a.root, a.workers, a.only)
+        stage_bind(a.root, a.workers, a.only, a.protocol)
     if a.stage in ("analyze", "all"):
         stage_analyze(a.root)
     return 0

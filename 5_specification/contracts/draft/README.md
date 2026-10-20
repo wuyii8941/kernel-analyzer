@@ -1,5 +1,9 @@
 # 合同层
 
+本目录保留尚未完成独立复核的扩展，运行时注册入口不会导入这些文件。带日期的合同与 adapter
+文件是同一次候选修改；只有来源、语义决定和参照实现都经复核后，才能合并到上级 `contracts/` 与
+`adapters/`。这样可以继续使用已审阅的旧 profile，同时不把开发中的新 profile 误当成 ground truth。
+
 - *.yaml：每个角色一份合同。字段见 TEMPLATE.yaml。
 - adapters/<ID>.py：把合同绑定到可执行参照（reference），并按误读的文字描述独立实现误读（mutants），不调用规格代码。
 - contract_check.py：逐例判定 成立 / 矛盾 / 未建立，检查每条误读是否被拒绝，输出条款追溯表。

@@ -58,12 +58,25 @@ def reset_launches():
 
 
 def snapshot(t: torch.Tensor) -> torch.Tensor:
-    """A copy with the same size, stride and logical values (storage offset 0)."""
-    if t.numel() == 0:
-        return torch.empty_strided(t.size(), t.stride(), dtype=t.dtype, device=t.device)
-    span = 1 + sum((s - 1) * st for s, st in zip(t.size(), t.stride()))
-    flat = torch.as_strided(t, (span,), (1,), t.storage_offset()).clone()
-    return flat.as_strided(t.size(), t.stride(), 0)
+    """A copy with the same size, stride and logical values (storage offset 0), made by a raw device copy: the ATen
+    copy operators may be the library under test (A2: FlagGems copy_ / _to_copy / index are no longer excluded)."""
+    from kernel_analyzer.reference_eval.capture import device_copy
+    return device_copy(t)
+
+
+def to_host(x):
+    """Recorded values for torch.save: tensors copied to the CPU without the ATen dispatcher; memory formats (not
+    picklable) as tagged strings, decoded by the generated call (instantiate.decode_tags)."""
+    from kernel_analyzer.reference_eval.capture import host_copy
+    if isinstance(x, torch.Tensor):
+        return host_copy(x)
+    if isinstance(x, torch.memory_format):
+        return {"__memory_format__": str(x).replace("torch.", "")}
+    if isinstance(x, (list, tuple)):
+        return type(x)(to_host(v) for v in x)
+    if isinstance(x, dict):
+        return {k: to_host(v) for k, v in x.items()}
+    return x
 
 
 def _walk(x, fn):
@@ -165,7 +178,7 @@ def save(recorder: Recorder, out_dir, extra=None):
                                  "args": describe(args), "kwargs": describe(kwargs)}) + "\n")
             if args is not None:
                 try:
-                    torch.save({"args": args, "kwargs": kwargs}, out / "values" / f"{k}.pt")
+                    torch.save({"args": to_host(args), "kwargs": to_host(kwargs)}, out / "values" / f"{k}.pt")
                 except Exception as err:  # noqa: BLE001 -- deviation D-A2: the key stays in the account
                     (out / "values" / f"{k}.pt").unlink(missing_ok=True)
                     unserializable.append({"key": k, "error": f"{type(err).__name__}: {err}"[:200]})

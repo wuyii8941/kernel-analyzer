@@ -23,7 +23,7 @@ import torch  # noqa: E402
 import flag_gems  # noqa: E402
 from instantiate import FLAGGEMS_EXCLUDE  # noqa: E402
 
-CAP_BYTES = 200 * 2**20
+CAP_MB = {"v1": 200, "A2": 1536}
 
 
 def model_step(model_dir, config):
@@ -115,8 +115,12 @@ def main():
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--extra-exclude", nargs="*", default=[],
                     help="deviation D-A3: FlagGems functions that fail to run on this workload (reported separately)")
+    ap.add_argument("--protocol", choices=("v1", "A2"), default="A2",
+                    help="v1: base exclusion copy_/to_copy/index and a 200 MB cap (OPERATOR_ENTRY_PROTOCOL); A2: no base "
+                         "exclusion (the recorder and the capture copy without the ATen dispatcher) and a 1.5 GB cap")
     a = ap.parse_args()
-    exclude = list(FLAGGEMS_EXCLUDE) + list(a.extra_exclude)
+    exclude = (list(FLAGGEMS_EXCLUDE) if a.protocol == "v1" else []) + list(a.extra_exclude)
+    cap_bytes = CAP_MB[a.protocol] * 2**20
     flag_gems.enable(unused=exclude)
     step = trigger_step(a.trigger) if a.trigger else model_step(a.model, a.config)
     step()
@@ -145,7 +149,7 @@ def main():
             return t
         R._walk(args, add)
         R._walk(kwargs, add)
-        if size > CAP_BYTES:
+        if size > cap_bytes:
             del rec.values[k]
             over_cap.append(k)
     import importlib.metadata as md
@@ -155,7 +159,8 @@ def main():
         "launches_without_recorder": len(seq_a), "launches_with_recorder": len(seq_b),
         "launches_outside_recorded_calls": unattributed, "calls": len(rec.calls), "keys": len(rec.keys),
         "keys_over_capture_cap": over_cap, "flag_gems": md.version("flag_gems"), "torch": torch.__version__,
-        "exclude": exclude, "extra_exclude": list(a.extra_exclude)})
+        "exclude": exclude, "extra_exclude": list(a.extra_exclude), "protocol": a.protocol,
+        "capture_cap_mb": CAP_MB[a.protocol]})
     print(json.dumps({"calls": len(rec.calls), "keys": len(rec.keys), "t1": first_diff is None,
                       "unattributed": unattributed, "over_cap": len(over_cap)}))
 

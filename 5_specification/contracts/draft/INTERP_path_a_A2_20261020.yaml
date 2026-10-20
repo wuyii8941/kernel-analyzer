@@ -1,0 +1,344 @@
+schema_version: '1.2'
+id: INTERP
+role: INTERP
+title: PyTorch 2.10 two-dimensional legacy nearest interpolation with complete input VJP, and the ATen upsample_nearest2d overloads
+review:
+  status: drafted
+  author: OpenAI Codex, source and implementation review (2026-10-19); Claude, path A closure package C ATen interface (2026-10-20)
+  date: '2026-10-20'
+  scope: Explicit positive output size, rank-4 physical finite floating input, legacy nearest mode, complete output and input VJP; ATen upsample_nearest2d and upsample_nearest2d_backward with output_size and optional exact-arithmetic scales
+activation:
+  implementation_status: pending
+  implementation_evidence: evidence/interpolate_implementation.md; evidence/layout_pool_interp_aten.md
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.functional.interpolate, aten.upsample_nearest2d, aten.upsample_nearest2d_backward]
+profiles:
+  torch210_nearest2d_size_autograd:
+    meaning: >-
+      PyTorch 2.10 functional interpolate on a positive rank-4 physical finite f16/bf16/f32/f64 tensor with an
+      explicit positive two-dimensional output size, mode='nearest', align_corners=None, scale_factor=None,
+      recompute_scale_factor None or false and antialias=false; return the complete forward and input VJP.
+    outputs: [out, grad]
+    task_choice_required: true
+    basis: [IN.SCHEMA, IN.INDEX, IN.GRAD]
+  torch210_aten_upsample_nearest2d:
+    meaning: >-
+      The PyTorch 2.10 ATen overloads upsample_nearest2d(self, output_size, scales_h=None, scales_w=None) and
+      upsample_nearest2d_backward(grad_output, output_size, input_size, scales_h=None, scales_w=None) on positive
+      rank-4 physical finite f16/bf16/f32/f64 tensors. The overload itself selects legacy nearest; output_size fixes
+      the output shape and each spatial input index is floor(o*isize/osize), or floor(o/scale) when that dimension's
+      scale is given and the source index arithmetic is exact (IN.ATEN_SCALES). The forward returns the gathered
+      tensor and the backward the complete input VJP for grad_output, both as the single output out.
+    task_choice_required: false
+    basis: [IN.ATEN, IN.ATEN_SCALES, IN.PHYSICAL]
+    outputs: [out]
+outputs:
+  out:
+    shape: '[N, C, requested output height, requested output width]; for the ATen profile the single returned tensor (forward output, or the input VJP of shape input_size for upsample_nearest2d_backward)'
+    guarantee: exact
+  grad:
+    shape: complete input shape
+    guarantee: exact
+comparison:
+  input_binding: Every public option, complete physical input and complete same-dtype upstream is explicit and validated.
+  complete_output: Every output and input-gradient coordinate with dtype and shape; no partial tensor is accepted.
+  quality: Exact coordinate selection and exact real addition; no tolerance in mathematical equality.
+  test_evidence: Independent integer-coordinate loops and PyTorch 2.10 CPU comparisons over all selected dtypes and rectangular up/down sizes.
+  error_handling: Malformed selected calls are invalid_input; other interpolation modes, scale-factor tasks and unsupported values are refused.
+decisions:
+- id: IN.SCHEMA
+  status: reviewed
+  statement: >-
+    Select rank-4 torch.nn.functional.interpolate with explicit size, legacy mode='nearest', scale_factor=None,
+    align_corners=None, recompute_scale_factor None or false and antialias=false. Size may be one positive integer,
+    expanded to both spatial dimensions, or exactly two positive integers. The public call maps this task to
+    upsample_nearest2d; nearest-exact, linear modes, area, one-/three-dimensional forms and out overloads are distinct.
+  basis: [TORCH210_INTERPOLATE_FUNCTIONAL.PUBLIC_TASK, TORCH210_INTERPOLATE_FUNCTIONAL.OPTIONS,
+    TORCH210_INTERPOLATE_FUNCTIONAL.DISPATCH, TS_NATIVE_FUNCTIONS.UPSAMPLE_SCHEMAS]
+- id: IN.INDEX
+  status: needs_binding
+  statement: >-
+    For this versioned PyTorch 2.10 legacy-nearest task with input H by W and output OH by OW, output (oh,ow)
+    reads input (floor(oh*H/OH), floor(ow*W/OW)). This is the documented implementation choice matching OpenCV
+    INTER_NEAREST. The half-pixel nearest-exact rule is a separate legal task and is not judged by this profile.
+  basis: [TORCH210_INTERPOLATE_FUNCTIONAL.NEAREST_MODE, TORCH210_UPSAMPLE_DECOMP.INDEX,
+    TORCH210_UPSAMPLE_DECOMP.SCOPE]
+- id: IN.GRAD
+  status: reviewed
+  statement: >-
+    The selected forward is a gather with fixed integer coordinates. Its ordinary input VJP sums the upstream of
+    every output coordinate that reads each input coordinate, including repeated reads during upsampling; all other
+    input coordinates receive zero. Input and upstream remain unchanged.
+  basis: [IN.INDEX, TORCH210_UPSAMPLE_DECOMP.GATHER, TS_NATIVE_FUNCTIONS.UPSAMPLE_SCHEMAS]
+- id: IN.ATEN
+  status: drafted
+  statement: >-
+    The ATen overload upsample_nearest2d is the legacy nearest operator; the half-pixel convention is the separate
+    operator _upsample_nearest_exact2d, so a call that claims upsample_nearest2d has already chosen the coordinate
+    convention and no task choice remains for it (unlike the public interpolate profile, whose mode string and size
+    or scale options are selected by the task). The output spatial shape is output_size (two positive integers). The
+    backward is the VJP that PyTorch 2.10's derivative table assigns to the forward: grad_output must have shape
+    input_size[0:2] + output_size and the forward's index rule is applied with input_size. The forward is a gather
+    with fixed integer coordinates, so its VJP gives every input coordinate the sum of the grad_output coordinates
+    that read it (repeated reads accumulate) and zero elsewhere. The .vec overload (optional output_size
+    with a scale_factors list) and the out forms are different tasks and unsupported. This rests on the retained
+    PyTorch 2.10 schema, derivative table and official decomposition together with the documented OpenCV
+    INTER_NEAREST compatibility of legacy nearest; agreement is agreement with that reference semantics. The
+    public interpolate profile keeps its IN.INDEX task binding; this decision does not change it.
+  basis: [LPI_NATIVE_FUNCTIONS.UPSAMPLE_NEAREST2D, LPI_DERIVATIVES.UPSAMPLE_NEAREST2D, LPI_DECOMP.UPSAMPLE_NEAREST_SCALES,
+    TORCH210_INTERPOLATE_FUNCTIONAL.NEAREST_MODE, TORCH210_UPSAMPLE_DECOMP.INDEX, TORCH210_UPSAMPLE_DECOMP.GATHER]
+- id: IN.ATEN_SCALES
+  status: drafted
+  statement: >-
+    How scales enter: the retained decomposition computes, per spatial dimension, scale = isize/(isize*s) when the
+    scale argument s is given and isize/osize otherwise, and input_index = trunc(float32(o) * scale), i.e. floor for
+    nonnegative values. Without s the profile uses the exact index floor(o*isize/osize), the same rule as the public
+    profile's IN.INDEX. With s the
+    exact index is floor(o/s), where s is the exact value of the received binary64 scale; output_size still fixes the
+    shape and is not required to equal floor(isize*s). The exact reading is adopted only where it provably equals
+    the source's floating evaluation: isize*s exactly representable in binary64, 1/s exactly representable in
+    binary32, and o/s exactly representable in binary32 for every output index o. Otherwise the floating rounding of
+    the index computation would decide the result, which this exact profile does not model: unsupported.
+    Alternatives considered: (a) ignore the scales and always use isize/osize (contradicts the source, which uses s
+    whenever it is given); (b) use floor(o/s) for every s (claims an exact rule where the source computes in floating
+    point). An index that reaches isize is unsupported: the decomposition gathers with _unsafe_index and defines no
+    value there (PyTorch 2.10 eager clamps or takes an output==2*input shortcut; neither is documented). Nonpositive
+    or non-finite scales are unsupported. For the recorded call (10x8 to 20x16 with s=2.0) every condition holds and
+    both readings give floor(o/2).
+  basis: [LPI_DECOMP.UPSAMPLE_NEAREST_SCALES, LPI_NATIVE_FUNCTIONS.UPSAMPLE_NEAREST2D, TORCH210_UPSAMPLE_DECOMP.INDEX]
+- id: IN.PHYSICAL
+  status: reviewed
+  statement: >-
+    Input and upstream are positive rank-4 physical finite f16/bf16/f32/f64 tensors with values exactly representable
+    in their declared dtype. Upstream has the same dtype and complete output shape. Special values, signed-zero
+    distinctions and other dtypes are outside this exact-real reference range.
+  basis: [TORCH210_INTERPOLATE_FUNCTIONAL.PUBLIC_TASK]
+clauses:
+- {id: IN.C1, basis: [IN.SCHEMA, IN.PHYSICAL], statement: Validate the complete public task and physical tensors before evaluating any coordinate., observes: [out, grad], evidence_kind: definition}
+- {id: IN.C2, basis: [IN.INDEX], statement: Every output coordinate copies the input selected by the two legacy nearest floor indices., observes: [out], evidence_kind: definition}
+- {id: IN.C3, basis: [IN.GRAD], statement: Every input-gradient coordinate is the sum of all upstream coordinates that selected it., observes: [grad], evidence_kind: derived}
+- {id: IN.C4, basis: [IN.SCHEMA, IN.INDEX], statement: Other modes, scale-factor tasks and incomplete outputs cannot receive a value under this profile., observes: [out, grad], evidence_kind: definition}
+- {id: IN.C5, basis: [IN.ATEN, IN.PHYSICAL], statement: 'The ATen forward validates the physical rank-4 input, two positive output sizes and optional scales, and returns every output coordinate of shape (N, C, output_size).', observes: [out], evidence_kind: definition}
+- {id: IN.C6, basis: [IN.ATEN_SCALES], statement: 'Each ATen spatial index is floor(o*isize/osize) without a scale and floor(o/scale) with an exactly evaluable scale; inexact scale arithmetic and indices beyond the input are unsupported.', observes: [out], evidence_kind: definition}
+- {id: IN.C7, basis: [IN.ATEN], statement: 'upsample_nearest2d_backward returns the complete input VJP of shape input_size, summing every grad_output coordinate into the input coordinate selected by the forward index rule.', observes: [out], evidence_kind: derived}
+examples:
+- id: IN.E1
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C1, IN.C2, IN.C3]
+  input:
+    op: torch.nn.functional.interpolate
+    x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    upstream: {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}
+    size: [4, 4]
+    scale_factor: null
+    mode: nearest
+    align_corners: null
+    recompute_scale_factor: null
+    antialias: false
+  expected:
+    outcome: value
+    fields:
+      out: [[[[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]]]]
+      grad: [[[[14, 22], [46, 54]]]]
+- id: IN.E2
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C2, IN.C3]
+  input:
+    op: torch.nn.functional.interpolate
+    x: {t: f32, shape: [1, 1, 3, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]]}
+    upstream: {t: f32, shape: [1, 1, 2, 3], v: [[[[1, 2, 3], [4, 5, 6]]]]}
+    size: [2, 3]
+    scale_factor: null
+    mode: nearest
+    align_corners: null
+    recompute_scale_factor: false
+    antialias: false
+  expected:
+    outcome: value
+    fields:
+      out: [[[[1, 2, 3], [5, 6, 7]]]]
+      grad: [[[[1, 2, 3, 0], [4, 5, 6, 0], [0, 0, 0, 0]]]]
+- id: IN.E3
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C1, IN.C2, IN.C3]
+  input:
+    op: torch.nn.functional.interpolate
+    x: {t: f64, shape: [1, 1, 2, 3], v: [[[[1, 2, 3], [4, 5, 6]]]]}
+    upstream: {t: f64, shape: [1, 1, 2, 2], v: [[[[1, 1], [1, 1]]]]}
+    size: 2
+    scale_factor: null
+    mode: nearest
+    align_corners: null
+    recompute_scale_factor: null
+    antialias: false
+  expected:
+    outcome: value
+    fields:
+      out: [[[[1, 2], [4, 5]]]]
+      grad: [[[[1, 1, 0], [1, 1, 0]]]]
+- id: IN.E4
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C4]
+  input: {op: torch.nn.functional.interpolate, x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, upstream: {t: f32, shape: [1, 1, 3, 3], v: [[[[1, 1, 1], [1, 1, 1], [1, 1, 1]]]]}, size: [3, 3], scale_factor: null, mode: nearest-exact, align_corners: null, recompute_scale_factor: null, antialias: false}
+  expected: {outcome: unsupported}
+- id: IN.E5
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C4]
+  input: {op: torch.nn.functional.interpolate, x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, upstream: {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]]]}, size: null, scale_factor: 2, mode: nearest, align_corners: null, recompute_scale_factor: null, antialias: false}
+  expected: {outcome: unsupported}
+- id: IN.E6
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C1]
+  input: {op: torch.nn.functional.interpolate, x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, upstream: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 1], [1, 1]]]]}, size: [0, 2], scale_factor: null, mode: nearest, align_corners: null, recompute_scale_factor: null, antialias: false}
+  expected: {outcome: invalid_input}
+- id: IN.E7
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C1]
+  input: {op: torch.nn.functional.interpolate, x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, upstream: {t: f32, shape: [1, 1, 1, 1], v: [[[[1]]]]}, size: [2, 2], scale_factor: null, mode: nearest, align_corners: null, recompute_scale_factor: null, antialias: false}
+  expected: {outcome: invalid_input}
+- id: IN.E8
+  profile: torch210_nearest2d_size_autograd
+  clauses: [IN.C4]
+  input: {op: torch.nn.functional.interpolate, x: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, upstream: {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 1], [1, 1]]]]}, size: [2, 2], scale_factor: null, mode: nearest, align_corners: false, recompute_scale_factor: null, antialias: false}
+  expected: {outcome: invalid_input}
+- id: IN.E9
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C5, IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args:
+    - {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    - [4, 4]
+    - 2.0
+    - 2.0
+  expected: {outcome: value, fields: {out: [[[[1, 1, 2, 2], [1, 1, 2, 2], [3, 3, 4, 4], [3, 3, 4, 4]]]]}}
+- id: IN.E10
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args:
+    - {t: f32, shape: [1, 1, 1, 11], v: [[[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]]]}
+    - [1, 2]
+    - 1.0
+    - 0.25
+  expected: {outcome: value, fields: {out: [[[[0, 4]]]]}}
+- id: IN.E11
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args:
+    - t: f32
+      shape: [1, 1, 8, 8]
+      v: [[[[0, 1, 2, 3, 4, 5, 6, 7], [8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 18, 19, 20, 21, 22, 23],
+            [24, 25, 26, 27, 28, 29, 30, 31], [32, 33, 34, 35, 36, 37, 38, 39], [40, 41, 42, 43, 44, 45, 46, 47],
+            [48, 49, 50, 51, 52, 53, 54, 55], [56, 57, 58, 59, 60, 61, 62, 63]]]]
+    - [2, 2]
+    - 0.5
+    - 0.25
+  expected: {outcome: value, fields: {out: [[[[0, 4], [16, 20]]]]}}
+- id: IN.E12
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C5, IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args:
+    - {t: bf16, shape: [1, 1, 3, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]]}
+    - [2, 3]
+  expected: {outcome: value, fields: {out: [[[[1, 2, 3], [5, 6, 7]]]]}}
+- id: IN.E13
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: f32, shape: [1, 1, 1, 3], v: [[[[0, 1, 2]]]]}, [1, 6], 1.0, 1.0]
+  expected: {outcome: unsupported}
+- id: IN.E14
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: f32, shape: [1, 1, 1, 4], v: [[[[0, 1, 2, 3]]]]}, [1, 2], 1.0, 0.3]
+  expected: {outcome: unsupported}
+- id: IN.E15
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C7]
+  input:
+    op: aten.upsample_nearest2d_backward
+    args: [{t: f32, shape: [1, 1, 1, 4], v: [[[[1, 2, 3, 4]]]]}, [1, 4], [1, 1, 1, 2], null, null]
+  expected: {outcome: value, fields: {out: [[[[3, 7]]]]}}
+- id: IN.E16
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6, IN.C7]
+  input:
+    op: aten.upsample_nearest2d_backward
+    args: [{t: f64, shape: [1, 1, 1, 2], v: [[[['1/2', 3]]]]}, [1, 2], [1, 1, 1, 11], 1.0, 0.25]
+  expected: {outcome: value, fields: {out: [[[['1/2', 0, 0, 0, 3, 0, 0, 0, 0, 0, 0]]]]}}
+- id: IN.E17
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C7]
+  input:
+    op: aten.upsample_nearest2d_backward
+    args: [{t: f32, shape: [1, 1, 1, 3], v: [[[[1, 2, 3]]]]}, [1, 4], [1, 1, 1, 2]]
+  expected: {outcome: invalid_input}
+- id: IN.E18
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C5]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, [0, 2]]
+  expected: {outcome: invalid_input}
+- id: IN.E19
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C5]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}, null, [2.0, 2.0]]
+  expected: {outcome: unsupported}
+- id: IN.E20
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C5]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: i64, shape: [1, 1, 1, 1], v: [[[[1]]]]}, [2, 2]]
+  expected: {outcome: unsupported}
+signature:
+  inputs: [complete physical rank-4 input, explicit positive output size, fixed public nearest options, complete same-dtype upstream]
+  pre_state: [input and upstream are unchanged]
+  post_state: [complete interpolated output and complete input VJP]
+  observation_unit: every output and input-gradient coordinate with dtype and shape
+domain:
+  valid: [positive physical rank-4 finite f16/bf16/f32/f64 tensors, positive scalar or pair output size, complete same-dtype upstream, selected fixed options]
+  invalid_input: [missing or extra field, malformed or nonpositive size, upstream shape or dtype mismatch, invalid option type, unrepresentable physical value]
+  unsupported: [scale-factor tasks, nearest-exact, linear bilinear bicubic trilinear area or antialiased modes, other ranks or dtypes, special values and signed-zero distinctions]
+mutation_requirements:
+- {id: IN.M1, misreading: use nearest-exact half-pixel coordinates, witnesses: [IN.E2]}
+- {id: IN.M2, misreading: round scaled coordinates instead of taking floor, witnesses: [IN.E2]}
+- {id: IN.M3, misreading: exchange the height and width scale ratios, witnesses: [IN.E2]}
+- {id: IN.M4, misreading: overwrite repeated gradient contributions instead of summing them, witnesses: [IN.E1]}
+- {id: IN.M5, misreading: omit the complete input gradient, witnesses: [IN.E1]}
+- {id: IN.M6, misreading: the ATen overload ignores given scales and always uses input/output size ratios, witnesses: [IN.E10, IN.E11]}
+- {id: IN.M7, misreading: a given scale multiplies the output index instead of dividing it, witnesses: [IN.E10]}
+- {id: IN.M8, misreading: scales_h and scales_w are exchanged, witnesses: [IN.E11]}
+- {id: IN.M9, misreading: upsample_nearest2d_backward overwrites repeated contributions instead of summing them, witnesses: [IN.E15]}
+- {id: IN.M10, misreading: the ATen overload uses half-pixel nearest-exact coordinates, witnesses: [IN.E10, IN.E12]}
+nonclaims:
+- This profile selects PyTorch 2.10 legacy nearest with explicit size; it makes no claim about a universal nearest-neighbor convention.
+- Device execution rounding, a Triton binding and statistical bias remain separate from this exact task reference.
+- The ATen profile rests on PyTorch 2.10's schema, derivative table and official decomposition (reference programs) plus the documented OpenCV INTER_NEAREST compatibility; agreement means agreement with that reference semantics. Without scales it uses the exact ratio isize/osize like IN.INDEX and does not model floating rounding of that index computation; with scales only exactly evaluable index arithmetic is admitted.
+- PyTorch 2.10 eager behaviour for indices beyond the input (clamping, or the output==2*input shortcut that ignores scales) is not judged.
+changes:
+- date: '2026-10-20'
+  change: >-
+    Add the ATen-call profile torch210_aten_upsample_nearest2d (task_choice_required false) for
+    aten.upsample_nearest2d and aten.upsample_nearest2d_backward with decisions IN.ATEN and IN.ATEN_SCALES, clauses
+    IN.C5-C7, examples IN.E9-E20 and mutants IN.M6-M10. The public profile refuses ATen-call records as
+    unsupported. Status returned to drafted/pending for independent review.
+  trigger: >-
+    Path A closure (G6): recorded trigger D18 aten.upsample_nearest2d(x [2,3,10,8] non-contiguous, [20,16], 2.0, 2.0)
+    reached INTERP, but the adapter had no ATen interface.
+- {date: '2026-10-19', note: Added after a real FlagGems public interpolate call exposed a common operator with no complete ground truth in the active catalog.}

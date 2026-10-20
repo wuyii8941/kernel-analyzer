@@ -1,0 +1,244 @@
+schema_version: '1.2'
+id: NLL
+role: NLL
+title: Negative log likelihood loss at the ATen level (aten.nll_loss_forward with total_weight, aten.nll_loss_backward),
+  real-number semantics
+review:
+  status: drafted
+  author: Claude (path A closure package A, norm_emb_nll), 2026-10-20
+  date: '2026-10-20'
+  scope: The ATen overloads nll_loss_forward and nll_loss_backward for 1D / 2D finite floating input, int64 targets,
+    optional class weights and reductions none / mean / sum; device rounding and concrete kernel binding remain separate
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
+covers: [aten.nll_loss_forward, aten.nll_loss_backward]
+profiles:
+  aten_real:
+    meaning: >-
+      One ATen call of aten.nll_loss_forward(self, target, weight, reduction, ignore_index) -> (output, total_weight)
+      or aten.nll_loss_backward(grad_output, self, target, weight, reduction, ignore_index, total_weight) ->
+      grad_input with self of shape (N, C) or (C), finite f16 / bf16 / f32 / f64 values, int64 target of shape (N) or
+      () (size 1 for 1D self), optional finite class weight of shape (C), reduction 0 (none), 1 (mean) or 2 (sum) and
+      any integer ignore_index. The output out is the ATen return.
+    task_choice_required: false
+    basis: [NL.TASK, NL.FORWARD, NL.TOTAL_WEIGHT, NL.BWD_SUPPLIED]
+outputs:
+  out:
+    shape: 'nll_loss_forward - [output, total_weight] (output of shape (N) for reduction none with 2D self, otherwise a
+      scalar; total_weight a scalar); nll_loss_backward - grad_input of the shape of self'
+    guarantee: exact
+readings:
+  NL.R1:
+    meaning: Diagnostic reading of NL.BWD_SUPPLIED alternative (b) - nll_loss_backward with mean reduction divides by
+      the total weight recomputed from target and weight instead of the supplied total_weight. Not the task; it
+      separates a kernel that ignores its total_weight argument from one that reads it.
+    basis: [NL.BWD_SUPPLIED]
+comparison:
+  input_binding: Tensor values are the exact values received; reduction and ignore_index are the recorded integers.
+  complete_output: Every returned position with dtype and shape; for nll_loss_forward both output and total_weight.
+  quality: Exact equality (sums and quotients of rationals).
+  test_evidence: Hand derivations from the NLLLoss formula; PyTorch 2.10 eager cross-check of the recorded argument
+    structures in evidence/norm_emb_nll_aten_interface.md.
+  error_handling: Shape, dtype-kind, reduction and target-range violations are invalid_input; a mean over total weight 0
+    is domain_undefined.
+decisions:
+- id: NL.TASK
+  status: drafted
+  statement: >-
+    The contract defines the two ATen overloads of the retained PyTorch 2.10 schemas, which the public
+    torch.nn.functional.nll_loss reaches through nll_loss_nd. reduction is the ATen Reduction enum - 0 none, 1 mean,
+    2 sum (torch/nn/_reduction.py, kept in sync with Reduction.h); other values are invalid_input. self is 1D or 2D
+    (the overloads reject other ranks; the K-dimensional loss is nll_loss2d / nll_loss_nd, not covered). target is
+    int64 (uint8, which the CPU kernel also accepts, is unsupported). The public page states the input is expected to
+    contain log-probabilities; that is a usage expectation and not a precondition of the formula, which is evaluated
+    for any finite values (the recorded inputs are rounded log_softmax outputs). Alternative - invalid_input for
+    values that are not log-probabilities - rejected, no source checks it.
+  basis: [TS_NATIVE_FUNCTIONS.NORM_EMB_NLL_SCHEMAS, NEN_REDUCTION_PY.ENUM, NEN_FUNCTIONAL.NLL_LOSS, NEN_LOSSNLL_CPP.META_FWD,
+    T_NLLLOSS.DEF, T_NLL_LOSS_F.DEF]
+- id: NL.FORWARD
+  status: drafted
+  statement: >-
+    l_n = - w_{t_n} x_{n, t_n} with w_c = weight[c] (1 without weight) and l_n = 0 when t_n = ignore_index. Reduction
+    none with 2D self returns (l_1..l_N); with 1D self the single l. sum returns sum_n l_n. mean returns sum_n l_n /
+    sum_n w_{t_n} over the non-ignored targets (the weighted mean of the NLLLoss page). The functional page's phrase
+    'divided by the number of elements in the output' is a simplification that the same pages contradict for ignored
+    targets ('averaged over non-ignored targets') and weights; the NLLLoss formula is used. Non-ignored targets must
+    lie in [0, C) (out of bounds is invalid_input); ignore_index may be any integer, including a class index.
+  basis: [T_NLLLOSS.DEF, T_NLLLOSS.REDUCTION, T_NLLLOSS.WEIGHT, T_NLLLOSS.IGNORE, T_NLLLOSS.TARGET, T_NLL_LOSS_F.IGNORE,
+    T_NLL_LOSS_F.MEAN_PHRASE, NEN_LOSSNLL_CPP.FWD]
+- id: NL.TOTAL_WEIGHT
+  status: drafted
+  statement: >-
+    total_weight, the second return of nll_loss_forward, is not described on the pages; per the native kernel and the
+    decomposition it is the sum of w_{t_n} over the non-ignored targets (their count without weight), and 0 for
+    reduction none with 2D self (the kernel zeroes it there). It is returned for every reduction, in the dtype of self.
+    This rests on the torch sources (nonclaim).
+  basis: [NEN_LOSSNLL_CPP.FWD, NEN_DECOMP.NLL_FWD, NEN_DERIVATIVES.NLL]
+- id: NL.EMPTY_MEAN
+  status: drafted
+  statement: >-
+    Mean reduction with total weight 0 - every target ignored, an empty batch, or class weights of the non-ignored
+    targets summing to 0 - is the quotient 0-or-finite / 0 of the documented formula, which has no real value;
+    domain_undefined, with no requirement on the device output (the native kernel returns NaN). No documented
+    alternative value exists. sum and none remain defined (0 for an all-ignored sum).
+  basis: [T_NLLLOSS.REDUCTION, NEN_LOSSNLL_CPP.FWD]
+- id: NL.BWD_SUPPLIED
+  status: drafted
+  statement: >-
+    nll_loss_backward returns grad_input of the shape of self, zero except at (n, t_n) for every non-ignored target,
+    where it is - w_{t_n} g with g = grad_output[n] (reduction none, 2D self), grad_output (sum) or grad_output /
+    total_weight (mean), using the supplied total_weight. Alternatives - (a) supplied total_weight, chosen - the
+    schema takes it as an argument, autograd passes the forward's total_weight (derivatives.yaml), the native kernel
+    and the decomposition read it, PyTorch 2.10 eager follows it, and it is the house precedent for saved-output
+    backward ops (SOFTMAX _log_softmax_backward_data uses the supplied output); (b) recompute the total weight from
+    target and weight - diagnostic reading NL.R1. The values of self are not read (only its shape and dtype), so
+    retained NaN storage in self is allowed.
+  basis: [TS_NATIVE_FUNCTIONS.NORM_EMB_NLL_SCHEMAS, NEN_DERIVATIVES.NLL, NEN_LOSSNLL_CPP.BWD, NEN_LOSSNLL_CPP.META_BWD,
+    NEN_DECOMP.NLL_BWD, T_NLLLOSS.IGNORE]
+- id: NL.BWD_EMPTY
+  status: drafted
+  statement: >-
+    In the mean backward, a position needs the quotient only when its target is not ignored. If every target is
+    ignored the result is all zeros whatever total_weight is (ignored targets do not contribute to the input
+    gradient; the native kernel writes nothing). If some target is not ignored and the supplied total_weight is 0 the
+    quotient has no real value - domain_undefined. Alternative - the whole result undefined whenever total_weight is 0
+    - rejected because no defined position depends on the quotient.
+  basis: [T_NLLLOSS.IGNORE, NEN_LOSSNLL_CPP.BWD]
+clauses:
+- {id: NL.C1, basis: [NL.FORWARD, NL.TOTAL_WEIGHT, NL.TASK], statement: 'nll_loss_forward mean - [sum of -w x at the
+    non-ignored targets / total weight, total weight]', observes: [out], evidence_kind: definition}
+- {id: NL.C2, basis: [NL.FORWARD, NL.TOTAL_WEIGHT], statement: 'nll_loss_forward sum and none (none with 2D self returns
+    total_weight 0); class weights; 1D self', observes: [out], evidence_kind: definition}
+- {id: NL.C3, basis: [NL.EMPTY_MEAN], statement: 'mean with total weight 0 is domain_undefined', observes: [out],
+  evidence_kind: definition}
+- {id: NL.C4, basis: [NL.BWD_SUPPLIED, NL.BWD_EMPTY], statement: 'nll_loss_backward - -w g (/ supplied total_weight for
+    mean) at the non-ignored target positions, zero elsewhere', observes: [out], evidence_kind: derived}
+- {id: NL.C5, basis: [NL.TASK, NL.FORWARD, NL.BWD_SUPPLIED], statement: 'out-of-range targets, unknown reductions and
+    shape mismatches are invalid_input', observes: [out], evidence_kind: definition}
+examples:
+- id: NL.E1
+  profile: aten_real
+  clauses: [NL.C1]
+  input: &fwd {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2', -1, '-3/2'], [-2, '-1/4',
+            -3]]}, {t: i64, v: [0, -100, 2, 1]}, null, 1, -100]}
+  expected: {outcome: value, fields: {out: ['11/12', 3]}}
+  note: Recorded structure (2D f32 self, int64 target containing ignore_index -100, weight None, reduction 1). Losses
+    1, ignored, 3/2, 1/4; sum 11/4 over three non-ignored targets.
+- id: NL.E2
+  profile: aten_real
+  clauses: [NL.C2]
+  input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2', -1, '-3/2'], [-2, '-1/4',
+            -3]]}, {t: i64, v: [0, -100, 2, 1]}, null, 2, -100]}
+  expected: {outcome: value, fields: {out: ['11/4', 3]}}
+- id: NL.E3
+  profile: aten_real
+  clauses: [NL.C2]
+  input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2', -1, '-3/2'], [-2, '-1/4',
+            -3]]}, {t: i64, v: [0, -100, 2, 1]}, null, 0, -100]}
+  expected: {outcome: value, fields: {out: [[1, 0, '3/2', '1/4'], 0]}}
+- id: NL.E4
+  profile: aten_real
+  clauses: [NL.C1, NL.C2]
+  input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2', -1, '-3/2'], [-2, '-1/4',
+            -3]]}, {t: i64, v: [0, -100, 2, 1]}, {t: f32, v: [2, 1, '1/2']}, 1, -100]}
+  expected: {outcome: value, fields: {out: ['6/7', '7/2']}}
+  note: Weighted losses 2, 3/4, 1/4 (sum 3); total weight 2 + 1/2 + 1.
+- {id: NL.E5, profile: aten_real, clauses: [NL.C3], input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2],
+          [-3, -4]]}, {t: i64, v: [-100, -100]}, null, 1, -100]}, expected: {outcome: domain_undefined}}
+- {id: NL.E6, profile: aten_real, clauses: [NL.C2, NL.C3], input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1,
+            -2], [-3, -4]]}, {t: i64, v: [-100, -100]}, null, 2, -100]}, expected: {outcome: value, fields: {out: [0,
+        0]}}}
+- {id: NL.E7, profile: aten_real, clauses: [NL.C2], input: {op: aten.nll_loss_forward, args: [{t: f64, v: [-1, -2]},
+      {t: i64, v: 1, shape: []}, null, 1, -100]}, expected: {outcome: value, fields: {out: [2, 1]}}, note: 1D self, 0D
+    target}
+- {id: NL.E8, profile: aten_real, clauses: [NL.C5], input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2,
+            -3]]}, {t: i64, v: [3]}, null, 1, -100]}, expected: {outcome: invalid_input}}
+- {id: NL.E9, profile: aten_real, clauses: [NL.C1], input: {op: aten.nll_loss_forward, args: [{t: bf16, v: [[-1, -2],
+          [-3, -4]]}, {t: i64, v: [0, 1]}, null, 1, 0]}, expected: {outcome: value, fields: {out: [4, 1]}}, note: ignore_index
+    0 is a class index}
+- {id: NL.E10, profile: aten_real, clauses: [NL.C5], input: {op: aten.nll_loss_forward, args: [{t: f32, v: [[-1, -2]]},
+      {t: i64, v: [0]}, null, 3, -100]}, expected: {outcome: invalid_input}}
+- id: NL.E11
+  profile: aten_real
+  clauses: [NL.C4]
+  input: {op: aten.nll_loss_backward, args: [{t: f32, v: 1, shape: []}, {t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2',
+          -1, '-3/2'], [-2, '-1/4', -3]]}, {t: i64, v: [0, -100, 2, 1]}, null, 1, -100, {t: f32, v: 3, shape: []}]}
+  expected: {outcome: value, fields: {out: [['-1/3', 0, 0], [0, 0, 0], [0, 0, '-1/3'], [0, '-1/3', 0]]}}
+  readings:
+    NL.R1: {outcome: value, fields: {out: [['-1/3', 0, 0], [0, 0, 0], [0, 0, '-1/3'], [0, '-1/3', 0]]}}
+  note: Recorded structure (scalar grad_output and total_weight, reduction 1, ignore_index -100).
+- id: NL.E12
+  profile: aten_real
+  clauses: [NL.C4]
+  input: {op: aten.nll_loss_backward, args: [{t: f32, v: 2, shape: []}, {t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2',
+          -1, '-3/2'], [-2, '-1/4', -3]]}, {t: i64, v: [0, -100, 2, 1]}, null, 1, -100, {t: f32, v: 4, shape: []}]}
+  expected: {outcome: value, fields: {out: [['-1/2', 0, 0], [0, 0, 0], [0, 0, '-1/2'], [0, '-1/2', 0]]}}
+  readings:
+    NL.R1: {outcome: value, fields: {out: [['-2/3', 0, 0], [0, 0, 0], [0, 0, '-2/3'], [0, '-2/3', 0]]}}
+  note: The supplied total_weight 4 differs from the recomputed 3; the task uses the supplied value.
+- id: NL.E13
+  profile: aten_real
+  clauses: [NL.C4]
+  input: {op: aten.nll_loss_backward, args: [{t: f32, v: [1, 2, 3, 4]}, {t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2',
+          -1, '-3/2'], [-2, '-1/4', -3]]}, {t: i64, v: [0, -100, 2, 1]}, null, 0, -100, {t: f32, v: 0, shape: []}]}
+  expected: {outcome: value, fields: {out: [[-1, 0, 0], [0, 0, 0], [0, 0, -3], [0, -4, 0]]}}
+- id: NL.E14
+  profile: aten_real
+  clauses: [NL.C4]
+  input: {op: aten.nll_loss_backward, args: [{t: f32, v: 3, shape: []}, {t: f32, v: [[-1, -2, -3], [-4, -5, -6], ['-1/2',
+          -1, '-3/2'], [-2, '-1/4', -3]]}, {t: i64, v: [0, -100, 2, 1]}, {t: f32, v: [2, 1, '1/2']}, 2, -100, {t: f32,
+        v: '7/2', shape: []}]}
+  expected: {outcome: value, fields: {out: [[-6, 0, 0], [0, 0, 0], [0, 0, '-3/2'], [0, -3, 0]]}}
+- {id: NL.E15, profile: aten_real, clauses: [NL.C4], input: {op: aten.nll_loss_backward, args: [{t: f32, v: 1, shape: []},
+      {t: f32, v: [[-1, -2], [-3, -4]]}, {t: i64, v: [-100, -100]}, null, 1, -100, {t: f32, v: 0, shape: []}]},
+  expected: {outcome: value, fields: {out: [[0, 0], [0, 0]]}}, note: every target ignored (NL.BWD_EMPTY)}
+- {id: NL.E16, profile: aten_real, clauses: [NL.C4], input: {op: aten.nll_loss_backward, args: [{t: f32, v: 1, shape: []},
+      {t: f32, v: [[-1, -2], [-3, -4]]}, {t: i64, v: [0, -100]}, null, 1, -100, {t: f32, v: 0, shape: []}]},
+  expected: {outcome: domain_undefined}}
+- {id: NL.E17, profile: aten_real, clauses: [NL.C4], input: {op: aten.nll_loss_backward, args: [{t: f32, v: 1, shape: []},
+      {t: f32, v: [[nan, 0]]}, {t: i64, v: [1]}, null, 2, -100, {t: f32, v: 1, shape: []}]}, expected: {outcome: value,
+    fields: {out: [[0, -1]]}}, note: the values of self are not read}
+- {id: NL.E18, profile: aten_real, clauses: [NL.C5], input: {op: aten.nll_loss_backward, args: [{t: f32, v: 1, shape: []},
+      {t: f32, v: [[-1, -2], [-3, -4]]}, {t: i64, v: [0, 1]}, null, 0, -100, {t: f32, v: 0, shape: []}]}, expected: {
+    outcome: invalid_input}, note: reduction none with 2D self needs grad_output of shape (N)}
+signature:
+  inputs: ['op: aten.nll_loss_forward | aten.nll_loss_backward', 'args / kwargs with the ATen schema names (self, target,
+      weight, reduction, ignore_index; grad_output and total_weight for the backward)']
+  pre_state: []
+  post_state: []
+  observation_unit: the complete ATen return (forward - output and total_weight; backward - grad_input)
+domain:
+  valid: [1D or 2D finite f16 / bf16 / f32 / f64 self, 'int64 targets in [0, C) or equal to ignore_index', optional finite
+      weight of shape (C), 'reduction 0, 1 or 2']
+  domain_undefined: [mean reduction with total weight 0 and at least one quotient needed]
+  invalid_input: [self of rank other than 1 or 2, target shape mismatch, out-of-range non-ignored target, weight of the
+      wrong shape, reduction outside 0-2, grad_output or total_weight of the wrong size, non-integer target dtype]
+  unsupported: [infinite values, non-int64 integer targets, f8 dtypes]
+mutation_requirements:
+- {id: NL.M1, misreading: mean over all targets including ignored ones, witnesses: [NL.E1]}
+- {id: NL.M2, misreading: 'ignored targets contribute (read as class 0 without masking)', witnesses: [NL.E1]}
+- {id: NL.M3, misreading: total_weight counts all targets including ignored ones, witnesses: [NL.E1]}
+- {id: NL.M4, misreading: sign of the loss reversed, witnesses: [NL.E1]}
+- {id: NL.M5, misreading: mean backward without the division by total_weight, witnesses: [NL.E11]}
+- {id: NL.M6, misreading: ignored targets receive a gradient, witnesses: [NL.E11]}
+- {id: NL.M7, misreading: weighted mean divided by the number of non-ignored targets, witnesses: [NL.E4]}
+- {id: NL.M8, misreading: 'Reduction enum misread (1 as sum, 2 as mean)', witnesses: [NL.E1]}
+- {id: NL.M9, misreading: mean over an all-ignored batch returns 0, witnesses: [NL.E5]}
+- {id: NL.M10, misreading: reduction none returns the count as total_weight, witnesses: [NL.E3]}
+- {id: NL.M11, misreading: backward ignores the class weight, witnesses: [NL.E14]}
+nonclaims:
+- total_weight and its value 0 for reduction none, the use of the supplied total_weight in the backward and the
+  all-ignored backward rest on the PyTorch 2.10 schemas and sources (native kernel, decomposition, derivatives.yaml),
+  not on the documentation pages; agreement with them is agreement with those programs.
+- Floating-point rounding of the sums and quotients is the numerical question K - G. The K-dimensional loss
+  (nll_loss2d, nll_loss_nd) and the public functional / module calls are not covered by this contract.
+changes:
+- date: '2026-10-20'
+  change: New contract for the ATen overloads nll_loss_forward and nll_loss_backward (profile aten_real), with
+    decisions NL.TASK, NL.FORWARD, NL.TOTAL_WEIGHT, NL.EMPTY_MEAN, NL.BWD_SUPPLIED, NL.BWD_EMPTY and reading NL.R1.
+  trigger: Path A closure (G6) - recorded FlagGems nll_loss_forward / nll_loss_backward calls (from cross_entropy) had
+    no contract. They are kept out of CE, whose profiles take logits and an explicit upstream; these overloads take
+    log-probabilities, return total_weight and take the backward's total_weight as an argument.

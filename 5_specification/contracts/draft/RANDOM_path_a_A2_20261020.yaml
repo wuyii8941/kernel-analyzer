@@ -1,0 +1,261 @@
+schema_version: '1.2'
+id: RANDOM
+role: RANDOM
+title: Deterministic dropout forward boundaries, finite native dropout backward, and native dropout forward given the returned mask
+review:
+  status: drafted
+  author: Claude (path A closure work package E), 2026-10-20; profiles deterministic_forward and finite_backward unchanged from the review by OpenAI Codex (2026-10-19)
+  date: '2026-10-20'
+  scope: >-
+    PyTorch 2.10 dropout cases whose complete value is fixed without choosing a random stream, plus native dropout
+    forward conditioned on the mask the call returned. The new profile awaits a review by someone who did not write it.
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [aten.dropout, torch.nn.functional.dropout, aten.native_dropout_backward, aten.native_dropout]
+profiles:
+  deterministic_forward:
+    meaning: >-
+      Complete dropout forward values on positive rank-1 through rank-4 physical finite f16, bf16, f32 or f64
+      tensors when evaluation is selected, or when training uses p=0 or p=1. These cases have a unique result without
+      observing or reproducing a random stream. Training with 0<p<1 is outside this profile.
+    task_choice_required: false
+    basis: [RN2.SCHEMA, RN2.DETERMINISTIC]
+  finite_backward:
+    meaning: >-
+      Complete native dropout backward values for a positive rank-1 through rank-4 physical finite f16, bf16, f32 or
+      f64 gradient tensor, an explicit same-shape Boolean mask, and a finite exact scale.
+    task_choice_required: false
+    basis: [RN2.SCHEMA, RN2.BACKWARD]
+  native_forward_given_mask:
+    meaning: >-
+      aten.native_dropout(input, p, train) -> (output, mask) on a finite f16, bf16, f32 or f64 input of positive size
+      and any rank, with the mask the call returned supplied as the reference input observed_mask. Given that mask the
+      output is determined: input * mask / (1 - p) in training with 0 < p < 1; input when train is false or p = 0;
+      zeros when p = 1. The profile checks the consistency of the output with the mask and the documented scaling;
+      it does not check that the mask is random or has the documented keep probability.
+    task_choice_required: false
+    basis: [RN3.CONDITIONED, RN3.SCALING, RN3.MASK_POSITION, RN3.TRAIN_NONE]
+readings:
+  keep_fraction:
+    meaning: >-
+      Diagnostic only, never part of the verdict: [fraction of true entries in observed_mask, documented keep
+      probability 1 - p] for a native_dropout query. Whether the fraction is plausible for Bernoulli(1 - p) is a
+      separate statistical question.
+    basis: [T_DROPOUT.DEF, RN3.CONDITIONED]
+outputs:
+  out:
+    shape: >-
+      the complete input or gradient shape; for aten.native_dropout the ATen return list [output, mask] where output
+      has the input shape and dtype and the mask position is not compared (RN3.MASK_POSITION)
+    guarantee: exact
+comparison:
+  input_binding: >-
+    The tensor records contain the exact physical values received in their declared dtypes. Forward probability and
+    training mode, or backward mask and scale, are explicit call arguments.
+  complete_output: The complete returned tensor is observed with dtype, explicit shape and every value.
+  quality: Exact finite-real task value, dtype and shape; no tolerance and no partial output.
+  test_evidence: Independent coordinate formulas and PyTorch 2.10 comparisons over all selected floating dtypes.
+  error_handling: Malformed calls are invalid_input; stochastic training forward without the returned mask, in-place
+    operation, special values, signed-zero distinctions, empty or unselected ranks and other dtypes receive no
+    reference answer. native_dropout with train=None is unsupported (RN3.TRAIN_NONE).
+decisions:
+- id: RN2.SCHEMA
+  status: reviewed
+  statement: >-
+    Select the one-output functional dropout calls and the one-output native_dropout_backward call. Native dropout
+    forward returns an additional mask and is a different task. In-place, feature, alpha and fused attention dropout
+    forms are also different tasks.
+  basis: [TS_NATIVE_FUNCTIONS.DROPOUT_SCHEMAS]
+- id: RN2.DETERMINISTIC
+  status: reviewed
+  statement: >-
+    Evaluation-mode dropout is the identity. In training, p=0 is the identity and p=1 is the all-zero tensor. For
+    0<p<1 the output depends on independently sampled Bernoulli variables, so this value reference refuses the query
+    instead of inventing a mask or accepting the tested kernel's mask as ground truth.
+  basis: [T_DROPOUT.DEF, T_DROPOUT_F.DEF, TS_DECOMP.DROPOUT]
+- id: RN2.BACKWARD
+  status: reviewed
+  statement: >-
+    Native dropout backward with an explicit mask and scale returns grad_output * mask * scale at every coordinate.
+    Its result is deterministic because the mask is an ordinary task input.
+  basis: [TS_DECOMP.DROPOUT_BWD, TS_NATIVE_FUNCTIONS.DROPOUT_SCHEMAS]
+- id: RN3.CONDITIONED
+  status: drafted
+  statement: >-
+    native_dropout returns (output, mask). The mask is drawn from Bernoulli variables whose stream is
+    implementation-defined, so no f can predict it. Given the Boolean mask the call actually returned, the output is
+    a deterministic function of input, p and that mask. The profile therefore takes the returned mask as an
+    additional reference input, the keyword observed_mask (not an ATen argument: the measured call is replayed as
+    recorded and the harness maps return position 1 into this keyword). Alternatives: (a) refuse training forward
+    (the previous reviewed scope); (b) a pseudo-op such as random.native_dropout_given_mask; (c) the keyword
+    observed_mask on aten.native_dropout. Choice (c), so that covers and overload matching stay those of the real
+    ATen call. What is checked is the consistency of the output with the mask and the scaling, not the randomness,
+    independence or keep probability of the mask; the mask is not an independent reference for itself. The keep
+    fraction is available only as the diagnostic reading keep_fraction. observed_mask must be a Boolean tensor of the
+    input's shape (else invalid_input); in training with 0 < p < 1 without it the call is unsupported. Negative zero
+    in the input denotes the real value 0 (signed-zero distinctions are not compared).
+  basis: [TS_NATIVE_FUNCTIONS_CR.NATIVE_DROPOUT_SCHEMA, T_DROPOUT.DEF, TS_DECOMP.DROPOUT, TS_DROPOUT_CPP.NATIVE_CPU]
+- id: RN3.SCALING
+  status: drafted
+  statement: >-
+    In training with 0 < p < 1 the output is input * mask * (1/(1 - p)) at every coordinate, with p the exact value
+    of the received double and the scale exact (the page states the 1/(1-p) scaling during training; the
+    decomposition and the CPU kernel multiply by the Boolean mask and that scale). train false returns the input and
+    an all-true mask; training with p = 0 returns the input (all-true mask in the decomposition, Bernoulli(1) in the
+    kernels); p = 1 returns zeros and an all-false mask (decomposition and CUDA kernel; the CPU kernel uses scale 0 and
+    Bernoulli(0)). p outside [0, 1] is invalid_input. Non-floating inputs are unsupported.
+  basis: [T_DROPOUT.DEF, TS_DECOMP.DROPOUT, TS_DROPOUT_CPP.NATIVE_CPU, TS_DROPOUT_CU.NATIVE_CUDA]
+- id: RN3.MASK_POSITION
+  status: drafted
+  statement: >-
+    The reference returns [output, None]: return position 1 (the mask) is not compared. In the conditioned case the
+    mask is the reference input itself, so comparing it with the returned mask is vacuous (its dtype and shape are
+    validated as input). In the deterministic cases (train false, p = 0, p = 1) the mask is defined (all true / all
+    false), but the RANDOM output out is a numeric field shared with the reviewed profiles and the measurement
+    binding accepts one kind (numeric or Boolean) per output field, so Boolean mask values cannot be returned in it.
+    Alternatives: (a) a mixed numeric/Boolean field (kind discrete), refused by the measurement binding; (b) a second
+    Boolean output field mask, not expressible in the ATen return-list convention of the path A harness; (c) not
+    compared. Choice (c); a wrong mask in the deterministic cases is not detected by this profile.
+  basis: [TS_NATIVE_FUNCTIONS_CR.NATIVE_DROPOUT_SCHEMA, RN3.CONDITIONED]
+- id: RN3.TRAIN_NONE
+  status: drafted
+  statement: >-
+    The schema allows train = None. The decomposition treats it as evaluation (input, all-true mask); the CPU and
+    CUDA kernels treat it as training. No page documents it, so train = None is unsupported. Recorded calls pass True.
+  basis: [TS_NATIVE_FUNCTIONS_CR.NATIVE_DROPOUT_SCHEMA, TS_DECOMP.DROPOUT, TS_DROPOUT_CPP.NATIVE_CPU, TS_DROPOUT_CU.NATIVE_CUDA]
+clauses:
+- id: RN2.C1
+  basis: [RN2.SCHEMA, RN2.DETERMINISTIC]
+  statement: Evaluation forward returns the complete input unchanged for every admitted p in [0,1].
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C2
+  basis: [RN2.DETERMINISTIC]
+  statement: Training forward returns the complete input for p=0 and a same-dtype, same-shape all-zero tensor for p=1.
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C3
+  basis: [RN2.DETERMINISTIC]
+  statement: Training forward with 0<p<1 has no value answer in this profile.
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C4
+  basis: [RN2.BACKWARD]
+  statement: Every backward output coordinate is grad_output at that coordinate times the Boolean mask and exact scale.
+  observes: [out]
+  evidence_kind: definition
+- id: RN2.C5
+  basis: [RN2.SCHEMA]
+  statement: >-
+    Both profiles require complete positive rank-1 through rank-4 physical finite floating tensors; backward additionally
+    requires a same-shape Boolean mask. Special values, signed-zero distinctions and other ranks or dtypes are refused.
+  observes: [out]
+  evidence_kind: definition
+- id: RN3.C1
+  basis: [RN3.CONDITIONED, RN3.SCALING]
+  statement: In training with 0 < p < 1, every output coordinate is input * (1/(1-p)) where observed_mask is true and 0 where it is false.
+  observes: [out]
+  evidence_kind: definition
+- id: RN3.C2
+  basis: [RN3.SCALING]
+  statement: train false or p = 0 returns the complete input; training with p = 1 returns the all-zero tensor of the input's shape and dtype.
+  observes: [out]
+  evidence_kind: definition
+- id: RN3.C3
+  basis: [RN3.CONDITIONED, RN3.SCALING, RN3.TRAIN_NONE]
+  statement: A missing observed_mask in stochastic training, train = None, special input values and non-floating inputs are unsupported; a non-Boolean or wrongly shaped observed_mask or p outside [0, 1] is invalid_input.
+  observes: [out]
+  evidence_kind: definition
+- id: RN3.C4
+  basis: [RN3.MASK_POSITION]
+  statement: Return position 1 (the mask) is returned as None and is not compared.
+  observes: [out]
+  evidence_kind: definition
+examples:
+- {id: RN2.E1, profile: deterministic_forward, clauses: [RN2.C1], input: {op: aten.dropout, args: [{t: f32, v: [2, -4, 6]}, '1/2', false]}, expected: {outcome: value, fields: {out: [2, -4, 6]}}}
+- {id: RN2.E2, profile: deterministic_forward, clauses: [RN2.C1], input: {op: torch.nn.functional.dropout, args: [{t: f64, v: [[1, 2], [3, 4]]}], kwargs: {p: '1/4', training: false, inplace: false}}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4]]}}}
+- {id: RN2.E3, profile: deterministic_forward, clauses: [RN2.C2], input: {op: aten.dropout, args: [{t: f16, v: [1, -2, 3]}, 0, true]}, expected: {outcome: value, fields: {out: [1, -2, 3]}}}
+- {id: RN2.E4, profile: deterministic_forward, clauses: [RN2.C2], input: {op: torch.nn.functional.dropout, args: [{t: bf16, v: [[1, -2], [3, 4]]}, 1, true]}, expected: {outcome: value, fields: {out: [[0, 0], [0, 0]]}}}
+- {id: RN2.E5, profile: deterministic_forward, clauses: [RN2.C3], input: {op: aten.dropout, args: [{t: f32, v: [1, 2]}, '1/2', true]}, expected: {outcome: unsupported}}
+- {id: RN2.E6, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: [1, 2]}, '3/2', false]}, expected: {outcome: invalid_input}}
+- {id: RN2.E7, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: [1, 2]}, 0, 1]}, expected: {outcome: invalid_input}}
+- {id: RN2.E8, profile: deterministic_forward, clauses: [RN2.C5], input: {op: torch.nn.functional.dropout, args: [{t: f32, v: [1, 2]}], kwargs: {p: 0, training: true, inplace: true}}, expected: {outcome: unsupported}}
+- {id: RN2.E9, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: i64, v: [1, 2]}, 0, true]}, expected: {outcome: unsupported}}
+- {id: RN2.E10, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: [1, inf]}, 0, true]}, expected: {outcome: unsupported}}
+- {id: RN2.E11, profile: deterministic_forward, clauses: [RN2.C5], input: {op: aten.dropout, args: [{t: f32, v: ['1/3', 1]}, 0, true]}, expected: {outcome: invalid_input}}
+- {id: RN2.E12, profile: finite_backward, clauses: [RN2.C4], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2, -3]}, {t: b8, v: [true, false, true]}, '5/4']}, expected: {outcome: value, fields: {out: ['5/4', 0, '-15/4']}}}
+- {id: RN2.E13, profile: finite_backward, clauses: [RN2.C4], input: {op: aten.native_dropout_backward, args: [{t: f16, v: [[2, -4], [6, 8]]}, {t: b8, v: [[false, true], [true, false]]}, '-1/2']}, expected: {outcome: value, fields: {out: [[0, 2], [-3, 0]]}}}
+- {id: RN2.E14, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2]}, {t: b8, v: [true]}, 1]}, expected: {outcome: invalid_input}}
+- {id: RN2.E15, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2]}, {t: i64, v: [1, 0]}, 1]}, expected: {outcome: invalid_input}}
+- {id: RN2.E16, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: [1, 2]}, {t: b8, v: [true, false]}, inf]}, expected: {outcome: unsupported}}
+- {id: RN2.E17, profile: finite_backward, clauses: [RN2.C5], input: {op: aten.native_dropout_backward, args: [{t: f32, v: 2}, {t: b8, v: true}, 1]}, expected: {outcome: unsupported}}
+- {id: RN3.E1, profile: native_forward_given_mask, clauses: [RN3.C1, RN3.C4], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4, 6]}, '1/4', true], kwargs: {observed_mask: {t: b8, v: [true, false, true]}}}, expected: {outcome: value, fields: {out: [['8/3', 0, 8], null]}}, readings: {keep_fraction: {outcome: value, fields: {out: ['2/3', '3/4']}}}}
+- {id: RN3.E2, profile: native_forward_given_mask, clauses: [RN3.C1], input: {op: aten.native_dropout, args: [{t: bf16, v: [[1, -2], [3, 4]]}, '1/2', true], kwargs: {observed_mask: {t: b8, v: [[false, true], [true, true]]}}}, expected: {outcome: value, fields: {out: [[[0, -4], [6, 8]], null]}}}
+- {id: RN3.E3, profile: native_forward_given_mask, clauses: [RN3.C1], note: 'recorded p = 0.1 as a Python float: exact double 3602879701896397/36028797018963968, scale 36028797018963968/32425917317067571', input: {op: aten.native_dropout, args: [{t: bf16, v: [[[3, '-1/2']]]}, 0.1, true], kwargs: {observed_mask: {t: b8, v: [[[true, false]]]}}}, expected: {outcome: value, fields: {out: [[[['108086391056891904/32425917317067571', 0]]], null]}}}
+- {id: RN3.E4, profile: native_forward_given_mask, clauses: [RN3.C2], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', false]}, expected: {outcome: value, fields: {out: [[2, 4], null]}}}
+- {id: RN3.E5, profile: native_forward_given_mask, clauses: [RN3.C2], input: {op: aten.native_dropout, args: [{t: f32, v: [2, -4]}, 1, true]}, expected: {outcome: value, fields: {out: [[0, 0], null]}}}
+- {id: RN3.E6, profile: native_forward_given_mask, clauses: [RN3.C2], input: {op: aten.native_dropout, args: [{t: f16, v: [2, -4]}, 0, true], kwargs: {observed_mask: {t: b8, v: [true, true]}}}, expected: {outcome: value, fields: {out: [[2, -4], null]}}}
+- {id: RN3.E7, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', true]}, expected: {outcome: unsupported}}
+- {id: RN3.E8, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', true], kwargs: {observed_mask: {t: b8, v: [true]}}}, expected: {outcome: invalid_input}}
+- {id: RN3.E9, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', true], kwargs: {observed_mask: {t: i64, v: [1, 0]}}}, expected: {outcome: invalid_input}}
+- {id: RN3.E10, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '3/2', true], kwargs: {observed_mask: {t: b8, v: [true, true]}}}, expected: {outcome: invalid_input}}
+- {id: RN3.E11, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, '1/2', null], kwargs: {observed_mask: {t: b8, v: [true, false]}}}, expected: {outcome: unsupported}}
+- {id: RN3.E12, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: f32, v: [2, inf]}, '1/2', true], kwargs: {observed_mask: {t: b8, v: [true, false]}}}, expected: {outcome: unsupported}}
+- {id: RN3.E13, profile: native_forward_given_mask, clauses: [RN3.C1], note: 0-dim input, input: {op: aten.native_dropout, args: [{t: f32, v: 3}, '1/2', true], kwargs: {observed_mask: {t: b8, v: true}}}, expected: {outcome: value, fields: {out: [6, null]}}}
+- {id: RN3.E14, profile: native_forward_given_mask, clauses: [RN3.C3], input: {op: aten.native_dropout, args: [{t: i64, v: [2, 4]}, '1/2', true], kwargs: {observed_mask: {t: b8, v: [true, false]}}}, expected: {outcome: unsupported}}
+- {id: RN3.E15, profile: deterministic_forward, clauses: [RN2.C5], note: native_dropout belongs to native_forward_given_mask, input: {op: aten.native_dropout, args: [{t: f32, v: [2, 4]}, 0, false]}, expected: {outcome: unsupported}}
+signature:
+  inputs: [selected dropout operation and exact scalar parameters, one physical finite floating tensor, an explicit same-shape Boolean mask for backward, the returned mask as observed_mask for native forward]
+  pre_state: [all input tensors are unchanged]
+  post_state: [one complete newly returned tensor]
+  observation_unit: every returned coordinate together with dtype and shape
+domain:
+  valid:
+  - evaluation forward with p in the closed unit interval
+  - training forward with p equal to zero or one
+  - native backward with explicit Boolean mask and finite exact scale
+  - native forward with p in [0, 1], Boolean train, and the returned same-shape Boolean mask as observed_mask (required in training with 0 < p < 1)
+  invalid_input:
+  - malformed record, probability outside the closed unit interval, nonboolean options, wrong mask dtype or shape, or unrepresentable physical input value
+  unsupported:
+  - stochastic training forward without the returned mask, native forward with train None, in-place operation, special values, signed-zero distinctions, empty dimensions, unselected ranks, or integer or complex floating inputs
+mutation_requirements:
+- {id: RN2.M1, misreading: evaluation forward still applies inverse keep-probability scaling, witnesses: [RN2.E1]}
+- {id: RN2.M2, misreading: training p=1 returns the input instead of zeros, witnesses: [RN2.E4]}
+- {id: RN2.M3, misreading: backward omits scale, witnesses: [RN2.E12]}
+- {id: RN2.M4, misreading: backward uses the complement of the mask, witnesses: [RN2.E13]}
+- {id: RN2.M5, misreading: backward adds scale instead of multiplying by it, witnesses: [RN2.E12]}
+- {id: RN3.M1, misreading: native dropout scales kept elements by (1 - p) instead of 1/(1 - p), witnesses: [RN3.E1]}
+- {id: RN3.M2, misreading: native dropout applies the mask but drops the scaling, witnesses: [RN3.E1]}
+- {id: RN3.M3, misreading: native dropout applies the scaling but drops the mask, witnesses: [RN3.E1]}
+- {id: RN3.M4, misreading: native dropout keeps the elements where the mask is false, witnesses: [RN3.E2]}
+- {id: RN3.M5, misreading: native dropout keeps the 1/(1 - p) scaling in evaluation mode, witnesses: [RN3.E4]}
+- {id: RN3.M6, misreading: native dropout with p = 1 returns the input, witnesses: [RN3.E5]}
+- {id: RN3.M7, misreading: native dropout treats train = None as evaluation, witnesses: [RN3.E11]}
+nonclaims:
+- No value ground truth is claimed for training forward with 0<p<1. Its output law requires a separate statistical test, and a tested kernel's realized mask is not an independent reference.
+- native_forward_given_mask checks only that the returned output agrees with the returned mask and the documented scaling. It does not certify the mask: its randomness, independence, keep probability (the keep_fraction reading is diagnostic only) or, in the deterministic cases, its all-true / all-false value (RN3.MASK_POSITION).
+- No result is certified for random-number generation, in-place or feature dropout, fused attention dropout, gradients with respect to probability, special values, empty tensors, aliasing or device placement.
+changes:
+- date: '2026-10-20'
+  change: >-
+    Add profile native_forward_given_mask for aten.native_dropout with the returned mask as reference input
+    observed_mask, decisions RN3.*, clauses RN3.C1-C4, examples RN3.E1-E15, mutants RN3.M1-M7 and the diagnostic reading
+    keep_fraction; add aten.native_dropout to covers. Existing profiles are unchanged. Review status returned to
+    drafted and implementation status to pending.
+  trigger: >-
+    Path A closure plan item G8: recorded native_dropout calls (bert-tiny, gpt2; f32 / bf16; p 0.1; train True) had
+    no covering profile. The earlier concern that a returned mask is not an independent reference is addressed by
+    claiming only output-mask consistency (RN3.CONDITIONED).
+- date: '2026-10-19'
+  change: >-
+    Replace the conditioned-random draft with two reviewed deterministic profiles: forward boundary cases independent of
+    a random stream, and native backward with an explicit mask. Preserve the former contract and adapter under
+    contracts/draft.
+  trigger: >-
+    The former adapter accepted a synthetic keep keyword absent from the selected ATen schemas. The current runtime
+    binding cannot use a returned mask as a task input, and doing so would not independently validate that mask.

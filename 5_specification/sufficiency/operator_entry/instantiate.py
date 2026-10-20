@@ -207,3 +207,230 @@ def _restride(t):
     flat = torch.as_strided(t, (span,), (1,), t.storage_offset()).clone()
     return flat.as_strided(t.size(), t.stride(), 0)
 '''
+
+
+# ------------------------------------------------------------------------------------------ generation rule v2 (A2)
+
+RULE_V2 = "operator_entry.instantiate v2"
+
+# Keyword arguments that do not change any returned value: they are replayed as recorded, and not passed to the
+# contract (each dropped argument is listed in the plan with this basis).
+NON_SEMANTIC = {
+    "device": "placement only: the measured call runs on the recorded device; values do not depend on it",
+    "layout": "torch.strided, the only layout accepted here; the layout does not change values",
+    "pin_memory": "host-memory pinning; does not change values",
+    "memory_format": "memory format changes strides, not values; the output's layout is part of the observation",
+    "non_blocking": "copy synchronisation; does not change values",
+}
+
+
+def decode_tags(x):
+    """Recorded values -> call arguments: memory-format tags (record.to_host) back to torch.memory_format."""
+    if isinstance(x, dict) and set(x) == {"__memory_format__"}:
+        return getattr(torch, x["__memory_format__"])
+    if isinstance(x, (list, tuple)):
+        return type(x)(decode_tags(v) for v in x)
+    if isinstance(x, dict):
+        return {k: decode_tags(v) for k, v in x.items()}
+    return x
+
+
+def _template_v2(x, tensors, path):
+    if isinstance(x, dict) and set(x) == {"__memory_format__"}:
+        return x
+    return _template(x, tensors, path)
+
+
+def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict, profile: str, runtime: dict,
+                adapter, exclude=(), budget=1800, task_statement=None):
+    """Rule v2: rule v1 plus (a) tuple returns mapped position by position under the adapter's ATEN_RETURNS
+    declaration, (b) the single written argument of a mutable overload mapped as the output post-state,
+    (c) non-semantic keyword arguments replayed but not passed to the contract, (d) a reference input conditioned on
+    a returned value (adapter ATEN_OBSERVED_INPUTS; that returned value is compared too)."""
+    fn = overload(op)
+    schema = fn._schema
+    base = "aten." + schema.name.split("::")[1]
+    written = [i for i, a in enumerate(schema.arguments) if a.alias_info is not None and a.alias_info.is_write]
+    if written and (written != [0] or len(schema.returns) != 1 or schema.arguments[0].kwarg_only):
+        raise Refuse("state mapping", f"written arguments {written}: only a single written self is generated")
+    rtypes = [str(r.type) for r in schema.returns]
+    if not rtypes or any(t not in ("Tensor", "Tensor?") for t in rtypes):
+        raise Refuse("output mapping", f"return type {rtypes} is not one or more tensors")
+    from kernel_spec.schema import profile_outputs
+    outs = profile_outputs(contract, profile)
+    if set(outs) != {"out"}:
+        raise Refuse("output mapping", f"profile {profile} outputs {sorted(outs)} (rule v2 maps one 'out' field)")
+    info = outs["out"]
+    if info.get("kind") == "discrete" or info.get("guarantee") not in ("exact", "rigorous_enclosure"):
+        raise Refuse("output mapping", f"output out kind {info.get('kind')} is not a measurable numeric target")
+    n = len(rtypes)
+    meta = (getattr(adapter, "ATEN_RETURNS", None) or {}).get(base)
+    if n > 1 and (meta is None or meta.get("positions") != n):
+        raise Refuse("output mapping", f"{n} returns without an ATEN_RETURNS declaration for {base}")
+    not_compared = {int(k): v for k, v in ((meta or {}).get("not_compared") or {}).items()}
+    observed = (getattr(adapter, "ATEN_OBSERVED_INPUTS", None) or {}).get(base)
+    rec = torch.load(values_pt, map_location="cuda", weights_only=False)
+    args, all_kwargs = rec["args"], core_aten.non_default_kwargs(fn, decode_tags(rec["kwargs"]))
+    dropped, contract_kwargs = [], {}
+    for k, v in all_kwargs.items():
+        if k in NON_SEMANTIC:
+            if k == "layout" and v is not torch.strided:
+                raise Refuse("argument encoding", f"layout {v}")
+            dropped.append({"argument": k, "value": repr(v), "basis": NON_SEMANTIC[k]})
+        else:
+            contract_kwargs[k] = v
+    none_positions = set()
+    if n > 1:
+        import flag_gems
+        with flag_gems.use_gems(exclude=list(exclude)):
+            probe = fn(*decode_tags(args), **all_kwargs)
+        none_positions = {i for i, r in enumerate(probe) if r is None}
+        del probe
+    tensors = {}
+    t_args = [_template_v2(v, tensors, f"/args/{i}") for i, v in enumerate(args)]
+    t_kwargs = {k: _template_v2(v, tensors, f"/kwargs/{k}") for k, v in contract_kwargs.items()}
+    t_call_kwargs = dict(t_kwargs, **{d["argument"]: _template_v2(all_kwargs[d["argument"]], tensors, "")
+                                      for d in dropped})
+    rule = f"rule {RULE_V2}"
+    input_map = [{"target": "/op", "literal": base, "basis": f"recorded overload {op} ({rule})"}]
+    for tname, (path, t) in tensors.items():
+        input_map.append({"target": path, "source": f"/tensor_arguments/{tname}/before", "conversion": "tensor_record"})
+    for i, v in enumerate(t_args):
+        _literals(v, f"/args/{i}", input_map)
+    for k, v in t_kwargs.items():
+        _literals(v, f"/kwargs/{k}", input_map)
+    conditioned = []
+    if observed is not None:
+        pos = int(observed["return_position"])
+        source = f"/returns/out{pos}"
+        input_map.append({"target": f"/kwargs/{observed['argument']}", "source": source,
+                          "conversion": "tensor_record"})
+        conditioned.append({"source": source, "basis": f"the {contract['id']} profile {profile} defines the "
+                            f"remaining outputs given returned output {pos}, which is itself compared exactly"})
+    if not t_args:
+        input_map.append({"target": "/args", "literal": [], "basis": "no positional argument recorded"})
+    if not t_kwargs and observed is None:
+        input_map.append({"target": "/kwargs", "literal": {}, "basis": "no non-default semantic keyword argument"})
+    # outputs
+    output_map, measured, unobserved, state_map = [], [], [], []
+    names = list(tensors)
+    if written:
+        self_name = next((t for t, (p, _) in tensors.items() if p == "/args/0"), None)
+        if self_name is None:
+            raise Refuse("state mapping", "the written argument is not a recorded tensor")
+        output_map.append({"target": "/out", "source": f"/tensor_arguments/{self_name}/after",
+                           "conversion": "tensor_record", "measure_output": "out"})
+        measured.append("out")
+        state_map = [{"argument": t, "effect": "output", "task": "op", "target": "/out"} if t == self_name
+                     else {"argument": t, "effect": "unchanged"} for t in names]
+    elif n == 1:
+        output_map.append({"target": "/out", "source": "/returns/out", "conversion": "tensor_record",
+                           "measure_output": "out"})
+        measured.append("out")
+    else:
+        for i in range(n):
+            if i in not_compared:
+                output_map.append({"target": f"/out/{i}", "literal": None,
+                                   "basis": f"return {i} is not defined by the task: {not_compared[i]}"})
+                unobserved.append({"position": i, "basis": not_compared[i]})
+            elif i in none_positions:
+                output_map.append({"target": f"/out/{i}", "literal": None,
+                                   "basis": f"the recorded call returns no tensor at position {i}"})
+            else:
+                output_map.append({"target": f"/out/{i}", "source": f"/returns/out{i}", "conversion": "tensor_record",
+                                   "measure_output": f"out{i}"})
+                measured.append(f"out{i}")
+    if not state_map:
+        state_map = [{"argument": t, "effect": "unchanged"} for t in names]
+    returned = ("self" if written else "single" if n == 1 else
+                [i for i in range(n) if i not in not_compared and i not in none_positions])
+    # files
+    calls, binds = spec / "corpus/calls", spec / "corpus/call_bindings"
+    data = calls / f"{name}_values.pt"
+    torch.save({"args": t_args, "kwargs": t_call_kwargs, "tensors": {k: t for k, (_, t) in tensors.items()}}, data)
+    plan_id = f"path_a.{name}"
+    call_src = CALL_TEMPLATE_V2.format(op=op, rule=RULE_V2, data=data.name, exclude=tuple(exclude),
+                                       returned=repr(returned))
+    (calls / f"{name}.py").write_text(call_src)
+    (calls / f"{name}_inputs.py").write_text(INPUTS_TEMPLATE.format(data=data.name) + "".join(
+        f"\n\ndef {t}(seed, shape, dtype):\n    return _get({t!r})\n" for t in tensors))
+    plan = {"schema": "triton-call-binding-v1", "id": plan_id, "status": "reviewed", "unresolved": [],
+            "generated_by": RULE_V2,
+            "subject": {"library": "FlagGems", "version": runtime["version"], "callable": f"{op} under flag_gems.use_gems()",
+                        "runtime_package": runtime, "boundary": "one recorded ATen call at the dispatch boundary",
+                        "measure_call": f"../calls/{name}.py:call"},
+            "launch_scope": "all_triton_launches_within_call",
+            "tasks": [{"id": "op", "contract": contract["id"], "profile": profile,
+                       "task_statement": task_statement or
+                       f"The {contract['id']} profile {profile} applied to the recorded {op} call "
+                       f"(no task choice: the profile requires none).",
+                       "input_map": input_map, "output_map": output_map}],
+            "state_map": state_map}
+    if dropped:
+        plan["dropped_arguments"] = dropped
+    if unobserved:
+        plan["unobserved_returns"] = unobserved
+    if conditioned:
+        plan["conditioned_on_returns"] = conditioned
+    text = json.dumps(plan, indent=2) + "\n"
+    (binds / f"{name}.json").write_text(text)
+    (spec / "validated/bindings" / f"{plan_id}.json").write_text(text)
+    (spec / "validated/calls" / f"{plan_id}.py").write_text(call_src)
+    tdt = {torch.float32: "float32", torch.bfloat16: "bfloat16", torch.float16: "float16", torch.float64: "float64"}
+    decl = {"call": f"../calls/{name}.py:call",
+            "inputs": {t: {"state": f"../calls/{name}_inputs.py:{t}", "shape": list(x.shape),
+                           "dtype": tdt.get(x.dtype, str(x.dtype).replace("torch.", ""))} for t, (_, x) in tensors.items()},
+            "compare": {"mode": "contract", "measure": measured, "binding_plan": f"../call_bindings/{name}.json",
+                        "specification_root": "../.."},
+            "units": {"development": 1, "confirmation": 2, "seed_offset": 0},
+            "alpha": 0.05,
+            "budget": {"cpu_seconds": budget, "gpu_seconds": budget, "case_timeout": budget, "max_units": 3},
+            "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
+            "multiplicity": "Holm within each rule class",
+            "reference_classes_allowed": ["complete_composed"],
+            "resolution": {"ulp_fraction": 0.125, "max_level": 3}}
+    dpath = spec / "corpus/measure_cases" / f"{name}.json"
+    dpath.write_text(json.dumps(decl, indent=1))
+    return dpath
+
+
+CALL_TEMPLATE_V2 = '''"""Path A generated call ({rule}): {op} under FlagGems, on the recorded arguments."""
+from pathlib import Path
+
+import torch
+import flag_gems
+
+# FlagGems functions not registered for this workload (deviation D-A3 run failures); the measurement copies without
+# the ATen dispatcher, so the copy operators themselves are not excluded.
+EXCLUDE = {exclude!r}
+_OP = torch.ops.{op}
+_REC = torch.load(Path(__file__).with_name({data!r}), map_location="cuda", weights_only=False)
+_RETURNED = {returned}
+
+
+def _fill(x, inputs):
+    if isinstance(x, dict) and set(x) == {{"__memory_format__"}}:
+        return getattr(torch, x["__memory_format__"])
+    if isinstance(x, dict) and "__tensor__" in x:
+        return inputs[x["__tensor__"]]
+    if isinstance(x, (list, tuple)):
+        return type(x)(_fill(v, inputs) for v in x)
+    if isinstance(x, dict):
+        return {{k: _fill(v, inputs) for k, v in x.items()}}
+    return x
+
+
+def call(inputs):
+    names = set(_REC["tensors"])
+    if set(inputs) != names:
+        raise ValueError(f"expected inputs {{sorted(names)}}")
+    for k, t in _REC["tensors"].items():
+        x = inputs[k]
+        if x.shape != t.shape or x.stride() != t.stride() or x.dtype != t.dtype:
+            raise ValueError(f"{{k}} differs from the recorded size, stride or dtype")
+    with flag_gems.use_gems(exclude=list(EXCLUDE)):
+        out = _OP(*_fill(_REC["args"], inputs), **_fill(_REC["kwargs"], inputs))
+    if _RETURNED in ("single", "self"):
+        return {{"out": out}}
+    return {{f"out{{i}}": out[i] for i in _RETURNED}}
+'''

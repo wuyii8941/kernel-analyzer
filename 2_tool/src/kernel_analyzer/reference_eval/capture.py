@@ -134,6 +134,79 @@ def _jsonable(value):
     return repr(value)
 
 
+_CUDART = []
+_D2H, _D2D, _H2D = 2, 3, 1
+
+
+def _cudart():
+    """libcudart through ctypes (the one PyTorch loaded): raw copies that never enter the ATen dispatcher."""
+    if not _CUDART:
+        import ctypes
+        import os
+        path = "libcudart.so.12"
+        try:
+            import nvidia.cuda_runtime as runtime
+            base = list(getattr(runtime, "__path__", []))[:1] or [os.path.dirname(runtime.__file__)]
+            candidate = os.path.join(base[0], "lib", "libcudart.so.12")
+            if os.path.exists(candidate):
+                path = candidate
+        except ImportError:
+            pass
+        lib = ctypes.CDLL(path)
+        lib.cudaMemcpy.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+        lib.cudaMemcpy.restype = ctypes.c_int
+        _CUDART.append(lib)
+    return _CUDART[0]
+
+
+def raw_copy(dst_ptr, src_ptr, nbytes, kind):
+    """cudaMemcpy after a device synchronization. The analysis copies device memory this way, not through
+    aten copy_ / _to_copy / index: those operators may be registered by the library under test (FlagGems registers
+    all three), whose code must not perform the tool's own copies (and re-entering it inside a launch deadlocks)."""
+    import torch
+    if nbytes:
+        torch.cuda.synchronize()
+        err = _cudart().cudaMemcpy(dst_ptr, src_ptr, nbytes, kind)
+        if err != 0:
+            raise RuntimeError(f"cudaMemcpy failed with error {err}")
+
+
+def device_to_host(ptr, nbytes):
+    """A new CPU uint8 tensor holding nbytes of device memory at ptr."""
+    import torch
+    out = torch.empty(nbytes, dtype=torch.uint8)
+    raw_copy(out.data_ptr(), ptr, nbytes, _D2H)
+    return out
+
+
+def device_copy(tensor):
+    """A new tensor on the same device with the same size, stride and bytes over the span the view reads
+    (storage offset 0), copied without the ATen dispatcher."""
+    import torch
+    if not tensor.is_cuda:
+        span = 1 + sum((s - 1) * st for s, st in zip(tensor.size(), tensor.stride())) if tensor.numel() else 0
+        flat = torch.as_strided(tensor, (span,), (1,), tensor.storage_offset()).clone()
+        return flat.as_strided(tensor.size(), tensor.stride(), 0)
+    if tensor.numel() == 0:
+        return torch.empty_strided(tensor.size(), tensor.stride(), dtype=tensor.dtype, device=tensor.device)
+    span = 1 + sum((s - 1) * st for s, st in zip(tensor.size(), tensor.stride()))
+    flat = torch.empty(span, dtype=tensor.dtype, device=tensor.device)
+    raw_copy(flat.data_ptr(), tensor.data_ptr(), span * tensor.element_size(), _D2D)
+    return flat.as_strided(tensor.size(), tensor.stride(), 0)
+
+
+def host_copy(tensor):
+    """device_copy's layout on the CPU (size, stride, bytes of the span), copied without the ATen dispatcher."""
+    import torch
+    if not tensor.is_cuda:
+        return device_copy(tensor)
+    if tensor.numel() == 0:
+        return torch.empty_strided(tensor.size(), tensor.stride(), dtype=tensor.dtype)
+    span = 1 + sum((s - 1) * st for s, st in zip(tensor.size(), tensor.stride()))
+    raw = device_to_host(tensor.data_ptr(), span * tensor.element_size())
+    return raw.view(tensor.dtype).as_strided(tensor.size(), tensor.stride(), 0)
+
+
 def _window_copy(tensor, indices, storage_relative=False):
     """Copy selected elements; returns (storage-relative indices, uint8 bytes)."""
 
@@ -148,9 +221,13 @@ def _window_copy(tensor, indices, storage_relative=False):
     rel = idx if storage_relative else idx + base
     order = np.argsort(rel, kind="stable")
     rel = rel[order]
-    flat = torch.empty(0, dtype=tensor.dtype, device=tensor.device).set_(
-        tensor.untyped_storage(), 0, (tensor.untyped_storage().nbytes() // size,))
-    picked = flat[torch.as_tensor(rel, device=tensor.device)].contiguous()
+    storage = tensor.untyped_storage()
+    if tensor.is_cuda:
+        whole = device_to_host(storage.data_ptr(), storage.nbytes())
+        flat = whole[: (storage.nbytes() // size) * size].view(tensor.dtype)
+    else:
+        flat = torch.empty(0, dtype=tensor.dtype, device=tensor.device).set_(storage, 0, (storage.nbytes() // size,))
+    picked = flat[torch.as_tensor(rel)].contiguous()
     raw = picked.view(torch.uint8).cpu()
     return rel, raw
 
@@ -159,6 +236,8 @@ def _storage_copy(tensor):
     import torch
 
     storage = tensor.untyped_storage()
+    if tensor.is_cuda:
+        return device_to_host(storage.data_ptr(), storage.nbytes())
     flat = torch.empty(storage.nbytes(), dtype=torch.uint8, device=tensor.device)
     flat.untyped_storage().copy_(storage)
     return flat.cpu()

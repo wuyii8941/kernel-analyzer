@@ -416,6 +416,16 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
         if not isinstance(public, list) or any(not isinstance(p, str) for p in public) or len(set(public)) != len(public):
             raise BindingError("public output paths must be an explicit unique list")
 
+        conditioned = plan.get("conditioned_on_returns", [])
+        if not isinstance(conditioned, list) or any(
+                not isinstance(c, dict) or set(c) != {"source", "basis"} or not isinstance(c["source"], str)
+                or not c["source"].startswith("/returns/") or not isinstance(c["basis"], str) or not c["basis"].strip()
+                for c in conditioned):
+            raise BindingError("conditioned_on_returns must list {source: /returns/..., basis} entries with a basis")
+        conditioned_sources = {c["source"] for c in conditioned}
+        if len(conditioned_sources) != len(conditioned):
+            raise BindingError("a conditioning return is declared more than once")
+
         all_input_sources, all_output_sources, task_runtime = [], [], {}
         for task in tasks:
             cid, profile = task.get("contract"), task.get("profile")
@@ -494,6 +504,14 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
             task_runtime[task["id"]] = {"task": task, "outputs": outputs, "output_by_target": output_by_target,
                                         "reference": result, "admitted": usable}
 
+        unused_conditions = conditioned_sources - set(all_input_sources)
+        if unused_conditions:
+            raise BindingError(f"declared conditioning return {sorted(unused_conditions)} is not used by any task input")
+        uncompared = conditioned_sources - set(all_output_sources)
+        if uncompared:
+            raise BindingError(f"conditioning return {sorted(uncompared)} must itself be a compared output")
+        if conditioned_sources:
+            report["conditioned_on_returns"] = sorted(conditioned_sources)
         if set(public) != set(all_output_sources):
             missing = sorted(set(public) - set(all_output_sources))
             extra = sorted(set(all_output_sources) - set(public))
@@ -539,7 +557,8 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
         observed_inputs = {f"/tensor_arguments/{name}/before" for name in arguments}
         observed_inputs.update(f"/scalars/{name}" for name in scalars)
 
-        mapped_inputs = {_received_input_root(source) for source in all_input_sources}
+        mapped_inputs = {_received_input_root(source) for source in all_input_sources
+                         if source not in conditioned_sources}
         unused_inputs = plan.get("unused_inputs", [])
         if not isinstance(unused_inputs, list):
             raise BindingError("unused_inputs must be a list")

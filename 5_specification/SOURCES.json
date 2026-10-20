@@ -3412,7 +3412,8 @@
     "items": {
       "FORWARD": "embedding: weight.index_select(0, indices) reshaped to the index shape followed by the embedding dimension.",
       "RENORM": "embedding_renorm_cpu_: for each distinct index, norm = row.norm(norm_type); if norm > max_norm, row *= max_norm / (norm + 1e-7).",
-      "DENSE_BWD": "embedding_dense_backward_cpu: grad_weight[k] += grad[i] * scale for every position i whose index k != padding_idx; scale = 1/counts[k] (number of occurrences of k in indices) when scale_grad_by_freq, else 1."
+      "DENSE_BWD": "embedding_dense_backward_cpu: grad_weight[k] += grad[i] * scale for every position i whose index k != padding_idx; scale = 1/counts[k] (number of occurrences of k in indices) when scale_grad_by_freq, else 1.",
+      "BACKWARD_DISPATCH": "embedding_backward_symint: sparse=true calls embedding_sparse_backward; sparse=false calls embedding_dense_backward(grad, indices, num_weights, padding_idx, scale_grad_by_freq). embedding_dense_backward_cpu accepts int64 or int32 indices, allocates zeros of shape [num_weights, grad.size(-1)], views grad as [indices.numel(), grad.size(-1)] and skips every position whose index equals padding_idx (a literal comparison)."
     },
     "snapshot": "sources/TS_EMBEDDING_CPP.cpp.gz",
     "snapshot_sha256": "ee962b129fccc1e48d96a24fccca65c0d34d99243509bc71088e0cfd487fb59a",
@@ -3801,7 +3802,8 @@
       "TO_COPY_SCHEMA": "_to_copy takes one tensor and keyword-only optional dtype, layout, device, pin_memory, non_blocking and memory_format arguments and returns one tensor; its out form is separate.",
       "PAGE": "torchgen/packaged/ATen/native/native_functions.yaml",
       "HUBER_SCHEMAS": "smooth_l1_loss(self,target,reduction,beta) and huber_loss(self,target,reduction,delta) return one tensor; lower-level backward schemas return grad_input only, distinct from the public-call VJP for both differentiable inputs.",
-      "UPSAMPLE_SCHEMAS": "upsample_nearest2d takes input, a two-dimensional output size and optional height/width scales; its backward takes complete grad_output, output size, four-dimensional input size and the same optional scales. nearest-exact and out forms are separate schemas."
+      "UPSAMPLE_SCHEMAS": "upsample_nearest2d takes input, a two-dimensional output size and optional height/width scales; its backward takes complete grad_output, output size, four-dimensional input size and the same optional scales. nearest-exact and out forms are separate schemas.",
+      "NORM_EMB_NLL_SCHEMAS": "native_layer_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight, Tensor? bias, float eps) -> (Tensor, Tensor, Tensor); native_layer_norm_backward(Tensor grad_out, Tensor input, SymInt[] normalized_shape, Tensor mean, Tensor rstd, Tensor? weight, Tensor? bias, bool[3] output_mask) -> (Tensor, Tensor, Tensor); rms_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight=None, float? eps=None) -> Tensor (CompositeImplicitAutograd rms_norm_symint); embedding_backward(Tensor grad, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq, bool sparse) -> Tensor (CompositeImplicitAutograd embedding_backward_symint); embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor; nll_loss_forward(Tensor self, Tensor target, Tensor? weight, int reduction, SymInt ignore_index) -> (Tensor output, Tensor total_weight); nll_loss_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight, int reduction, SymInt ignore_index, Tensor total_weight) -> Tensor. All are functional schemas; their out overloads are separate."
     },
     "snapshot": "sources/TS_NATIVE_FUNCTIONS.yaml.gz",
     "path": "torchgen/packaged/ATen/native/native_functions.yaml",
@@ -5377,5 +5379,440 @@
     "torch_version": "2.10.0+cu128",
     "retrieved": "2026-10-19",
     "snapshot_note": "Full installed official PyTorch 2.10 source retained and compared directly with the installed file; no content fingerprint is introduced."
+  },
+  "T_NLLLOSS": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.NLLLoss.html",
+    "title": "PyTorch 2.10 torch.nn.NLLLoss",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.NLLLoss",
+      "DEF": "Unreduced loss l_n = - w_{y_n} x_{n,y_n} with w_c = weight[c] * 1{c != ignore_index}; the input is expected to contain log-probabilities of each class.",
+      "REDUCTION": "If reduction is not 'none' (default 'mean'): 'mean' gives sum_n l_n / sum_n w_{y_n}; 'sum' gives sum_n l_n. 'mean': the weighted mean of the output is taken.",
+      "WEIGHT": "weight, if given, is a 1D tensor of size C assigning a rescaling weight to each class; otherwise it is treated as all ones.",
+      "IGNORE": "ignore_index specifies a target value that is ignored and does not contribute to the input gradient; the loss is averaged over non-ignored targets. The target accepts this index, which need not be in the class range.",
+      "TARGET": "The target is a class index in [0, C-1]; target shape (N) or () for input (N, C) or (C).",
+      "SHAPE": "Input (N, C) or (C) (or (N, C, d1..dK)); output of shape (N) for reduction 'none', otherwise a scalar."
+    },
+    "snapshot": "sources/T_NLLLOSS.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "T_NLL_LOSS_F": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.nll_loss.html",
+    "title": "PyTorch 2.10 torch.nn.functional.nll_loss",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.nn.functional.nll_loss",
+      "DEF": "nll_loss(input, target, weight=None, size_average=None, ignore_index=-100, reduce=None, reduction='mean'): negative log likelihood loss, see NLLLoss; input is expected to be log-probabilities.",
+      "IGNORE": "ignore_index (default -100) is ignored and does not contribute to the input gradient; when size_average is True the loss is averaged over non-ignored targets.",
+      "MEAN_PHRASE": "The reduction parameter text says 'mean': the sum of the output will be divided by the number of elements in the output."
+    },
+    "snapshot": "sources/T_NLL_LOSS_F.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_DECOMP": {
+    "title": "torch 2.10 source torch/_decomp/decompositions.py (layer_norm backward, rms_norm, embedding backward, nll_loss)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/_decomp/decompositions.py",
+      "LN_BWD": "native_layer_norm_backward(grad_out, input, normalized_shape, mean, rstd, weight, bias, output_mask): x_hat = (input - mean) * rstd from the supplied mean and rstd; grad_x_hat = grad_out * weight (or grad_out); d_input = (rstd / N) * (N grad_x_hat - sum(grad_x_hat) - x_hat * sum(grad_x_hat * x_hat)) over the inner dims; d_weight = sum over the outer dims of grad_out * x_hat only when output_mask[1] and weight is given; d_bias = sum over the outer dims of grad_out only when output_mask[2] and bias is given; positions not requested are None; results are cast to the input / weight / bias dtypes.",
+      "RMS_FUSED": "_fused_rms_norm: computation dtype from the input (float32 for half and bfloat16); eps None becomes torch.finfo(float32).eps when the computation dtype is float32, otherwise torch.finfo(float64).eps; rstd = rsqrt(mean(x^2 over the normalized dims) + eps); result = x * rstd (* weight), cast back to the input dtype.",
+      "EMB_DENSE_BWD": "embedding_dense_backward(grad_output, indices, num_weights, padding_idx, scale_grad_by_freq): optional division of each position by counts[indices] (occurrences of its index); positions with indices == padding_idx are filled with 0; grad_weight of shape (num_weights,) + embedding dims accumulates the positions at their index rows.",
+      "NLL_FWD": "nll_loss_forward / _nll_loss_forward: input 1D or 2D, target 0D or 1D; with weight, self is multiplied by weight along the class dim; result = -self[n, safe_target] with ignored targets set to 0; reduction none with 2D input returns the per-sample result and total_weight = 0; otherwise total_weight = sum of weight[target] over non-ignored targets (count of non-ignored targets without weight); sum reduces by summation; mean divides the sum by total_weight.",
+      "NLL_BWD": "nll_loss_backward / _nll_loss_backward: for mean, grad_output is divided by the supplied total_weight; grad_input is zero except -1 at the target column scaled by grad_output (and weight[target]), with ignored targets giving zero; reduction none with 2D input requires grad_output of shape (N), otherwise a single-element grad_output; total_weight must have one element."
+    },
+    "snapshot": "sources/NEN_DECOMP.py.gz",
+    "path": "torch/_decomp/decompositions.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_REFS": {
+    "title": "torch 2.10 source torch/_refs/__init__.py (native_layer_norm)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/_refs/__init__.py",
+      "NATIVE_LN": "native_layer_norm: requires len(normalized_shape) >= 1, weight and bias of shape normalized_shape and input trailing shape equal to normalized_shape; _normalize uses biased var_mean (keepdim) over the normalized dims, rstd = rsqrt(var + eps), out = (input - mean) * rstd then * weight + bias; returns (out, mean, rstd) with mean and rstd keeping the reduced dims as size 1; out is cast to the input dtype and mean / rstd are cast to the input dtype only on cpu and mtia devices."
+    },
+    "snapshot": "sources/NEN_REFS.py.gz",
+    "path": "torch/_refs/__init__.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_REDUCTION_PY": {
+    "title": "torch 2.10 source torch/nn/_reduction.py",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/nn/_reduction.py",
+      "ENUM": "get_enum: reduction 'none' -> 0, 'mean' (and deprecated 'elementwise_mean') -> 1, 'sum' -> 2; any other string raises ValueError. The file states it is kept in sync with aten/src/ATen/core/Reduction.h."
+    },
+    "snapshot": "sources/NEN_REDUCTION_PY.py.gz",
+    "path": "torch/nn/_reduction.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_FUNCTIONAL": {
+    "title": "torch 2.10 source torch/nn/functional.py (rms_norm, nll_loss, embedding)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "definitions in torch/nn/functional.py",
+      "RMS_NORM": "rms_norm(input, normalized_shape, weight=None, eps=None) calls torch.rms_norm(input, normalized_shape, weight, eps) directly (eps None is passed through).",
+      "NLL_LOSS": "nll_loss calls torch._C._nn.nll_loss_nd(input, target, weight, _Reduction.get_enum(reduction), ignore_index)."
+    },
+    "snapshot": "sources/NEN_FUNCTIONAL.py.gz",
+    "path": "torch/nn/functional.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_LOSSNLL_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/LossNLL.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/LossNLL.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "LossNLL.cpp",
+      "META_FWD": "nll_loss_forward meta: input 1D or 2D, target 0D or 1D (1D target of size 1 for 1D input), size(0) of input and target match for 2D input, weight undefined or 1D of n_classes elements; output of shape (batch) for reduction None with 2D input, otherwise a scalar; total_weight is a scalar.",
+      "FWD": "nll_loss_out_frame: reduction None with 2D input writes output[i] = -input[i][t] * weight[t] (0 for t == ignore_index) and leaves total_weight 0; otherwise output is a scalar: empty target gives NaN for Mean and 0 otherwise with total_weight 0; non-ignored targets must satisfy 0 <= t < n_classes (Target out of bounds error); total_weight = number of non-ignored targets without weight, else the sum of weight[t]; the loss sum is divided by total_weight for Mean.",
+      "META_BWD": "nll_loss_backward meta: total_weight must have exactly one element; grad_output has shape (batch) for reduction None with 2D input, otherwise a single element; grad_input has the input's sizes.",
+      "BWD": "nll_loss_backward_out_frame: grad_input is zeroed; reduction None with 2D input writes -weight[t] * grad_output[i] at [i][t]; otherwise grad = -(grad_output / total_weight for Mean, else grad_output) using the supplied total_weight value, written as weight[t] * grad (or grad) at [i][t] for every non-ignored target; ignored targets leave zeros."
+    },
+    "snapshot": "sources/NEN_LOSSNLL_CPP.cpp.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_LAYER_NORM_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/layer_norm.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/layer_norm.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "layer_norm.cpp",
+      "STATS": "layer_norm_cpu allocates mean and rstd with M elements (M = product of the outer dims) in param_scalar_type(input, mixed_type) and views them as stat_shape = outer dims followed by a 1 for each normalized dim.",
+      "BWD": "layer_norm_backward_cpu passes the supplied mean and rstd to LayerNormBackwardKernel with M and N from _check_layer_norm_inputs; outputs not requested by grad_input_mask are left undefined.",
+      "RMS_EPS": "rms_norm_composite: the input is upcast to its opmath type; for a float opmath type eps.value_or(numeric_limits<float>::epsilon()), otherwise eps.value_or(numeric_limits<double>::epsilon()); rqrst = rsqrt(mean(x^2 over the normalized dims, keepdim) + eps); rms_norm_symint dispatches to rms_norm_composite or _fused_rms_norm."
+    },
+    "snapshot": "sources/NEN_LAYER_NORM_CPP.cpp.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "NEN_DERIVATIVES": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/tools/autograd/derivatives.yaml",
+    "title": "PyTorch v2.10.0 tools/autograd/derivatives.yaml",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "derivatives.yaml",
+      "LN": "native_layer_norm: the gradients of input, weight and bias are native_layer_norm_backward(grad, input, normalized_shape, result1, result2, weight, bias, grad_input_mask), i.e. the forward's returned mean and rstd are passed as the backward's mean and rstd.",
+      "NLL": "nll_loss_forward: self gradient is nll_loss_backward(grad, self, target, weight, reduction, ignore_index, total_weight), i.e. the forward's returned total_weight is passed to the backward.",
+      "EMB": "embedding: the weight gradient is embedding_backward(grad, indices, weight.size(0), padding_idx, scale_grad_by_freq, sparse)."
+    },
+    "snapshot": "sources/NEN_DERIVATIVES.yaml.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "T_ONES_LIKE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.ones_like.html",
+    "title": "PyTorch 2.10 torch.ones_like",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.ones_like (items refined after reading)",
+      "DEF": "returns a tensor filled with the scalar value 1 with the same size as input; equivalent to torch.ones(input.size(), dtype=input.dtype, layout=input.layout, device=input.device).",
+      "DTYPE": "dtype: if None, defaults to the dtype of input; memory_format defaults to torch.preserve_format."
+    },
+    "snapshot": "sources/T_ONES_LIKE.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "T_ZEROS_LIKE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.zeros_like.html",
+    "title": "PyTorch 2.10 torch.zeros_like",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.zeros_like (items refined after reading)",
+      "DEF": "returns a tensor filled with the scalar value 0 with the same size as input; equivalent to torch.zeros(input.size(), dtype=input.dtype, layout=input.layout, device=input.device).",
+      "DTYPE": "dtype: if None, defaults to the dtype of input."
+    },
+    "snapshot": "sources/T_ZEROS_LIKE.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "T_SET_DEFAULT_DTYPE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.set_default_dtype.html",
+    "title": "PyTorch 2.10 torch.set_default_dtype",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.set_default_dtype (items refined after reading)",
+      "INITIAL": "sets the default floating point dtype; when PyTorch is initialized its default floating point dtype is torch.float32, and set_default_dtype can change it (e.g. to torch.float64)."
+    },
+    "snapshot": "sources/T_SET_DEFAULT_DTYPE.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "T_EMPTY": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.empty.html",
+    "title": "PyTorch 2.10 torch.empty",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "Documentation of torch.empty (items refined after reading)",
+      "UNINIT": "returns a tensor filled with uninitialized data of the given shape (filled with NaN / the maximum integer only when deterministic algorithms and fill_uninitialized_memory are both set)."
+    },
+    "snapshot": "sources/T_EMPTY.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_DROPOUT_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/Dropout.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/Dropout.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "CPU native_dropout source (items refined after reading)",
+      "NATIVE_CPU": "native_dropout_cpu: an empty input returns (input, empty_like mask); if train has no value or is true, scale = 1/(1-p) (0 when 1-p == 0), mask = Bernoulli(1-p) Boolean tensor of input's shape, output = input * mask * scale; otherwise output = clone of input and mask = all-true Boolean tensor.",
+      "BACKWARD_CPU": "native_dropout_backward(grad, mask, scale) = grad * mask * scale."
+    },
+    "snapshot": "sources/TS_DROPOUT_CPP.cpp.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_DROPOUT_CU": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/cuda/Dropout.cu",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/cuda/Dropout.cu",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "CUDA native_dropout source (items refined after reading)",
+      "NATIVE_CUDA": "native_dropout_cuda: if train has a value and is false, returns (clone of input, all-true Boolean mask); if p == 1, returns (zeros_like input, all-false Boolean mask); otherwise draws the mask with keep probability 1-p (train without a value is treated as training)."
+    },
+    "snapshot": "sources/TS_DROPOUT_CU.cu.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_TENSOR_FACTORIES_CPP": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/TensorFactories.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/TensorFactories.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "tensor factory source (items refined after reading)",
+      "SCALAR_TENSOR": "scalar_tensor(s, dtype, layout, device, pin_memory) builds TensorOptions from the optional dtype (an absent dtype leaves the options' default dtype) and creates a 0-dim tensor holding s."
+    },
+    "snapshot": "sources/TS_TENSOR_FACTORIES_CPP.cpp.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_RANGE_UTILS_H": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/RangeUtils.h",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/RangeUtils.h",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "arange size computation source (items refined after reading)",
+      "CHECKS": "arange_check_bounds requires a nonzero step, finite start and end, and (step > 0 and end >= start) or (step < 0 and end <= start), else 'upper bound and lower bound inconsistent with step sign'.",
+      "SIZE": "compute_arange_size: for int64 results size = ceil((end - start + step - sgn(step)) / step) in int64 arithmetic; otherwise size = ceil((end - start) / step) evaluated in double precision."
+    },
+    "snapshot": "sources/TS_RANGE_UTILS_H.h.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_NATIVE_FUNCTIONS_CR": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/native_functions.yaml",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/native_functions.yaml (creation and native dropout schemas)",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "native_functions.yaml (items refined after reading)",
+      "CREATION_SCHEMAS": "arange(Scalar end), arange.start(Scalar start, Scalar end) and arange.start_step(Scalar start, Scalar end, Scalar step=1); zeros(SymInt[] size), ones(SymInt[] size), full(SymInt[] size, Scalar fill_value), zeros_like(Tensor self), ones_like(Tensor self), full_like(Tensor self, Scalar fill_value) and scalar_tensor(Scalar s); each takes keyword-only ScalarType? dtype=None, Layout? layout, Device? device, bool? pin_memory (the *_like forms also MemoryFormat? memory_format) and returns one Tensor; out and names overloads are separate.",
+      "NATIVE_DROPOUT_SCHEMA": "native_dropout(Tensor input, float p, bool? train) -> (Tensor, Tensor)."
+    },
+    "snapshot": "sources/TS_NATIVE_FUNCTIONS_CR.yaml.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "LPI_T_REPEAT_INTERLEAVE": {
+    "url": "https://docs.pytorch.org/docs/2.10/generated/torch.repeat_interleave.html",
+    "title": "PyTorch 2.10 torch.repeat_interleave",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "torch.repeat_interleave documentation page",
+      "DEF": "repeat_interleave(input, repeats, dim=None, *, output_size=None) repeats elements of a tensor; it differs from Tensor.repeat and is similar to numpy.repeat. repeats (Tensor or int) is the number of repetitions for each element and is broadcast to fit the shape of the given axis. The result has the shape of input except along the given axis.",
+      "DIM": "dim is the dimension along which values are repeated; by default the flattened input array is used and a flat output array is returned.",
+      "OUTPUT_SIZE": "output_size (keyword) is the total output size for the given axis (e.g. the sum of repeats); giving it avoids the stream synchronization needed to calculate the output shape.",
+      "EXAMPLE": "[1,2,3].repeat_interleave(2) gives [1,1,2,2,3,3]; repeat_interleave([[1,2],[3,4]], 2) gives [1,1,2,2,3,3,4,4]; repeat_interleave([[1,2],[3,4]], 3, dim=1) gives [[1,1,1,2,2,2],[3,3,3,4,4,4]]."
+    },
+    "snapshot": "sources/LPI_T_REPEAT_INTERLEAVE.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "LPI_DECOMP": {
+    "title": "torch 2.10 torch/_decomp/decompositions.py (slice_backward, upsample_nearest2d scales)",
+    "kind": "torch_source",
+    "items": {
+      "PAGE": "torch/_decomp/decompositions.py",
+      "SLICE_BACKWARD": "The registered slice_backward decomposition returns slice_scatter(grad_output.new_zeros(input_sizes), grad_output, dim, start, end, step).",
+      "UPSAMPLE_NEAREST_SCALES": "upsample_nearest2d.default(input, output_size, scales_h=None, scales_w=None) gathers input with _unsafe_index at per-dimension indices computed by _compute_upsample_nearest_indices: osize is output_size[d]; scale = isize/(isize*scales[d]) when the scale argument is given, otherwise isize/osize; input_index = ((float32 arange(osize) + offset) * scale) converted to int64, with offset 0 for legacy nearest (documented in a comment as floor(output_index*scale), same as OpenCV INTER_NEAREST) and 0.5 for nearest-exact. The output spatial shape is output_size.",
+      "UPSAMPLE_VEC": "The .vec overloads compute the output size from output_size or scale_factors with upsample_compute_output_size and pass scale_factors, or None for every dimension, as the per-dimension scales."
+    },
+    "snapshot": "sources/LPI_DECOMP.py.gz",
+    "path": "torch/_decomp/decompositions.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-20"
+  },
+  "LPI_NATIVE_FUNCTIONS": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/native_functions.yaml",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/native_functions.yaml (layout/pool/interp ATen schemas)",
+    "kind": "torch_source",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "aten/src/ATen/native/native_functions.yaml at tag v2.10.0",
+      "PAD": "pad(Tensor self, SymInt[] pad, str mode=\"constant\", float? value=None) -> Tensor, python_module nn, dispatched as CompositeImplicitAutograd (pad_symint).",
+      "CONSTANT_PAD_ND": "constant_pad_nd(Tensor self, SymInt[] pad, Scalar value=0) -> Tensor.",
+      "SLICE_BACKWARD": "slice_backward(Tensor grad_output, SymInt[] input_sizes, int dim, SymInt start, SymInt end, SymInt step) -> Tensor, function variant, CompositeExplicitAutograd.",
+      "REPEAT_INTERLEAVE": "repeat_interleave has the overloads .Tensor(Tensor repeats, *, SymInt? output_size=None), .self_Tensor(Tensor self, Tensor repeats, int? dim=None, *, SymInt? output_size=None) and .self_int(Tensor self, SymInt repeats, int? dim=None, *, SymInt? output_size=None); both self overloads are CompositeImplicitAutograd (repeat_interleave_symint).",
+      "TRIL": "tril(Tensor self, SymInt diagonal=0) -> Tensor.",
+      "AVG_POOL2D": "avg_pool2d(Tensor self, int[2] kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False, bool count_include_pad=True, int? divisor_override=None) -> Tensor; avg_pool2d_backward(Tensor grad_output, Tensor self, int[2] kernel_size, int[2] stride, int[2] padding, bool ceil_mode, bool count_include_pad, int? divisor_override) -> Tensor, with every option positional and required; the out and grad_input forms are separate schemas.",
+      "UPSAMPLE_NEAREST2D": "upsample_nearest2d(Tensor self, SymInt[2] output_size, float? scales_h=None, float? scales_w=None) -> Tensor; upsample_nearest2d.vec(Tensor input, SymInt[]? output_size, float[]? scale_factors) is a separate overload; upsample_nearest2d_backward(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, float? scales_h=None, float? scales_w=None) -> Tensor; _upsample_nearest_exact2d and its backward are separate operators with the same argument lists."
+    },
+    "snapshot": "sources/LPI_NATIVE_FUNCTIONS.yaml.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "LPI_DERIVATIVES": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/tools/autograd/derivatives.yaml",
+    "title": "PyTorch v2.10.0 tools/autograd/derivatives.yaml (slice, avg_pool2d, upsample_nearest2d)",
+    "kind": "torch_source",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "tools/autograd/derivatives.yaml at tag v2.10.0",
+      "SLICE": "The derivative of slice.Tensor(self, dim=0, start=None, end=None, step=1) with respect to self is slice_backward_wrapper(grad, self.sym_sizes(), dim, start, end, step).",
+      "AVG_POOL2D": "The derivative of avg_pool2d with respect to self is avg_pool2d_backward(grad, self, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override). For avg_pool2d_backward, the derivative with respect to grad_output is avg_pool2d(grad, ...same options) and with respect to self is zeros_like(self).",
+      "UPSAMPLE_NEAREST2D": "The derivative of upsample_nearest2d(self, output_size, scales_h, scales_w) with respect to self is upsample_nearest2d_backward(grad, output_size, self.sym_sizes(), scales_h, scales_w)."
+    },
+    "snapshot": "sources/LPI_DERIVATIVES.yaml.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "CPP23_CONV_FPINT": {
+    "url": "https://timsong-cpp.github.io/cppwp/n4950/conv.fpint",
+    "title": "C++23 final working draft N4950 [conv.fpint] floating-integral conversions",
+    "kind": "standard",
+    "edition": "ISO/IEC 14882:2023 working draft N4950 (2023-05-10)",
+    "items": {
+      "PAGE": "Section 7.3.11 [conv.fpint] of the C++23 final working draft N4950 (floating-integral conversions).",
+      "TRUNC": "7.3.11/1: a floating-point value converted to an integer type is truncated (the fractional part is discarded); the behavior is undefined if the truncated value cannot be represented in the destination type.",
+      "EXACT": "7.3.11/2: an integer value converted to a floating-point type gives an exact result if possible.",
+      "INEXACT": "7.3.11/2: an integer value in the representable range that cannot be represented exactly converts to an implementation-defined choice of the next lower or next higher representable value; a value outside the representable range gives undefined behavior.",
+      "BOOL": "7.3.11/2: if the source type is bool, false is converted to zero and true is converted to one."
+    },
+    "snapshot": "sources/CPP23_CONV_FPINT.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "CPP23_CONV_DOUBLE": {
+    "url": "https://timsong-cpp.github.io/cppwp/n4950/conv.double",
+    "title": "C++23 final working draft N4950 [conv.double] floating-point conversions",
+    "kind": "standard",
+    "edition": "ISO/IEC 14882:2023 working draft N4950 (2023-05-10)",
+    "items": {
+      "PAGE": "Section 7.3.10 [conv.double] of the C++23 final working draft N4950 (floating-point conversions).",
+      "EXACT": "7.3.10/2: if the source value can be exactly represented in the destination floating-point type, the result of the conversion is that exact representation.",
+      "BETWEEN": "7.3.10/2: if the source value lies between two adjacent destination values, the result is an implementation-defined choice of either value; otherwise the behavior is undefined."
+    },
+    "snapshot": "sources/CPP23_CONV_DOUBLE.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_META_SDPA": {
+    "kind": "torch_source",
+    "title": "torch 2.10 torch/_meta_registrations.py (SDPA fused-op meta functions)",
+    "items": {
+      "PAGE": "torch/_meta_registrations.py"
+    },
+    "snapshot": "sources/TS_META_SDPA.py.gz",
+    "path": "torch/_meta_registrations.py",
+    "torch_version": "2.10.0+cu128",
+    "retrieval_method": "installed_torch_file",
+    "retrieved": "2026-10-20"
+  },
+  "FA2_PAPER": {
+    "url": "https://arxiv.org/html/2307.08691v1",
+    "title": "Dao 2023, FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (arXiv 2307.08691v1)",
+    "kind": "paper",
+    "items": {
+      "PAGE": "arXiv 2307.08691v1 HTML"
+    },
+    "snapshot": "sources/FA2_PAPER.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "T_RANDOMNESS": {
+    "url": "https://docs.pytorch.org/docs/2.10/notes/randomness.html",
+    "title": "PyTorch 2.10 Reproducibility notes",
+    "kind": "versioned_document",
+    "version": "2.10",
+    "items": {
+      "PAGE": "notes/randomness"
+    },
+    "snapshot": "sources/T_RANDOMNESS.txt.gz",
+    "snapshot_note": "main text extracted from the HTML page",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_ATTN_CU": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/transformers/cuda/attention.cu",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/transformers/cuda/attention.cu",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "attention.cu"
+    },
+    "snapshot": "sources/TS_ATTN_CU.cu.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
+  },
+  "TS_MEMEFF_FWD_H": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/transformers/cuda/mem_eff_attention/kernel_forward.h",
+    "title": "PyTorch v2.10.0 mem_eff_attention/kernel_forward.h",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "PAGE": "kernel_forward.h"
+    },
+    "snapshot": "sources/TS_MEMEFF_FWD_H.h.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-20"
   }
 }
