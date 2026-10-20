@@ -27,7 +27,11 @@ class CastProfileDomains(unittest.TestCase):
                         "prims.convert_element_type", [{"t": source, "v": [0, 1, "-1/2"]}, target]), "value")
 
     def test_unreviewed_types_nonfinite_and_overflow_are_refused(self):
-        for source in ("i64", "b8", "f8e4m3", "f8e5m2", "complex64"):
+        # integer and boolean sources were admitted by the reviewed 2026-10-20 extension (CA.INTSRC)
+        self.assertEqual(self.outcome("prims.convert_element_type", [{"t": "i64", "v": [1]}, "f32"]), "value")
+        self.assertEqual(self.outcome("prims.convert_element_type", [{"t": "b8", "v": [True]}, "f32"]), "value")
+        self.assertEqual(self.outcome("prims.convert_element_type", [{"t": "b8", "v": [1]}, "f32"]), "invalid_input")
+        for source in ("f8e4m3", "f8e5m2", "complex64"):
             with self.subTest(source=source):
                 self.assertEqual(self.outcome(
                     "prims.convert_element_type", [{"t": source, "v": [1]}, "f32"]), "unsupported")

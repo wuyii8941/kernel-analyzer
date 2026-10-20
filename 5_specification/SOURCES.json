@@ -1539,7 +1539,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PROMOTION": "type promotion: a higher category (complex > floating > integral > boolean) of a scalar or zero-dim operand promotes; otherwise the dimensioned operands decide."
+      "PROMOTION": "type promotion: a higher category (complex > floating > integral > boolean) of a scalar or zero-dim operand promotes; otherwise the dimensioned operands decide.",
+      "INT_DTYPES": "Integer dtypes table: torch.uint8 is an 8-bit integer (unsigned); torch.int8, torch.int16 (short), torch.int32 (int) and torch.int64 (long) are 8-, 16-, 32- and 64-bit integers (signed); torch.bool is Boolean."
     },
     "snapshot": "sources/T_TENSOR_ATTR.txt.gz",
     "snapshot_sha256": "0efebb32db54ae83ce9b4d1a55532d7983ffa5c979628253fa8b5c0b485b9911",
@@ -2702,7 +2703,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "DIVISOR": "divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. kernel_size, stride, padding: a single number, a single-element tuple or a tuple."
+      "DIVISOR": "divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. kernel_size, stride, padding: a single number, a single-element tuple or a tuple.",
+      "KERNEL_SIZE": "kernel_size - size of the pooling region; can be a single number, a single-element tuple or a tuple (kH, kW)."
     },
     "snapshot": "sources/T_F_AVG_POOL2D.txt.gz",
     "snapshot_sha256": "0e385ca6018d6c076f7cc6f65b586babad0d47a49d683e3aa0eb43a0c0a69dbc",
@@ -3772,7 +3774,8 @@
       "CAT": "The cat Tensor-list derivative is cat_tensors_backward applied to the complete upstream gradient, every input size and dtype, and the selected dimension.",
       "CLAMP": "For clamp, the derivative is undefined at min and max, but PyTorch deliberately returns subgradient 1 at both boundaries; the Scalar overload uses clamp_backward, while scalar clamp_min and clamp_max spell the inclusive >= min and <= max rules explicitly.",
       "EXTREMA": "For maximum and minimum with two Tensor operands, strict winner coordinates receive the full upstream gradient and equality coordinates give half to each operand; ordinary autograd broadcasting then sums each gradient back to its source shape.",
-      "PAGE": "torchgen/packaged/autograd/derivatives.yaml"
+      "PAGE": "torchgen/packaged/autograd/derivatives.yaml",
+      "SDPA_FUSED": "_scaled_dot_product_flash_attention: only output is differentiable; the query, key and value gradients are _scaled_dot_product_flash_attention_backward(grad, query, key, value, output, logsumexp, cum_seq_q, cum_seq_k, max_q, max_k, dropout_p, is_causal, rng_state, unused, scale). _scaled_dot_product_efficient_attention: only output is differentiable; the query, key, value and attn_bias gradients are _scaled_dot_product_efficient_attention_backward(grad, query, key, value, attn_bias, output, log_sumexp, philox_seed, philox_offset, dropout_p, grad_input_mask, is_causal, scale). The backward operations therefore receive the forward call's own output and logsumexp."
     },
     "snapshot": "sources/TS_AUTOGRAD_DERIVATIVES.yaml.gz",
     "path": "torchgen/packaged/autograd/derivatives.yaml",
@@ -3803,7 +3806,8 @@
       "PAGE": "torchgen/packaged/ATen/native/native_functions.yaml",
       "HUBER_SCHEMAS": "smooth_l1_loss(self,target,reduction,beta) and huber_loss(self,target,reduction,delta) return one tensor; lower-level backward schemas return grad_input only, distinct from the public-call VJP for both differentiable inputs.",
       "UPSAMPLE_SCHEMAS": "upsample_nearest2d takes input, a two-dimensional output size and optional height/width scales; its backward takes complete grad_output, output size, four-dimensional input size and the same optional scales. nearest-exact and out forms are separate schemas.",
-      "NORM_EMB_NLL_SCHEMAS": "native_layer_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight, Tensor? bias, float eps) -> (Tensor, Tensor, Tensor); native_layer_norm_backward(Tensor grad_out, Tensor input, SymInt[] normalized_shape, Tensor mean, Tensor rstd, Tensor? weight, Tensor? bias, bool[3] output_mask) -> (Tensor, Tensor, Tensor); rms_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight=None, float? eps=None) -> Tensor (CompositeImplicitAutograd rms_norm_symint); embedding_backward(Tensor grad, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq, bool sparse) -> Tensor (CompositeImplicitAutograd embedding_backward_symint); embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor; nll_loss_forward(Tensor self, Tensor target, Tensor? weight, int reduction, SymInt ignore_index) -> (Tensor output, Tensor total_weight); nll_loss_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight, int reduction, SymInt ignore_index, Tensor total_weight) -> Tensor. All are functional schemas; their out overloads are separate."
+      "NORM_EMB_NLL_SCHEMAS": "native_layer_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight, Tensor? bias, float eps) -> (Tensor, Tensor, Tensor); native_layer_norm_backward(Tensor grad_out, Tensor input, SymInt[] normalized_shape, Tensor mean, Tensor rstd, Tensor? weight, Tensor? bias, bool[3] output_mask) -> (Tensor, Tensor, Tensor); rms_norm(Tensor input, SymInt[] normalized_shape, Tensor? weight=None, float? eps=None) -> Tensor (CompositeImplicitAutograd rms_norm_symint); embedding_backward(Tensor grad, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq, bool sparse) -> Tensor (CompositeImplicitAutograd embedding_backward_symint); embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor; nll_loss_forward(Tensor self, Tensor target, Tensor? weight, int reduction, SymInt ignore_index) -> (Tensor output, Tensor total_weight); nll_loss_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight, int reduction, SymInt ignore_index, Tensor total_weight) -> Tensor. All are functional schemas; their out overloads are separate.",
+      "SDPA_FUSED_SCHEMAS": "_scaled_dot_product_flash_attention(Tensor query, Tensor key, Tensor value, float dropout_p=0.0, bool is_causal=False, bool return_debug_mask=False, *, float? scale=None) returns (output, logsumexp, cum_seq_q, cum_seq_k, SymInt max_q, SymInt max_k, rng_state, unused, debug_attn_mask) and is tagged nondeterministic_seeded. _scaled_dot_product_flash_attention_backward(grad_out, query, key, value, out, logsumexp, cum_seq_q, cum_seq_k, SymInt max_q, SymInt max_k, float dropout_p, bool is_causal, philox_seed, philox_offset, *, float? scale=None) returns (grad_query, grad_key, grad_value). _scaled_dot_product_efficient_attention_backward(grad_out_, query, key, value, attn_bias, out, logsumexp, philox_seed, philox_offset, float dropout_p, bool[4] grad_input_mask, bool is_causal=False, *, float? scale=None) returns four tensors and is tagged nondeterministic_seeded. The flash ops dispatch to CUDA, XPU and nested CUDA kernels; the efficient backward to a CUDA kernel."
     },
     "snapshot": "sources/TS_NATIVE_FUNCTIONS.yaml.gz",
     "path": "torchgen/packaged/ATen/native/native_functions.yaml",
@@ -5756,7 +5760,11 @@
     "kind": "torch_source",
     "title": "torch 2.10 torch/_meta_registrations.py (SDPA fused-op meta functions)",
     "items": {
-      "PAGE": "torch/_meta_registrations.py"
+      "PAGE": "torch/_meta_registrations.py",
+      "FLASH_FWD": "meta__scaled_dot_product_flash_attention: attention = empty_like(query); logsumexp float32 of shape (batch, num_heads of query, max_seqlen_batch_q); debug_mask of shape (B, H, L, padded K) only with return_debug_mask, otherwise an empty tensor of query dtype; seed of shape (2,) and offset of shape () (uint64 on CUDA); returns (attention, logsumexp, None, None, query.size(2), key.size(2), seed, offset, debug_mask).",
+      "FLASH_BWD": "meta__scaled_dot_product_flash_backward: grad_q, grad_k, grad_v are empty_like(query), empty_like(key), empty_like(value).",
+      "EFF_FWD_LSE": "meta__scaled_dot_product_efficient_attention: logsum_exp is float32 of shape (B, num_heads, ceil(M/32)*32) when compute_log_sumexp (M the query length; HIP uses M), seed and offset are int64 scalars.",
+      "EFF_BWD": "meta__scaled_dot_product_efficient_backward: grad_q, grad_k, grad_v have the shapes and dtypes of query, key and value; grad_bias is None unless attn_bias is not None and grad_input_mask[3]; returns (grad_q, grad_k, grad_v, grad_bias)."
     },
     "snapshot": "sources/TS_META_SDPA.py.gz",
     "path": "torch/_meta_registrations.py",
@@ -5769,7 +5777,11 @@
     "title": "Dao 2023, FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (arXiv 2307.08691v1)",
     "kind": "paper",
     "items": {
-      "PAGE": "arXiv 2307.08691v1 HTML"
+      "PAGE": "arXiv 2307.08691v1 HTML",
+      "LSE": "The forward pass stores, per query row, the logsumexp L = m + log(l), where m is the row maximum of S and l the row sum of exp(S - m); Algorithm 1 returns the output O and the logsumexp L. Scaling of QK^T and elementwise masking are omitted from the exposition.",
+      "BWD": "Algorithm 2 (FlashAttention-2 backward) takes Q, K, V, O, dO and the vector L; computes D = rowsum(dO o O); for each block P = exp(S - L), dV += P^T dO, dP = dO V^T, dS = P o (dP - D), dQ += dS K, dK += dS^T Q.",
+      "GQA": "For MQA and GQA several query heads use the same key/value head by index manipulation; in the backward pass dK and dV are summed across the heads that were implicitly duplicated.",
+      "CHAIN": "By the chain rule dV = P^T dO, dP = dO V^T, dS = dsoftmax(dP), dQ = dS K, dK = Q dS^T, with ds = (diag(p) - p p^T) dp for p = softmax(s)."
     },
     "snapshot": "sources/FA2_PAPER.txt.gz",
     "snapshot_note": "main text extracted from the HTML page",
@@ -5782,7 +5794,8 @@
     "kind": "versioned_document",
     "version": "2.10",
     "items": {
-      "PAGE": "notes/randomness"
+      "PAGE": "notes/randomness",
+      "NO_GUARANTEE": "Completely reproducible results are not guaranteed across PyTorch releases, individual commits, or different platforms; results may not be reproducible between CPU and GPU executions, even when using identical seeds."
     },
     "snapshot": "sources/T_RANDOMNESS.txt.gz",
     "snapshot_note": "main text extracted from the HTML page",
@@ -5795,7 +5808,9 @@
     "kind": "reference_program",
     "version": "v2.10.0",
     "items": {
-      "PAGE": "attention.cu"
+      "PAGE": "attention.cu",
+      "FLASH_RETURN": "_scaled_dot_product_flash_attention_cuda returns (attention, logsumexp, Tensor(), Tensor(), max_seqlen_batch_q, max_seqlen_batch_k, philox_seed, philox_offset, debug_attn_mask): the cumulative-sequence positions are undefined tensors for dense inputs.",
+      "EFF_CAUSAL": "_scaled_dot_product_efficient_attention_cuda maps is_causal to CustomMaskType::CausalFromTopLeft (otherwise NoCustomMask); with batch size above 65535 it requires dropout_p == 0 because it cannot produce valid seed and offset outputs."
     },
     "snapshot": "sources/TS_ATTN_CU.cu.gz",
     "snapshot_note": "raw file, byte for byte",
@@ -5808,7 +5823,8 @@
     "kind": "reference_program",
     "version": "v2.10.0",
     "items": {
-      "PAGE": "kernel_forward.h"
+      "PAGE": "kernel_forward.h",
+      "DROPOUT_RNG": "The memory-efficient kernel's dropout uses a curandStatePhilox4_32_10 state initialised with curand_init(seed, 0, offset + batch_id*num_heads*num_queries*num_keys + head_id*num_queries*num_keys); each element of the (batch, heads, queries, keys) attention matrix is associated with one offset of that sequence and is multiplied by 0 with probability dropout_p or by 1/(1-dropout_p) otherwise. The LSE buffer is padded to ceil(num_queries / kAlignLSE) * kAlignLSE."
     },
     "snapshot": "sources/TS_MEMEFF_FWD_H.h.gz",
     "snapshot_note": "raw file, byte for byte",

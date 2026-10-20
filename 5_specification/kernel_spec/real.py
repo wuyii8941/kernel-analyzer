@@ -213,6 +213,48 @@ def _iv(x):
     return to_iv(x.v)
 
 
+_ARB_PREC = 320
+
+
+def _arb_increasing(name, x):
+    """Enclosure of an increasing elementary function over the interval of x with python-flint Arb: endpoints convert
+    exactly (mantissa, exponent), the result endpoints are the lower bound of f(a) and the upper bound of f(b).
+    Replaces mpmath iv for exp / log / tanh / sigmoid: with mpmath 1.3.0, iv.exp at 256 bits returns point intervals
+    that exclude the true value for |x| between about 2^-271 and 2^-55 (tests/test_real_small_arguments.py)."""
+    import flint
+    (a, b) = to_iv(x.v)._mpi_
+    old = flint.ctx.prec
+    flint.ctx.prec = _ARB_PREC
+    try:
+        def arb_point(t):
+            sign, man, ex, _ = t                  # mpf tuple: (-1)^sign * man * 2^ex
+            value = flint.arb(int(man)) * flint.arb(2) ** int(ex)
+            return -value if sign else value
+
+        def f(t):
+            if name == "exp":
+                return t.exp()
+            if name == "log":
+                return t.log()
+            if name == "tanh":
+                return t.tanh()
+            if name == "sigmoid":
+                return 1 / (1 + (-t).exp())
+            raise ValueError(name)
+
+        lo, hi = f(arb_point(a)).lower(), f(arb_point(b)).upper()
+        if not (lo.is_finite() and hi.is_finite()):
+            raise NotEstablished(f"{name} enclosure is not finite")
+        lm, le = lo.man_exp()
+        hm, he = hi.man_exp()
+        from mpmath import mp, mpf
+        with mp.workprec(2 * _ARB_PREC):          # exact: the Arb endpoints carry at most _ARB_PREC bits
+            a_, b_ = mpf((int(lm), int(le))), mpf((int(hm), int(he)))
+        return R(iv.mpf([a_, b_]))                # iv rounds the endpoints outward to its own precision
+    finally:
+        flint.ctx.prec = old
+
+
 def hull(a: R, b: R) -> R:
     lo, hi = min_(a, b), max_(a, b)
     if not (lo.finite and hi.finite):
@@ -254,7 +296,7 @@ def exp(x):
         return R(0)
     if isinstance(x.v, Fraction) and x.v == 0:
         return R(1)
-    return R(iv.exp(_iv(x)))
+    return _arb_increasing("exp", x)
 
 
 def log(x):
@@ -268,7 +310,7 @@ def log(x):
         return R(NEG)                       # the limit; contracts that exclude it check before calling
     if isinstance(x.v, Fraction) and x.v == 1:
         return R(0)
-    return R(iv.log(_iv(x)))
+    return _arb_increasing("log", x)
 
 
 def log1p(x):
@@ -316,7 +358,7 @@ def tanh(x):
         return R(-1)
     if isinstance(x.v, Fraction) and x.v == 0:
         return R(0)
-    return R(1 - 2 / (iv.exp(2 * _iv(x)) + 1))
+    return _arb_increasing("tanh", x)
 
 
 def sigmoid(x):
@@ -327,7 +369,7 @@ def sigmoid(x):
         return R(0)
     if isinstance(x.v, Fraction) and x.v == 0:
         return R(Fraction(1, 2))
-    return R(1 / (1 + iv.exp(-_iv(x))))
+    return _arb_increasing("sigmoid", x)
 
 
 def erf(x):
