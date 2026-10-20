@@ -207,6 +207,32 @@ class Bulk(unittest.TestCase):
         self.assertIsNone(bulk.evaluate("CAST", "finite_rne", big, force=True))
         del statement
 
+    def test_nll(self):
+        adapter = registry.load("NLL").adapter
+        for seed in range(12):
+            g = self.rng(700 + seed)
+            n, c = int(g.integers(1, 6)), int(g.integers(2, 7))
+            dtype = ["f32", "bf16"][seed % 2]
+            x = -np.abs(g.standard_normal((n, c))) * 3
+            t = g.integers(0, c, n)
+            if seed % 3 == 0:
+                t[0] = -100
+            if seed == 6:
+                t[:] = -100
+            red = seed % 3
+            fwd = {"op": "aten.nll_loss_forward", "args": [record(x, dtype), index_record(t), None, red, -100]}
+            ref = evaluate(adapter.reference, "aten_real", fwd)
+            got = bulk.evaluate("NLL", "aten_real", fwd, force=True)
+            if got is None:
+                self.assertNotEqual(ref.outcome, "value") if seed == 6 and red == 1 else None
+            else:
+                self.assertEqual(ref.outcome, "value", ref.note)
+                self.assertEqual(flat(ref.fields["out"]), flat(got.fields["out"]))
+            go = record(g.standard_normal((n,)) if red == 0 else g.standard_normal(()), "f32")
+            tw = record(np.array(float(max(1, (t != -100).sum()))), "f32")
+            bwd = {"op": "aten.nll_loss_backward", "args": [go, record(x, dtype), index_record(t), None, red, -100, tw]}
+            self.assertEqual(self.compare("NLL", "aten_real", bwd, True), "evaluated")
+
     def test_threshold_and_unlisted(self):
         small = {"op": "aten.mm", "args": [record(np.ones((2, 2)), "f32"), record(np.ones((2, 2)), "f32")]}
         self.assertIsNone(bulk.evaluate("MATMUL", "real", small))

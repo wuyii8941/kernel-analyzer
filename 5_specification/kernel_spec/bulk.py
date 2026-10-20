@@ -478,7 +478,78 @@ def _cast(inp):
     return BulkTensor(y, y.copy(), target, True)
 
 
-ENTRIES = {("CAST", "finite_rne"): _cast, ("MATMUL", "real"): _matmul, ("ARITH", "real"): _arith, ("INDEX", "real"): _index,
+def _int_scalar(x):
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise _Decline("integer argument form")
+    return x
+
+
+def _nll(inp):
+    """NLL aten_real (kernel_spec.norm_emb_nll_aten): only the N target coordinates of self are read; weight None."""
+    op, args, kwargs = inp["op"], list(inp.get("args") or []), dict(inp.get("kwargs") or {})
+    if kwargs:
+        raise _Decline("keywords")
+    if op == "aten.nll_loss_forward" and len(args) == 5:
+        self_, target, weight, reduction, ignore = args
+    elif op == "aten.nll_loss_backward" and len(args) == 7:
+        grad, self_, target, weight, reduction, ignore, total = args
+    else:
+        raise _Decline("operation")
+    if weight is not None:
+        raise _Decline("weight")
+    red, ign = _int_scalar(reduction), _int_scalar(ignore)
+    if red not in (0, 1, 2):
+        raise _Decline("reduction")
+    if op == "aten.nll_loss_forward":
+        x, dtype = _float_tensor(self_)
+    else:
+        x, dtype = _record(self_)             # values not read (NaN storage allowed by the adapter)
+    t, _ = _record(target, floating=False)
+    if x.ndim != 2 or t.ndim != 1 or t.shape[0] != x.shape[0]:
+        raise _Decline("shapes")
+    n, c = x.shape
+    keep = t != ign
+    if np.any(keep & ((t < 0) | (t >= c))):
+        raise _Decline("target out of range")
+    rows, cols = np.nonzero(keep)[0], t[keep]
+    if op == "aten.nll_loss_forward":
+        picked = [-Fraction(float(v)) for v in x[rows, cols]]
+        tw = Fraction(len(picked))
+        if red == 0:
+            losses = [Fraction(0)] * n
+            for r, v in zip(rows.tolist(), picked):
+                losses[r] = v
+            return [losses, Fraction(0)]
+        total_loss = sum(picked, Fraction(0))
+        if red == 1:
+            if tw == 0:
+                raise _Decline("mean over total weight 0")
+            total_loss /= tw
+        return [total_loss, tw]
+    g, _ = _float_tensor(grad)
+    tws, _ = _float_tensor(total)
+    if tws.size != 1:
+        raise _Decline("total_weight size")
+    if red == 0:
+        if g.shape != (n,):
+            raise _Decline("grad_output shape")
+        gv = [Fraction(float(g[r])) for r in rows.tolist()]
+    else:
+        if g.size != 1 or g.ndim > 1:
+            raise _Decline("grad_output shape")
+        gv = [Fraction(float(g.ravel()[0]))] * len(rows)
+    if red == 1:
+        twv = Fraction(float(tws.ravel()[0]))
+        if twv == 0 and len(rows):
+            raise _Decline("mean backward with supplied total_weight 0")
+        gv = [v / twv for v in gv]
+    lo, hi = np.zeros((n, c)), np.zeros((n, c))
+    for r, col, v in zip(rows.tolist(), cols.tolist(), gv):
+        lo[r, col], hi[r, col] = _rational_bounds(-v)
+    return BulkTensor(lo, hi, dtype, True)
+
+
+ENTRIES = {("CAST", "finite_rne"): _cast, ("NLL", "aten_real"): _nll, ("MATMUL", "real"): _matmul, ("ARITH", "real"): _arith, ("INDEX", "real"): _index,
            ("SOFTMAX", "real"): _softmax, ("ACT", "torch"): _act}
 
 # Below this many scalar operations the adapter itself is fast enough and stays the evaluator.
