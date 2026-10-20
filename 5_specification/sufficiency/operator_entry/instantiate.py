@@ -261,15 +261,18 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
     if written and (written != [0] or len(schema.returns) != 1 or schema.arguments[0].kwarg_only):
         raise Refuse("state mapping", f"written arguments {written}: only a single written self is generated")
     rtypes = [str(r.type) for r in schema.returns]
-    if not rtypes or any(t not in ("Tensor", "Tensor?") for t in rtypes):
+    if not rtypes or any(t not in ("Tensor", "Tensor?", "SymInt", "int") for t in rtypes) or \
+            all(t in ("SymInt", "int") for t in rtypes):
         raise Refuse("output mapping", f"return type {rtypes} is not one or more tensors")
+    scalar_positions = {i for i, t in enumerate(rtypes) if t in ("SymInt", "int")}
     from kernel_spec.schema import profile_outputs
     outs = profile_outputs(contract, profile)
-    if set(outs) != {"out"}:
-        raise Refuse("output mapping", f"profile {profile} outputs {sorted(outs)} (rule v2 maps one 'out' field)")
-    info = outs["out"]
+    if len(outs) != 1:
+        raise Refuse("output mapping", f"profile {profile} outputs {sorted(outs)} (rule v2 maps one output field)")
+    (field, info), = outs.items()
     if info.get("kind") == "discrete" or info.get("guarantee") not in ("exact", "rigorous_enclosure"):
-        raise Refuse("output mapping", f"output out kind {info.get('kind')} is not a measurable numeric target")
+        raise Refuse("output mapping", f"output {field} kind {info.get('kind')} is not a measurable numeric or "
+                                       f"Boolean target")
     n = len(rtypes)
     meta = (getattr(adapter, "ATEN_RETURNS", None) or {}).get(base)
     if n > 1 and (meta is None or meta.get("positions") != n):
@@ -325,32 +328,37 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
         self_name = next((t for t, (p, _) in tensors.items() if p == "/args/0"), None)
         if self_name is None:
             raise Refuse("state mapping", "the written argument is not a recorded tensor")
-        output_map.append({"target": "/out", "source": f"/tensor_arguments/{self_name}/after",
+        output_map.append({"target": f"/{field}", "source": f"/tensor_arguments/{self_name}/after",
                            "conversion": "tensor_record", "measure_output": "out"})
         measured.append("out")
-        state_map = [{"argument": t, "effect": "output", "task": "op", "target": "/out"} if t == self_name
+        state_map = [{"argument": t, "effect": "output", "task": "op", "target": f"/{field}"} if t == self_name
                      else {"argument": t, "effect": "unchanged"} for t in names]
     elif n == 1:
-        output_map.append({"target": "/out", "source": "/returns/out", "conversion": "tensor_record",
+        output_map.append({"target": f"/{field}", "source": "/returns/out", "conversion": "tensor_record",
                            "measure_output": "out"})
         measured.append("out")
     else:
         for i in range(n):
-            if i in not_compared:
-                output_map.append({"target": f"/out/{i}", "literal": None,
+            if i in scalar_positions:
+                output_map.append({"target": f"/{field}/{i}", "literal": None,
+                                   "basis": f"return {i} is an integer, outside the tensor measurement (rule v2)"})
+                unobserved.append({"position": i, "basis": "integer return, not measured (rule v2)"})
+            elif i in not_compared:
+                output_map.append({"target": f"/{field}/{i}", "literal": None,
                                    "basis": f"return {i} is not defined by the task: {not_compared[i]}"})
                 unobserved.append({"position": i, "basis": not_compared[i]})
             elif i in none_positions:
-                output_map.append({"target": f"/out/{i}", "literal": None,
+                output_map.append({"target": f"/{field}/{i}", "literal": None,
                                    "basis": f"the recorded call returns no tensor at position {i}"})
             else:
-                output_map.append({"target": f"/out/{i}", "source": f"/returns/out{i}", "conversion": "tensor_record",
+                output_map.append({"target": f"/{field}/{i}", "source": f"/returns/out{i}", "conversion": "tensor_record",
                                    "measure_output": f"out{i}"})
                 measured.append(f"out{i}")
     if not state_map:
         state_map = [{"argument": t, "effect": "unchanged"} for t in names]
     returned = ("self" if written else "single" if n == 1 else
-                [i for i in range(n) if i not in not_compared and i not in none_positions])
+                [i for i in range(n) if i not in not_compared and i not in none_positions
+                 and i not in scalar_positions])
     # files
     calls, binds = spec / "corpus/calls", spec / "corpus/call_bindings"
     data = calls / f"{name}_values.pt"

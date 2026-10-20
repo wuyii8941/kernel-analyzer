@@ -36,6 +36,7 @@ CHOSEN = "usable with recorded task choice (step 2)"   # A2: a task-choice profi
 RUNFAIL = "run failure of the implementation (replayed)"  # A2 G12: an excluded FlagGems function replayed alone
 PROTOCOL = ["v1"]
 CHOICES = HERE / "task_choices_A2.json"
+SHAPE_DIFF = __import__("re").compile(r"reference target \S+ shape \([^)]*\) differs from output \S+ \([^)]*\)")
 
 
 def recorded_choice(cid, profile, base):
@@ -293,6 +294,11 @@ def main():
                  "failure_class": fclass, "failure_reason": (freason or "")[:300],
                  "verdict": verdict(report) if report else ("not_established", err)}
         entry["applies"] = True if entry["evaluated"] else None      # None = undecided
+        shape = SHAPE_DIFF.search(freason or "") if PROTOCOL[0] == "A2" else None
+        if not entry["evaluated"] and shape:
+            # verdict rule v2: the specification fixes the returned tensor's shape; a different shape is a detection
+            entry["applies"] = True
+            entry["verdict"] = ("detected", f"returned shape differs from the specification: {shape.group(0)}"[:300])
         if not entry["evaluated"] and freason and "did not retain an admitted specification binding" in freason:
             try:
                 outcome, note = reference_outcome(a.spec, d, values)

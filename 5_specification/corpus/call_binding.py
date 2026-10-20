@@ -110,6 +110,11 @@ def _set(root, pointer, value):
 def _same_record_values(left, right):
     """Equality of two tensor records in which NaN equals NaN (a list comparison treats NaN as unequal to itself,
     which declared untouched NaN inputs changed). Other values compare with ==, as before."""
+    if isinstance(left, dict) and isinstance(right, dict) and set(left) == set(right) == {"t", "v", "shape"}:
+        a, b = _numeric_array(left["v"]), _numeric_array(right["v"])
+        if a is not None and b is not None and a.dtype.kind == b.dtype.kind:
+            return left["t"] == right["t"] and left["shape"] == right["shape"] and a.shape == b.shape and \
+                bool(np.array_equal(a, b, equal_nan=a.dtype.kind == "f"))
     if isinstance(left, dict) and isinstance(right, dict):
         return left.keys() == right.keys() and all(_same_record_values(left[k], right[k]) for k in left)
     if isinstance(left, list) and isinstance(right, list):
@@ -122,6 +127,8 @@ def _same_record_values(left, right):
 def _complete(value):
     if value is _MISSING:
         return False
+    if isinstance(value, dict) and set(value) == {"t", "v", "shape"}:
+        return True       # a tensor record is a leaf: holes come only from list targets built by _set
     if isinstance(value, dict):
         return all(_complete(v) for v in value.values())
     if isinstance(value, list):
@@ -147,9 +154,24 @@ def _tensor_record(value):
         # reconstructed.  The explicit shape remains authoritative there.
         return expected[0] == 0 or all(has_shape(child, expected[1:]) for child in x)
 
-    if not has_shape(value["v"], shape):
+    if not (_numeric_shape(value["v"]) == tuple(shape) and 0 not in shape) and not has_shape(value["v"], shape):
         raise BindingError("tensor values do not have the declared shape")
     return value
+
+
+def _numeric_array(values):
+    """The nested value list as one numeric NumPy array, or None (ragged, empty, or non-numeric leaves). A fast path
+    only: every caller falls back to the element-wise check when this returns None."""
+    try:
+        arr = np.asarray(values)
+    except (ValueError, TypeError):
+        return None
+    return arr if arr.dtype.kind in "fbiu" and arr.size else None
+
+
+def _numeric_shape(values):
+    arr = _numeric_array(values)
+    return None if arr is None else tuple(arr.shape)
 
 
 def _convert(value, conversion):
