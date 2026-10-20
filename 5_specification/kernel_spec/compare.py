@@ -93,6 +93,17 @@ def validate_reference_values(fields, outputs):
     def visit(value, guarantee, kind, path):
         if isinstance(value, R):
             value = value.v
+        if hasattr(value, "bulk_bounds"):
+            # kernel_spec.bulk array result: exact entries carry directed roundings of an exact value
+            import numpy as np
+            if kind in ("boolean", "discrete"):
+                raise ValueError(f"{path}: array endpoints returned for a {kind} output")
+            if guarantee == "exact" and not value.exact:
+                raise ValueError(f"{path}: {guarantee} output returned an enclosure")
+            lo, hi = value.bulk_bounds()
+            if not (np.all(np.isfinite(lo)) and np.all(np.isfinite(hi)) and np.all(lo <= hi)):
+                raise ValueError(f"{path}: invalid array reference endpoints")
+            return
         if value is None:
             # Optional positions in structured outputs are represented explicitly.
             # Contract-specific complete-output checkers decide where null is legal.

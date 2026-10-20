@@ -127,6 +127,9 @@ def _endpoints(value, backend):
 
 def _arrays(value, backend):
     """Nested exact values/enclosures -> rectangular binary64 lower and upper arrays."""
+    if hasattr(value, "bulk_bounds"):                 # an array result of the specification's bulk evaluator
+        lo, hi = value.bulk_bounds()
+        return np.asarray(lo, dtype=np.float64), np.asarray(hi, dtype=np.float64)
     if isinstance(value, dict):
         raise ContractBindingError("a measured target must select a tensor/scalar leaf, not a mapping")
     if isinstance(value, (list, tuple)):

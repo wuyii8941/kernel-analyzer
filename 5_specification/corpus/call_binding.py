@@ -16,10 +16,12 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
+import numpy as np
+
 SPEC = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SPEC))
 
-from kernel_spec import registry  # noqa: E402
+from kernel_spec import bulk, registry  # noqa: E402
 from kernel_spec.compare import validate_reference_values  # noqa: E402
 from kernel_spec.num import IV, Result, ends, evaluate  # noqa: E402
 from kernel_spec.real import R  # noqa: E402
@@ -203,6 +205,73 @@ def _leaves(value):
         yield value
 
 
+def _is_bulk(value):
+    return hasattr(value, "bulk_bounds")
+
+
+def _bulk_observed(observed):
+    return np.asarray(observed, dtype=np.float64).ravel()
+
+
+def _bulk_difference(observed, reference):
+    """fixed_sample_difference for an array reference (kernel_spec.bulk): the same counts, with the coordinate sums
+    computed exactly from the binary64 values (the reference side is its directed-rounding enclosure)."""
+    point = _bulk_observed(observed)
+    lo, hi = (a.ravel() for a in reference.bulk_bounds())
+    if point.size != lo.size:
+        return {"status": "shape_mismatch", "observed": int(point.size), "reference": int(lo.size)}
+    ok = np.isfinite(point)
+    n = int(ok.sum())
+    if not n:
+        return {"status": "no_numeric_coordinates", "coordinates": int(point.size)}
+    p, l, h = point[ok], lo[ok], hi[ok]
+    sp, sl, sh = (_exact_sum(x) for x in (p, l, h))
+    positive, negative = int((p > h).sum()), int((p < l).sum())
+    return {"status": "computed", "coordinates": n, "positive": positive, "negative": negative,
+            "contains_zero": n - positive - negative, "exact_equal": int(((p == l) & (p == h)).sum()),
+            "mean_error_interval": [(sp - sh) / n, (sp - sl) / n],
+            "meaning": "fixed-sample coordinate mean of K-f; not a population bias estimate"}
+
+
+def _exact_sum(arr):
+    nums, exp = bulk._ints(np.ascontiguousarray(arr, dtype=np.float64))
+    return Fraction(sum(nums)) * Fraction(2) ** exp
+
+
+def _bulk_membership(observed, reference):
+    """check_enclosed_output for an array reference: False if a coordinate is outside (or not finite), True if every
+    coordinate equals a point reference, otherwise not established."""
+    point = _bulk_observed(observed)
+    lo, hi = (a.ravel() for a in reference.bulk_bounds())
+    if point.size != lo.size:
+        return False
+    if not np.all(np.isfinite(point)):
+        return False
+    equal = (lo == hi) & (point == lo)
+    if reference.exact:
+        return bool(np.all(equal))
+    if np.any((point < lo) | (point > hi)):
+        return False
+    return True if np.all(equal) else None
+
+
+def _reference(contract, cid, profile, inputs):
+    """The reference result and the evaluator that produced it: kernel_spec.bulk where it accepts the call, otherwise
+    the contract adapter."""
+    accepted = {}
+
+    def run():
+        got = bulk.evaluate(cid, profile, inputs)
+        accepted["result"] = got
+        return got if got is not None else Result("value", {})
+    result = evaluate(run)
+    if "result" not in accepted:                  # bulk raised: the adapter's own refusal for that condition
+        return result, bulk.VERSION
+    if accepted["result"] is None:
+        return evaluate(contract.adapter.reference, profile, inputs), "adapter"
+    return result, bulk.VERSION
+
+
 def _same_structure(observed, reference):
     """Whether every promised field and sequence position is present.
 
@@ -210,6 +279,10 @@ def _same_structure(observed, reference):
     an exact rational or interval), so only containers are compared here.
     """
     observed, reference = _plain(observed), _plain(reference)
+    if _is_bulk(reference):
+        if isinstance(observed, dict) and set(observed) == {"t", "v", "shape"}:
+            return list(observed["shape"]) == list(reference.shape)
+        return isinstance(observed, list) and np.asarray(observed, dtype=np.float64).shape == reference.shape
     if isinstance(observed, dict) and set(observed) == {"t", "v", "shape"} and not isinstance(reference, dict):
         return _same_structure(_tensor_record(observed)["v"], reference)
     if isinstance(reference, dict):
@@ -230,6 +303,8 @@ def _numeric_observation(observed, reference):
 
 def fixed_sample_difference(observed, reference):
     """Coordinate mean of K-f for one observation; never a population claim."""
+    if _is_bulk(reference):
+        return _bulk_difference(observed, reference)
     actual, target = list(_leaves(observed)), list(_leaves(reference))
     if len(actual) != len(target):
         return {"status": "shape_mismatch", "observed": len(actual), "reference": len(target)}
@@ -357,7 +432,7 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
                 raise BindingError(f"task {task['id']}: observed fields {sorted(outputs)} do not match {sorted(required)}")
             all_input_sources.extend(input_sources)
             all_output_sources.extend(output_sources)
-            result = evaluate(contract.adapter.reference, profile, inputs)
+            result, reference_backend = _reference(contract, cid, profile, inputs)
             if _reference_results is not None:
                 if not isinstance(_reference_results, dict):
                     raise BindingError("internal reference result sink must be a mapping")
@@ -387,7 +462,14 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
                         differences[name] = fixed_sample_difference(observed_value, result.fields[name])
                 comparison = "not_established"
                 checker = getattr(contract.adapter, "check_output", None)
-                if checker is not None:
+                bulk_fields = [name for name in required if _is_bulk(result.fields[name])]
+                if bulk_fields:
+                    states = [_bulk_membership(_numeric_observation(outputs[name], result.fields[name]),
+                                               result.fields[name]) for name in bulk_fields]
+                    states += [None for name in required if name not in bulk_fields]
+                    comparison = "outside_declared_result" if False in states else \
+                        "not_established" if None in states else "inside_declared_result"
+                elif checker is not None:
                     checked = evaluate(lambda: Result("value", {"matches": checker(profile, inputs, outputs)}))
                     if checked.outcome == "value" and type(checked.fields.get("matches")) is bool:
                         comparison = "inside_declared_result" if checked.fields["matches"] else \
@@ -399,7 +481,7 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
             usable, reasons, labels = registry.activation(
                 contract, profile, task_bindings={profile: statement},
                 allow_draft=contract.data["review"]["status"] == "drafted")
-            row = {"id": task["id"], "contract": cid, "profile": profile,
+            row = {"id": task["id"], "contract": cid, "profile": profile, "reference_backend": reference_backend,
                    "inputs": inputs, "observed_outputs": outputs,
                    "reference_outcome": result.outcome, "reference_note": result.note,
                    "fixed_call_against_f": comparison,
