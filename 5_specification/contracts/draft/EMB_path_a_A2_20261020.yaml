@@ -249,9 +249,16 @@ signature:
   post_state: [complete newly returned out and complete dense dweight]
   observation_unit: every coordinate of both outputs together with dtype and shape
 domain:
-  valid: [finite physical f16/bf16/f32/f64 values, nonempty positive dimensions, int64 in-range indices, valid optional padding_idx, max_norm null, norm_type 2, sparse false]
-  invalid_input: [malformed records, ragged or mismatched shapes, out-of-range or noninteger indices or padding_idx, values not exactly represented by the declared dtype]
-  unsupported: [ATen calls outside aten_dense_backward, aten.embedding_backward with sparse=true, embedding_bag, max_norm renormalisation, sparse gradients, special or complex values, non-int64 indices, empty tensors, module initialization, layout and alias effects]
+  valid:
+  - 'torch210_dense_real - finite physical f16/bf16/f32/f64 values, nonempty positive dimensions, int64 in-range indices, valid optional padding_idx in [-V, V), max_norm null, norm_type 2, sparse false'
+  - 'aten_dense_backward - finite f16/bf16/f32/f64 grad of shape indices.shape+[D], int64 or int32 indices in [0, num_weights), any integer padding_idx (compared literally; -1 or a value outside [0, num_weights) pads no row), scale_grad_by_freq false or true, sparse false; empty indices give an all-zero [num_weights, D] result'
+  invalid_input:
+  - 'torch210_dense_real - malformed records, ragged or mismatched shapes, out-of-range or noninteger indices or padding_idx, values not exactly represented by the declared dtype'
+  - 'aten_dense_backward - grad shape not indices.shape+[D], indices outside [0, num_weights), negative num_weights, non-integer index dtype, non-integer or boolean padding_idx / num_weights, non-boolean flags, NaN values, records without an ATen op field'
+  unsupported:
+  - 'both profiles - ATen calls in torch210_dense_real (answered only by aten_dense_backward), embedding_bag, max_norm renormalisation, sparse gradients (aten.embedding_backward with sparse=true), infinite or complex values, module initialization, layout and alias effects'
+  - 'torch210_dense_real - non-int64 indices, empty tensors'
+  - 'aten_dense_backward - index dtypes other than int64 / int32, floating dtypes other than f16/bf16/f32/f64'
 mutation_requirements:
 - {id: EM.M1, misreading: padding positions contribute to dweight, witnesses: [EM.E2]}
 - {id: EM.M2, misreading: functional embedding replaces the stored padding row with zeros in forward, witnesses: [EM.E2]}

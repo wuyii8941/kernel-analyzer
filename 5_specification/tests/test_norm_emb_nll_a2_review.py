@@ -655,3 +655,39 @@ def test_nll_harness_shape(C):
     assert list(prof) == ["aten_real"] and prof["aten_real"]["task_choice_required"] is False
     assert "make_reference" in Path(c.adapter_path).read_text()
     assert c.adapter.ATEN_RETURNS == {"aten.nll_loss_forward": {"positions": 2, "not_compared": {}}}
+
+
+def test_emb_domain_text_classes_match_adapter(C):
+    """Re-check after the EMB domain fix (EMB.yaml 0dbc46cb...): every class named in the per-profile domain lists is
+    the adapter's outcome."""
+    g = tens("f32", [F(1), F(2)], (1, 2))
+    ix = lambda v, t="i64": itens(v, (len(v),), t)  # noqa: E731
+    a = lambda *args: run(C["EMB"], "aten_dense_backward", {"op": "aten.embedding_backward", "args": list(args)}).outcome  # noqa: E731,E501
+    # valid: any integer padding_idx, int32 indices, freq true, empty indices
+    for pad in (-1, -5, 0, 1, 7):
+        assert a(g, ix([1]), 2, pad, False, False) == "value"
+    assert a(g, ix([1], "i32"), 2, -1, True, False) == "value"
+    # invalid_input
+    assert a(g, ix([0]), -1, -1, False, False) == "invalid_input"                       # negative num_weights
+    assert a(g, {"t": "f32", "v": [0.0], "shape": [1]}, 2, -1, False, False) == "invalid_input"
+    assert a(g, ix([0]), 2, True, False, False) == "invalid_input"                      # boolean padding_idx
+    assert a(g, ix([0]), 2, F(1, 2), False, False) == "invalid_input"
+    assert a(g, ix([0]), True, -1, False, False) == "invalid_input"                     # boolean num_weights
+    assert a(g, ix([0]), 2, -1, 1, False) == "invalid_input"                            # non-boolean flag
+    assert a({"t": "f32", "v": [[float("nan"), 1.0]], "shape": [1, 2]}, ix([0]), 2, -1, False, False) == "invalid_input"
+    # unsupported
+    assert a({"t": "f32", "v": [[float("inf"), 1.0]], "shape": [1, 2]}, ix([0]), 2, -1, False, False) == "unsupported"
+    assert a(g, ix([0], "i16"), 2, -1, False, False) == "unsupported"
+    assert a(g, ix([0], "u8"), 2, -1, False, False) == "unsupported"
+    assert a(g, ix([0]), 2, -1, False, True) == "unsupported"
+    # A public (non-ATen) record sent to aten_dense_backward: invalid_input ('records without an ATen op field',
+    # EMB.yaml 5c96ef8a..., after the fix of review issue 2).
+    pub = {"weight": [[1, 2]], "indices": [0], "upstream": [[1, 1]], "dtype": "f32", "index_dtype": "i64",
+           "padding_idx": None, "max_norm": None, "norm_type": 2, "scale_grad_by_freq": False, "sparse": False}
+    assert run(C["EMB"], "aten_dense_backward", pub).outcome == "invalid_input"
+    # old profile: padding_idx in [-V, V) valid, outside invalid; i32 and empty unsupported
+    base = dict(pub, weight=[[1, 2], [3, 4]])
+    for pad, out in ((-2, "value"), (-3, "invalid_input"), (1, "value"), (2, "invalid_input"), (None, "value")):
+        assert run(C["EMB"], "torch210_dense_real", dict(base, padding_idx=pad)).outcome == out
+    assert run(C["EMB"], "torch210_dense_real", dict(base, index_dtype="i32")).outcome == "unsupported"
+    assert run(C["EMB"], "torch210_dense_real", dict(base, indices=[], upstream=[])).outcome == "unsupported"

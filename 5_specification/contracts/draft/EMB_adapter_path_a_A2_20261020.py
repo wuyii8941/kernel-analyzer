@@ -14,7 +14,10 @@ from kernel_spec import aten as A
 from kernel_spec import ieee
 from kernel_spec import norm_emb_nll_aten as NA
 from kernel_spec.aten_adapter import make_output_checker, make_reference
-from kernel_spec.registry import CONTRACTS
+from pathlib import Path
+
+# The staged contract next to this adapter (stage/<X>/adapters/EMB.py -> stage/<X>/contracts/EMB.yaml).
+CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Result, Unsupported, integer, rational
 from kernel_spec.real import R

@@ -4,8 +4,9 @@ role: EMB
 title: Exact public PyTorch 2.10 dense embedding lookup and weight VJP
 review:
   status: reviewed_for_implementation
-  author: OpenAI Codex, independent implementation review
-  date: '2026-10-19'
+  reviewer: 'independent review 2026-10-21 (reviews/2026-10-20/A2_package_A_review.md)'
+  author: OpenAI Codex, independent implementation review; ATen-call profile Claude (path A closure package A), 2026-10-20
+  date: '2026-10-21'
   scope: PyTorch 2.10 functional embedding without renormalisation or sparse gradients, including the complete dense weight VJP
 activation:
   implementation_status: validated
@@ -13,7 +14,7 @@ activation:
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
     reviewed_contract_and_adapter_match_current]
-covers: [torch.nn.functional.embedding, aten.embedding, aten.embedding_dense_backward]
+covers: [torch.nn.functional.embedding, aten.embedding, aten.embedding_dense_backward, aten.embedding_backward]
 profiles:
   torch210_dense_real:
     meaning: >-
@@ -23,8 +24,19 @@ profiles:
       scale_grad_by_freq may be false or true. max_norm is null, norm_type is the public default 2 and sparse is false.
     task_choice_required: false
     basis: [EM.TASK, EM.LOOKUP, EM.DENSE_VJP]
+    outputs: [out, dweight]
+  aten_dense_backward:
+    meaning: >-
+      One ATen call of aten.embedding_backward (sparse=false) or aten.embedding_dense_backward with a finite f16, bf16,
+      f32 or f64 grad of shape indices.shape+[D], int64 or int32 indices in [0, num_weights), any integer padding_idx
+      compared literally (EM.ATEN_PADDING) and scale_grad_by_freq false or true. The output out is the ATen return,
+      the dense [num_weights, D] weight gradient (EM.ATEN_BACKWARD).
+    task_choice_required: false
+    basis: [EM.ATEN_INTERFACE, EM.ATEN_PADDING, EM.ATEN_BACKWARD]
+    outputs: [out]
 outputs:
-  out: {shape: 'indices.shape followed by embedding dimension', guarantee: exact}
+  out: {shape: 'profile torch210_dense_real - the lookup, indices.shape followed by the embedding dimension; profile
+      aten_dense_backward - the ATen return, the dense weight gradient [num_weights, D]', guarantee: exact}
   dweight: {shape: 'the complete weight shape [num_embeddings, embedding_dim]', guarantee: exact}
 comparison:
   input_binding: >-
@@ -64,6 +76,39 @@ decisions:
     scale_grad_by_freq=true, each such contribution is divided by the number of occurrences of k in the complete
     index tensor. Rows without a contributing position and the padding row are zero.
   basis: [T_EMBEDDING.FREQ, TS_EMBEDDING_CPP.DENSE_BWD]
+- id: EM.ATEN_INTERFACE
+  status: reviewed
+  statement: >-
+    The ATen overloads aten.embedding_backward and aten.embedding_dense_backward (retained PyTorch 2.10 schemas) are
+    answered in a separate non-task-choice profile aten_dense_backward whose single output out is the ATen return.
+    Profile torch210_dense_real keeps its public forward-plus-VJP task and refuses ATen calls (unsupported).
+    Alternative - adding the ATen interface to torch210_dense_real - rejected because that profile promises the
+    forward lookup and the weight gradient together, whereas the backward call returns only the weight gradient.
+    aten.embedding (forward) stays outside this profile; it is answered by the INDEX contract, so a recorded forward
+    call does not meet two applicable profiles.
+  basis: [TS_NATIVE_FUNCTIONS.NORM_EMB_NLL_SCHEMAS, NEN_DERIVATIVES.EMB, EM.DENSE_VJP]
+- id: EM.ATEN_PADDING
+  status: reviewed
+  statement: >-
+    At the ATen level padding_idx is an integer compared literally with each index; positions whose index equals
+    padding_idx contribute nothing. The public functional embedding resolves padding_idx before the ATen call (None
+    becomes -1, a negative value v becomes num_embeddings + v), so padding_idx -1 at the ATen level means that no row
+    is padded, and any value outside [0, num_weights) pads nothing. Alternative - normalising a negative ATen
+    padding_idx by adding num_weights as the functional interface does - rejected, because the ATen decomposition and
+    kernels compare literally and the functional wrapper has already normalised (mutant EM.M8).
+  basis: [TS_FUNCTIONAL_EMB.EMB_PADDING, NEN_DECOMP.EMB_DENSE_BWD, TS_EMBEDDING_CPP.BACKWARD_DISPATCH,
+    TS_EMBEDDING_CPP.DENSE_BWD]
+- id: EM.ATEN_BACKWARD
+  status: reviewed
+  statement: >-
+    aten.embedding_backward is the composite that, for sparse=false, is exactly aten.embedding_dense_backward(grad,
+    indices, num_weights, padding_idx, scale_grad_by_freq); sparse=true returns a sparse gradient layout and is
+    unsupported. The result has shape [num_weights, D] and the grad dtype; row k is the sum of grad rows at positions
+    with index k other than padding_idx, each divided by the occurrence count of k in the complete indices when
+    scale_grad_by_freq is true; other rows are zero. int64 and int32 indices are accepted (the kernels accept both);
+    indices outside [0, num_weights) are invalid_input. With empty indices the result is all zeros.
+  basis: [TS_EMBEDDING_CPP.BACKWARD_DISPATCH, TS_EMBEDDING_CPP.DENSE_BWD, NEN_DECOMP.EMB_DENSE_BWD,
+    T_EMBEDDING.FREQ, T_EMBEDDING.PADDING, EM.DENSE_VJP]
 clauses:
 - {id: EM.C1, basis: [EM.TASK], statement: 'The call uses finite exactly represented weight and upstream values, int64 indices, max_norm=null, norm_type=2 and sparse=false.', observes: [out, dweight], evidence_kind: definition}
 - {id: EM.C2, basis: [EM.LOOKUP], statement: 'out[position,:]=weight[indices[position],:] with the complete indices.shape+[D] shape, including repeated and multidimensional indices.', observes: [out], evidence_kind: definition}
@@ -71,6 +116,8 @@ clauses:
 - {id: EM.C4, basis: [EM.DENSE_VJP], statement: 'Without frequency scaling, dweight[k] is the sum of all upstream rows at positions whose index is k, except padding.', observes: [dweight], evidence_kind: definition}
 - {id: EM.C5, basis: [EM.DENSE_VJP], statement: 'With frequency scaling, every contribution for row k is divided by the total occurrence count of k in the complete index tensor.', observes: [dweight], evidence_kind: definition}
 - {id: EM.C6, basis: [EM.TASK], statement: 'Every input is read-only and the result includes the full forward and dense weight-gradient tensors.', observes: [out, dweight], evidence_kind: definition}
+- {id: EM.C7, basis: [EM.ATEN_INTERFACE, EM.ATEN_BACKWARD], statement: 'aten.embedding_backward (sparse=false) and aten.embedding_dense_backward return the dense [num_weights, D] weight gradient; sparse=true is unsupported.', observes: [out], evidence_kind: definition}
+- {id: EM.C8, basis: [EM.ATEN_PADDING], statement: 'ATen padding_idx is compared literally; -1 pads no row.', observes: [out], evidence_kind: definition}
 examples:
 - id: EM.E1
   profile: torch210_dense_real
@@ -162,15 +209,57 @@ examples:
   clauses: [EM.C1]
   input: {<<: *base, indices: [], upstream: []}
   expected: {outcome: unsupported}
+- id: EM.E19
+  profile: aten_dense_backward
+  clauses: [EM.C7, EM.C8]
+  input: {op: aten.embedding_backward, args: [{t: f32, v: [[[1, 2], [3, 4], [5, 6]]]}, {t: i64, v: [[2, 0, 2]]}, 3, -1,
+      false, false]}
+  expected: {outcome: value, fields: {out: [[3, 4], [0, 0], [6, 8]]}}
+  note: Recorded structure (grad [1, L, D], indices [1, L], padding_idx -1, no scaling, dense). Row 2 = (1,2)+(5,6).
+- id: EM.E20
+  profile: aten_dense_backward
+  clauses: [EM.C7, EM.C8]
+  input: {op: aten.embedding_backward, args: [{t: bf16, v: [[[1, 1], [2, '1/2'], [4, 4]]]}, {t: i64, v: [[0, 1, 0]]}, 2,
+      0, false, false]}
+  expected: {outcome: value, fields: {out: [[0, 0], [2, '1/2']]}}
+  note: Recorded structure with padding_idx 0 (word embeddings); both occurrences of row 0 contribute nothing.
+- id: EM.E21
+  profile: aten_dense_backward
+  clauses: [EM.C7]
+  input: {op: aten.embedding_backward, args: [{t: f32, v: [[2, 4], [6, 8], [1, 1]]}, {t: i64, v: [1, 1, 0]}, 2, -1,
+      true, false]}
+  expected: {outcome: value, fields: {out: [[1, 1], [4, 6]]}}
+- {id: EM.E22, profile: aten_dense_backward, clauses: [EM.C7], input: {op: aten.embedding_backward, args: [
+      {t: f32, v: [[1, 2]]}, {t: i64, v: [0]}, 2, -1, false, true]}, expected: {outcome: unsupported}}
+- id: EM.E23
+  profile: aten_dense_backward
+  clauses: [EM.C7, EM.C8]
+  input: {op: aten.embedding_dense_backward, args: [{t: f32, v: [[[1, 2], [3, 4], [5, 6]]]}, {t: i64, v: [[2, 0, 2]]}, 3,
+      -1, false]}
+  expected: {outcome: value, fields: {out: [[3, 4], [0, 0], [6, 8]]}}
+- {id: EM.E24, profile: aten_dense_backward, clauses: [EM.C7], input: {op: aten.embedding_backward, args: [
+      {t: f32, v: [[1, 2]]}, {t: i64, v: [3]}, 3, -1, false, false]}, expected: {outcome: invalid_input}}
+- {id: EM.E25, profile: aten_dense_backward, clauses: [EM.C7], input: {op: aten.embedding_backward, args: [
+      {t: f32, v: [[1, 2], [3, 4]]}, {t: i64, v: [0]}, 3, -1, false, false]}, expected: {outcome: invalid_input}}
+- {id: EM.E26, profile: torch210_dense_real, clauses: [EM.C7], input: {op: aten.embedding_backward, args: [
+      {t: f32, v: [[1, 2]]}, {t: i64, v: [0]}, 1, -1, false, false]}, expected: {outcome: unsupported},
+  note: ATen calls are answered only by profile aten_dense_backward}
 signature:
   inputs: [complete physical weight, complete int64 indices, complete upstream, dtype and all selected public options]
   pre_state: [weight, indices and upstream are unchanged]
   post_state: [complete newly returned out and complete dense dweight]
   observation_unit: every coordinate of both outputs together with dtype and shape
 domain:
-  valid: [finite physical f16/bf16/f32/f64 values, nonempty positive dimensions, int64 in-range indices, valid optional padding_idx, max_norm null, norm_type 2, sparse false]
-  invalid_input: [malformed records, ragged or mismatched shapes, out-of-range or noninteger indices or padding_idx, values not exactly represented by the declared dtype]
-  unsupported: [embedding_bag, max_norm renormalisation, sparse gradients, special or complex values, non-int64 indices, empty tensors, module initialization, layout and alias effects]
+  valid:
+  - 'torch210_dense_real - finite physical f16/bf16/f32/f64 values, nonempty positive dimensions, int64 in-range indices, valid optional padding_idx in [-V, V), max_norm null, norm_type 2, sparse false'
+  - 'aten_dense_backward - finite f16/bf16/f32/f64 grad of shape indices.shape+[D], int64 or int32 indices in [0, num_weights), any integer padding_idx (compared literally; -1 or a value outside [0, num_weights) pads no row), scale_grad_by_freq false or true, sparse false; empty indices give an all-zero [num_weights, D] result'
+  invalid_input:
+  - 'torch210_dense_real - malformed records, ragged or mismatched shapes, out-of-range or noninteger indices or padding_idx, values not exactly represented by the declared dtype'
+  - 'aten_dense_backward - grad shape not indices.shape+[D], indices outside [0, num_weights), negative num_weights, non-integer index dtype, non-integer or boolean padding_idx / num_weights, non-boolean flags, NaN values, records without an ATen op field'
+  unsupported:
+  - 'both profiles - ATen calls in torch210_dense_real (answered only by aten_dense_backward), embedding_bag, max_norm renormalisation, sparse gradients (aten.embedding_backward with sparse=true), infinite or complex values, module initialization, layout and alias effects'
+  - 'torch210_dense_real - non-int64 indices, empty tensors'
+  - 'aten_dense_backward - index dtypes other than int64 / int32, floating dtypes other than f16/bf16/f32/f64'
 mutation_requirements:
 - {id: EM.M1, misreading: padding positions contribute to dweight, witnesses: [EM.E2]}
 - {id: EM.M2, misreading: functional embedding replaces the stored padding row with zeros in forward, witnesses: [EM.E2]}
@@ -179,6 +268,10 @@ mutation_requirements:
 - {id: EM.M5, misreading: multidimensional indices are flattened in the returned shape, witnesses: [EM.E5]}
 - {id: EM.M6, misreading: lookup reads the following weight row, witnesses: [EM.E1]}
 - {id: EM.M7, misreading: repeated-index gradients overwrite instead of accumulate, witnesses: [EM.E1]}
+- {id: EM.M8, misreading: 'ATen padding_idx -1 normalised to row num_weights - 1', witnesses: [EM.E19]}
+- {id: EM.M9, misreading: aten.embedding_backward ignores padding_idx, witnesses: [EM.E20]}
+- {id: EM.M10, misreading: 'sparse=true computed as the dense gradient', witnesses: [EM.E22]}
+- {id: EM.M11, misreading: aten.embedding_backward ignores scale_grad_by_freq, witnesses: [EM.E21]}
 nonclaims:
 - No answer is supplied for embedding_bag, max_norm mutation, sparse gradient layout, module initialization, unusual layouts, aliasing or special values.
 - Exact real accumulation defines the selected semantic target; finite-precision reduction order remains a numerical effect measured separately.
@@ -190,3 +283,12 @@ changes:
   trigger: >-
     The former draft combined multiple public tasks, mutation and disputed renormalisation behavior. Those branches
     could not share one ground truth without task-specific evidence and binding.
+- date: '2026-10-20'
+  change: >-
+    Added the non-task-choice profile aten_dense_backward with an ATen-call interface for aten.embedding_backward
+    (dense case) and aten.embedding_dense_backward, decisions EM.ATEN_INTERFACE, EM.ATEN_PADDING and EM.ATEN_BACKWARD,
+    clauses EM.C7-EM.C8, examples EM.E19-EM.E26 and mutants EM.M8-EM.M11; aten.embedding_backward added to covers.
+    torch210_dense_real keeps its semantics, lists its outputs explicitly and refuses ATen calls. Review status reset
+    to drafted.
+  trigger: Path A closure (G6) - recorded FlagGems aten.embedding_backward calls had no contract with an ATen-call
+    interface.

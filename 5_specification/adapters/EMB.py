@@ -1,4 +1,6 @@
-"""Reviewed public PyTorch 2.10 dense embedding forward and weight VJP."""
+"""Public PyTorch 2.10 dense embedding forward and weight VJP (profile torch210_dense_real) and the ATen-call
+interface for aten.embedding_backward / aten.embedding_dense_backward (profile aten_dense_backward, built with
+kernel_spec.aten_adapter.make_reference; semantics in kernel_spec.norm_emb_nll_aten)."""
 from __future__ import annotations
 
 import math
@@ -6,7 +8,16 @@ from fractions import Fraction
 
 import numpy as np
 
+import yaml
+
+from kernel_spec import aten as A
 from kernel_spec import ieee
+from kernel_spec import norm_emb_nll_aten as NA
+from kernel_spec.aten_adapter import make_output_checker, make_reference
+from pathlib import Path
+
+# The staged contract next to this adapter (stage/<X>/adapters/EMB.py -> stage/<X>/contracts/EMB.yaml).
+CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Result, Unsupported, integer, rational
 from kernel_spec.real import R
@@ -75,9 +86,27 @@ def _physical(value, shape, name, dtype):
     return _map(convert, value)
 
 
+ATEN_PROFILE = "aten_dense_backward"
+ATEN_OPS = ("aten.embedding_backward", "aten.embedding_dense_backward")
+_COVERS = yaml.safe_load((CONTRACTS / "EMB.yaml").read_text())["covers"]
+assert set(ATEN_OPS) <= set(_COVERS)
+
+
+def _aten_reference(extra=None, **kw):
+    return make_reference(ATEN_OPS, extra={**{k: NA.OPS[k] for k in ATEN_OPS}, **(extra or {})},
+                          profiles=(ATEN_PROFILE,), argument_decoder=NA.decode_argument, **kw)
+
+
+_aten = _aten_reference()
+_aten_check = make_output_checker(ATEN_OPS, extra={k: NA.OPS[k] for k in ATEN_OPS}, profiles=(ATEN_PROFILE,),
+                                  argument_decoder=NA.decode_argument)
+
+
 def _parse(profile, inp):
     if profile != PROFILE:
         raise Unsupported(f"profile {profile!r}")
+    if isinstance(inp, dict) and isinstance(inp.get("op"), str) and inp["op"].startswith("aten."):
+        raise Unsupported(f"{inp['op']}: ATen calls are answered by profile {ATEN_PROFILE} only")
     if not isinstance(inp, dict) or any(not isinstance(key, str) for key in inp):
         raise Invalid("embedding input must be a mapping with string field names")
     missing = REQUIRED - set(inp)
@@ -178,6 +207,8 @@ def _evaluate(profile, inp, mode=None):
 
 
 def reference(profile, inp):
+    if profile == ATEN_PROFILE:
+        return _aten(profile, inp)
     return _evaluate(profile, inp)
 
 
@@ -192,6 +223,8 @@ def _observed(value, shape, dtype, name):
 
 
 def check_output(profile, inp, observed):
+    if profile == ATEN_PROFILE:
+        return _aten_check(profile, inp, observed)
     try:
         parsed = _parse(profile, inp)
         if not isinstance(observed, dict) or set(observed) != {"out", "dweight"}:
@@ -210,6 +243,35 @@ def _mutant(mode):
     return lambda profile, inp: _evaluate(profile, inp, mode)
 
 
+# ------------------------------------------------------------------ independent ATen-call implementations (mutants)
+def _aten_bwd(mode):
+    def dense(grad_output, indices, num_weights, padding_idx, scale_grad_by_freq):
+        width = grad_output.shape[-1]
+        rows = [[v.v for v in r] for r in grad_output.a.reshape(-1, width)]
+        idx = [int(k) for k in indices.a.reshape(-1)]
+        pad = padding_idx
+        if mode == "negative_padding_wraps" and pad < 0:
+            pad += num_weights
+        if mode == "padding_ignored":
+            pad = None
+        freq = scale_grad_by_freq and mode != "frequency_ignored"
+        table = [[Fraction(0)] * width for _ in range(num_weights)]
+        for row, k in zip(rows, idx):
+            if k == pad:
+                continue
+            n = idx.count(k) if freq else 1
+            table[k] = [a + b / n for a, b in zip(table[k], row)]
+        return A.Ten(np.array([[R(v) for v in r] for r in table], dtype=object).reshape(num_weights, width),
+                     grad_output.dtype)
+
+    def composite(grad, indices, num_weights, padding_idx, scale_grad_by_freq, sparse):
+        if sparse and mode != "sparse_as_dense":
+            raise Unsupported("sparse")
+        return dense(grad, indices, num_weights, padding_idx, scale_grad_by_freq)
+    ref = _aten_reference({"aten.embedding_backward": composite, "aten.embedding_dense_backward": dense})
+    return lambda profile, inp: ref(profile, inp)
+
+
 MUTANTS = {
     "EM.M1": _mutant("padding_gets_gradient"),
     "EM.M2": _mutant("padding_forward_zero"),
@@ -218,5 +280,9 @@ MUTANTS = {
     "EM.M5": _mutant("flatten_output"),
     "EM.M6": _mutant("following_row"),
     "EM.M7": _mutant("last_gradient_only"),
+    "EM.M8": _aten_bwd("negative_padding_wraps"),
+    "EM.M9": _aten_bwd("padding_ignored"),
+    "EM.M10": _aten_bwd("sparse_as_dense"),
+    "EM.M11": _aten_bwd("frequency_ignored"),
 }
 READINGS = {}

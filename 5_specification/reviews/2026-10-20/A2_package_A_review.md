@@ -130,3 +130,61 @@ cd 5_specification   # 已按 BRIEF 设置 HOME/TMPDIR 等环境变量
     --adapters ../.cache/spec_a2_review/A/adapters --only NORM EMB NLL
 # exit 0；NORM 34/34 例子、21/21 变异；EMB 26/26、11/11；NLL 18/18、读法 2/2、变异 11/11
 ```
+
+## 5 EMB 复查（2026-10-21，作者修订 domain 之后）
+
+复查对象：
+
+| 文件 | sha256 |
+|---|---|
+| contracts/draft/EMB_path_a_A2_20261020.yaml（已修订） | 0dbc46cb609457e8ea648bbc6f601ad2952fc783dca5c7384b213e0c39c5b279 |
+| contracts/draft/EMB_adapter_path_a_A2_20261020.py（未改动） | cfe06af0189bc916a6a309b782dec507f91e5717d6cbfc7931bd65a763054996 |
+
+与上一版相比，只有 `domain` 一段有改动。新文本按 profile 分别列出各类输入。我逐条用适配器核对（新增测试 `test_emb_domain_text_classes_match_adapter`）：
+
+- **aten_dense_backward：除下面第 2 条外，全部一致。**
+  - value：任意整数 padding_idx（−1、−5、0、1、7）、int32 indices、freq 为 true、空 indices。
+  - invalid_input：num_weights 为负、indices 为浮点、padding_idx 或 num_weights 为布尔或非整数、flag 不是布尔值、grad 含 NaN。
+  - unsupported：grad 含 inf、indices 为 i16/u8、sparse=true、f8。
+- **torch210_dense_real：一致。**
+  - padding_idx 在 [−V, V) 内为 value，超出为 invalid_input。
+  - int32 indices、空张量为 unsupported。
+  - ATen 调用为 unsupported。
+
+上一轮的问题 1 **已解决**。
+
+剩余问题：
+
+2. `contracts/draft/EMB_path_a_A2_20261020.yaml:259`：“both profiles” 一条把 “public calls in aten_dense_backward” 列为 unsupported。
+   - 实际上，把公开调用记录（没有 `op` 字段）交给 aten_dense_backward 时，共享的 `make_reference` 会返回 **invalid_input**（"ATen call: missing required fields ['op']"）。
+   - 只有带未覆盖算子名的 `op`（例如 `aten.embedding`）才返回 unsupported。
+   - 影响：这是新写入的文字，与适配器行为不符。路径 A 只会把 ATen 调用交给这个 profile，所以对记录到的调用和合同语义都没有影响。
+   - 修法（纯文字）：把这一项从 unsupported 移到 aten_dense_backward 的 invalid_input，例如写 “records without an ATen op field”。
+
+复跑结果：
+- 复核测试 31 passed，作者测试 15 passed。
+- `check_contracts --only NORM EMB NLL` exit 0：EMB 26/26 例子、11/11 变异。
+- 复核暂存区的 EMB.yaml 已更新为新版本，`test_review_stage_matches_drafts` 通过。
+
+**EMB 结论：ISSUES**（只剩第 2 条，一行文字，不阻塞路径 A）。修正之后，如果适配器 sha256 仍为 cfe06af0…4996，且 YAML 只改了这一项，就可以直接确认，不需要再做数值复核。
+
+## 6 EMB 最终复查（2026-10-21）
+
+本次复查的文件：
+
+- `contracts/draft/EMB_path_a_A2_20261020.yaml`：sha256 `5c96ef8af7e41113b5351daef177f848c5fcebd42a25e79d2e1b5ce26b529225`
+- `contracts/draft/EMB_adapter_path_a_A2_20261020.py`：sha256 `cfe06af0189bc916a6a309b782dec507f91e5717d6cbfc7931bd65a763054996`，未改动，与暂存区逐字节相同
+
+YAML 与上一版的差异只有两处，都在第 2 条问题的范围内：
+
+- 第 257 行：aten_dense_backward 的 invalid_input 列表增加了 “records without an ATen op field”；
+- 第 259 行：“both profiles” 的 unsupported 列表删去了 “public calls in aten_dense_backward”。
+
+修改后的文字与适配器的实际行为一致：没有 `op` 字段的记录返回 invalid_input。第 2 条问题已解决。
+
+复跑结果：
+
+- 复核测试与作者测试共 46 项全部通过，包括 `test_emb_domain_text_classes_match_adapter`；该测试的注释已同步更新。
+- `check_contracts --only NORM EMB NLL` 退出码为 0，EMB 例子 26/26、变异 11/11。
+
+**EMB 结论：CONFIRMED。** 上面这两个文件（连同已随 NORM/NLL 入库的 `kernel_spec/norm_emb_nll_aten.py`，sha256 `2866f5b7…a2a6e2a`）可以提升，并放入 validated/。
