@@ -39,6 +39,7 @@ import numpy as np
 from . import intervals as iv
 from .ttir_mapping import (LIBDEVICE, LIBDEVICE_ROUNDING, inline_asm_internal, inline_asm_rounding, match_welford,
                            recognize_combiner, rule_for)
+INT_EXPONENT_POW = ("__nv_powif", "__nv_powi")
 from .ttir_parser import PtrType, TFunc, TModule, TOp, TRegion, TType, parse_ttir
 
 ST_OK, ST_NAN, ST_PINF, ST_NINF, ST_UNDEF, ST_NE = 0, 1, 2, 3, 4, 5
@@ -4193,6 +4194,9 @@ class KernelReferenceEvaluator:
         internal = LIBDEVICE.get(symbol)
         if internal is None:
             raise ProgramAbort(f"{op.node_id}: libdevice {symbol} has no declared semantics")
+        if symbol in INT_EXPONENT_POW and len(args) == 2 and args[0].kind == "f" and args[1].kind == "i":
+            # x**n with an int32 exponent: n converted to the base's float type (exact for every int32)
+            args = [args[0], self._int_to_float("sitofp", op, args[1], args[0].elem)]
         if any(a.kind != "f" for a in args) and internal not in ("isnan", "isinf", "isfinite", "signbit"):
             # integer operands (e.g. __nv_abs on int32): the integer rule, never the float one (4.0: the float rule
             # returned 0 for every lane, found by the per-signature tests)

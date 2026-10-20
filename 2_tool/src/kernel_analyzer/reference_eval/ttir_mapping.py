@@ -274,6 +274,8 @@ for _fn in _ELEMENTARY | {"floor", "ceil", "trunc", "round", "abs", "fabs"}:
         LIBDEVICE[_sym] = base
 LIBDEVICE.update({
     "__nv_powf": "pow", "__nv_fast_powf": "pow", "__nv_pow": "pow",
+    # float / double base with an int32 exponent: the real power x**n (the exponent is converted exactly)
+    "__nv_powif": "pow", "__nv_powi": "pow",
     "__nv_fmaxf": "maxnum", "__nv_fminf": "minnum", "__nv_fmax": "maxnum", "__nv_fmin": "minnum",
     "__nv_fmaf": "fma", "__nv_fma": "fma", "__nv_fdividef": "div", "__nv_fast_fdividef": "div", "__nv_fdiv_rn": "div",
     "__nv_div_rn": "div", "__nv_frcp_rn": "rcp", "__nv_rcp64h": "rcp", "__nv_fsqrt_rn": "sqrt",
