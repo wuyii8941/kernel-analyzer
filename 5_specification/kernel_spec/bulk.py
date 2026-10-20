@@ -435,7 +435,50 @@ def _act(inp):
     return BulkTensor(lo, hi, dg, False)
 
 
-ENTRIES = {("MATMUL", "real"): _matmul, ("ARITH", "real"): _arith, ("INDEX", "real"): _index,
+_FMT = {"f16": (11, -14, 15), "bf16": (8, -126, 127), "f32": (24, -126, 127), "f64": (53, -1022, 1023)}
+
+
+def _rne(x, target):
+    """Exact roundTiesToEven of binary64 values into target (precision p, minimum normal exponent emin): the value is
+    scaled by a power of two so that its target-ulp is 1, rounded with rint (ties to even, exact on binary64
+    integers below 2^53), and scaled back. Overflow beyond the target's largest finite value declines."""
+    p, emin, emax = _FMT[target]
+    if target == "f64":
+        return x.copy()
+    _, e = np.frexp(x)                        # x = m 2^e, 0.5 <= |m| < 1 (e = 0 for x = 0)
+    q = np.maximum(e - 1, emin) - (p - 1)     # exponent of the target ulp (subnormals share emin's ulp)
+    scaled = np.ldexp(x, -q)
+    if not np.all(np.abs(scaled) < 2.0 ** 53):
+        raise _Decline("scaling exceeded binary64 integer range")
+    y = np.ldexp(np.rint(scaled), q)
+    largest = (2.0 - 2.0 ** (1 - p)) * 2.0 ** emax
+    if np.any(np.abs(y) > largest):
+        raise _Decline("conversion overflows the target")
+    return y
+
+
+def _cast(inp):
+    from . import aten as A
+    from .aten_adapter import decode
+    op, args, kwargs = inp["op"], list(inp.get("args") or []), dict(inp.get("kwargs") or {})
+    if op == "aten._to_copy" and len(args) == 1 and set(kwargs) == {"dtype"}:
+        target = kwargs["dtype"]
+    elif op == "prims.convert_element_type" and len(args) == 2 and not kwargs:
+        target = args[1]
+    else:
+        raise _Decline("operation")
+    try:
+        target = A.dt(decode(target))
+    except Exception:  # noqa: BLE001 -- the adapter decides malformed dtypes
+        raise _Decline("target dtype") from None
+    if target not in FLOATS:
+        raise _Decline("target dtype")
+    x, _ = _float_tensor(args[0])
+    y = _rne(x, target)
+    return BulkTensor(y, y.copy(), target, True)
+
+
+ENTRIES = {("CAST", "finite_rne"): _cast, ("MATMUL", "real"): _matmul, ("ARITH", "real"): _arith, ("INDEX", "real"): _index,
            ("SOFTMAX", "real"): _softmax, ("ACT", "torch"): _act}
 
 # Below this many scalar operations the adapter itself is fast enough and stays the evaluator.

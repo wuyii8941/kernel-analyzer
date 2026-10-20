@@ -177,7 +177,8 @@ def reference_outcome(spec, decl_path, values, budget=300):
     old = signal.signal(signal.SIGALRM, alarm)
     signal.alarm(budget)
     try:
-        r = registry.query(task["contract"], task["profile"], inputs)
+        r = registry.query(task["contract"], task["profile"], inputs,
+                           task_bindings={task["profile"]: task["task_statement"]})
         return r.outcome, (r.note or "")[:200]
     except TimeoutError:
         return "budget_exceeded", ""

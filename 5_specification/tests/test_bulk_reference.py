@@ -182,6 +182,31 @@ class Bulk(unittest.TestCase):
         self.assertIn(self.compare("ACT", "torch", {"op": "aten.silu_backward", "args": [
             record(np.ones((2, 2)), "f32"), record(np.ones((2,)), "f32")]}, False), ("declined", "raised"))
 
+    def test_cast(self):
+        statement = "roundTiesToEven conversion (test)"
+        adapter = registry.load("CAST").adapter
+        for seed in range(12):
+            g = self.rng(600 + seed)
+            src = ["f32", "f64", "bf16", "f16"][seed % 4]
+            dst = ["bf16", "f16", "f32", "bf16", "f64"][seed % 5]
+            x = g.standard_normal((3, 5)) * [1, 1e3, 1e-3, 1e-6, 6e4][seed % 5]
+            if dst == "f16":
+                x = np.clip(x, -6e4, 6e4)
+            x.flat[0] = 1 + 2.0 ** -8 if src in ("f32", "f64") else x.flat[0]   # a bf16 tie
+            x.flat[1] = 2.0 ** -133 if src in ("f32", "f64") else x.flat[1]     # bf16 subnormal range
+            inp = {"op": "aten._to_copy", "args": [record(x, src)], "kwargs": {"dtype": {"dtype": dst}}}
+            ref = evaluate(adapter.reference, "finite_rne", inp)
+            got = bulk.evaluate("CAST", "finite_rne", inp, force=True)
+            if got is None:
+                continue
+            self.assertEqual(ref.outcome, "value", ref.note)
+            for i, v in enumerate(flat(ref.fields["out"])):
+                self.assertEqual((got.fields["out"].lo.ravel()[i], got.fields["out"].hi.ravel()[i]),
+                                 directed(Fraction(v)), (src, dst, i))
+        big = {"op": "aten._to_copy", "args": [record(np.array([3e38]), "f32")], "kwargs": {"dtype": {"dtype": "f16"}}}
+        self.assertIsNone(bulk.evaluate("CAST", "finite_rne", big, force=True))
+        del statement
+
     def test_threshold_and_unlisted(self):
         small = {"op": "aten.mm", "args": [record(np.ones((2, 2)), "f32"), record(np.ones((2, 2)), "f32")]}
         self.assertIsNone(bulk.evaluate("MATMUL", "real", small))

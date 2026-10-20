@@ -224,6 +224,13 @@ NON_SEMANTIC = {
 }
 
 
+# Profiles whose task is itself a declared rounding: the program reference keeps that rounding (call_binding
+# _program_reference "rounding_check"); with the default numerical_difference model G_pi would drop the very rounding
+# the task defines and every rounded coordinate would show a G_pi - f gap.
+ROUNDING_TASKS = {("CAST", "finite_rne"): "the task is the declared IEEE 754 roundTiesToEven conversion (CAST CA.RNE); "
+                                          "the program reference keeps the conversion's rounding"}
+
+
 def decode_tags(x):
     """Recorded values -> call arguments: memory-format tags (record.to_host) back to torch.memory_format."""
     if isinstance(x, dict) and set(x) == {"__memory_format__"}:
@@ -366,6 +373,8 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
                        f"(no task choice: the profile requires none).",
                        "input_map": input_map, "output_map": output_map}],
             "state_map": state_map}
+    if (contract["id"], profile) in ROUNDING_TASKS:
+        plan["program_reference"] = {"mode": "rounding_check", "basis": ROUNDING_TASKS[(contract["id"], profile)]}
     if dropped:
         plan["dropped_arguments"] = dropped
     if unobserved:
