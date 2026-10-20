@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 import math
+from pathlib import Path
 
 import numpy as np
 import yaml
@@ -15,20 +16,23 @@ from kernel_spec.num import Invalid, Result, Undefined, Unsupported
 from kernel_spec.real import R
 from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "RANDOM.yaml").read_text())["covers"]
+def _own_contract():
+    """The contract next to this adapter when staged as <root>/adapters/RANDOM.py, else the registry's contract."""
+    staged = Path(__file__).resolve().parent.parent / "contracts" / "RANDOM.yaml"
+    return staged if staged.is_file() else CONTRACTS / "RANDOM.yaml"
+
+
+COVERS = yaml.safe_load(_own_contract().read_text())["covers"]
 FORWARD_COVERS = ["aten.dropout", "torch.nn.functional.dropout"]
 BACKWARD_COVERS = ["aten.native_dropout_backward"]
 NATIVE_COVERS = ["aten.native_dropout"]
 NATIVE_PROFILE = "native_forward_given_mask"
 OBSERVED_MASK = "observed_mask"
 
-# Harness conventions (path A rule v2). native_dropout returns (output, mask). Position 1 is defined by the task but
-# is not compared: in the conditioned case it is the reference input itself, and the RANDOM output `out` is a numeric
-# field that cannot carry Boolean values (decision RN3.MASK_POSITION).
-ATEN_RETURNS = {"aten.native_dropout": {
-    "positions": 2,
-    "not_compared": {1: "RN3.MASK_POSITION: the returned mask is the conditioning input observed_mask; comparing it "
-                        "with itself is vacuous, and the numeric output field cannot hold Boolean values"}}}
+# Harness conventions (path A rule v2). native_dropout returns (output, mask); both positions are defined and compared.
+# The mask position is returned in the numeric encoding 1 = true (kept), 0 = false (dropped), because the RANDOM
+# output `out` is a numeric field shared with the reviewed profiles (decision RN3.MASK_POSITION).
+ATEN_RETURNS = {"aten.native_dropout": {"positions": 2, "not_compared": {}}}
 # The returned mask (return position 1) is mapped into the reference input as the keyword observed_mask; the measured
 # call itself is replayed exactly as recorded, without that keyword.
 ATEN_OBSERVED_INPUTS = {"aten.native_dropout": {"argument": OBSERVED_MASK, "return_position": 1}}
@@ -277,23 +281,30 @@ def _native_train(train):
     return bool(train)
 
 
+def _constant_mask(shape, keep):
+    return A.Ten(np.full(shape, 1 if keep else 0, dtype=object), "b8")
+
+
 def _native_dropout(input, p, train, *, observed_mask=None):
-    """[output, None]: output = input * mask / (1 - p) given the returned mask; position 1 is not compared."""
+    """[output, mask]: given the returned mask, output = input * mask / (1 - p); the mask in the 1 / 0 encoding."""
     q = _native_probability(p)
     training = _native_train(train)
     if observed_mask is not None and observed_mask.shape != input.shape:
         raise Invalid("observed_mask must have the shape of input")
     if not training or q == 0:
-        return [input, None]
+        return [input, _constant_mask(input.shape, True)]
     if q == 1:
-        return [A.Ten(np.full(input.shape, R(0), dtype=object), input.dtype), None]
+        return [A.Ten(np.full(input.shape, R(0), dtype=object), input.dtype), _constant_mask(input.shape, False)]
     if observed_mask is None:
         raise Unsupported("training native_dropout with 0 < p < 1 needs the returned mask as observed_mask")
     scale = R(Fraction(1) / (1 - q))
     out = np.empty(input.shape, dtype=object)
+    mask = np.empty(input.shape, dtype=object)
     for index in np.ndindex(input.shape):
-        out[index] = input.a[index] * scale if bool(observed_mask.a[index]) else R(0)
-    return [A.Ten(out, input.dtype), None]
+        keep = bool(observed_mask.a[index])
+        out[index] = input.a[index] * scale if keep else R(0)
+        mask[index] = 1 if keep else 0
+    return [A.Ten(out, input.dtype), A.Ten(mask, "b8")]
 
 
 _NATIVE_REFERENCE = make_reference(NATIVE_COVERS, extra={"aten.native_dropout": _native_dropout},
@@ -311,26 +322,35 @@ def reference(profile, inp):
 
 
 def _check_native(profile, inp, observed):
-    """observed = {"out": [output record {t, v, shape}, anything]}; position 1 is not compared (RN3.MASK_POSITION)."""
+    """observed = {"out": [output record, mask record]} with records {t, v, shape}: dtype, shape and every value of both
+    positions; the observed Boolean mask is compared with the reference mask in its 1 / 0 encoding."""
     from kernel_spec.compare import check_enclosed_output
     raw = make_reference(NATIVE_COVERS, extra={"aten.native_dropout": _native_dropout}, profiles=(NATIVE_PROFILE,),
                          encode_output=False, argument_decoder=_decode_native)
-    expected = raw(profile, inp).fields["out"][0]
+    expected_out, expected_mask = raw(profile, inp).fields["out"]
     if not isinstance(observed, dict) or set(observed) != {"out"}:
         return False
     pair = observed["out"]
     if not isinstance(pair, (list, tuple)) or len(pair) != 2:
         return False
-    record = pair[0]
-    if not isinstance(record, dict) or set(record) != {"t", "v", "shape"}:
-        return False
-    try:
-        if A.dt(record["t"]) != expected.dtype or tuple(record["shape"]) != expected.shape:
+    records = []
+    for record, expected in zip(pair, (expected_out, expected_mask)):
+        if not isinstance(record, dict) or set(record) != {"t", "v", "shape"}:
             return False
-        got = decode(record)
-    except (Invalid, Unsupported, Undefined):
-        return False
-    return got.shape == expected.shape and check_enclosed_output(encode(expected), encode(got))
+        try:
+            if A.dt(record["t"]) != expected.dtype or tuple(record["shape"]) != expected.shape:
+                return False
+            if expected is expected_mask and any(not isinstance(v, (bool, np.bool_)) for v in _raw_leaves(record["v"])):
+                return False                # a b8 mask record must hold real Booleans, not 2 or 0.5
+            got = decode(record)
+        except (Invalid, Unsupported, Undefined):
+            return False
+        if got.shape != expected.shape:
+            return False
+        records.append(got)
+    observed_mask = [1 if v is True else 0 for v in records[1].a.flat]
+    return (check_enclosed_output(encode(expected_out), encode(records[0]))
+            and observed_mask == [int(v) for v in expected_mask.a.flat])
 
 
 def check_output(profile, inp, observed):
@@ -362,44 +382,53 @@ def _backward_mutant(mode):
                           profiles=("finite_backward",), argument_decoder=_decode_argument)
 
 
-# Independent wrong implementations of native_dropout given the mask (each a separate function).
+# Independent wrong implementations of native_dropout given the mask (each a separate function). Their mask position
+# follows the same documented rule as the reference, so a witness rejects them through the output position.
+def _mutant_mask(input, p, train, observed_mask):
+    q = Fraction(p if not isinstance(p, R) else p.v)
+    if not train or q == 0:
+        return _constant_mask(input.shape, True)
+    if q == 1:
+        return _constant_mask(input.shape, False)
+    return A.Ten(np.vectorize(lambda v: 1 if v else 0, otypes=[object])(observed_mask.a), "b8")
+
 def _nm_scale_by_keep(input, p, train, *, observed_mask=None):
     keep = 1 - Fraction(p if not isinstance(p, R) else p.v)
     if not train:
-        return [input, None]
+        return [input, _mutant_mask(input, p, train, observed_mask)]
     out = np.empty(input.shape, dtype=object)
     for index in np.ndindex(input.shape):   # misreading: multiplies by (1 - p) instead of dividing
         out[index] = input.a[index] * R(keep) if observed_mask.a[index] else R(0)
-    return [A.Ten(out, input.dtype), None]
+    return [A.Ten(out, input.dtype), _mutant_mask(input, p, train, observed_mask)]
 
 
 def _nm_no_scale(input, p, train, *, observed_mask=None):
     if not train:
-        return [input, None]
+        return [input, _mutant_mask(input, p, train, observed_mask)]
     out = np.empty(input.shape, dtype=object)
     for index in np.ndindex(input.shape):   # misreading: the mask is applied but the 1/(1-p) scaling is dropped
         out[index] = input.a[index] if observed_mask.a[index] else R(0)
-    return [A.Ten(out, input.dtype), None]
+    return [A.Ten(out, input.dtype), _mutant_mask(input, p, train, observed_mask)]
 
 
 def _nm_ignore_mask(input, p, train, *, observed_mask=None):
     if not train:
-        return [input, None]
+        return [input, _mutant_mask(input, p, train, observed_mask)]
     factor = R(1 / (1 - Fraction(p if not isinstance(p, R) else p.v)))
     out = np.empty(input.shape, dtype=object)
     for index in np.ndindex(input.shape):   # misreading: scaling applied, mask dropped
         out[index] = input.a[index] * factor
-    return [A.Ten(out, input.dtype), None]
+    return [A.Ten(out, input.dtype), _mutant_mask(input, p, train, observed_mask)]
 
 
 def _nm_inverted_mask(input, p, train, *, observed_mask=None):
     if not train:
-        return [input, None]
+        return [input, _mutant_mask(input, p, train, observed_mask)]
     factor = R(1 / (1 - Fraction(p if not isinstance(p, R) else p.v)))
     out = np.empty(input.shape, dtype=object)
     for index in np.ndindex(input.shape):   # misreading: True marks dropped elements
         out[index] = R(0) if observed_mask.a[index] else input.a[index] * factor
-    return [A.Ten(out, input.dtype), None]
+    return [A.Ten(out, input.dtype), _mutant_mask(input, p, train, observed_mask)]
 
 
 def _nm_eval_scaled(input, p, train, *, observed_mask=None):
@@ -408,22 +437,29 @@ def _nm_eval_scaled(input, p, train, *, observed_mask=None):
     for index in np.ndindex(input.shape):   # misreading: evaluation mode keeps the 1/(1-p) scaling
         keep = True if (not train or observed_mask is None) else bool(observed_mask.a[index])
         out[index] = input.a[index] * R(1 / (1 - q)) if keep else R(0)
-    return [A.Ten(out, input.dtype), None]
+    return [A.Ten(out, input.dtype), _mutant_mask(input, p, train, observed_mask)]
 
 
 def _nm_p1_identity(input, p, train, *, observed_mask=None):
     q = Fraction(p if not isinstance(p, R) else p.v)
     if not train or q in (0, 1):            # misreading: p = 1 returns the input like p = 0
-        return [input, None]
+        return [input, _mutant_mask(input, p, train, observed_mask)]
     out = np.empty(input.shape, dtype=object)
     for index in np.ndindex(input.shape):
         out[index] = input.a[index] * R(1 / (1 - q)) if observed_mask.a[index] else R(0)
-    return [A.Ten(out, input.dtype), None]
+    return [A.Ten(out, input.dtype), _mutant_mask(input, p, train, observed_mask)]
 
 
 def _nm_none_is_eval(input, p, train, *, observed_mask=None):
     if train is None:                       # misreading: train=None is evaluation (decomposition only)
-        return [input, None]
+        return [input, _mutant_mask(input, p, train, observed_mask)]
+    return _native_dropout(input, p, train, observed_mask=observed_mask)
+
+
+def _nm_mask_true_dropped(input, p, train, *, observed_mask=None):
+    q = Fraction(p if not isinstance(p, R) else p.v)
+    if not train or q == 0:                 # misreading: the mask marks dropped elements, so evaluation gives all false
+        return [input, A.Ten(np.full(input.shape, 0, dtype=object), "b8")]
     return _native_dropout(input, p, train, observed_mask=observed_mask)
 
 
@@ -454,6 +490,7 @@ MUTANTS = {
     "RN3.M5": _native_mutant(_nm_eval_scaled),
     "RN3.M6": _native_mutant(_nm_p1_identity),
     "RN3.M7": _native_mutant(_nm_none_is_eval),
+    "RN3.M8": _native_mutant(_nm_mask_true_dropped),
     "RN2.M1": _forward_mutant("eval_scaled"),
     "RN2.M2": _forward_mutant("p1_identity"),
     "RN2.M3": _backward_mutant("no_scale"),

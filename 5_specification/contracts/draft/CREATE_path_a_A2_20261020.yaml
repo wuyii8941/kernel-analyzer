@@ -18,37 +18,30 @@ activation:
 covers: [aten.arange, aten.zeros, aten.ones, aten.full, aten.zeros_like, aten.ones_like, aten.full_like,
   aten.scalar_tensor]
 profiles:
-  explicit_numeric:
+  explicit:
     meaning: >-
       Factory calls whose result dtype is fixed by the call itself (an explicit dtype, the dtype of a *_like input,
       int64 inference for arange with integer arguments, bool / int64 inference for full with a bool / int fill) and
-      is a floating (f16, bf16, f32, f64) or integer (i64, i32, i16, i8, u8) dtype. Calls whose result dtype is the
-      process default floating dtype are outside this profile.
+      is a floating (f16, bf16, f32, f64), integer (i64, i32, i16, i8, u8) or bool dtype. A Boolean result is returned
+      in the exact numeric encoding 1 = true, 0 = false (CR.BOOL_ENCODING). Calls whose result dtype is the process
+      default floating dtype are outside this profile.
     task_choice_required: false
     outputs: [out]
-    basis: [CR.SCOPE, CR.ARANGE_LENGTH, CR.ARANGE_DTYPE, CR.CONVERSION, CR.LIKE, CR.SCALAR_DTYPE]
-  explicit_boolean:
+    basis: [CR.SCOPE, CR.ARANGE_LENGTH, CR.ARANGE_DTYPE, CR.CONVERSION, CR.LIKE, CR.SCALAR_DTYPE, CR.BOOL_ENCODING]
+  default_float32:
     meaning: >-
-      The same calls as explicit_numeric when the result dtype is bool (for example ones with dtype=torch.bool or
-      ones_like of a Boolean input). The complete Boolean tensor is the output out_bool.
-    task_choice_required: false
-    outputs: [out_bool]
-    basis: [CR.SCOPE, CR.CONVERSION, CR.LIKE, CR.SCALAR_DTYPE]
-  default_float32_numeric:
-    meaning: >-
-      explicit_numeric extended to calls whose result dtype is the process default floating dtype (zeros / ones
-      without dtype, full with a floating fill, arange with a floating argument), with the task declaring that the
-      process runs with the documented initial default torch.float32.
+      explicit extended to calls whose result dtype is the process default floating dtype (zeros / ones without
+      dtype, full with a floating fill, arange with a floating argument), with the task declaring that the process
+      runs with the documented initial default torch.float32.
     task_choice_required: true
     outputs: [out]
-    basis: [CR.DEFAULT_DTYPE, CR.SCOPE, CR.ARANGE_LENGTH, CR.ARANGE_DTYPE, CR.CONVERSION, CR.LIKE, CR.SCALAR_DTYPE]
+    basis: [CR.DEFAULT_DTYPE, CR.SCOPE, CR.ARANGE_LENGTH, CR.ARANGE_DTYPE, CR.CONVERSION, CR.LIKE, CR.SCALAR_DTYPE,
+      CR.BOOL_ENCODING]
 outputs:
   out:
-    shape: the complete numeric result tensor with its dtype and explicit shape (including empty and 0-dim shapes)
-    guarantee: exact
-  out_bool:
-    shape: the complete Boolean result tensor with its explicit shape
-    kind: boolean
+    shape: >-
+      the complete result tensor with its dtype and explicit shape (including empty and 0-dim shapes); Boolean results
+      in the numeric encoding 1 = true, 0 = false
     guarantee: exact
 comparison:
   input_binding: >-
@@ -58,7 +51,7 @@ comparison:
     recorded basis.
   complete_output: The complete returned tensor is observed with dtype, explicit shape and every value.
   quality: >-
-    Exact values: integers and Booleans exactly; floating results are the exact real task value (start + i*step, the
+    Exact values: integers exactly, Booleans exactly in the 1 / 0 encoding; floating results are the exact real task value (start + i*step, the
     fill value, plus or minus infinity where the dtype has infinities); the deviation of a stored floating value from
     that real value is measured, not tolerated by the reference.
   test_evidence: Hand-derived coordinate values and PyTorch 2.10 eager comparisons of the recorded argument structures.
@@ -86,8 +79,8 @@ decisions:
     zeros / ones / full (floating fill) without dtype and arange with a floating argument and no dtype take the
     process default floating dtype, which is mutable process state (torch.set_default_dtype) and is not part of the
     recorded call. Alternatives: (a) assume torch.float32, the documented initial default; (b) refuse such calls;
-    (c) record the default dtype at capture time. The explicit profiles choose (b); the profile
-    default_float32_numeric is (a) and requires the task to declare it. (c) needs a recorder change.
+    (c) record the default dtype at capture time. The profile explicit chooses (b); the profile
+    default_float32 is (a) and requires the task to declare it. (c) needs a recorder change.
   basis: [T_SET_DEFAULT_DTYPE.INITIAL, T_ZEROS.DEF, T_ARANGE.DEF]
 - id: CR.ARANGE_DTYPE
   status: drafted
@@ -110,7 +103,12 @@ decisions:
     but refuse the ambiguous band. Choice (d): when any argument is non-integer (or has magnitude at least 2^53) and
     the exact quotient lies within 2^-30 * max(1, |q|) of an integer (including exactly on it), the call is
     unsupported. (b) would define f from the implementation, (c) needs set-valued shapes. All-integer arguments below
-    2^53 are always evaluated exactly.
+    2^53 are always evaluated exactly. An infinite step is not rejected by the reference program's checks (only
+    nonfinite start and end are) and PyTorch 2.10 eager returns an empty tensor for arange(0, 5, inf); the page's
+    length formula involves division by an infinite step, which is not a real-number operation. Alternatives: (i)
+    invalid_input; (ii) length 0 by reading (end - start)/inf as 0; (iii) unsupported. Choice (iii): the
+    documentation does not define the case, and neither refusing a call eager accepts nor fixing its value is
+    supported by a source.
   basis: [T_ARANGE.DEF, T_ARANGE.ROUNDING, TS_RANGE_UTILS_H.CHECKS, TS_RANGE_UTILS_H.SIZE]
 - id: CR.CONVERSION
   status: drafted
@@ -129,6 +127,16 @@ decisions:
     zeros_like, ones_like and full_like read only the shape and dtype of input (dtype defaults to input's dtype);
     input values, including NaN and infinities, are irrelevant and accepted.
   basis: [T_ONES_LIKE.DEF, T_ONES_LIKE.DTYPE, T_ZEROS_LIKE.DEF, T_ZEROS_LIKE.DTYPE, T_FULL_LIKE.DEF]
+- id: CR.BOOL_ENCODING
+  status: drafted
+  statement: >-
+    A Boolean result (ones / zeros / full / *_like / scalar_tensor with bool dtype) is returned in the exact numeric
+    encoding 1 = true, 0 = false in the numeric output out; the contract's complete-output checker requires the
+    observed tensor to have dtype bool and the given shape, and compares each Boolean entry with that encoding.
+    Alternatives: (a) a separate Boolean output field (kind boolean) in a separate profile; rejected because the path
+    A generation rule maps a single output field named out; (b) a mixed field (kind discrete), refused by the
+    measurement binding. Values are unaffected; only the representation of true / false in the reference changes.
+  basis: [TS_NATIVE_FUNCTIONS_CR.CREATION_SCHEMAS, T_ONES.DEF, T_ZEROS.DEF]
 - id: CR.SCALAR_DTYPE
   status: drafted
   statement: >-
@@ -145,36 +153,36 @@ clauses:
   evidence_kind: definition
 - id: CR.C2
   basis: [CR.ARANGE_LENGTH]
-  statement: arange with zero step, nonfinite bounds or a step sign inconsistent with end - start is invalid_input; end == start gives the empty tensor.
+  statement: arange with zero step, nonfinite start or end, or a step sign inconsistent with end - start is invalid_input; an infinite step is unsupported; end == start gives the empty tensor.
   observes: [out]
   evidence_kind: definition
 - id: CR.C3
   basis: [CR.ARANGE_DTYPE, CR.DEFAULT_DTYPE, CR.ARANGE_LENGTH]
-  statement: arange with a floating argument and no dtype has the default floating dtype; explicit profiles refuse it, default_float32_numeric evaluates it as float32 with exact values; the documented rounding ambiguity band is refused.
+  statement: arange with a floating argument and no dtype has the default floating dtype; explicit refuses it, default_float32 evaluates it as float32 with exact values; the documented rounding ambiguity band is refused.
   observes: [out]
   evidence_kind: definition
 - id: CR.C4
   basis: [CR.CONVERSION, TS_NATIVE_FUNCTIONS_CR.CREATION_SCHEMAS]
-  statement: zeros / ones / full return the complete tensor of the given (possibly empty) size whose every coordinate is 0 / 1 / fill_value in the result dtype (false / true for bool).
-  observes: [out, out_bool]
+  statement: zeros / ones / full return the complete tensor of the given (possibly empty) size whose every coordinate is 0 / 1 / fill_value in the result dtype (0 / 1 encoding false / true for bool).
+  observes: [out]
   evidence_kind: definition
 - id: CR.C5
   basis: [CR.LIKE, CR.CONVERSION]
   statement: zeros_like / ones_like / full_like return the fill value at every coordinate of input's shape, in input's dtype unless dtype is given.
-  observes: [out, out_bool]
+  observes: [out]
   evidence_kind: definition
 - id: CR.C6
   basis: [CR.SCALAR_DTYPE, CR.CONVERSION]
   statement: scalar_tensor(s, dtype) returns the 0-dim tensor holding s exactly (infinities exact in floating dtypes); without dtype it is unsupported.
-  observes: [out, out_bool]
+  observes: [out]
   evidence_kind: definition
 - id: CR.C7
   basis: [CR.CONVERSION, CR.DEFAULT_DTYPE]
-  statement: Negative sizes, values outside an integer dtype's range and infinities in integer results are invalid_input; calls whose result dtype is the default floating dtype are unsupported in the explicit profiles; results of another profile's dtype class are unsupported.
+  statement: Negative sizes, values outside an integer dtype's range and infinities in integer results are invalid_input; calls whose result dtype is the default floating dtype are unsupported in explicit; float8 and complex result dtypes are unsupported.
   observes: [out]
   evidence_kind: definition
 examples:
-- {id: CR.E1, profile: explicit_numeric, clauses: [CR.C1], note: recorded aten.arange.default(128) (device and pin_memory dropped),
+- {id: CR.E1, profile: explicit, clauses: [CR.C1], note: recorded aten.arange.default(128) (device and pin_memory dropped),
   input: {op: aten.arange, args: [128]},
   expected: {outcome: value, fields: {out: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
           22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
@@ -182,48 +190,49 @@ examples:
           78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
           104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125,
           126, 127]}}}
-- {id: CR.E2, profile: explicit_numeric, clauses: [CR.C1], input: {op: aten.arange, args: [5]}, expected: {outcome: value, fields: {out: [0, 1, 2, 3, 4]}}}
-- {id: CR.E3, profile: explicit_numeric, clauses: [CR.C1], note: 'arange.start', input: {op: aten.arange, args: [1, 4]}, expected: {outcome: value, fields: {out: [1, 2, 3]}}}
-- {id: CR.E4, profile: explicit_numeric, clauses: [CR.C1], note: 'arange.start_step, ceil(5/2) = 3', input: {op: aten.arange, args: [0, 5, 2]}, expected: {outcome: value, fields: {out: [0, 2, 4]}}}
-- {id: CR.E5, profile: explicit_numeric, clauses: [CR.C1], note: 'negative step, ceil(-4/-2) = 2', input: {op: aten.arange, args: [5, 1, -2]}, expected: {outcome: value, fields: {out: [5, 3]}}}
-- {id: CR.E6, profile: explicit_numeric, clauses: [CR.C1], input: {op: aten.arange, args: [3], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: [0, 1, 2]}}}
-- {id: CR.E7, profile: explicit_numeric, clauses: [CR.C1, CR.C7], note: 'int64 inference; the values exceed int64', input: {op: aten.arange, args: [18446744073709551616, 18446744073709551618]}, expected: {outcome: invalid_input}}
-- {id: CR.E8, profile: explicit_numeric, clauses: [CR.C2], input: {op: aten.arange, args: [5, 1, 1]}, expected: {outcome: invalid_input}}
-- {id: CR.E9, profile: explicit_numeric, clauses: [CR.C2], input: {op: aten.arange, args: [0, 5, 0]}, expected: {outcome: invalid_input}}
-- {id: CR.E10, profile: explicit_numeric, clauses: [CR.C2], input: {op: aten.arange, args: [0, 0]}, expected: {outcome: value, fields: {out: []}}}
-- {id: CR.E11, profile: explicit_numeric, clauses: [CR.C3], input: {op: aten.arange, args: [1, '5/2', '1/2']}, expected: {outcome: unsupported}}
-- {id: CR.E12, profile: default_float32_numeric, clauses: [CR.C3], note: 'documented example torch.arange(1, 2.5, 0.5); quotient 3 is an integer, but the step is non-integer', input: {op: aten.arange, args: [1, '5/2', '1/2']}, expected: {outcome: unsupported}}
-- {id: CR.E13, profile: default_float32_numeric, clauses: [CR.C3], note: 'ceil((5/2)/1) = 3 values', input: {op: aten.arange, args: [0, 2.5]}, expected: {outcome: value, fields: {out: [0, 1, 2]}}}
-- {id: CR.E14, profile: default_float32_numeric, clauses: [CR.C3], note: 'quotient (2-0)/(3/4) = 8/3, ceil 3', input: {op: aten.arange, args: [0, 2, 0.75]}, expected: {outcome: value, fields: {out: [0, '3/4', '3/2']}}}
-- {id: CR.E15, profile: explicit_numeric, clauses: [CR.C4], note: 'recorded aten.zeros.default([0], dtype=bfloat16)', input: {op: aten.zeros, args: [[0]], kwargs: {dtype: {dtype: bf16}}}, expected: {outcome: value, fields: {out: []}}}
-- {id: CR.E16, profile: explicit_numeric, clauses: [CR.C4], note: 'recorded aten.zeros.default([0], dtype=float32)', input: {op: aten.zeros, args: [[0]], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: []}}}
-- {id: CR.E17, profile: explicit_numeric, clauses: [CR.C4], input: {op: aten.zeros, args: [[2, 3]], kwargs: {dtype: {dtype: i64}}}, expected: {outcome: value, fields: {out: [[0, 0, 0], [0, 0, 0]]}}}
-- {id: CR.E18, profile: explicit_numeric, clauses: [CR.C7], input: {op: aten.zeros, args: [[2]]}, expected: {outcome: unsupported}}
-- {id: CR.E19, profile: default_float32_numeric, clauses: [CR.C4], input: {op: aten.zeros, args: [[2]]}, expected: {outcome: value, fields: {out: [0, 0]}}}
-- {id: CR.E20, profile: explicit_numeric, clauses: [CR.C7], input: {op: aten.zeros, args: [[-1]], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: invalid_input}}
-- {id: CR.E21, profile: explicit_boolean, clauses: [CR.C4], note: 'recorded aten.ones.default([128, 128], dtype=bool), shown at size [2, 3]', input: {op: aten.ones, args: [[2, 3]], kwargs: {dtype: {dtype: b8}}}, expected: {outcome: value, fields: {out_bool: [[true, true, true], [true, true, true]]}}}
-- {id: CR.E22, profile: explicit_numeric, clauses: [CR.C7], input: {op: aten.ones, args: [[2, 2]], kwargs: {dtype: {dtype: b8}}}, expected: {outcome: unsupported}}
-- {id: CR.E23, profile: explicit_numeric, clauses: [CR.C4], input: {op: aten.ones, args: [[1, 2]], kwargs: {dtype: {dtype: f16}}}, expected: {outcome: value, fields: {out: [[1, 1]]}}}
-- {id: CR.E24, profile: explicit_numeric, clauses: [CR.C5], note: 'recorded aten.ones_like.default(f32 0-dim) (pin_memory, memory_format dropped)', input: {op: aten.ones_like, args: [{t: f32, v: 3}]}, expected: {outcome: value, fields: {out: 1}}}
-- {id: CR.E25, profile: explicit_numeric, clauses: [CR.C5], note: 'recorded aten.ones_like.default(f32 [1,1,2,2])', input: {op: aten.ones_like, args: [{t: f32, v: [[[['1/2', -2], [inf, 4]]]]}]}, expected: {outcome: value, fields: {out: [[[[1, 1], [1, 1]]]]}}}
-- {id: CR.E26, profile: explicit_boolean, clauses: [CR.C5], input: {op: aten.ones_like, args: [{t: b8, v: [true, false]}]}, expected: {outcome: value, fields: {out_bool: [true, true]}}}
-- {id: CR.E27, profile: explicit_numeric, clauses: [CR.C5], input: {op: aten.ones_like, args: [{t: i64, v: [5, 7]}], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: [1, 1]}}}
-- {id: CR.E28, profile: explicit_numeric, clauses: [CR.C5], input: {op: aten.zeros_like, args: [{t: bf16, v: [[1, -inf]]}]}, expected: {outcome: value, fields: {out: [[0, 0]]}}}
-- {id: CR.E29, profile: explicit_numeric, clauses: [CR.C5], input: {op: aten.full_like, args: [{t: f16, v: [1, 2]}, '1/2']}, expected: {outcome: value, fields: {out: ['1/2', '1/2']}}}
-- {id: CR.E30, profile: explicit_numeric, clauses: [CR.C4], input: {op: aten.full, args: [[2], '-inf'], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: [-inf, -inf]}}}
-- {id: CR.E31, profile: explicit_numeric, clauses: [CR.C4], note: 'int fill infers int64', input: {op: aten.full, args: [[2], 3]}, expected: {outcome: value, fields: {out: [3, 3]}}}
-- {id: CR.E32, profile: explicit_boolean, clauses: [CR.C4], note: 'bool fill infers bool', input: {op: aten.full, args: [[2], true]}, expected: {outcome: value, fields: {out_bool: [true, true]}}}
-- {id: CR.E33, profile: explicit_numeric, clauses: [CR.C7], note: 'floating fill infers the default floating dtype', input: {op: aten.full, args: [[2], '5/2']}, expected: {outcome: unsupported}}
-- {id: CR.E34, profile: explicit_numeric, clauses: [CR.C7], input: {op: aten.full, args: [[2], 300], kwargs: {dtype: {dtype: u8}}}, expected: {outcome: invalid_input}}
-- {id: CR.E35, profile: explicit_numeric, clauses: [CR.C6], note: "recorded aten.scalar_tensor.default('-inf', dtype=float32)", input: {op: aten.scalar_tensor, args: ['-inf'], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: -inf}}}
-- {id: CR.E36, profile: explicit_numeric, clauses: [CR.C6], note: 'recorded value as a Python float -inf', input: {op: aten.scalar_tensor, args: [-.inf], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: -inf}}}
-- {id: CR.E37, profile: explicit_numeric, clauses: [CR.C6], note: 'recorded aten.scalar_tensor.default(0.0, dtype=float32)', input: {op: aten.scalar_tensor, args: [0.0], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: 0}}}
-- {id: CR.E38, profile: default_float32_numeric, clauses: [CR.C6], input: {op: aten.scalar_tensor, args: [1]}, expected: {outcome: unsupported}}
-- {id: CR.E39, profile: explicit_numeric, clauses: [CR.C6, CR.C7], input: {op: aten.scalar_tensor, args: ['-inf'], kwargs: {dtype: {dtype: i64}}}, expected: {outcome: invalid_input}}
-- {id: CR.E40, profile: explicit_boolean, clauses: [CR.C6], input: {op: aten.scalar_tensor, args: [true], kwargs: {dtype: {dtype: b8}}}, expected: {outcome: value, fields: {out_bool: true}}}
-- {id: CR.E41, profile: explicit_numeric, clauses: [CR.C6], note: 'exact real value; the stored float32 rounding is measured', input: {op: aten.scalar_tensor, args: ['1/3'], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: '1/3'}}}
-- {id: CR.E42, profile: explicit_numeric, clauses: [CR.C6], note: 'overflows float32', input: {op: aten.scalar_tensor, args: [1000000000000000000000000000000000000000], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: unsupported}}
-- {id: CR.E43, profile: explicit_numeric, clauses: [CR.C5, CR.C7], note: 'ones_like keeps the Boolean input dtype, so the result belongs to explicit_boolean', input: {op: aten.ones_like, args: [{t: b8, v: [true, false]}]}, expected: {outcome: unsupported}}
+- {id: CR.E2, profile: explicit, clauses: [CR.C1], input: {op: aten.arange, args: [5]}, expected: {outcome: value, fields: {out: [0, 1, 2, 3, 4]}}}
+- {id: CR.E3, profile: explicit, clauses: [CR.C1], note: 'arange.start', input: {op: aten.arange, args: [1, 4]}, expected: {outcome: value, fields: {out: [1, 2, 3]}}}
+- {id: CR.E4, profile: explicit, clauses: [CR.C1], note: 'arange.start_step, ceil(5/2) = 3', input: {op: aten.arange, args: [0, 5, 2]}, expected: {outcome: value, fields: {out: [0, 2, 4]}}}
+- {id: CR.E5, profile: explicit, clauses: [CR.C1], note: 'negative step, ceil(-4/-2) = 2', input: {op: aten.arange, args: [5, 1, -2]}, expected: {outcome: value, fields: {out: [5, 3]}}}
+- {id: CR.E6, profile: explicit, clauses: [CR.C1], input: {op: aten.arange, args: [3], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: [0, 1, 2]}}}
+- {id: CR.E7, profile: explicit, clauses: [CR.C1, CR.C7], note: 'int64 inference; the values exceed int64', input: {op: aten.arange, args: [18446744073709551616, 18446744073709551618]}, expected: {outcome: invalid_input}}
+- {id: CR.E8, profile: explicit, clauses: [CR.C2], input: {op: aten.arange, args: [5, 1, 1]}, expected: {outcome: invalid_input}}
+- {id: CR.E9, profile: explicit, clauses: [CR.C2], input: {op: aten.arange, args: [0, 5, 0]}, expected: {outcome: invalid_input}}
+- {id: CR.E44, profile: explicit, clauses: [CR.C2], note: 'infinite step: not defined by the page (CR.ARANGE_LENGTH)', input: {op: aten.arange, args: [0, 5, inf]}, expected: {outcome: unsupported}}
+- {id: CR.E10, profile: explicit, clauses: [CR.C2], input: {op: aten.arange, args: [0, 0]}, expected: {outcome: value, fields: {out: []}}}
+- {id: CR.E11, profile: explicit, clauses: [CR.C3], input: {op: aten.arange, args: [1, '5/2', '1/2']}, expected: {outcome: unsupported}}
+- {id: CR.E12, profile: default_float32, clauses: [CR.C3], note: 'documented example torch.arange(1, 2.5, 0.5); quotient 3 is an integer, but the step is non-integer', input: {op: aten.arange, args: [1, '5/2', '1/2']}, expected: {outcome: unsupported}}
+- {id: CR.E13, profile: default_float32, clauses: [CR.C3], note: 'ceil((5/2)/1) = 3 values', input: {op: aten.arange, args: [0, 2.5]}, expected: {outcome: value, fields: {out: [0, 1, 2]}}}
+- {id: CR.E14, profile: default_float32, clauses: [CR.C3], note: 'quotient (2-0)/(3/4) = 8/3, ceil 3', input: {op: aten.arange, args: [0, 2, 0.75]}, expected: {outcome: value, fields: {out: [0, '3/4', '3/2']}}}
+- {id: CR.E15, profile: explicit, clauses: [CR.C4], note: 'recorded aten.zeros.default([0], dtype=bfloat16)', input: {op: aten.zeros, args: [[0]], kwargs: {dtype: {dtype: bf16}}}, expected: {outcome: value, fields: {out: []}}}
+- {id: CR.E16, profile: explicit, clauses: [CR.C4], note: 'recorded aten.zeros.default([0], dtype=float32)', input: {op: aten.zeros, args: [[0]], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: []}}}
+- {id: CR.E17, profile: explicit, clauses: [CR.C4], input: {op: aten.zeros, args: [[2, 3]], kwargs: {dtype: {dtype: i64}}}, expected: {outcome: value, fields: {out: [[0, 0, 0], [0, 0, 0]]}}}
+- {id: CR.E18, profile: explicit, clauses: [CR.C7], input: {op: aten.zeros, args: [[2]]}, expected: {outcome: unsupported}}
+- {id: CR.E19, profile: default_float32, clauses: [CR.C4], input: {op: aten.zeros, args: [[2]]}, expected: {outcome: value, fields: {out: [0, 0]}}}
+- {id: CR.E20, profile: explicit, clauses: [CR.C7], input: {op: aten.zeros, args: [[-1]], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: invalid_input}}
+- {id: CR.E21, profile: explicit, clauses: [CR.C4], note: 'recorded aten.ones.default([128, 128], dtype=bool), shown at size [2, 3]', input: {op: aten.ones, args: [[2, 3]], kwargs: {dtype: {dtype: b8}}}, expected: {outcome: value, fields: {out: [[1, 1, 1], [1, 1, 1]]}}}
+- {id: CR.E22, profile: explicit, clauses: [CR.C4], input: {op: aten.zeros, args: [[2, 2]], kwargs: {dtype: {dtype: b8}}}, expected: {outcome: value, fields: {out: [[0, 0], [0, 0]]}}}
+- {id: CR.E23, profile: explicit, clauses: [CR.C4], input: {op: aten.ones, args: [[1, 2]], kwargs: {dtype: {dtype: f16}}}, expected: {outcome: value, fields: {out: [[1, 1]]}}}
+- {id: CR.E24, profile: explicit, clauses: [CR.C5], note: 'recorded aten.ones_like.default(f32 0-dim) (pin_memory, memory_format dropped)', input: {op: aten.ones_like, args: [{t: f32, v: 3}]}, expected: {outcome: value, fields: {out: 1}}}
+- {id: CR.E25, profile: explicit, clauses: [CR.C5], note: 'recorded aten.ones_like.default(f32 [1,1,2,2])', input: {op: aten.ones_like, args: [{t: f32, v: [[[['1/2', -2], [inf, 4]]]]}]}, expected: {outcome: value, fields: {out: [[[[1, 1], [1, 1]]]]}}}
+- {id: CR.E26, profile: explicit, clauses: [CR.C5], input: {op: aten.ones_like, args: [{t: b8, v: [true, false]}]}, expected: {outcome: value, fields: {out: [1, 1]}}}
+- {id: CR.E27, profile: explicit, clauses: [CR.C5], input: {op: aten.ones_like, args: [{t: i64, v: [5, 7]}], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: [1, 1]}}}
+- {id: CR.E28, profile: explicit, clauses: [CR.C5], input: {op: aten.zeros_like, args: [{t: bf16, v: [[1, -inf]]}]}, expected: {outcome: value, fields: {out: [[0, 0]]}}}
+- {id: CR.E29, profile: explicit, clauses: [CR.C5], input: {op: aten.full_like, args: [{t: f16, v: [1, 2]}, '1/2']}, expected: {outcome: value, fields: {out: ['1/2', '1/2']}}}
+- {id: CR.E30, profile: explicit, clauses: [CR.C4], input: {op: aten.full, args: [[2], '-inf'], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: [-inf, -inf]}}}
+- {id: CR.E31, profile: explicit, clauses: [CR.C4], note: 'int fill infers int64', input: {op: aten.full, args: [[2], 3]}, expected: {outcome: value, fields: {out: [3, 3]}}}
+- {id: CR.E32, profile: explicit, clauses: [CR.C4], note: 'bool fill infers bool', input: {op: aten.full, args: [[2], true]}, expected: {outcome: value, fields: {out: [1, 1]}}}
+- {id: CR.E33, profile: explicit, clauses: [CR.C7], note: 'floating fill infers the default floating dtype', input: {op: aten.full, args: [[2], '5/2']}, expected: {outcome: unsupported}}
+- {id: CR.E34, profile: explicit, clauses: [CR.C7], input: {op: aten.full, args: [[2], 300], kwargs: {dtype: {dtype: u8}}}, expected: {outcome: invalid_input}}
+- {id: CR.E35, profile: explicit, clauses: [CR.C6], note: "recorded aten.scalar_tensor.default('-inf', dtype=float32)", input: {op: aten.scalar_tensor, args: ['-inf'], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: -inf}}}
+- {id: CR.E36, profile: explicit, clauses: [CR.C6], note: 'recorded value as a Python float -inf', input: {op: aten.scalar_tensor, args: [-.inf], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: -inf}}}
+- {id: CR.E37, profile: explicit, clauses: [CR.C6], note: 'recorded aten.scalar_tensor.default(0.0, dtype=float32)', input: {op: aten.scalar_tensor, args: [0.0], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: 0}}}
+- {id: CR.E38, profile: default_float32, clauses: [CR.C6], input: {op: aten.scalar_tensor, args: [1]}, expected: {outcome: unsupported}}
+- {id: CR.E39, profile: explicit, clauses: [CR.C6, CR.C7], input: {op: aten.scalar_tensor, args: ['-inf'], kwargs: {dtype: {dtype: i64}}}, expected: {outcome: invalid_input}}
+- {id: CR.E40, profile: explicit, clauses: [CR.C6], input: {op: aten.scalar_tensor, args: [true], kwargs: {dtype: {dtype: b8}}}, expected: {outcome: value, fields: {out: 1}}}
+- {id: CR.E41, profile: explicit, clauses: [CR.C6], note: 'exact real value; the stored float32 rounding is measured', input: {op: aten.scalar_tensor, args: ['1/3'], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: value, fields: {out: '1/3'}}}
+- {id: CR.E42, profile: explicit, clauses: [CR.C6], note: 'overflows float32', input: {op: aten.scalar_tensor, args: [1000000000000000000000000000000000000000], kwargs: {dtype: {dtype: f32}}}, expected: {outcome: unsupported}}
+- {id: CR.E43, profile: explicit, clauses: [CR.C5, CR.C7], note: 'ones_like keeps the input dtype float8_e4m3fn, which is outside the profiles', input: {op: aten.ones_like, args: [{t: f8e4m3, v: [1, 2]}]}, expected: {outcome: unsupported}}
 signature:
   inputs: [selected factory operation, size list or arange bounds or fill value, optional dtype, a *_like input tensor (shape and dtype only)]
   pre_state: [a *_like input tensor is unchanged]
@@ -236,7 +245,8 @@ domain:
   invalid_input:
   - malformed record, negative size, zero step, inconsistent step sign, nonfinite arange bounds, integer-result values out of range or infinite
   unsupported:
-  - result dtype equal to the process default floating dtype (explicit profiles), scalar_tensor without dtype, NaN fill, floating overflow, non-integer values for integer results, Boolean values other than 0/1, arange inside the rounding ambiguity band, empty / empty_like, out and names overloads, complex and float8 dtypes
+  - arange with an infinite step
+  - result dtype equal to the process default floating dtype (profile explicit), scalar_tensor without dtype, NaN fill, floating overflow, non-integer values for integer results, Boolean values other than 0/1, arange inside the rounding ambiguity band, empty / empty_like, out and names overloads, complex and float8 dtypes
 mutation_requirements:
 - {id: CR.M1, misreading: arange includes end (length floor((end-start)/step)+1), witnesses: [CR.E2]}
 - {id: CR.M2, misreading: arange length floor((end-start)/step) instead of ceil, witnesses: [CR.E4]}
@@ -247,10 +257,17 @@ mutation_requirements:
 - {id: CR.M7, misreading: arange(end) counts from 1 to end, witnesses: [CR.E2]}
 nonclaims:
 - No values are defined for empty / empty_like; layout, device, pin_memory, memory_format, strides and requires_grad are not checked.
-- The process default floating dtype is not observed; default_float32_numeric only states the result under the task's declaration that it is float32.
+- The process default floating dtype is not observed; default_float32 only states the result under the task's declaration that it is float32.
 - The arange validity checks and the scalar_tensor dtype analysis rely in part on reference programs (RangeUtils.h, TensorFactories.cpp, torch._refs, native_functions.yaml); there the result is consistency with those programs.
 - Floating results are exact real values; how a device rounds start + i*step or a non-representable fill value is a measured deviation, not a claim of this contract.
 changes:
+- date: '2026-10-21'
+  change: >-
+    Independent review fixes: Boolean observations must hold real Booleans; an infinite arange step is unsupported
+    with the alternatives in CR.ARANGE_LENGTH (example CR.E44); corrected profile name in a refusal message.
+  trigger: reviews/2026-10-20/A2_package_E_review.md (CR-1, CR-2, CR-3).
 - date: '2026-10-20'
-  change: New contract for the path A factory calls (arange, zeros, ones, ones_like, scalar_tensor) plus full, zeros_like, full_like.
+  change: >-
+    New contract for the path A factory calls (arange, zeros, ones, ones_like, scalar_tensor) plus full, zeros_like,
+    full_like; one output field out with Boolean results in the 1 / 0 encoding (CR.BOOL_ENCODING).
   trigger: Path A closure plan item G8; recorded calls had no covering contract.

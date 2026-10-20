@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 import math
+from pathlib import Path
 
 import numpy as np
 import yaml
@@ -20,16 +21,22 @@ from kernel_spec.num import Invalid, Result, Undefined, Unsupported
 from kernel_spec.real import NEG, POS, R
 from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "CREATE.yaml").read_text())["covers"]
+def _own_contract():
+    """The contract next to this adapter when staged as <root>/adapters/CREATE.py, else the registry's contract."""
+    staged = Path(__file__).resolve().parent.parent / "contracts" / "CREATE.yaml"
+    return staged if staged.is_file() else CONTRACTS / "CREATE.yaml"
+
+
+COVERS = yaml.safe_load(_own_contract().read_text())["covers"]
 FLOATS = {"f16", "bf16", "f32", "f64"}
 INTS = {"i64": (-2 ** 63, 2 ** 63 - 1), "i32": (-2 ** 31, 2 ** 31 - 1), "i16": (-2 ** 15, 2 ** 15 - 1),
         "i8": (-2 ** 7, 2 ** 7 - 1), "u8": (0, 255)}
 BOOL = "b8"
-# profile -> (output field, default floating dtype or None, admitted result dtypes)
+# profile -> (output field, default floating dtype or None, admitted result dtypes). A Boolean result is returned in
+# the exact numeric encoding 1 = true, 0 = false (decision CR.BOOL_ENCODING); check_output compares Boolean records.
 PROFILES = {
-    "explicit_numeric": ("out", None, FLOATS | set(INTS)),
-    "explicit_boolean": ("out_bool", None, {BOOL}),
-    "default_float32_numeric": ("out", "f32", FLOATS | set(INTS)),
+    "explicit": ("out", None, FLOATS | set(INTS) | {BOOL}),
+    "default_float32": ("out", "f32", FLOATS | set(INTS) | {BOOL}),
 }
 # Band around an integer quotient inside which a non-integer arange length is refused (decision CR.ARANGE_LENGTH).
 ARANGE_BAND = Fraction(1, 2 ** 30)
@@ -87,10 +94,10 @@ def _element(value, dtype, name):
         return x
     if dtype == BOOL:
         if kind == "bool":
-            return bool(value)
+            return 1 if value else 0
         x = _real(value, name)
         if x.finite and x.v in (0, 1):
-            return x.v == 1
+            return int(x.v)
         raise Unsupported(f"{name}={value!r} for a Boolean result is outside the CREATE profiles")
     x = _real(value, name)
     if not x.finite:
@@ -128,7 +135,7 @@ def _filled(shape, value, dtype):
 def _default(default):
     if default is None:
         raise Unsupported("the result dtype is the process default floating dtype, which the call does not record; "
-                          "profile default_float32_numeric declares it as float32")
+                          "profile default_float32 declares it as float32")
     return default
 
 
@@ -146,8 +153,10 @@ def _operations(default):
         if "bool" in kinds:
             raise Unsupported("Boolean arange arguments are outside the CREATE profiles")
         reals = [_real(v, n) for v, n in zip((start, end, step), ("start", "end", "step"))]
-        if not all(x.finite for x in reals):
-            raise Invalid("arange: start, end and step must be finite")
+        if not (reals[0].finite and reals[1].finite):
+            raise Invalid("arange: start and end must be finite")
+        if not reals[2].finite:
+            raise Unsupported("arange with an infinite step is outside the CREATE profiles (CR.ARANGE_LENGTH)")
         s, e, st = (x.v for x in reals)
         if st == 0:
             raise Invalid("arange: step must be nonzero")
@@ -242,12 +251,23 @@ def _build(table, profile_names, check_dtype=True):
         field, _, admitted = PROFILES[profile]
         out = raw[profile](profile, inp).fields["out"]
         if check_dtype and out.dtype not in admitted:
-            raise Unsupported(f"result dtype {out.dtype} belongs to another CREATE profile")
+            raise Unsupported(f"result dtype {out.dtype} is outside the CREATE profiles")
         return Result("value", {field: encode(out)})
     return reference
 
 
 reference = _build(_operations, tuple(PROFILES))
+
+
+def _boolean_leaves(values):
+    stack = [values]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, (list, tuple)):
+            stack.extend(item)
+        elif not isinstance(item, (bool, np.bool_)):
+            return False
+    return True
 
 
 def check_output(profile, inp, observed):
@@ -258,7 +278,7 @@ def check_output(profile, inp, observed):
                          argument_decoder=_decode_argument)
     expected = raw(profile, inp).fields["out"]
     if expected.dtype not in PROFILES[profile][2]:
-        raise Unsupported(f"result dtype {expected.dtype} belongs to another CREATE profile")
+        raise Unsupported(f"result dtype {expected.dtype} is outside the CREATE profiles")
     if not isinstance(observed, dict) or set(observed) != {field}:
         return False
     candidate = observed[field]
@@ -267,11 +287,15 @@ def check_output(profile, inp, observed):
     try:
         if A.dt(candidate["t"]) != expected.dtype or tuple(candidate["shape"]) != expected.shape:
             return False
+        if expected.dtype == BOOL and not _boolean_leaves(candidate["v"]):
+            return False                    # a b8 record must hold real Booleans, not 2 or 0.5
         got = decode(candidate)
     except (Invalid, Unsupported, Undefined):
         return False
     if got.shape != expected.shape:
         return False
+    if expected.dtype == BOOL:
+        return [1 if v is True else 0 for v in got.a.flat] == [int(v) for v in expected.a.flat]
     return check_enclosed_output(encode(expected), encode(got))
 
 
