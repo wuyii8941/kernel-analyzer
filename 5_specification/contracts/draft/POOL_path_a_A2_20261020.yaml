@@ -150,10 +150,13 @@ decisions:
     output shape (otherwise invalid input). Forward and backward use one divisor, so the PA.DIVISOR task choice
     remains required: the AvgPool2d and avg_pool2d pages say only that the default divisor is the size of the
     pooling region, which does not fix the region of a ceil-mode window extending past the input (POOL_A1 records
-    the AvgPool3d page calling it kernel_size). No retained PyTorch document resolves it; agreement of native
+    the AvgPool3d page calling it kernel_size). The functional avg_pool2d page also describes kernel_size itself as
+    the "size of the pooling region", which textually supports dividing by the full kernel size (the R1 reading);
+    it still does not say whether a ceil-mode window extending past the padded input keeps that size, so the
+    overhang divisor remains the task choice. No retained PyTorch document resolves it; agreement of native
     kernels or compilers is not used as the definition. The out and grad_input forms are separate tasks.
   basis: [LPI_NATIVE_FUNCTIONS.AVG_POOL2D, LPI_DERIVATIVES.AVG_POOL2D, T_AVGPOOL2D.DIVISOR, T_F_AVG_POOL2D.DIVISOR,
-    PH1_DECISIONS.POOL_A1, PA.SCHEMA, PA.DIVISOR, PA.GRAD]
+    T_F_AVG_POOL2D.KERNEL_SIZE, PH1_DECISIONS.POOL_A1, PA.SCHEMA, PA.DIVISOR, PA.GRAD]
 - id: P2.SCHEMA
   status: reviewed
   statement: >-
@@ -760,6 +763,9 @@ nonclaims:
 - Max indices and VJP are certified only for the explicitly selected PyTorch 2.10 unique-maximum profile. Tied maxima, adaptive pooling, special values, empty dimensions, layouts, aliasing, device placement and other overloads remain outside scope. Average pooling only uses its explicitly selected divisor convention.
 - Exact selected values do not claim a particular device comparison instruction. The versioned flattened index is a declared public-task convention, not a universal tie-breaking or encoding rule.
 changes:
+- date: '2026-10-21'
+  change: PA.ATEN notes that the functional avg_pool2d page calls kernel_size the size of the pooling region (textual support for the full-kernel divisor) while the ceil-overhang divisor stays the task choice.
+  trigger: Independent review of package C (A2_package_C_review.md, non-blocking POOL remark).
 - date: '2026-10-20'
   change: >-
     Add aten.avg_pool2d and aten.avg_pool2d_backward to covers with an ATen-call profile torch210_aten_avg2d

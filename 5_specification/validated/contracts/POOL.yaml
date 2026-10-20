@@ -4,16 +4,19 @@ role: POOL
 title: Exact two-dimensional pooling values and explicitly selected complete pooling VJPs
 review:
   status: reviewed_for_implementation
-  author: OpenAI Codex, independent implementation review
-  date: '2026-10-19'
-  scope: Finite max_pool2d forward values; separately selected unique-max PyTorch 2.10 max_pool2d values, indices and input VJP; finite avg_pool2d forward and input VJP with explicit padding-domain divisor semantics
+  reviewer: 'independent review 2026-10-21 (reviews/2026-10-20/A2_package_C_review.md)'
+  author: OpenAI Codex, independent implementation review (2026-10-19); Claude, path A closure package C ATen average-pooling interface (2026-10-20)
+  date: '2026-10-21'
+  scope: Finite max_pool2d forward values; separately selected unique-max PyTorch 2.10 max_pool2d values, indices and input VJP; finite avg_pool2d forward and input VJP with explicit padding-domain divisor semantics; the ATen avg_pool2d and avg_pool2d_backward overloads on the same selected divisor
 activation:
   implementation_status: validated
+  implementation_evidence: evidence/layout_pool_interp_aten.md
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
     reviewed_contract_and_adapter_match_current]
-covers: [aten.max_pool2d, torch.nn.functional.max_pool2d, torch.nn.functional.avg_pool2d]
+covers: [aten.max_pool2d, torch.nn.functional.max_pool2d, torch.nn.functional.avg_pool2d, aten.avg_pool2d,
+  aten.avg_pool2d_backward]
 profiles:
   finite_max2d_values:
     outputs: [out]
@@ -39,6 +42,16 @@ profiles:
       but excludes ceil overhang beyond the explicit padding domain. A nonzero integer divisor_override takes precedence.
     task_choice_required: true
     basis: [PA.SCHEMA, PA.DIVISOR, PA.GRAD]
+  torch210_aten_avg2d:
+    outputs: [out]
+    meaning: >-
+      The PyTorch 2.10 ATen overloads avg_pool2d(self, kernel_size, stride=[], padding=0, ceil_mode=False,
+      count_include_pad=True, divisor_override=None) and avg_pool2d_backward(grad_output, self, kernel_size, stride,
+      padding, ceil_mode, count_include_pad, divisor_override) as ATen calls. The forward returns exactly the out
+      field, and the backward exactly the grad field with upstream=grad_output, of finite_avg2d_autograd under the
+      same explicitly chosen divisor (PA.DIVISOR). The single returned tensor is the out output of this profile.
+    task_choice_required: true
+    basis: [PA.SCHEMA, PA.DIVISOR, PA.GRAD, PA.ATEN]
 outputs:
   out:
     shape: input leading dimensions followed by the two output dimensions of the selected profile
@@ -126,6 +139,25 @@ decisions:
     This is the ordinary derivative of a linear map; no tie or subgradient convention is needed. Forward and backward
     must use the same divisor. All inputs are unchanged; return every forward and input-gradient coordinate.
   basis: [PA.SCHEMA, PA.DIVISOR]
+- id: PA.ATEN
+  status: reviewed
+  statement: >-
+    The ATen schemas take the same options as the public task (avg_pool2d defaults stride=[] meaning kernel_size,
+    padding 0, ceil_mode false, count_include_pad true, divisor_override None; avg_pool2d_backward takes every option
+    positionally). PyTorch 2.10's derivative table defines the self-derivative of avg_pool2d as avg_pool2d_backward
+    with the same options, so avg_pool2d_backward(grad_output, self, ...) is the input VJP of avg_pool2d at self for
+    upstream grad_output. Mapping: forward result = finite_avg2d_autograd.out; backward result =
+    finite_avg2d_autograd.grad with upstream grad_output, which must have the dtype of self and the complete forward
+    output shape (otherwise invalid input). Forward and backward use one divisor, so the PA.DIVISOR task choice
+    remains required: the AvgPool2d and avg_pool2d pages say only that the default divisor is the size of the
+    pooling region, which does not fix the region of a ceil-mode window extending past the input (POOL_A1 records
+    the AvgPool3d page calling it kernel_size). The functional avg_pool2d page also describes kernel_size itself as
+    the "size of the pooling region", which textually supports dividing by the full kernel size (the R1 reading);
+    it still does not say whether a ceil-mode window extending past the padded input keeps that size, so the
+    overhang divisor remains the task choice. No retained PyTorch document resolves it; agreement of native
+    kernels or compilers is not used as the definition. The out and grad_input forms are separate tasks.
+  basis: [LPI_NATIVE_FUNCTIONS.AVG_POOL2D, LPI_DERIVATIVES.AVG_POOL2D, T_AVGPOOL2D.DIVISOR, T_F_AVG_POOL2D.DIVISOR,
+    T_F_AVG_POOL2D.KERNEL_SIZE, PH1_DECISIONS.POOL_A1, PA.SCHEMA, PA.DIVISOR, PA.GRAD]
 - id: P2.SCHEMA
   status: reviewed
   statement: >-
@@ -185,6 +217,11 @@ clauses:
   statement: Complete exact forward and VJP use the same explicitly chosen divisor, with all overlapping contributions accumulated.
   observes: [out, grad]
   evidence_kind: definition
+- id: PA.C3
+  basis: [PA.ATEN]
+  statement: The ATen avg_pool2d call returns the selected task's complete forward values and avg_pool2d_backward returns its complete input VJP for upstream grad_output, with the same divisor choice and argument order of the PyTorch 2.10 schemas.
+  observes: [out]
+  evidence_kind: derived
 - id: P2.C1
   basis: [P2.SCHEMA, P2.PHYSICAL]
   statement: In finite_max2d_values, every call has one rank-3 or rank-4 finite physical floating tensor, positive one- or two-component kernel, stride and dilation, zero padding, floor mode and values-only output.
@@ -469,6 +506,98 @@ examples:
     divisor_override: null
   expected:
     outcome: invalid_input
+- id: PA.E8
+  profile: torch210_aten_avg2d
+  clauses: [PA.C1, PA.C3]
+  input:
+    op: aten.avg_pool2d
+    args:
+    - {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}
+    - [3, 3]
+    - [2, 2]
+    - [0, 0]
+    - true
+  expected: {outcome: value, fields: {out: [[[[6, '15/2'], [12, '27/2']]]]}}
+- id: PA.E9
+  profile: torch210_aten_avg2d
+  clauses: [PA.C1, PA.C3]
+  input:
+    op: aten.avg_pool2d_backward
+    args:
+    - {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    - {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}
+    - [3, 3]
+    - [2, 2]
+    - [0, 0]
+    - true
+    - true
+    - null
+  expected:
+    outcome: value
+    fields:
+      out: [[[['1/9', '1/9', '4/9', '1/3'], ['1/9', '1/9', '4/9', '1/3'], ['11/18', '11/18', '35/18', '4/3'], ['1/2', '1/2', '3/2', 1]]]]
+- id: PA.E10
+  profile: torch210_aten_avg2d
+  clauses: [PA.C3]
+  input:
+    op: aten.avg_pool2d_backward
+    args:
+    - {t: f32, shape: [1, 1, 1, 1], v: [[[[2]]]]}
+    - {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    - [2, 2]
+    - []
+    - [0, 0]
+    - false
+    - true
+    - -2
+  expected: {outcome: value, fields: {out: [[[[-1, -1], [-1, -1]]]]}}
+- id: PA.E11
+  profile: torch210_aten_avg2d
+  clauses: [PA.C1, PA.C3]
+  input:
+    op: aten.avg_pool2d
+    args:
+    - {t: bf16, shape: [1, 2, 4], v: [[[1, 2, 3, 4], [5, 6, 7, 8]]]}
+    - [2, 2]
+  expected: {outcome: value, fields: {out: [[['7/2', '11/2']]]}}
+- id: PA.E12
+  profile: torch210_aten_avg2d
+  clauses: [PA.C1, PA.C3]
+  input:
+    op: aten.avg_pool2d_backward
+    args:
+    - {t: f32, shape: [1, 1, 1, 1], v: [[[[1]]]]}
+    - {t: f32, shape: [1, 1, 4, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]]]}
+    - [3, 3]
+    - [2, 2]
+    - [0, 0]
+    - true
+    - true
+    - null
+  expected: {outcome: invalid_input}
+- id: PA.E13
+  profile: torch210_aten_avg2d
+  clauses: [PA.C1]
+  input:
+    op: aten.avg_pool2d
+    args:
+    - {t: f32, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    - [2, 2]
+    - []
+    - [0, 0]
+    - false
+    - true
+    - 0
+  expected: {outcome: invalid_input}
+- id: PA.E14
+  profile: torch210_aten_avg2d
+  clauses: [PA.C1]
+  input:
+    op: aten.avg_pool2d
+    args:
+    - {t: i64, shape: [1, 1, 2, 2], v: [[[[1, 2], [3, 4]]]]}
+    - [2, 2]
+  expected: {outcome: unsupported}
 - id: PM.E1
   profile: torch210_unique_max2d_autograd
   clauses: [PM.C1, PM.C2, PM.C3, PM.C4]
@@ -607,7 +736,7 @@ signature:
   post_state: [complete newly returned values tensor, complete input gradient for either autograd profile, complete int64 indices for unique-max autograd]
   observation_unit: every returned coordinate together with dtype and shape
 domain:
-  valid: [positive rank-3 or rank-4 physical finite f16/bf16/f32/f64 tensors, profile-specific kernel stride padding dilation and output choices, complete upstream for autograd, explicit divisor or versioned-index task selection where required]
+  valid: [ATen avg_pool2d / avg_pool2d_backward calls in the schema argument order under the selected divisor, positive rank-3 or rank-4 physical finite f16/bf16/f32/f64 tensors, profile-specific kernel stride padding dilation and output choices, complete upstream for autograd, explicit divisor or versioned-index task selection where required]
   invalid_input: [malformed record, unrepresentable value, nonpositive or malformed kernel stride or dilation, output dimension below one, nonboolean options]
   unsupported: [tied maxima or return_indices=false under unique-max autograd, max padding ceil indices or backward under the older values-only profile, adaptive pooling, special values, signed-zero distinctions, integer or complex data, other ranks or overloads]
 mutation_requirements:
@@ -622,6 +751,9 @@ mutation_requirements:
 - {id: PA.M3, misreading: ignore explicit divisor_override, witnesses: [PA.E2]}
 - {id: PA.M4, misreading: include padding when count_include_pad is false, witnesses: [PA.E3]}
 - {id: PA.M5, misreading: omit the entire input gradient, witnesses: [PA.E1]}
+- {id: PA.M6, misreading: the ATen overloads divide every ceil-overhang window by the full kernel size, witnesses: [PA.E8, PA.E9]}
+- {id: PA.M7, misreading: aten.avg_pool2d_backward ignores divisor_override, witnesses: [PA.E10]}
+- {id: PA.M8, misreading: aten.avg_pool2d_backward takes its first tensor as the forward input and its second as the upstream, witnesses: [PA.E9]}
 - {id: P2.M1, misreading: take the minimum of every window, witnesses: [P2.E1]}
 - {id: P2.M2, misreading: take the first value of every window, witnesses: [P2.E1]}
 - {id: P2.M3, misreading: ignore dilation, witnesses: [P2.E3]}
@@ -632,6 +764,20 @@ nonclaims:
 - Max indices and VJP are certified only for the explicitly selected PyTorch 2.10 unique-maximum profile. Tied maxima, adaptive pooling, special values, empty dimensions, layouts, aliasing, device placement and other overloads remain outside scope. Average pooling only uses its explicitly selected divisor convention.
 - Exact selected values do not claim a particular device comparison instruction. The versioned flattened index is a declared public-task convention, not a universal tie-breaking or encoding rule.
 changes:
+- date: '2026-10-21'
+  change: PA.ATEN notes that the functional avg_pool2d page calls kernel_size the size of the pooling region (textual support for the full-kernel divisor) while the ceil-overhang divisor stays the task choice.
+  trigger: Independent review of package C (A2_package_C_review.md, non-blocking POOL remark).
+- date: '2026-10-20'
+  change: >-
+    Add aten.avg_pool2d and aten.avg_pool2d_backward to covers with an ATen-call profile torch210_aten_avg2d
+    (decision PA.ATEN, clause PA.C3, examples PA.E8-E14, mutants PA.M6-M8). The forward returns the out field and
+    the backward the grad field of finite_avg2d_autograd under the same divisor; the PA.DIVISOR task choice is kept
+    because no retained PyTorch document fixes the ceil-overhang divisor. Public-record profiles refuse ATen-call
+    records as unsupported, and finite_max2d_values evaluates only max-pooling names. Status returned to
+    drafted/pending for independent review.
+  trigger: >-
+    Path A closure (G6): recorded trigger D8 calls aten.avg_pool2d and aten.avg_pool2d_backward had no contract
+    with these covers names and no ATen interface.
 - date: '2026-10-19'
   change: Add a separate PyTorch 2.10 unique-max max_pool2d profile with complete values, int64 flattened spatial indices and input VJP over padding, dilation and ceil-mode geometry.
   trigger: Real public training calls already observed all three results, but the former admitted profile could judge only forward values; ties remain unsupported rather than assigned an undocumented universal derivative.

@@ -6,6 +6,8 @@ from fractions import Fraction
 import math
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -14,9 +16,13 @@ from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Unsupported, Result
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / 'INTERP.yaml').read_text())['covers']
+_HERE = Path(__file__).resolve()
+# The contract next to this adapter: <root>/contracts/INTERP.yaml when staged as <root>/adapters/INTERP.py, or the
+# paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
+_CONTRACT = (_HERE.with_name("INTERP_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+             else _HERE.parents[1] / "contracts" / "INTERP.yaml")
+COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 PROFILE = 'torch210_nearest2d_size_autograd'
 KEYS = {'op', 'x', 'upstream', 'size', 'scale_factor', 'mode', 'align_corners',
         'recompute_scale_factor', 'antialias'}
@@ -179,18 +185,27 @@ def _representable(value, dtype):
     return stored.exact and stored.v == value
 
 
+def _exact_index_arithmetic(ratio, output_length):
+    """The index products are exact in binary32: ratio and every o*ratio are binary32 numbers (IN.ATEN_SCALES)."""
+    return _representable(ratio, 'f32') and all(_representable(o * ratio, 'f32') for o in range(output_length))
+
+
 def _source_indices(input_length, output_length, scale, name, *, mode='correct'):
-    """IN.ATEN_SCALES: input index floor(o*q) with q = 1/scale when a scale is given, otherwise input/output."""
+    """IN.ATEN_SCALES: input index floor(o*q), q = 1/scale with a scale and isize/osize without one, admitted only
+    where the retained decomposition's floating evaluation trunc(fl32(o)*q) is provably exact."""
     if mode == 'ignore_scale':
         scale = None
     if scale is None:
         ratio = Fraction(input_length, output_length)
+        # The decomposition computes isize/osize in binary64 and multiplies float32 indices by it in binary32.
+        if mode != 'exact_no_check' and not _exact_index_arithmetic(ratio, output_length):
+            raise Unsupported(f'{name}: the size ratio {input_length}/{output_length} index arithmetic is not exact '
+                              'in binary32; its floating rounding is outside the selected profile')
     else:
         ratio = scale if mode == 'multiply_scale' else 1 / scale
         # The retained decomposition evaluates isize/(isize*scale) in binary64 and (float32 o)*scale; the exact
         # reading is used only where every one of these quantities is exactly representable.
-        if not (_representable(input_length * scale, 'f64') and _representable(ratio, 'f32')
-                and all(_representable(o * ratio, 'f32') for o in range(output_length))):
+        if not (_representable(input_length * scale, 'f64') and _exact_index_arithmetic(ratio, output_length)):
             raise Unsupported(f'{name}={float(scale)!r}: the source index arithmetic is not exact; '
                               'its floating rounding is outside the selected profile')
     offset = Fraction(1, 2) if mode == 'nearest_exact' else 0
@@ -325,5 +340,5 @@ def _aten_mutant(mode):
 
 
 MUTANTS.update({f'IN.M{i}': _aten_mutant(mode) for i, mode in enumerate(
-    ['ignore_scale', 'multiply_scale', 'swap', 'overwrite_grad', 'nearest_exact'], 6)})
+    ['ignore_scale', 'multiply_scale', 'swap', 'overwrite_grad', 'nearest_exact', 'exact_no_check'], 6)})
 READINGS = {}

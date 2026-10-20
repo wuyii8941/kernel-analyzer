@@ -1,10 +1,13 @@
-"""Adapter for the reviewed finite max_pool2d values scope in contracts/POOL.yaml."""
+"""Adapter for contracts/POOL.yaml: max_pool2d values, unique-max autograd, average pooling with its VJP and the
+ATen avg_pool2d / avg_pool2d_backward overloads on the same selected divisor."""
 from __future__ import annotations
 
 from fractions import Fraction
 import math
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -12,9 +15,13 @@ from kernel_spec import ieee
 from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
 from kernel_spec.num import Invalid, Unsupported, Result
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "POOL.yaml").read_text())["covers"]
+_HERE = Path(__file__).resolve()
+# The contract next to this adapter: <root>/contracts/POOL.yaml when staged as <root>/adapters/POOL.py, or the
+# paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
+_CONTRACT = (_HERE.with_name("POOL_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+             else _HERE.parents[1] / "contracts" / "POOL.yaml")
+COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 PROFILE = ("finite_max2d_values",)
 FLOAT_DTYPES = {"f16", "bf16", "f32", "f64"}
 
@@ -174,8 +181,9 @@ OPS = {
     "aten.max_pool2d": _aten_max_pool2d,
     "torch.nn.functional.max_pool2d": _functional_max_pool2d,
 }
-_max_reference = make_reference(COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
-_max_check_output = make_output_checker(COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
+MAX_COVERS = ["aten.max_pool2d", "torch.nn.functional.max_pool2d"]
+_max_reference = make_reference(MAX_COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
+_max_check_output = make_output_checker(MAX_COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
 
 AVG_PROFILE = 'finite_avg2d_autograd'
 MAX_AUTOGRAD_PROFILE = 'torch210_unique_max2d_autograd'
@@ -311,7 +319,81 @@ def _max_autograd(inp, *, mode='correct'):
     return Result('value', fields)
 
 
+ATEN_AVG_PROFILE = 'torch210_aten_avg2d'
+ATEN_AVG_COVERS = ['aten.avg_pool2d', 'aten.avg_pool2d_backward']
+
+
+def _record_argument(op, name, value, arguments):
+    """Validate a tensor argument physically but keep its complete record for the average-pooling task (PA.ATEN)."""
+    if name in ('a', 'grad_output'):
+        tensor = _source_tensor(value, name)
+        return {'t': value['t'], 'v': value['v'], 'shape': list(tensor.shape)}
+    return decode(value)
+
+
+def _avg_task(x, upstream, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override):
+    return {'op': 'avg_pool2d', 'x': x, 'upstream': upstream, 'kernel_size': kernel_size, 'stride': stride,
+            'padding': padding, 'ceil_mode': ceil_mode, 'count_include_pad': count_include_pad,
+            'divisor_override': divisor_override}
+
+
+def _avg_output_shape(x, kernel_size, stride, padding, ceil_mode):
+    from kernel_spec import e2_pool
+    kernel = _avg_pair(kernel_size, 'kernel_size', 1)
+    strides = kernel if stride is None or stride == [] or stride == () else _avg_pair(stride, 'stride', 1)
+    pads = _avg_pair(padding, 'padding', 0)
+    ceil = _flag(ceil_mode, 'ceil_mode')
+    lengths = tuple(e2_pool.out_len(x['shape'][-2 + i], kernel[i], strides[i], pads[i], 1, ceil) for i in range(2))
+    if any(length < 1 for length in lengths):
+        raise Invalid('avg_pool2d output dimensions must be positive')
+    return tuple(x['shape'][:-2]) + lengths
+
+
+def _avg_forward(reading, a, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override):
+    shape = _avg_output_shape(a, kernel_size, stride, padding, ceil_mode)
+    zeros = np.zeros(shape, dtype=int).tolist()
+    upstream = {'t': a['t'], 'v': zeros, 'shape': list(shape)}
+    fields = _average(_avg_task(a, upstream, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                                divisor_override), divisor_reading=reading).fields
+    return A.Ten(np.array(fields['out'], dtype=object), a['t'])
+
+
+def _avg_backward(reading, grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                  divisor_override):
+    fields = _average(_avg_task(a, grad_output, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                                divisor_override), divisor_reading=reading).fields
+    return A.Ten(np.array(fields['grad'], dtype=object), a['t'])
+
+
+def _aten_avg_pool2d(a, kernel_size, stride=(), padding=0, ceil_mode=False, count_include_pad=True,
+                     divisor_override=None):
+    """PA.ATEN: the ATen forward returns the out field of the selected average-pooling task."""
+    return _avg_forward('R2', a, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
+
+def _aten_avg_pool2d_backward(grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                              divisor_override):
+    """PA.ATEN: the ATen backward returns the grad field of the selected task with upstream grad_output."""
+    return _avg_backward('R2', grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                         divisor_override)
+
+
+ATEN_AVG_OPS = {'aten.avg_pool2d': _aten_avg_pool2d, 'aten.avg_pool2d_backward': _aten_avg_pool2d_backward}
+_aten_avg_reference = make_reference(ATEN_AVG_COVERS, extra=ATEN_AVG_OPS, profiles=(ATEN_AVG_PROFILE,),
+                                     argument_decoder=_record_argument)
+_aten_avg_check_output = make_output_checker(ATEN_AVG_COVERS, extra=ATEN_AVG_OPS, profiles=(ATEN_AVG_PROFILE,),
+                                             argument_decoder=_record_argument)
+
+
+def _aten_call(inp):
+    return isinstance(inp, dict) and isinstance(inp.get('op'), str) and inp['op'].startswith('aten.')
+
+
 def reference(profile, inp):
+    if profile == ATEN_AVG_PROFILE:
+        return _aten_avg_reference(profile, inp)
+    if profile in (AVG_PROFILE, MAX_AUTOGRAD_PROFILE) and _aten_call(inp):
+        raise Unsupported(f'profile {profile} selects a public task record, not an ATen call')
     if profile == AVG_PROFILE:
         return _average(inp)
     if profile == MAX_AUTOGRAD_PROFILE:
@@ -320,6 +402,8 @@ def reference(profile, inp):
 
 
 def check_output(profile, inp, observed):
+    if profile == ATEN_AVG_PROFILE:
+        return _aten_avg_check_output(profile, inp, observed)
     if profile not in (AVG_PROFILE, MAX_AUTOGRAD_PROFILE):
         return _max_check_output(profile, inp, observed)
     from kernel_spec.compare import check_enclosed_output
@@ -399,6 +483,43 @@ def _avg_mutant(mode):
 
 MUTANTS.update({f'PA.M{i}': _avg_mutant(mode) for i, mode in enumerate(
     ['fixed_kernel', 'backward_fixed_kernel', 'ignore_override', 'include_pad', 'omit_gradient'], 1)})
+
+
+def _aten_avg_mutant(**operations):
+    table = {**ATEN_AVG_OPS, **operations}
+    mutant = make_reference(ATEN_AVG_COVERS, extra=table, profiles=(ATEN_AVG_PROFILE,),
+                            argument_decoder=_record_argument)
+    return mutant
+
+
+def _forward_fixed_kernel(a, kernel_size, stride=(), padding=0, ceil_mode=False, count_include_pad=True,
+                          divisor_override=None):
+    return _avg_forward('R1', a, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override)
+
+
+def _backward_fixed_kernel(grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                           divisor_override):
+    return _avg_backward('R1', grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                         divisor_override)
+
+
+def _backward_ignore_override(grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                              divisor_override):
+    return _aten_avg_pool2d_backward(grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad, None)
+
+
+def _backward_swapped(grad_output, a, kernel_size, stride, padding, ceil_mode, count_include_pad, divisor_override):
+    # Misreading of the schema order: the first tensor is taken as the forward input.
+    return _aten_avg_pool2d_backward(a, grad_output, kernel_size, stride, padding, ceil_mode, count_include_pad,
+                                     divisor_override)
+
+
+MUTANTS.update({
+    'PA.M6': _aten_avg_mutant(**{'aten.avg_pool2d': _forward_fixed_kernel,
+                                  'aten.avg_pool2d_backward': _backward_fixed_kernel}),
+    'PA.M7': _aten_avg_mutant(**{'aten.avg_pool2d_backward': _backward_ignore_override}),
+    'PA.M8': _aten_avg_mutant(**{'aten.avg_pool2d_backward': _backward_swapped}),
+})
 
 
 def _max_autograd_mutant(mode):

@@ -510,6 +510,21 @@ examples:
   clauses: [LY.C10, LY.C16]
   input: {op: aten.cat, args: [[{t: i64, v: [1]}, {t: i32, v: [2]}]]}
   expected: {outcome: unsupported}
+- id: LY.E74
+  profile: real
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: i64, v: [1, 2]}, [0, 1], constant, .inf]}
+  expected: {outcome: unsupported}
+- id: LY.E75
+  profile: boolean
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: b8, v: [true]}, [1, 0], constant, -.inf]}
+  expected: {outcome: unsupported}
+- id: LY.E76
+  profile: real
+  clauses: [LY.C6, LY.C10]
+  input: {op: aten.constant_pad_nd, args: [{t: f32, v: [1, 2]}, [1, 0], .inf]}
+  expected: {outcome: unsupported}
 signature:
   inputs: ['real: one selected functional layout call', 'pad autograd: public op, complete input, even integer pad, constant mode, scalar/default value and complete upstream', 'cat autograd: public op, nonempty ordered complete tensor list, integer dim and complete upstream']
   pre_state: [all inputs are unchanged]
@@ -551,6 +566,9 @@ nonclaims:
 - slice_backward rests on PyTorch 2.10's derivative table and official decomposition (reference programs) together with the documented slice; agreement means agreement with that reference semantics.
 - PyTorch 2.10 eager accepts non-integral fills for integer tensors (truncating) and nonzero fills for b8 (as True); these undocumented conversions are refused, not judged.
 changes:
+- date: '2026-10-21'
+  change: An infinite fill received as a binary64 infinity (aten.pad / constant_pad_nd on floating, integer or b8 data) is unsupported instead of an implementation error; examples LY.E74-E76.
+  trigger: Independent review of package C (A2_package_C_review.md, issue LAYOUT-1).
 - date: '2026-10-20'
   change: >-
     Extend the real profile to integer tensors and add a boolean profile (output bool_out) for the selected

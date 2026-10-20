@@ -6,6 +6,8 @@ from fractions import Fraction
 import math
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -13,9 +15,13 @@ from kernel_spec import ieee
 from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
 from kernel_spec.num import Invalid, Unsupported, Result
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "POOL.yaml").read_text())["covers"]
+_HERE = Path(__file__).resolve()
+# The contract next to this adapter: <root>/contracts/POOL.yaml when staged as <root>/adapters/POOL.py, or the
+# paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
+_CONTRACT = (_HERE.with_name("POOL_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+             else _HERE.parents[1] / "contracts" / "POOL.yaml")
+COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 PROFILE = ("finite_max2d_values",)
 FLOAT_DTYPES = {"f16", "bf16", "f32", "f64"}
 

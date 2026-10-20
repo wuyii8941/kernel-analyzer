@@ -95,19 +95,21 @@ decisions:
   statement: >-
     How scales enter: the retained decomposition computes, per spatial dimension, scale = isize/(isize*s) when the
     scale argument s is given and isize/osize otherwise, and input_index = trunc(float32(o) * scale), i.e. floor for
-    nonnegative values. Without s the profile uses the exact index floor(o*isize/osize), the same rule as the public
-    profile's IN.INDEX. With s the
-    exact index is floor(o/s), where s is the exact value of the received binary64 scale; output_size still fixes the
-    shape and is not required to equal floor(isize*s). The exact reading is adopted only where it provably equals
-    the source's floating evaluation: isize*s exactly representable in binary64, 1/s exactly representable in
-    binary32, and o/s exactly representable in binary32 for every output index o. Otherwise the floating rounding of
-    the index computation would decide the result, which this exact profile does not model: unsupported.
-    Alternatives considered: (a) ignore the scales and always use isize/osize (contradicts the source, which uses s
-    whenever it is given); (b) use floor(o/s) for every s (claims an exact rule where the source computes in floating
-    point). An index that reaches isize is unsupported: the decomposition gathers with _unsafe_index and defines no
+    nonnegative values. Without s the exact index is floor(o*isize/osize); with s it is floor(o/s), where s is the
+    exact value of the received binary64 scale; output_size still fixes the shape and is not required to equal
+    floor(isize*s). The exact reading and the source's floating evaluation can disagree (without s, e.g. isize=2,
+    osize=82, o=41: exact 1, float32 source and eager 0). Alternatives for that case: (1) assert the exact rule
+    everywhere (contradicts the cited source on such pairs); (2) model the float32 source arithmetic
+    trunc(fl32(o)*fl32(q)) as the definition (makes binary32 rounding of an index computation part of the task,
+    taken from the implementation); (3) make the convention a task choice. Chosen: neither (1) nor (2) for a
+    non-choice profile; the profile returns a value only where both readings provably agree and is unsupported
+    elsewhere. Condition, with q = isize/osize without s and q = 1/s with s: q exactly representable in binary32,
+    o*q exactly representable in binary32 for every output index o, and with s also isize*s exactly representable
+    in binary64 (so the source's isize/(isize*s) equals 1/s). Further alternatives for s: ignore the scales and
+    always use isize/osize (contradicts the source, which uses s whenever it is given). An index that reaches isize is unsupported: the decomposition gathers with _unsafe_index and defines no
     value there (PyTorch 2.10 eager clamps or takes an output==2*input shortcut; neither is documented). Nonpositive
     or non-finite scales are unsupported. For the recorded call (10x8 to 20x16 with s=2.0) every condition holds and
-    both readings give floor(o/2).
+    both readings give floor(o/2); without scales 10/20 and 8/16 are 1/2, also exact.
   basis: [LPI_DECOMP.UPSAMPLE_NEAREST_SCALES, LPI_NATIVE_FUNCTIONS.UPSAMPLE_NEAREST2D, TORCH210_UPSAMPLE_DECOMP.INDEX]
 - id: IN.PHYSICAL
   status: reviewed
@@ -122,7 +124,7 @@ clauses:
 - {id: IN.C3, basis: [IN.GRAD], statement: Every input-gradient coordinate is the sum of all upstream coordinates that selected it., observes: [grad], evidence_kind: derived}
 - {id: IN.C4, basis: [IN.SCHEMA, IN.INDEX], statement: Other modes, scale-factor tasks and incomplete outputs cannot receive a value under this profile., observes: [out, grad], evidence_kind: definition}
 - {id: IN.C5, basis: [IN.ATEN, IN.PHYSICAL], statement: 'The ATen forward validates the physical rank-4 input, two positive output sizes and optional scales, and returns every output coordinate of shape (N, C, output_size).', observes: [out], evidence_kind: definition}
-- {id: IN.C6, basis: [IN.ATEN_SCALES], statement: 'Each ATen spatial index is floor(o*isize/osize) without a scale and floor(o/scale) with an exactly evaluable scale; inexact scale arithmetic and indices beyond the input are unsupported.', observes: [out], evidence_kind: definition}
+- {id: IN.C6, basis: [IN.ATEN_SCALES], statement: 'Each ATen spatial index is floor(o*isize/osize) without a scale and floor(o/scale) with a scale, only where the binary32 index arithmetic of the retained source is exact; inexact index arithmetic and indices beyond the input are unsupported.', observes: [out], evidence_kind: definition}
 - {id: IN.C7, basis: [IN.ATEN], statement: 'upsample_nearest2d_backward returns the complete input VJP of shape input_size, summing every grad_output coordinate into the input coordinate selected by the forward index rule.', observes: [out], evidence_kind: derived}
 examples:
 - id: IN.E1
@@ -248,8 +250,29 @@ examples:
     op: aten.upsample_nearest2d
     args:
     - {t: bf16, shape: [1, 1, 3, 4], v: [[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]]]}
-    - [2, 3]
-  expected: {outcome: value, fields: {out: [[[[1, 2, 3], [5, 6, 7]]]]}}
+    - [2, 2]
+  expected: {outcome: value, fields: {out: [[[[1, 3], [5, 7]]]]}}
+- id: IN.E21
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: f32, shape: [1, 1, 1, 2], v: [[[[1, 2]]]]}, [1, 82]]
+  expected: {outcome: unsupported}
+- id: IN.E22
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6]
+  input:
+    op: aten.upsample_nearest2d
+    args: [{t: f32, shape: [1, 1, 1, 3], v: [[[[1, 2, 3]]]]}, [1, 7]]
+  expected: {outcome: unsupported}
+- id: IN.E23
+  profile: torch210_aten_upsample_nearest2d
+  clauses: [IN.C6, IN.C7]
+  input:
+    op: aten.upsample_nearest2d_backward
+    args: [{t: f32, shape: [1, 1, 1, 3], v: [[[[1, 2, 3]]]]}, [1, 3], [1, 1, 1, 2], null, null]
+  expected: {outcome: unsupported}
 - id: IN.E13
   profile: torch210_aten_upsample_nearest2d
   clauses: [IN.C6]
@@ -326,12 +349,19 @@ mutation_requirements:
 - {id: IN.M8, misreading: scales_h and scales_w are exchanged, witnesses: [IN.E11]}
 - {id: IN.M9, misreading: upsample_nearest2d_backward overwrites repeated contributions instead of summing them, witnesses: [IN.E15]}
 - {id: IN.M10, misreading: the ATen overload uses half-pixel nearest-exact coordinates, witnesses: [IN.E10, IN.E12]}
+- {id: IN.M11, misreading: without scales the exact ratio rule is asserted even where the source's binary32 index arithmetic is inexact, witnesses: [IN.E21, IN.E22]}
 nonclaims:
 - This profile selects PyTorch 2.10 legacy nearest with explicit size; it makes no claim about a universal nearest-neighbor convention.
 - Device execution rounding, a Triton binding and statistical bias remain separate from this exact task reference.
-- The ATen profile rests on PyTorch 2.10's schema, derivative table and official decomposition (reference programs) plus the documented OpenCV INTER_NEAREST compatibility; agreement means agreement with that reference semantics. Without scales it uses the exact ratio isize/osize like IN.INDEX and does not model floating rounding of that index computation; with scales only exactly evaluable index arithmetic is admitted.
+- The ATen profile rests on PyTorch 2.10's schema, derivative table and official decomposition (reference programs) plus the documented OpenCV INTER_NEAREST compatibility; agreement means agreement with that reference semantics. With or without scales it returns a value only where the binary32 index arithmetic of the retained source is exact; elsewhere it is unsupported rather than modelling that rounding.
 - PyTorch 2.10 eager behaviour for indices beyond the input (clamping, or the output==2*input shortcut that ignores scales) is not judged.
 changes:
+- date: '2026-10-21'
+  change: >-
+    IN.ATEN_SCALES: the no-scale branch now applies the same exactness standard as the scale branch (q = isize/osize
+    and every o*q exact in binary32), otherwise unsupported; alternatives listed. IN.E12 changed to an exact size
+    pair; examples IN.E21-E23 and mutant IN.M11 added. D18 stays evaluable.
+  trigger: Independent review of package C (A2_package_C_review.md, issue INTERP-1).
 - date: '2026-10-20'
   change: >-
     Add the ATen-call profile torch210_aten_upsample_nearest2d (task_choice_required false) for

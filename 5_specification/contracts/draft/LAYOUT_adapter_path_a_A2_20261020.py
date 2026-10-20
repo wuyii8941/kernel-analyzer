@@ -8,6 +8,8 @@ import math
 from fractions import Fraction
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -16,9 +18,13 @@ from kernel_spec.aten_adapter import decode, encode, make_output_checker, make_r
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Result, Unsupported, require_fields
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "LAYOUT.yaml").read_text())["covers"]
+_HERE = Path(__file__).resolve()
+# The contract next to this adapter: <root>/contracts/LAYOUT.yaml when staged as <root>/adapters/LAYOUT.py, or the
+# paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
+_CONTRACT = (_HERE.with_name("LAYOUT_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+             else _HERE.parents[1] / "contracts" / "LAYOUT.yaml")
+COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 REAL_PROFILE = "real"
 PAD_PROFILE = "torch210_functional_constant_pad_autograd"
 CAT_PROFILE = "torch210_cat_autograd"
@@ -139,6 +145,9 @@ def _scalar(value, dtype, name):
         return _integer_fill(value, dtype, name)
     try:
         item = value if isinstance(value, R) else R(Fraction(value))
+    except OverflowError:
+        # Fraction(+-inf): an infinite fill, outside the finite profiles (not an implementation error).
+        raise Unsupported(f"infinite {name} is outside the selected LAYOUT profiles") from None
     except (TypeError, ValueError, ZeroDivisionError):
         raise Invalid(f"{name} must be a finite real scalar") from None
     if not item.exact:
@@ -154,6 +163,9 @@ def _scalar(value, dtype, name):
 def _exact_scalar(value, name):
     try:
         item = value if isinstance(value, R) else R(Fraction(value))
+    except OverflowError:
+        # Fraction(+-inf): an infinite fill, outside the finite profiles (not an implementation error).
+        raise Unsupported(f"infinite {name} is outside the selected LAYOUT profiles") from None
     except (TypeError, ValueError, ZeroDivisionError):
         raise Invalid(f"{name} must be a finite real scalar") from None
     if not item.exact:

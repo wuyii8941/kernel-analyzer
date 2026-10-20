@@ -1,21 +1,28 @@
-"""Reference for the selected PyTorch 2.10 legacy-nearest 2D interpolation task."""
+"""Reference for the selected PyTorch 2.10 legacy-nearest 2D interpolation task and the ATen overloads
+upsample_nearest2d / upsample_nearest2d_backward (output_size with optional per-dimension scales)."""
 from __future__ import annotations
 
 from fractions import Fraction
 import math
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
 from kernel_spec import ieee
-from kernel_spec.aten_adapter import decode
+from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Unsupported, Result
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / 'INTERP.yaml').read_text())['covers']
+_HERE = Path(__file__).resolve()
+# The contract next to this adapter: <root>/contracts/INTERP.yaml when staged as <root>/adapters/INTERP.py, or the
+# paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
+_CONTRACT = (_HERE.with_name("INTERP_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+             else _HERE.parents[1] / "contracts" / "INTERP.yaml")
+COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 PROFILE = 'torch210_nearest2d_size_autograd'
 KEYS = {'op', 'x', 'upstream', 'size', 'scale_factor', 'mode', 'align_corners',
         'recompute_scale_factor', 'antialias'}
@@ -155,13 +162,133 @@ def _evaluate(inp, *, mode='correct'):
     return Result('value', fields)
 
 
+ATEN_PROFILE = 'torch210_aten_upsample_nearest2d'
+ATEN_COVERS = ['aten.upsample_nearest2d', 'aten.upsample_nearest2d_backward']
+
+
+def _scale(value, name):
+    """None, or the exact rational value of the received positive finite scale (IN.ATEN_SCALES)."""
+    if value is None:
+        return None
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, float, Fraction, np.integer, np.floating)):
+        raise Invalid(f'{name} must be None or a floating scale')
+    if isinstance(value, (float, np.floating)) and not math.isfinite(float(value)):
+        raise Unsupported(f'non-finite {name} is outside the selected profile')
+    exact = Fraction(value)
+    if exact <= 0:
+        raise Unsupported(f'nonpositive {name} is outside the selected profile')
+    return exact
+
+
+def _representable(value, dtype):
+    stored = ieee.round_to(R(value), dtype)
+    return stored.exact and stored.v == value
+
+
+def _exact_index_arithmetic(ratio, output_length):
+    """The index products are exact in binary32: ratio and every o*ratio are binary32 numbers (IN.ATEN_SCALES)."""
+    return _representable(ratio, 'f32') and all(_representable(o * ratio, 'f32') for o in range(output_length))
+
+
+def _source_indices(input_length, output_length, scale, name, *, mode='correct'):
+    """IN.ATEN_SCALES: input index floor(o*q), q = 1/scale with a scale and isize/osize without one, admitted only
+    where the retained decomposition's floating evaluation trunc(fl32(o)*q) is provably exact."""
+    if mode == 'ignore_scale':
+        scale = None
+    if scale is None:
+        ratio = Fraction(input_length, output_length)
+        # The decomposition computes isize/osize in binary64 and multiplies float32 indices by it in binary32.
+        if mode != 'exact_no_check' and not _exact_index_arithmetic(ratio, output_length):
+            raise Unsupported(f'{name}: the size ratio {input_length}/{output_length} index arithmetic is not exact '
+                              'in binary32; its floating rounding is outside the selected profile')
+    else:
+        ratio = scale if mode == 'multiply_scale' else 1 / scale
+        # The retained decomposition evaluates isize/(isize*scale) in binary64 and (float32 o)*scale; the exact
+        # reading is used only where every one of these quantities is exactly representable.
+        if not (_representable(input_length * scale, 'f64') and _exact_index_arithmetic(ratio, output_length)):
+            raise Unsupported(f'{name}={float(scale)!r}: the source index arithmetic is not exact; '
+                              'its floating rounding is outside the selected profile')
+    offset = Fraction(1, 2) if mode == 'nearest_exact' else 0
+    indices = [math.floor((o + offset) * ratio) for o in range(output_length)]
+    if any(index >= input_length for index in indices):
+        raise Unsupported(f'{name} selects an input index beyond the input; the retained source leaves it undefined')
+    return indices
+
+
+def _aten_size(output_size, scales_h, scales_w):
+    if output_size is None or isinstance(scales_h, (list, tuple)):
+        raise Unsupported('the upsample_nearest2d.vec overload is outside the selected profile')
+    return _size(output_size), _scale(scales_h, 'scales_h'), _scale(scales_w, 'scales_w')
+
+
+def _tensor_argument(op, name, value, arguments):
+    if name in ('a', 'grad_output'):
+        return _physical(value, name)
+    return decode(value)
+
+
+def _aten_forward(a, output_size, scales_h=None, scales_w=None, *, mode='correct'):
+    (out_h, out_w), sh, sw = _aten_size(output_size, scales_h, scales_w)
+    if mode == 'swap':
+        sh, sw = sw, sh
+    height, width = a.shape[-2:]
+    rows = _source_indices(height, out_h, sh, 'scales_h', mode=mode)
+    cols = _source_indices(width, out_w, sw, 'scales_w', mode=mode)
+    out = np.empty(a.shape[:2] + (out_h, out_w), dtype=object)
+    for n, c, oh, ow in np.ndindex(out.shape):
+        out[n, c, oh, ow] = a.a[n, c, rows[oh], cols[ow]]
+    return A.Ten(out, a.dtype)
+
+
+def _aten_backward(grad_output, output_size, input_size, scales_h=None, scales_w=None, *, mode='correct'):
+    (out_h, out_w), sh, sw = _aten_size(output_size, scales_h, scales_w)
+    input_shape = A._layout_sizes(input_size, 'input_size')
+    if len(input_shape) != 4 or any(length <= 0 for length in input_shape):
+        raise Invalid('input_size must contain four positive sizes')
+    expected = tuple(input_shape[:2]) + (out_h, out_w)
+    if grad_output.shape != expected:
+        raise Invalid(f'grad_output shape must be {expected}')
+    rows = _source_indices(input_shape[2], out_h, sh, 'scales_h')
+    cols = _source_indices(input_shape[3], out_w, sw, 'scales_w')
+    grad = np.empty(tuple(input_shape), dtype=object)
+    grad.fill(R(0))
+    for n, c, oh, ow in np.ndindex(expected):
+        target = (n, c, rows[oh], cols[ow])
+        contribution = grad_output.a[n, c, oh, ow]
+        grad[target] = contribution if mode == 'overwrite_grad' else grad[target] + contribution
+    return A.Ten(grad, grad_output.dtype)
+
+
+def _forward_op(a, output_size, scales_h=None, scales_w=None):
+    """IN.ATEN: aten.upsample_nearest2d."""
+    return _aten_forward(a, output_size, scales_h, scales_w)
+
+
+def _backward_op(grad_output, output_size, input_size, scales_h=None, scales_w=None):
+    """IN.ATEN: aten.upsample_nearest2d_backward, the VJP of the forward with the same index rule."""
+    return _aten_backward(grad_output, output_size, input_size, scales_h, scales_w)
+
+
+ATEN_OPS = {'aten.upsample_nearest2d': _forward_op, 'aten.upsample_nearest2d_backward': _backward_op}
+_aten_reference = make_reference(ATEN_COVERS, extra=ATEN_OPS, profiles=(ATEN_PROFILE,),
+                                 argument_decoder=_tensor_argument)
+_aten_check_output = make_output_checker(ATEN_COVERS, extra=ATEN_OPS, profiles=(ATEN_PROFILE,),
+                                         argument_decoder=_tensor_argument)
+
+
 def reference(profile, inp):
+    if profile == ATEN_PROFILE:
+        return _aten_reference(profile, inp)
     if profile != PROFILE:
         raise Unsupported('unknown INTERP profile')
+    if isinstance(inp, dict) and isinstance(inp.get('op'), str) and inp['op'].startswith('aten.'):
+        raise Unsupported(f'profile {PROFILE} selects the public functional task record, not an ATen call')
     return _evaluate(inp)
 
 
 def check_output(profile, inp, observed):
+    if profile == ATEN_PROFILE:
+        return _aten_check_output(profile, inp, observed)
     if profile != PROFILE:
         return False
     expected = _evaluate(inp).fields
@@ -199,4 +326,19 @@ def _mutant(mode):
 
 MUTANTS = {f'IN.M{i}': _mutant(mode) for i, mode in enumerate(
     ['nearest_exact', 'round', 'swap_scales', 'overwrite_grad', 'omit_gradient'], 1)}
+
+
+def _aten_mutant(mode):
+    def forward(a, output_size, scales_h=None, scales_w=None):
+        return _aten_forward(a, output_size, scales_h, scales_w, mode=mode)
+
+    def backward(grad_output, output_size, input_size, scales_h=None, scales_w=None):
+        return _aten_backward(grad_output, output_size, input_size, scales_h, scales_w, mode=mode)
+    return make_reference(ATEN_COVERS, extra={'aten.upsample_nearest2d': forward,
+                                              'aten.upsample_nearest2d_backward': backward},
+                          profiles=(ATEN_PROFILE,), argument_decoder=_tensor_argument)
+
+
+MUTANTS.update({f'IN.M{i}': _aten_mutant(mode) for i, mode in enumerate(
+    ['ignore_scale', 'multiply_scale', 'swap', 'overwrite_grad', 'nearest_exact', 'exact_no_check'], 6)})
 READINGS = {}
