@@ -182,3 +182,19 @@
   - 记录与重放使用同一排除集合（`run.json` 的 `exclude`）；
   - 运行失败本身作为结果单独报告：哪个函数、什么输入、什么错误。它们是被测实现在真实负载上的运行失败；是否构成缺陷，另行用独立复现确认；
   - 这些调用不计入「原样可用」的分母，单独列为「被测实现运行失败」。
+- D-A3 补充：bert-tiny fp32 按清单重新记录时，在**带记录器的那一步**发生非法内存访问；两次不带记录器的步骤都正常。
+  用 `CUDA_LAUNCH_BLOCKING=1` 定位到 FlagGems `layer_norm_backward` 内部的 `weight_bias_backward_kernel`，与 gpt2 上直接失败的
+  是同一个 kernel。这次调用的键之前已经出现过，记录器没有为它复制任何东西，参数与不带记录器时相同，记录器只改变了周围的
+  内存分配布局。这与「该 kernel 有依赖布局的越界访问」一致，但没有独立证明（compute-sanitizer 在本环境中无法完整运行）。
+  按 D-A3 把该函数加入 bert-tiny fp32 的额外排除，并在清单里写明以上限制。
+- 偏差 D-A4（规格侧工具缺陷，先写测试再修）：触发 D3（`addmm`，input 含 NaN，beta=0）被拒绝，原因是「tensor argument 'a0'
+  changed but the plan declares it unchanged」。直接核对确认 FlagGems 没有改动 input（逐位相同），而 D3 的缺陷照样复现：
+  beta=0 时输出仍含 NaN。
+  - 原因：`corpus/call_binding.py` 的不变状态检查用 Python 列表比较前后记录，NaN 不等于自身，所以任何含 NaN 的未改动输入
+    都被判为「已改动」。
+  - 处理：
+    - 新增 `tests/test_call_binding_nan_state.py`，修复前失败、修复后通过；
+    - 修复为 NaN 视同相等，其余值仍用 `==` 比较；
+    - 原有绑定测试全部通过；
+    - 修复后的文件同步到本次运行的临时规格树，只重跑 D3；
+    - 模型工作负载的绑定在同步之后进行。

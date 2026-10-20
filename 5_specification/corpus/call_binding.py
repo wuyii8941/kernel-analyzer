@@ -105,6 +105,18 @@ def _set(root, pointer, value):
             raise BindingError(f"mapping target {pointer!r} has an invalid list position")
 
 
+def _same_record_values(left, right):
+    """Equality of two tensor records in which NaN equals NaN (a list comparison treats NaN as unequal to itself,
+    which declared untouched NaN inputs changed). Other values compare with ==, as before."""
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(_same_record_values(left[k], right[k]) for k in left)
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(_same_record_values(x, y) for x, y in zip(left, right))
+    if isinstance(left, float) and isinstance(right, float) and left != left and right != right:
+        return True
+    return left == right
+
+
 def _complete(value):
     if value is _MISSING:
         return False
@@ -429,7 +441,7 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
                 raise BindingError(f"tensor argument {name!r} changed dtype or shape")
             state = by_argument[name]
             if state.get("effect") == "unchanged":
-                if before != after:
+                if not _same_record_values(before, after):
                     raise BindingError(f"tensor argument {name!r} changed but the plan declares it unchanged")
             elif state.get("effect") == "output":
                 tid, target = state.get("task"), state.get("target")
