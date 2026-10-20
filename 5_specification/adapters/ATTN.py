@@ -1,4 +1,6 @@
-"""Reviewed defined-row public PyTorch 2.10 SDPA forward and VJP references."""
+"""Defined-row public PyTorch 2.10 SDPA forward and VJP references, plus (draft path A A2, 2026-10-20) an ATen-call
+interface for the fused overloads aten._scaled_dot_product_flash_attention, its backward and
+aten._scaled_dot_product_efficient_attention_backward (kernel_spec.attn_aten_semantics), dropout_p == 0 only."""
 from __future__ import annotations
 
 import math
@@ -163,7 +165,7 @@ def _strip(value, rank):
     return value if rank == 4 else value[0]
 
 
-def reference(profile, inp):
+def _public_reference(profile, inp):
     parsed = _parse(profile, inp)
     result = A.attention(
         parsed["q"], parsed["k"], parsed["v"], allowed=parsed["allowed"], bias=parsed["bias"],
@@ -187,7 +189,7 @@ def _observed(value, rank, shape, dtype, name):
     return tensor
 
 
-def check_output(profile, inp, observed):
+def _public_check_output(profile, inp, observed):
     try:
         parsed = _parse(profile, inp)
         shapes = {"out": parsed["shape"]}
@@ -199,7 +201,7 @@ def check_output(profile, inp, observed):
                      for name, shape in shapes.items()}
     except Invalid:
         return False
-    return check_enclosed_output(reference(profile, inp).fields, candidate)
+    return check_enclosed_output(_public_reference(profile, inp).fields, candidate)
 
 
 def _interval(value):
@@ -247,11 +249,196 @@ def _mask_and_causal(profile, inp):
     return _independent(profile, inp)
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# ATen-call interface (draft path A A2): fused SDPA overloads, profile torch210_aten_sdpa_fused_dropout0.
+# Built with kernel_spec.aten_adapter.make_reference; arguments are passed through undecoded and validated by
+# kernel_spec.attn_aten_semantics (tensor records are decoded there at their exact values).
+
+from kernel_spec import attn_aten_indep as AI  # noqa: E402
+from kernel_spec import attn_aten_semantics as AS  # noqa: E402
+from kernel_spec.aten_adapter import make_reference  # noqa: E402
+
+ATEN_PROFILE = "torch210_aten_sdpa_fused_dropout0"
+# The covered overloads are fixed here (not read from a contract path) so that a staged copy of this adapter
+# needs no access to the top-level contracts directory.
+ATEN_COVERS = AS.COVERS
+
+# Harness convention (path A rule v2): number of ATen return values and the positions the task never defines.
+ATEN_RETURNS = {
+    AS.FLASH: {"positions": 9, "not_compared": {
+        "2": "AT.ATEN_AUX: cum_seq_q is an undefined tensor for dense inputs; it carries no task value",
+        "3": "AT.ATEN_AUX: cum_seq_k is an undefined tensor for dense inputs; it carries no task value",
+        "6": "AT.ATEN_AUX: rng_state (philox seed) is RNG bookkeeping not defined by the task",
+        "7": "AT.ATEN_AUX: unused (philox offset) is RNG bookkeeping not defined by the task",
+        "8": "AT.ATEN_AUX: debug_attn_mask is not requested (return_debug_mask=False); no task value",
+    }},
+    AS.FLASH_BWD: {"positions": 3, "not_compared": {}},
+    AS.EFF_BWD: {"positions": 4, "not_compared": {}},
+}
+
+
+def _raw_argument(op, name, value, arguments):
+    return value
+
+
+_aten_reference = make_reference(ATEN_COVERS, extra=AS.OPS, profiles=(ATEN_PROFILE,), encode_output=False,
+                                 argument_decoder=_raw_argument)
+
+
+def reference(profile, inp):
+    if profile == ATEN_PROFILE:
+        return _aten_reference(profile, inp)
+    return _public_reference(profile, inp)
+
+
+def _aten_check_output(profile, inp, observed):
+    """Complete-output comparison for an ATen call: every compared position with its dtype and shape;
+    positions the profile does not compare (None in the reference) accept any observed value."""
+    expected = _aten_reference(profile, inp).fields["out"]
+    op = inp["op"]
+    args, kwargs = list(inp.get("args", [])), dict(inp.get("kwargs") or {})
+    parsed = AS.PARSERS[op](*args, **kwargs)
+    layout = AS.output_layout(op, parsed)
+    if not isinstance(observed, dict) or set(observed) != {"out"}:
+        return False
+    cand = observed["out"]
+    if not isinstance(cand, (list, tuple)) or len(cand) != ATEN_RETURNS[op]["positions"]:
+        return False
+    ref_vals, obs_vals = [], []
+    for ref, got, lay in zip(expected, cand, layout):
+        if ref is None:
+            continue
+        if lay == "int":
+            if type(got) is not int or got != ref:
+                return False
+            continue
+        dtype, shape = lay
+        if not isinstance(got, dict) or set(got) != {"t", "v", "shape"}:
+            return False
+        try:
+            gd, gs, gv = AS.tensor(got, "observed")
+        except (Invalid, Unsupported):
+            return False
+        if gd != dtype or tuple(gs) != tuple(shape):
+            return False
+        ref_vals.append(ref)
+        obs_vals.append(_observed_points(gv))
+    return check_enclosed_output(ref_vals, obs_vals)
+
+
+def _observed_points(v):
+    if isinstance(v, list):
+        return [_observed_points(x) for x in v]
+    if isinstance(v, str):
+        return float(v) if v != "nan" else float("nan")
+    return v
+
+
+def check_output(profile, inp, observed):
+    if profile == ATEN_PROFILE:
+        try:
+            return _aten_check_output(profile, inp, observed)
+        except Invalid:
+            return False
+    return _public_check_output(profile, inp, observed)
+
+
+def _call(inp):
+    if not isinstance(inp, dict) or "op" not in inp:
+        raise Unsupported("not an ATen call")
+    op = inp["op"]
+    if op not in AS.PARSERS:
+        raise Unsupported(f"{op} is not covered")
+    return op, list(inp.get("args", [])), dict(inp.get("kwargs") or {})
+
+
+def _iv_scale(parsed):
+    return AI.I(parsed["scale"])
+
+
+def _contiguous(parsed):
+    grp = parsed["Hq"] // parsed["Hkv"]
+    return lambda h: h // grp
+
+
+def _causal_pred(parsed, offset=0, strict=False):
+    if not parsed["causal"]:
+        return lambda i, j: True
+    if strict:
+        return lambda i, j: j < i
+    return lambda i, j: j <= i + offset
+
+
+def _aten_independent(profile, inp, *, scale=None, pred=None, kv_head=None, lse_divisor=None, group_sum=True,
+                      saved_lse=True, saved_out=True, parse_kw=None):
+    """Independent interval evaluation of one fused ATen call with the misreading given by the parameters."""
+    if profile != ATEN_PROFILE:
+        raise Unsupported("ATen mutant on a public profile")
+    op, args, kwargs = _call(inp)
+    parsed = AS.PARSERS[op](*args, **kwargs, **(parse_kw or {}))
+    sc = scale(parsed) if scale else _iv_scale(parsed)
+    allowed = pred(parsed) if pred else _causal_pred(parsed)
+    head = kv_head(parsed) if kv_head else _contiguous(parsed)
+    if op == AS.FLASH:
+        out, lse = AI.iv_forward(parsed["q"], parsed["k"], parsed["v"], scale=sc, allowed=allowed, kv_head=head,
+                                 lse_divisor=lse_divisor)
+        res = [out, lse, None, None, parsed["L"], parsed["S"], None, None, None]
+    else:
+        dq, dk, dv = AI.iv_backward(parsed["q"], parsed["k"], parsed["v"], parsed["dout"], parsed["out"],
+                                    parsed["lse"], scale=sc, allowed=allowed, kv_head=head, Hkv=parsed["Hkv"],
+                                    group_sum=group_sum, saved_lse=saved_lse, saved_out=saved_out)
+        res = [dq, dk, dv] + ([None] if op == AS.EFF_BWD else [])
+    return Result("value", {"out": res})
+
+
+def _am(**kw):
+    return lambda profile, inp: _aten_independent(profile, inp, **kw)
+
+
+def _default_scale_iv(parsed):
+    return AI.I(A.default_scale(parsed["E"]))
+
+
+def _round_robin(parsed):
+    return lambda h: h % parsed["Hkv"]
+
+
+def _bottom_right(parsed):
+    return _causal_pred(parsed, offset=parsed["S"] - parsed["L"])
+
+
+ATEN_MUTANTS = {
+    "AT.M9": _am(scale=_default_scale_iv),                                   # ignore the explicit scale keyword
+    "AT.M10": _am(pred=lambda parsed: _causal_pred(parsed, strict=True)),    # causal excludes the diagonal
+    "AT.M11": _am(lse_divisor=AI.iv.log(2)),                                 # logsumexp in base 2
+    "AT.M12": _am(kv_head=_round_robin),                                     # GQA heads round-robin
+    "AT.M13": _am(group_sum=False),                                          # dk/dv not summed over the group
+    "AT.M14": _am(saved_lse=False),                                          # recompute the LSE, ignore supplied
+    "AT.M15": _am(saved_out=False),                                          # recompute out for D, ignore supplied
+    "AT.M16": _am(parse_kw={"allow_dropout": True}),                         # treat dropout_p > 0 as 0
+    "AT.M17": _am(pred=_bottom_right, parse_kw={"allow_nonsquare_causal": True}),  # bottom-right non-square causal
+    "AT.M18": _am(kv_head=lambda parsed: (lambda h: 0)),                     # ignore GQA: every head uses KV head 0
+    "AT.M19": _am(parse_kw={"allow_value_dim": True}),                      # flash accepts Ev != E
+}
+
+
+def _reading_recompute(profile, inp):
+    """Diagnostic reading recompute_saved: backward overloads evaluated as the exact VJP of the forward at
+    (q, k, v), ignoring the supplied out and logsumexp."""
+    op, args, kwargs = _call(inp)
+    if op == AS.FLASH:
+        return reference(profile, inp)
+    parsed = AS.PARSERS[op](*args, **kwargs)
+    grads = [AS.values(x) for x in AS.recomputed_backward(parsed)]
+    return Result("value", {"out": grads + ([None] if op == AS.EFF_BWD else [])})
+
+
 def _mutant(mode):
     return lambda profile, inp: _independent(profile, inp, mode)
 
 
 MUTANTS = {
+    **ATEN_MUTANTS,
     "AT.M1": _mutant("scale_one_over_E"),
     "AT.M2": _mutant("ignore_explicit_scale"),
     "AT.M3": _mutant("invert_bool"),
@@ -261,4 +448,4 @@ MUTANTS = {
     "AT.M7": _mutant("empty_uniform"),
     "AT.M8": _mask_and_causal,
 }
-READINGS = {}
+READINGS = {"recompute_saved": _reading_recompute}

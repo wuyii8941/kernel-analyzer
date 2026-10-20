@@ -630,3 +630,40 @@ def test_exact_predicate_implies_source_agreement():
                 admitted += 1
                 assert my_nearest_idx(isize, osize, None) == source_index_no_scale(isize, osize), (isize, osize)
     assert admitted > 100
+
+
+# ---------------------------------------------------------------- re-check of the tensor-parameter decoder (2026-10-21)
+@pytest.mark.parametrize("profile,dtype,v1,v2", [("real", "i64", [1, 2], [3]), ("real", "f32", [1, 2], [3]),
+                                                 ("boolean", "b8", [True, False], [True])])
+def test_tensor_parameters_still_accepted(C, profile, dtype, v1, v2):
+    key = "out" if profile == "real" else "bool_out"
+    c = C["LAYOUT"]
+    r = run(c, profile, "aten.cat", [rec(dtype, v1), rec(dtype, v2)], 0)
+    same(r.fields[key], v1 + v2)
+    r = run(c, profile, "aten.stack", [rec(dtype, v1), rec(dtype, v1)], 0)
+    same(r.fields[key], [v1, v1])
+    base = [v1, v1]
+    r = run(c, profile, "aten.select_scatter", rec(dtype, base), rec(dtype, [v2[0], v2[0]]), 0, 1)
+    same(r.fields[key], [v1, [v2[0], v2[0]]])
+    r = run(c, profile, "aten.slice_scatter", rec(dtype, v1), rec(dtype, v2), 0, 1, INT64_MAX, 1)
+    same(r.fields[key], [v1[0], v2[0]])
+    zero = False if dtype == "b8" else 0
+    r = run(c, profile, "aten.slice_backward", rec(dtype, v2), [2], 0, 1, INT64_MAX, 1)
+    same(r.fields[key], [zero, v2[0]])
+    r = run(c, profile, "aten.constant_pad_nd", rec(dtype, v1), [1, 0])
+    same(r.fields[key], [zero] + v1)
+
+
+T0 = {"t": "i64", "v": 0, "shape": []}
+
+
+@pytest.mark.parametrize("op,args", [
+    ("aten.narrow", [rec("f32", [1, 2, 3]), 0, T0, 1]),
+    ("aten.select", [rec("f32", [1, 2, 3]), 0, T0]),
+    ("aten.slice", [rec("f32", [1, 2, 3]), T0, 0, 2, 1]),
+    ("aten.view", [rec("f32", [1, 2]), [T0, 2]]),
+    ("aten.constant_pad_nd", [rec("f32", [1, 2]), [T0, 1]]),
+    ("aten.repeat_interleave", [rec("f32", [1, 2]), rec("i64", [1, 2]), 0]),
+    ("aten.tril", [rec("f32", [[1, 2], [3, 4]]), T0])])
+def test_tensor_for_non_tensor_parameter_is_unsupported(C, op, args):
+    assert run(C["LAYOUT"], "real", op, *args).outcome == "unsupported"

@@ -1,4 +1,5 @@
 import importlib.util
+import os
 import unittest
 from pathlib import Path
 
@@ -6,7 +7,8 @@ from kernel_spec.num import Invalid, Unsupported
 
 
 def load_adapter():
-    path = Path(__file__).resolve().parents[1] / "adapters" / "LAYOUT.py"
+    # LAYOUT_ADAPTER may name a staged candidate adapter; by default the current top-level adapter is tested.
+    path = Path(os.environ.get("LAYOUT_ADAPTER") or Path(__file__).resolve().parents[1] / "adapters" / "LAYOUT.py")
     spec = importlib.util.spec_from_file_location("reviewed_layout_domain_adapter", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -33,8 +35,9 @@ class LayoutProfileDomains(unittest.TestCase):
         self.assertEqual(empty.fields["out"], [[], [], []])
 
     def test_unreviewed_types_nonfinite_unrepresentable_and_negative_zero_are_refused(self):
+        # 2026-10-20 extension (LY.EXACT_DATA): integer data is in the real profile; b8 belongs to the boolean profile.
+        self.assertEqual(self.call("aten.clone", [{"t": "i64", "v": [1]}]).fields["out"], [1])
         for record in (
-            {"t": "i64", "v": [1]},
             {"t": "b8", "v": [True]},
             {"t": "f8e4m3", "v": [1]},
             {"t": "complex64", "v": [1]},

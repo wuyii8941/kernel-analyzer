@@ -46,8 +46,13 @@ class EmbeddingPublicCall(unittest.TestCase):
     def test_mutation_and_nondefault_public_tasks_are_refused(self):
         w = {'t': 'f32', 'v': [[3, 4], [5, 6]]}
         i = {'t': 'i64', 'v': [0, 1]}
-        for kwargs in ({'max_norm': 1}, {'padding_idx': -1}, {'padding_idx': 0},
-                       {'norm_type': 1}, {'scale_grad_by_freq': True}, {'sparse': True}):
+        # public padding_idx -1 / 0 give the plain lookup since the reviewed 2026-10-20 extension (IX.PADDING_FORWARD)
+        for kwargs in ({'padding_idx': -1}, {'padding_idx': 0}):
+            with self.subTest(kwargs=kwargs):
+                self.assertEqual(self.adapter.reference('real', {'op': 'torch.nn.functional.embedding',
+                                                                 'args': [i, w], 'kwargs': kwargs}).fields['out'],
+                                 [[3, 4], [5, 6]])
+        for kwargs in ({'max_norm': 1}, {'norm_type': 1}, {'scale_grad_by_freq': True}, {'sparse': True}):
             with self.subTest(kwargs=kwargs), self.assertRaises(Unsupported):
                 self.adapter.reference('real', {'op': 'torch.nn.functional.embedding', 'args': [i, w],
                                                'kwargs': kwargs})

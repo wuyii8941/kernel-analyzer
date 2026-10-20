@@ -179,3 +179,40 @@ cd 5_specification && /data1/tzh/envs/liger/bin/python tools/check_contracts.py 
   - 作者测试（aten + torch）：39 passed。
 
 **最终结论**：上表中的 LAYOUT、POOL、INTERP 三对文件均为 **CONFIRMED**，可以晋升到顶层并复制到 validated/。
+
+## 7 LAYOUT 第二次复查（2026-10-21，晋升前发现 narrow.Tensor 问题）
+
+POOL 和 INTERP 已按第 6 节确认的哈希晋升。LAYOUT 在晋升检查时被暂缓：`tests/test_layout_profile_domains.py` 显示，aten.narrow 的 start 传入张量时（属于 narrow.Tensor 重载），结果类别是 invalid_input，而应为 unsupported。
+
+作者的修复和复查对象：
+
+| 文件 | sha256 |
+|---|---|
+| LAYOUT_path_a_A2_20261020.yaml | 5b98080b739a396f2242c454da55003236a5e26b135f0e2db12110a611a8dbe8 |
+| LAYOUT_adapter_path_a_A2_20261020.py | 96640c39e1ab2c874daa5afe9672f2a1434f41e1ad566eb67c0db7516af9bcad |
+
+**改动内容**
+- 解码器只在张量参数（a、src、grad_output、tensors）上接受张量记录。
+- 其他参数（尺寸、维度、下标、范围、重复次数、标量，包括嵌套在列表里的）一旦出现张量记录，就判为 unsupported，视为另一个重载。
+- 新增例子 LY.E77（narrow.Tensor）和 LY.E78（repeat_interleave.self_Tensor）。
+
+**核对**
+- 用 inspect 枚举了 covers 中全部 28 个 ATen 算子的参数名。所有张量参数都在 {a, src, grad_output, tensors} 之内，所以没有合法的张量参数会被拒绝。
+- 新增 `test_tensor_parameters_still_accepted`，在 i64、f32、b8 三种 dtype 上覆盖了 cat 和 stack 的张量列表、select_scatter 和 slice_scatter 的 src、slice_backward 的 grad_output，以及 constant_pad_nd。
+- 新增 `test_tensor_for_non_tensor_parameter_is_unsupported`，覆盖 7 种情形：narrow、select、slice 的 dim、view 尺寸列表中嵌套的张量、pad 列表中嵌套的张量、张量形式的 repeats、tril 的 diagonal。
+- 作者对 `test_layout_profile_domains.py` 的两处修改都正确：
+  - 改为 i64 的 clone 在 real profile 下给出值 [1]，这与 LY.EXACT_DATA 一致；
+  - 增加了可选的 `LAYOUT_ADAPTER` 环境变量。
+- 对照验证：
+  - 该测试指向上一版 adapter（C2）时失败 1 项，即 `test_selected_functional_schemas_reject_other_overloads`；
+  - 指向本版时全部通过。
+  - 这说明测试确实用到了暂存的 adapter。
+
+**结果**（fresh stage `.cache/spec_a2_review/C3`）
+- check_contracts LAYOUT：退出码 0，例子 78/78，变异 25/25，consistent。
+- pytest：
+  - `test_layout_pool_interp_a2_review.py`：335 passed；
+  - 作者测试（aten + torch）：39 passed；
+  - `LAYOUT_ADAPTER=<C3>/adapters/LAYOUT.py`，运行 `tests/test_layout_profile_domains.py`：5 passed，20 个 subtests 全部通过。
+
+**LAYOUT 最终结论：CONFIRMED**。确认对象为上表中的文件对，可以晋升并复制到 validated/。

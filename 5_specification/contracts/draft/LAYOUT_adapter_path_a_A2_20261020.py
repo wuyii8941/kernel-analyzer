@@ -102,12 +102,29 @@ def _point_tensor(value, name, allowed=DTYPES):
     return tensor
 
 
+TENSOR_PARAMETERS = {"a", "src", "grad_output"}   # plus the tensor list "tensors"
+
+
+def _contains_tensor_record(value):
+    if isinstance(value, dict):
+        return "t" in value or "v" in value
+    if isinstance(value, (list, tuple)):
+        return any(_contains_tensor_record(item) for item in value)
+    return False
+
+
 def _argument_decoder(allowed):
     def decode_argument(op, name, value, arguments):
         if name == "tensors":
             if not isinstance(value, (list, tuple)) or not value:
                 raise Invalid(f"{op}: tensors must be a nonempty list")
             return [_point_tensor(item, f"tensors[{index}]", allowed) for index, item in enumerate(value)]
+        if name not in TENSOR_PARAMETERS:
+            # A tensor for a size, dimension, index, range, repeat count or scalar parameter selects another
+            # overload (e.g. narrow.Tensor, repeat_interleave.self_Tensor): a legal call outside the profiles.
+            if _contains_tensor_record(value):
+                raise Unsupported(f"{op}: tensor-valued {name} belongs to another overload outside the selected profiles")
+            return decode(value)
         if isinstance(value, dict) and ("t" in value or "v" in value):
             return _point_tensor(value, name, allowed)
         return decode(value)

@@ -1,32 +1,43 @@
 schema_version: '1.2'
 id: LAYOUT
 role: ATEN_LAYOUT
-title: Common finite floating layout operations and selected PyTorch 2.10 layout autograd tasks
+title: Common layout and data-movement operations on floating, integer and boolean tensors, and selected PyTorch 2.10 layout autograd tasks
 review:
   status: reviewed_for_implementation
-  author: Claude (original broad draft) and Codex (finite common-operation revision), 2026-10-18
-  date: '2026-10-18'
-  reviewer: Codex source, schema, domain and complete-output review with separate NumPy and PyTorch checks
-  scope: Logical values and shapes for selected finite floating functional operations; constant pad and cat additionally have complete public-call forward and VJP profiles
+  author: Claude (original broad draft), Codex (finite common-operation revision, 2026-10-18) and Claude (path A closure package C, 2026-10-20)
+  date: '2026-10-21'
+  reviewer: 'Codex source, schema, domain and complete-output review with separate NumPy and PyTorch checks (2026-10-18 version); the 2026-10-20 extension awaits independent review; independent review 2026-10-21 (reviews/2026-10-20/A2_package_C_review.md)'
+  scope: Logical values and shapes for selected functional layout and data-movement operations on finite floating and integer tensors (real) and boolean tensors (boolean), including aten.pad constant mode, slice_backward and repeat_interleave.self_int; constant pad and cat additionally have complete public-call forward and VJP profiles
 activation:
   implementation_status: validated
-  implementation_evidence: evidence/layout_implementation.md
+  implementation_evidence: evidence/layout_implementation.md; evidence/layout_pool_interp_aten.md
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [aten.view, aten.reshape, aten._unsafe_view, aten.permute, aten.transpose, aten.t, aten.expand,
   aten.unsqueeze, aten.squeeze, aten.select, aten.slice, aten.narrow, aten.cat, aten.stack, aten.split,
   aten.split_with_sizes, aten.constant_pad_nd, aten.select_scatter, aten.slice_scatter, aten.clone,
-  aten.lift_fresh_copy, aten.lift_fresh, aten.alias, aten.triu, aten.tril, torch.nn.functional.pad,
-  torch.cat]
+  aten.lift_fresh_copy, aten.lift_fresh, aten.alias, aten.triu, aten.tril, aten.pad, aten.slice_backward,
+  aten.repeat_interleave, torch.nn.functional.pad, torch.cat]
 profiles:
   real:
     meaning: >-
-      Complete logical values and shapes for selected default functional operations on dense finite f16, bf16, f32
-      or f64 tensors. Every recorded value and scalar fill must be exactly representable in the declared dtype.
-      Multi-tensor calls require one dtype. The task does not promise strides, aliasing or storage identity.
+      Complete logical values and shapes for selected default functional ATen operations on dense finite f16, bf16,
+      f32 or f64 tensors, or on i64, i32, i16, i8 or u8 tensors. Every recorded value and scalar fill must be exactly
+      representable in the declared dtype (an integer fill must be an integer in range). Multi-tensor calls require
+      one dtype. Includes aten.pad in constant mode, aten.slice_backward and aten.repeat_interleave.self_int. The task
+      does not promise strides, aliasing or storage identity.
     task_choice_required: false
+    basis: [LY.SCHEMA, LY.PHYSICAL, LY.EXACT_DATA, LY.ATEN_PAD, LY.SLICE_BACKWARD, LY.REPEAT_INTERLEAVE]
     outputs: [out]
+  boolean:
+    meaning: >-
+      The same selected ATen operations and rules as the real profile, applied to dense b8 tensors. Every value is a
+      boolean literal; a fill is False/True or the numeric value 0 or 1; the zero of triu/tril, slice_backward and the
+      default pad value is False. Returns the complete boolean result in bool_out.
+    task_choice_required: false
+    basis: [LY.SCHEMA, LY.EXACT_DATA, LY.ATEN_PAD, LY.SLICE_BACKWARD, LY.REPEAT_INTERLEAVE]
+    outputs: [bool_out]
   torch210_functional_constant_pad_autograd:
     meaning: >-
       PyTorch 2.10 public torch.nn.functional.pad with mode='constant', a finite exactly representable scalar or the
@@ -47,12 +58,14 @@ profiles:
     outputs: [out, grads]
 outputs:
   out: {shape: 'complete result tensor; split operations return the complete ordered list', guarantee: exact}
+  bool_out: {shape: 'complete b8 result tensor of the boolean profile; split operations return the complete ordered list', kind: boolean, guarantee: exact}
   grad: {shape: 'complete constant-pad input shape', guarantee: exact}
   grads: {shape: 'complete ordered list with one tensor in each cat input shape', guarantee: exact}
 comparison:
   input_binding: >-
     Tensor records are physical source values rather than arbitrary reals carrying a dtype label. All tensors are
-    dense, finite and floating; multi-tensor calls use one dtype. The pad VJP profile requires complete input and
+    dense; floating values are finite, integer values are integer literals in range and b8 values are boolean
+    literals; multi-tensor calls use one dtype. The pad VJP profile requires complete input and
     upstream records and every public option.
   complete_output: >-
     check_output requires exactly the profile's declared fields as complete tensor records with t, v and shape.
@@ -72,9 +85,62 @@ decisions:
 - id: LY.PHYSICAL
   status: reviewed
   statement: >-
-    Inputs are dense finite f16/bf16/f32/f64 tensors whose values are exactly representable in their declared dtype.
-    Multi-tensor calls require the same dtype, and scalar padding values must be exactly representable in it.
+    Floating inputs are dense finite f16/bf16/f32/f64 tensors whose values are exactly representable in their
+    declared dtype. Multi-tensor calls require the same dtype, and scalar padding values must be exactly
+    representable in it. Integer and boolean inputs are governed by LY.EXACT_DATA.
   basis: [T_TENSOR_ATTR.PROMOTION, TS_NATIVE_FUNCTIONS.LAYOUT_SCHEMAS]
+- id: LY.EXACT_DATA
+  status: reviewed
+  statement: >-
+    Every selected operation only selects, reorders, repeats or places input coordinates and fills the remaining
+    coordinates with one scalar, so its definition does not depend on floating arithmetic. The real profile therefore
+    also admits dense i64/i32/i16/i8/u8 tensors whose values are integer literals in the dtype range, and the boolean
+    profile admits dense b8 tensors of boolean literals; one dtype per call as in LY.PHYSICAL. Zero (T_TRIU.DEF,
+    T_TRIL.DEF, the slice_backward base and the documented default pad value) is 0 for integers and False for b8.
+    Fill conversion: T_PAD.DEF says padded positions take the given value, and the aten.pad schema types it float?.
+    An integer tensor holds that value exactly only when it is an integer in the dtype range, so such a value (for
+    example the recorded -100.0) is stored as that integer. Alternatives for a non-integral or out-of-range value:
+    (a) refuse it; (b) truncate toward zero, which PyTorch 2.10 eager does for 0.5 and -2.7, with an overflow error
+    out of range; (c) round to nearest. No retained PyTorch document states (b) or (c), so the profile chooses (a)
+    and reports unsupported (the call is API-legal but outside the profile). For b8 the alternatives are (a) accept
+    only False/True and the numeric values 0 and 1 that denote them, or (b) map every nonzero value to True, as
+    eager does for 0.5 and 2.0; (b) is undocumented and the profile chooses (a). Other operations, mixed dtypes and type promotion stay out.
+  basis: [T_PAD.DEF, LPI_NATIVE_FUNCTIONS.PAD, LPI_NATIVE_FUNCTIONS.CONSTANT_PAD_ND, TS_REFS.CONSTANT_PAD,
+    T_TRIL.DEF, T_TRIU.DEF, LY.PHYSICAL]
+- id: LY.ATEN_PAD
+  status: reviewed
+  statement: >-
+    aten.pad(self, pad, mode='constant', value=None) is the ATen form of torch.nn.functional.pad. With mode='constant'
+    it pads or crops exactly like constant_pad_nd (LY.PLACEMENT, LY.PAD_TASK geometry) with fill value, and value
+    None selects the documented default 0. The modes reflect, replicate and circular are documented but are
+    different tasks and are unsupported here; any other mode string is invalid input. The fill must satisfy
+    LY.PHYSICAL (floating) or LY.EXACT_DATA (integer, boolean).
+  basis: [LPI_NATIVE_FUNCTIONS.PAD, T_PAD.DEF, TS_REFS.CONSTANT_PAD, LY.PLACEMENT, LY.EXACT_DATA]
+- id: LY.SLICE_BACKWARD
+  status: reviewed
+  statement: >-
+    aten.slice_backward(grad_output, input_sizes, dim, start, end, step) is the derivative that PyTorch 2.10 assigns
+    to slice.Tensor: the VJP of the documented slice (LY.RANGES). Since slicing copies input coordinate
+    start+k*step to output coordinate k, its transpose is a zero tensor of shape input_sizes and grad_output's dtype
+    with grad_output placed at dim[start:end:step]; the bounds are normalized exactly like slice (negative values
+    wrap once, then clamp to [0, size], so an end of 9223372036854775807 means the dimension end), and step must be
+    positive. The retained official decomposition states the same formula (slice_scatter into new_zeros). A
+    grad_output whose shape differs from the selected slice shape, or input_sizes of another rank or with negative
+    entries, is invalid input. This is consistent with the PyTorch 2.10 reference program and is not an independent
+    public document.
+  basis: [LPI_DERIVATIVES.SLICE, LPI_DECOMP.SLICE_BACKWARD, LPI_NATIVE_FUNCTIONS.SLICE_BACKWARD, LY.RANGES,
+    T_SLICE_SCATTER.DEF]
+- id: LY.REPEAT_INTERLEAVE
+  status: reviewed
+  statement: >-
+    aten.repeat_interleave.self_int(self, repeats, dim=None, *, output_size=None): every element along dim is
+    repeated repeats consecutive times, so output coordinate j along dim reads input coordinate floor(j/repeats);
+    the other coordinates are unchanged (numpy.repeat order, not Tensor.repeat tiling). dim None uses the row-major
+    flattened input and returns a one-dimensional result. repeats is a nonnegative number of repetitions (negative
+    is invalid input; zero gives an empty axis). output_size, when given, is the documented total output size along
+    the axis and must equal size*repeats, otherwise invalid input. The tensor-repeats overloads are unsupported.
+  basis: [LPI_T_REPEAT_INTERLEAVE.DEF, LPI_T_REPEAT_INTERLEAVE.DIM, LPI_T_REPEAT_INTERLEAVE.OUTPUT_SIZE,
+    LPI_T_REPEAT_INTERLEAVE.EXAMPLE, LPI_NATIVE_FUNCTIONS.REPEAT_INTERLEAVE]
 - id: LY.ORDER
   status: reviewed
   statement: >-
@@ -152,6 +218,10 @@ clauses:
 - {id: LY.C12, basis: [LY.PAD_VJP], statement: 'the complete input VJP reads upstream at the one output coordinate copied from each retained input coordinate and is zero at every cropped input coordinate', observes: [out, grad], evidence_kind: derived}
 - {id: LY.C13, basis: [LY.CAT_TASK], statement: 'public cat preserves input order, copies every coordinate into the consecutive interval selected by dim and leaves every input and upstream unchanged', observes: [out, grads], evidence_kind: definition}
 - {id: LY.C14, basis: [LY.CAT_VJP], statement: 'the complete ordered input VJPs partition upstream by the original cat-axis sizes, preserving one-dimensional empty inputs as empty gradients', observes: [out, grads], evidence_kind: derived}
+- {id: LY.C15, basis: [LY.ATEN_PAD], statement: 'aten.pad in constant mode pads or crops like constant_pad_nd with the given value or the default zero; other documented modes are unsupported', observes: [out, bool_out], evidence_kind: definition}
+- {id: LY.C16, basis: [LY.EXACT_DATA], statement: 'integer and boolean tensors move exactly; a fill is stored only when exactly representable (integer in range, or False/True/0/1 for b8) and other fills are unsupported', observes: [out, bool_out], evidence_kind: definition}
+- {id: LY.C17, basis: [LY.SLICE_BACKWARD], statement: 'slice_backward returns zeros of input_sizes with grad_output placed at the normalized slice dim[start:end:step]', observes: [out, bool_out], evidence_kind: derived}
+- {id: LY.C18, basis: [LY.REPEAT_INTERLEAVE], statement: 'repeat_interleave.self_int repeats each element along dim (or the flattened input) repeats consecutive times and checks a given output_size', observes: [out, bool_out], evidence_kind: definition}
 examples:
 - {id: LY.E1, profile: real, clauses: [LY.C1], input: {op: aten.view, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [3, 2]]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5, 6]]}}}
 - {id: LY.E2, profile: real, clauses: [LY.C1], input: {op: aten.reshape, args: [{t: f16, v: [[1, 2, 3], [4, 5, 6]]}, [2, -1, 1]]}, expected: {outcome: value, fields: {out: [[[1], [2], [3]], [[4], [5], [6]]]}}}
@@ -295,15 +365,185 @@ examples:
     dim: 0
     upstream: {t: f32, shape: [2], v: [1, 1]}
   expected: {outcome: invalid_input}
+- id: LY.E45
+  profile: real
+  clauses: [LY.C15, LY.C16]
+  input: {op: aten.pad, args: [{t: i64, shape: [1, 3], v: [[5, 6, 7]]}, [0, 1], constant, -100.0]}
+  expected: {outcome: value, fields: {out: [[5, 6, 7, -100]]}}
+- id: LY.E46
+  profile: real
+  clauses: [LY.C15]
+  input: {op: aten.pad, args: [{t: f32, v: [[1, 2]]}, [1, 0, 0, 1]]}
+  expected: {outcome: value, fields: {out: [[0, 1, 2], [0, 0, 0]]}}
+- id: LY.E47
+  profile: real
+  clauses: [LY.C15, LY.C16]
+  input: {op: aten.pad, args: [{t: i32, v: [1, 2, 3, 4]}, [-1, 2], constant, 7]}
+  expected: {outcome: value, fields: {out: [2, 3, 4, 7, 7]}}
+- id: LY.E48
+  profile: real
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: i64, v: [1, 2]}, [0, 1], constant, '1/2']}
+  expected: {outcome: unsupported}
+- id: LY.E49
+  profile: real
+  clauses: [LY.C15]
+  input: {op: aten.pad, args: [{t: f32, v: [[1, 2, 3]]}, [1, 1], reflect]}
+  expected: {outcome: unsupported}
+- id: LY.E50
+  profile: real
+  clauses: [LY.C15]
+  input: {op: aten.pad, args: [{t: f32, v: [1, 2]}, [1, 1], zeros, 0]}
+  expected: {outcome: invalid_input}
+- id: LY.E51
+  profile: real
+  clauses: [LY.C16]
+  input: {op: aten.constant_pad_nd, args: [{t: u8, v: [[3]]}, [1, 1], 255]}
+  expected: {outcome: value, fields: {out: [[255, 3, 255]]}}
+- id: LY.E52
+  profile: real
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: i8, v: [1]}, [1, 0], constant, 128]}
+  expected: {outcome: unsupported}
+- id: LY.E53
+  profile: boolean
+  clauses: [LY.C15, LY.C16]
+  input: {op: aten.pad, args: [{t: b8, v: [[true, false]]}, [1, 1]]}
+  expected: {outcome: value, fields: {bool_out: [[false, true, false, false]]}}
+- id: LY.E54
+  profile: boolean
+  clauses: [LY.C15, LY.C16]
+  input: {op: aten.pad, args: [{t: b8, v: [[true, false]]}, [1, 1], constant, 1.0]}
+  expected: {outcome: value, fields: {bool_out: [[true, true, false, true]]}}
+- id: LY.E55
+  profile: boolean
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: b8, v: [true]}, [1, 0], constant, 2.0]}
+  expected: {outcome: unsupported}
+- id: LY.E56
+  profile: real
+  clauses: [LY.C17]
+  input: {op: aten.slice_backward, args: [{t: f32, v: [[1, 2], [3, 4]]}, [2, 4], 1, 2, 9223372036854775807, 1]}
+  expected: {outcome: value, fields: {out: [[0, 0, 1, 2], [0, 0, 3, 4]]}}
+- id: LY.E57
+  profile: real
+  clauses: [LY.C17]
+  input: {op: aten.slice_backward, args: [{t: bf16, v: [[[1, 2]], [[3, 4]]]}, [2, 1, 4], -1, 0, 2, 1]}
+  expected: {outcome: value, fields: {out: [[[1, 2, 0, 0]], [[3, 4, 0, 0]]]}}
+- id: LY.E58
+  profile: real
+  clauses: [LY.C17]
+  input: {op: aten.slice_backward, args: [{t: f64, v: ['1/2', -3]}, [5], 0, 1, 100, 2]}
+  expected: {outcome: value, fields: {out: [0, '1/2', 0, -3, 0]}}
+- id: LY.E59
+  profile: real
+  clauses: [LY.C17]
+  input: {op: aten.slice_backward, args: [{t: f32, v: [1, 2, 3]}, [4], 0, 0, 4, 1]}
+  expected: {outcome: invalid_input}
+- id: LY.E60
+  profile: real
+  clauses: [LY.C17]
+  input: {op: aten.slice_backward, args: [{t: f32, v: [1, 2]}, [4], 0, -2, 9223372036854775807, 1]}
+  expected: {outcome: value, fields: {out: [0, 0, 1, 2]}}
+- id: LY.E61
+  profile: boolean
+  clauses: [LY.C16, LY.C17]
+  input: {op: aten.slice_backward, args: [{t: b8, v: [true]}, [3], 0, 1, 2, 1]}
+  expected: {outcome: value, fields: {bool_out: [false, true, false]}}
+- id: LY.E62
+  profile: real
+  clauses: [LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: f32, shape: [2, 1, 2], v: [[[1, 2]], [[3, 4]]]}, 3, -3]}
+  expected: {outcome: value, fields: {out: [[[1, 2]], [[1, 2]], [[1, 2]], [[3, 4]], [[3, 4]], [[3, 4]]]}}
+- id: LY.E63
+  profile: real
+  clauses: [LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: f32, v: [[1, 2], [3, 4]]}, 2]}
+  expected: {outcome: value, fields: {out: [1, 1, 2, 2, 3, 3, 4, 4]}}
+- id: LY.E64
+  profile: real
+  clauses: [LY.C16, LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: i64, v: [[1, 2], [3, 4]]}, 3, 1], kwargs: {output_size: 6}}
+  expected: {outcome: value, fields: {out: [[1, 1, 1, 2, 2, 2], [3, 3, 3, 4, 4, 4]]}}
+- id: LY.E65
+  profile: real
+  clauses: [LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: f32, v: [[1, 2], [3, 4]]}, 3, 0], kwargs: {output_size: 5}}
+  expected: {outcome: invalid_input}
+- id: LY.E66
+  profile: real
+  clauses: [LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: f32, v: [1, 2]}, -1, 0]}
+  expected: {outcome: invalid_input}
+- id: LY.E67
+  profile: real
+  clauses: [LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: f16, v: [[1, 2]]}, 0, 1]}
+  expected: {outcome: value, fields: {out: [[]]}}
+- id: LY.E68
+  profile: boolean
+  clauses: [LY.C9, LY.C16]
+  input: {op: aten.tril, args: [{t: b8, v: [[true, true, true], [true, true, true], [true, true, true]]}]}
+  expected: {outcome: value, fields: {bool_out: [[true, false, false], [true, true, false], [true, true, true]]}}
+- id: LY.E69
+  profile: real
+  clauses: [LY.C9, LY.C16]
+  input: {op: aten.tril, args: [{t: i64, v: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]}, 1]}
+  expected: {outcome: value, fields: {out: [[1, 2, 0], [4, 5, 6], [7, 8, 9]]}}
+- id: LY.E70
+  profile: real
+  clauses: [LY.C10, LY.C16]
+  input: {op: aten.tril, args: [{t: b8, v: [[true, true], [true, true]]}]}
+  expected: {outcome: unsupported}
+- id: LY.E71
+  profile: boolean
+  clauses: [LY.C16]
+  input: {op: aten.tril, args: [{t: f32, v: [[1, 1], [1, 1]]}]}
+  expected: {outcome: unsupported}
+- id: LY.E72
+  profile: real
+  clauses: [LY.C16]
+  input: {op: aten.clone, args: [{t: i8, v: [127, 128]}]}
+  expected: {outcome: invalid_input}
+- id: LY.E73
+  profile: real
+  clauses: [LY.C10, LY.C16]
+  input: {op: aten.cat, args: [[{t: i64, v: [1]}, {t: i32, v: [2]}]]}
+  expected: {outcome: unsupported}
+- id: LY.E74
+  profile: real
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: i64, v: [1, 2]}, [0, 1], constant, .inf]}
+  expected: {outcome: unsupported}
+- id: LY.E75
+  profile: boolean
+  clauses: [LY.C16]
+  input: {op: aten.pad, args: [{t: b8, v: [true]}, [1, 0], constant, -.inf]}
+  expected: {outcome: unsupported}
+- id: LY.E76
+  profile: real
+  clauses: [LY.C6, LY.C10]
+  input: {op: aten.constant_pad_nd, args: [{t: f32, v: [1, 2]}, [1, 0], .inf]}
+  expected: {outcome: unsupported}
+- id: LY.E77
+  profile: real
+  clauses: [LY.C10]
+  input: {op: aten.narrow, args: [{t: f32, v: [1, 2, 3]}, 0, {t: i64, v: 0}, 1]}
+  expected: {outcome: unsupported}
+- id: LY.E78
+  profile: real
+  clauses: [LY.C10, LY.C18]
+  input: {op: aten.repeat_interleave, args: [{t: i64, v: [1, 2]}, {t: i64, v: [1, 2]}, 0]}
+  expected: {outcome: unsupported}
 signature:
   inputs: ['real: one selected functional layout call', 'pad autograd: public op, complete input, even integer pad, constant mode, scalar/default value and complete upstream', 'cat autograd: public op, nonempty ordered complete tensor list, integer dim and complete upstream']
   pre_state: [all inputs are unchanged]
   post_state: [the complete logical output tensor or ordered list; pad returns its complete input VJP; cat returns every ordered input VJP]
   observation_unit: every declared output coordinate together with dtype, shape and ordered result position
 domain:
-  valid: [exactly representable finite f16/bf16/f32/f64 values; same dtype for multi-tensor calls; documented shapes, dimensions and ranges]
-  invalid_input: [NaN; negative zero; unrepresentable value or scalar; malformed call; incompatible shape, dimension, index, slice, split or scatter source]
-  unsupported: [integer, boolean, float8, complex or infinite data; mixed dtypes; creation operations; copy or fill; dtype views; named dimensions; implicit expand; nondefault memory format; out or in-place variants; storage, stride, aliasing or device effects]
+  valid: [exactly representable finite f16/bf16/f32/f64 values; integer literals in range for i64/i32/i16/i8/u8 (real profile); boolean literals for b8 (boolean profile); same dtype for multi-tensor calls; documented shapes, dimensions and ranges]
+  invalid_input: [NaN; negative zero; unrepresentable floating value or scalar; out-of-range integer tensor literal; malformed call; incompatible shape, dimension, index, slice, split or scatter source; undocumented pad mode string; negative repeat count; output_size different from the total; slice_backward grad_output not matching the slice]
+  unsupported: [float8, complex or infinite data; non-integral or out-of-range fill for an integer tensor; fill other than False/True/0/1 for b8; b8 data under the real profile and non-b8 data under the boolean profile; mixed dtypes; reflect, replicate or circular pad modes; tensor-valued repeats; creation operations; copy or fill; dtype views; named dimensions; implicit expand; nondefault memory format; out or in-place variants; storage, stride, aliasing or device effects]
 mutation_requirements:
 - {id: LY.M1, misreading: view reads elements in column-major order, witnesses: [LY.E1]}
 - {id: LY.M2, misreading: permute applies the inverse permutation, witnesses: [LY.E5]}
@@ -323,10 +563,39 @@ mutation_requirements:
 - {id: LY.M16, misreading: cat may reverse the ordered input sequence, witnesses: [LY.E40]}
 - {id: LY.M17, misreading: every cat input gradient starts from upstream offset zero, witnesses: [LY.E40]}
 - {id: LY.M18, misreading: the final cat input gradient may be omitted, witnesses: [LY.E40]}
+- {id: LY.M19, misreading: aten.pad ignores the given value and fills zero, witnesses: [LY.E45, LY.E54]}
+- {id: LY.M20, misreading: an integer or boolean tensor silently converts any fill (truncation toward zero or nonzero as True), witnesses: [LY.E48, LY.E55]}
+- {id: LY.M21, misreading: slice_backward places grad_output at offset zero and ignores start, witnesses: [LY.E56]}
+- {id: LY.M22, misreading: slice_backward ignores the step and writes a contiguous block, witnesses: [LY.E58]}
+- {id: LY.M23, misreading: repeat_interleave tiles the whole axis like Tensor.repeat, witnesses: [LY.E62, LY.E64]}
+- {id: LY.M24, misreading: repeat_interleave ignores dim and always flattens, witnesses: [LY.E62]}
+- {id: LY.M25, misreading: tril keeps the upper triangle, witnesses: [LY.E68, LY.E69]}
 nonclaims:
 - Storage identity, aliasing, strides, memory format, device placement and signed zero are not certified.
-- Creation, dtype conversion, copy/fill state effects, integer/boolean data, gradients other than the selected constant-pad and cat VJPs and unselected overloads are not certified.
+- Creation, dtype conversion, copy/fill state effects, gradients other than the selected constant-pad, cat and slice_backward VJPs and unselected overloads are not certified. Integer and boolean data are certified only for the listed data-movement operations with one dtype per call.
+- slice_backward rests on PyTorch 2.10's derivative table and official decomposition (reference programs) together with the documented slice; agreement means agreement with that reference semantics.
+- PyTorch 2.10 eager accepts non-integral fills for integer tensors (truncating) and nonzero fills for b8 (as True); these undocumented conversions are refused, not judged.
 changes:
+- date: '2026-10-21'
+  change: >-
+    A tensor record for any non-tensor parameter (size, dimension, index, range, repeat count or scalar), such as the
+    tensor start of narrow.Tensor or the tensor repeats of repeat_interleave.self_Tensor, is unsupported (another
+    overload) instead of being decoded as integer data and reported invalid; examples LY.E77-E78.
+  trigger: Promotion check (tests/test_layout_profile_domains.py) found narrow.Tensor classified invalid_input.
+- date: '2026-10-21'
+  change: An infinite fill received as a binary64 infinity (aten.pad / constant_pad_nd on floating, integer or b8 data) is unsupported instead of an implementation error; examples LY.E74-E76.
+  trigger: Independent review of package C (A2_package_C_review.md, issue LAYOUT-1).
+- date: '2026-10-20'
+  change: >-
+    Extend the real profile to integer tensors and add a boolean profile (output bool_out) for the selected
+    data-movement operations (LY.EXACT_DATA, fill conversion decision); add aten.pad (constant mode),
+    aten.slice_backward and aten.repeat_interleave.self_int to covers and the ATen interface with decisions
+    LY.ATEN_PAD, LY.SLICE_BACKWARD and LY.REPEAT_INTERLEAVE, examples LY.E45-E73 and mutants LY.M19-M25. Public
+    functional autograd profiles now refuse ATen-call records as unsupported. Status returned to drafted/pending
+    for independent review.
+  trigger: >-
+    Path A closure (G7): recorded aten.pad on int64 labels (value -100.0), aten.slice_backward (bf16/f32),
+    aten.repeat_interleave.self_int (f32) and aten.tril on a b8 mask had no admitted profile.
 - date: '2026-10-19'
   change: >-
     Add a PyTorch 2.10 public Tensor-list cat profile with complete forward and one ordered VJP per input, including

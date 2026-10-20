@@ -1,10 +1,15 @@
-"""Adapter for the reviewed finite floating logical-value scope in contracts/LAYOUT.yaml."""
+"""Adapter for contracts/LAYOUT.yaml: exact logical values of selected layout and data-movement operations.
+
+The real profile admits finite floating and integer tensors; the boolean profile admits b8 tensors and returns
+its complete result in the boolean output bool_out (LY.EXACT_DATA)."""
 from __future__ import annotations
 
 import math
 from fractions import Fraction
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -13,14 +18,23 @@ from kernel_spec.aten_adapter import decode, encode, make_output_checker, make_r
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Result, Unsupported, require_fields
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "LAYOUT.yaml").read_text())["covers"]
+_HERE = Path(__file__).resolve()
+# The contract next to this adapter: <root>/contracts/LAYOUT.yaml when staged as <root>/adapters/LAYOUT.py, or the
+# paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
+_CONTRACT = (_HERE.with_name("LAYOUT_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+             else _HERE.parents[1] / "contracts" / "LAYOUT.yaml")
+COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 REAL_PROFILE = "real"
 PAD_PROFILE = "torch210_functional_constant_pad_autograd"
 CAT_PROFILE = "torch210_cat_autograd"
+BOOL_PROFILE = "boolean"
 PROFILE = (REAL_PROFILE,)
 DTYPES = {"f16", "bf16", "f32", "f64"}
+INT_DTYPES = {"i64", "i32", "i16", "i8", "u8"}
+BOOL_DTYPES = {"b8"}
+REAL_DTYPES = DTYPES | INT_DTYPES
+ANY_DTYPES = REAL_DTYPES | BOOL_DTYPES
 
 
 def _raw_dtype(value):
@@ -44,10 +58,30 @@ def _raw_leaves(value):
             yield item
 
 
-def _point_tensor(value, name):
+def _exact_data_tensor(value, name, dtype):
+    """Integer or boolean tensor record: integer literals within the dtype range, or boolean literals (LY.EXACT_DATA)."""
+    if isinstance(value, dict) and "v" in value:
+        low, high = A.INT_RANGE.get(dtype, (0, 1))
+        for raw in _raw_leaves(value["v"]):
+            if dtype in BOOL_DTYPES:
+                if not isinstance(raw, (bool, np.bool_)):
+                    raise Invalid(f"{name} b8 values must be boolean literals")
+            elif isinstance(raw, (bool, np.bool_)) or not isinstance(raw, (int, np.integer)):
+                raise Invalid(f"{name} {dtype} values must be integer literals")
+            elif not low <= int(raw) <= high:
+                raise Invalid(f"{name} value {int(raw)} is not representable as {dtype}")
+    tensor = decode(value)
+    if not isinstance(tensor, A.Ten) or tensor.dtype != dtype:
+        raise Invalid(f"{name} must be a {dtype} tensor")
+    return tensor
+
+
+def _point_tensor(value, name, allowed=DTYPES):
     dtype = _raw_dtype(value)
-    if dtype is not None and dtype not in DTYPES:
-        raise Unsupported(f"{name} dtype {dtype!r} is outside the finite LAYOUT profile")
+    if dtype is not None and dtype not in allowed:
+        raise Unsupported(f"{name} dtype {dtype!r} is outside the selected LAYOUT profile")
+    if dtype in INT_DTYPES | BOOL_DTYPES:
+        return _exact_data_tensor(value, name, dtype)
     if isinstance(value, dict) and "v" in value:
         for raw in _raw_leaves(value["v"]):
             if isinstance(raw, (float, np.floating)) and raw == 0 and math.copysign(1.0, float(raw)) < 0:
@@ -68,21 +102,45 @@ def _point_tensor(value, name):
     return tensor
 
 
-def _decode_argument(op, name, value, arguments):
-    if name == "tensors":
-        if not isinstance(value, (list, tuple)) or not value:
-            raise Invalid(f"{op}: tensors must be a nonempty list")
-        return [_point_tensor(item, f"tensors[{index}]") for index, item in enumerate(value)]
-    if isinstance(value, dict) and ("t" in value or "v" in value):
-        return _point_tensor(value, name)
-    return decode(value)
+TENSOR_PARAMETERS = {"a", "src", "grad_output"}   # plus the tensor list "tensors"
+
+
+def _contains_tensor_record(value):
+    if isinstance(value, dict):
+        return "t" in value or "v" in value
+    if isinstance(value, (list, tuple)):
+        return any(_contains_tensor_record(item) for item in value)
+    return False
+
+
+def _argument_decoder(allowed):
+    def decode_argument(op, name, value, arguments):
+        if name == "tensors":
+            if not isinstance(value, (list, tuple)) or not value:
+                raise Invalid(f"{op}: tensors must be a nonempty list")
+            return [_point_tensor(item, f"tensors[{index}]", allowed) for index, item in enumerate(value)]
+        if name not in TENSOR_PARAMETERS:
+            # A tensor for a size, dimension, index, range, repeat count or scalar parameter selects another
+            # overload (e.g. narrow.Tensor, repeat_interleave.self_Tensor): a legal call outside the profiles.
+            if _contains_tensor_record(value):
+                raise Unsupported(f"{op}: tensor-valued {name} belongs to another overload outside the selected profiles")
+            return decode(value)
+        if isinstance(value, dict) and ("t" in value or "v" in value):
+            return _point_tensor(value, name, allowed)
+        return decode(value)
+    return decode_argument
+
+
+_decode_argument = _argument_decoder(REAL_DTYPES)
+_decode_bool_argument = _argument_decoder(BOOL_DTYPES)
 
 
 def _tensor(value, name="input"):
+    # The profile's argument decoder has already restricted the dtype.
     if not isinstance(value, A.Ten):
         raise Invalid(f"{name} must be a tensor")
-    if value.dtype not in DTYPES:
-        raise Unsupported(f"{name} must use f16, bf16, f32 or f64")
+    if value.dtype not in ANY_DTYPES:
+        raise Unsupported(f"{name} dtype {value.dtype!r} is outside the selected LAYOUT profiles")
     return value
 
 
@@ -96,10 +154,17 @@ def _same_dtype(tensors):
 
 
 def _scalar(value, dtype, name):
+    if dtype in BOOL_DTYPES:
+        return _bool_fill(value, name)
     if isinstance(value, A.Ten) or isinstance(value, (bool, np.bool_)):
         raise Invalid(f"{name} must be a real scalar")
+    if dtype in INT_DTYPES:
+        return _integer_fill(value, dtype, name)
     try:
         item = value if isinstance(value, R) else R(Fraction(value))
+    except OverflowError:
+        # Fraction(+-inf): an infinite fill, outside the finite profiles (not an implementation error).
+        raise Unsupported(f"infinite {name} is outside the selected LAYOUT profiles") from None
     except (TypeError, ValueError, ZeroDivisionError):
         raise Invalid(f"{name} must be a finite real scalar") from None
     if not item.exact:
@@ -110,6 +175,48 @@ def _scalar(value, dtype, name):
     if not stored.exact or stored.v != item.v:
         raise Invalid(f"{name}={item!r} is not exactly representable as {dtype}")
     return item.v
+
+
+def _exact_scalar(value, name):
+    try:
+        item = value if isinstance(value, R) else R(Fraction(value))
+    except OverflowError:
+        # Fraction(+-inf): an infinite fill, outside the finite profiles (not an implementation error).
+        raise Unsupported(f"infinite {name} is outside the selected LAYOUT profiles") from None
+    except (TypeError, ValueError, ZeroDivisionError):
+        raise Invalid(f"{name} must be a finite real scalar") from None
+    if not item.exact:
+        raise Invalid(f"{name} must be exact")
+    if not item.finite:
+        raise Unsupported(f"infinite {name} is outside the selected LAYOUT profiles")
+    return item.v
+
+
+def _integer_fill(value, dtype, name):
+    """LY.EXACT_DATA: an integer tensor stores the fill only when the received value is an integer in range."""
+    exact = _exact_scalar(value, name)
+    if exact.denominator != 1:
+        raise Unsupported(f"{name}={exact} is not an integer; its conversion to {dtype} is not documented")
+    low, high = A.INT_RANGE[dtype]
+    if not low <= exact.numerator <= high:
+        raise Unsupported(f"{name}={exact} is outside the {dtype} range; its conversion is not documented")
+    return int(exact.numerator)
+
+
+def _bool_fill(value, name):
+    """LY.EXACT_DATA: a b8 tensor stores False/True, or the numeric values 0 and 1 that denote them."""
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, A.Ten):
+        raise Invalid(f"{name} must be a scalar")
+    exact = _exact_scalar(value, name)
+    if exact not in (0, 1):
+        raise Unsupported(f"{name}={exact} is neither 0 nor 1; its conversion to b8 is not documented")
+    return exact == 1
+
+
+def _zero(dtype):
+    return False if dtype in BOOL_DTYPES else 0 if dtype in INT_DTYPES else R(0)
 
 
 def _view(a, shape):
@@ -190,6 +297,62 @@ def _constant_pad_nd(a, pad, value=0):
     return A.constant_pad_nd(a, pad, _scalar(value, a.dtype, "padding value"))
 
 
+PAD_MODES = ("constant", "reflect", "replicate", "circular")
+
+
+def _pad(a, pad, mode="constant", value=None):
+    """LY.ATEN_PAD: aten.pad in constant mode is constant padding with the documented default value zero."""
+    a = _tensor(a)
+    if not isinstance(mode, str) or mode not in PAD_MODES:
+        raise Invalid(f"pad mode {mode!r} is not one of the documented modes")
+    if mode != "constant":
+        raise Unsupported(f"pad mode {mode!r} is outside the selected profiles")
+    fill = _scalar(0 if value is None else value, a.dtype, "padding value")
+    return A.constant_pad_nd(a, pad, fill)
+
+
+def _slice_backward(grad_output, input_sizes, dim, start, end, step):
+    """LY.SLICE_BACKWARD: zeros of input_sizes with grad_output placed at the slice dim[start:end:step]."""
+    grad_output = _tensor(grad_output, "grad_output")
+    sizes = A._layout_sizes(input_sizes, "slice_backward input_sizes")
+    if any(size < 0 for size in sizes):
+        raise Invalid("slice_backward input_sizes must be nonnegative")
+    if len(sizes) != len(grad_output.shape):
+        raise Invalid("slice_backward input_sizes must have the rank of grad_output")
+    base = np.empty(tuple(sizes), dtype=object)
+    base.fill(_zero(grad_output.dtype))
+    return A.slice_scatter(A.Ten(base, grad_output.dtype), grad_output, dim, start, end, step)
+
+
+def _repeat_interleave(a, repeats=None, dim=None, *, output_size=None):
+    """LY.REPEAT_INTERLEAVE: self_int overload; each element along dim is repeated `repeats` consecutive times."""
+    a = _tensor(a)
+    if repeats is None:
+        raise Unsupported("the repeats-only repeat_interleave.Tensor overload is outside the selected profiles")
+    if isinstance(repeats, A.Ten):
+        raise Unsupported("tensor-valued repeats (repeat_interleave.self_Tensor) are outside the selected profiles")
+    repeats = A._layout_sizes([repeats], "repeat_interleave repeats")[0]
+    if repeats < 0:
+        raise Invalid("repeat_interleave repeats is a number of repetitions and cannot be negative")
+    array = a.a
+    if dim is None:
+        array, axis = array.reshape(-1), 0
+    else:
+        axis = A._layout_axis(dim, array.ndim)
+    total = array.shape[axis] * repeats
+    if output_size is not None:
+        if A._layout_sizes([output_size], "repeat_interleave output_size")[0] != total:
+            raise Invalid(f"output_size must equal the total output size {total} along the selected axis")
+    shape = list(array.shape)
+    shape[axis] = total
+    out = np.empty(tuple(shape), dtype=object)
+    for index in np.ndindex(out.shape):
+        source = list(index)
+        source[axis] = index[axis] // repeats
+        out[index] = array[tuple(source)]
+    return A.Ten(out, a.dtype)
+
+
 def _select_scatter(a, src, dim, index):
     tensors, _ = _same_dtype([a, src])
     return A.select_scatter(tensors[0], tensors[1], dim, index)
@@ -237,11 +400,35 @@ OPS = {
     "aten.clone": _clone, "aten.lift_fresh_copy": _identity_copy,
     "aten.lift_fresh": _identity_copy, "aten.alias": _identity_copy,
     "aten.triu": _triu, "aten.tril": _tril,
+    "aten.pad": _pad, "aten.slice_backward": _slice_backward, "aten.repeat_interleave": _repeat_interleave,
 }
+ATEN_COVERS = [name for name in COVERS if name.startswith("aten.")]
+missing = set(ATEN_COVERS) - set(OPS)
+if missing:
+    raise ImportError(f"LAYOUT covers ATen operations without semantics: {sorted(missing)}")
 
-_real_reference = make_reference(COVERS, extra=OPS, profiles=PROFILE, argument_decoder=_decode_argument)
-_real_check_output = make_output_checker(COVERS, extra=OPS, profiles=PROFILE,
+
+def _bool_rename(reference):
+    def renamed(profile, inp):
+        result = reference(profile, inp)
+        if result.outcome == "value":
+            return Result("value", {"bool_out": result.fields["out"]})
+        return result
+    return renamed
+
+
+def _references(ops):
+    real = make_reference(ATEN_COVERS, extra=ops, profiles=(REAL_PROFILE,), argument_decoder=_decode_argument)
+    boolean = _bool_rename(make_reference(ATEN_COVERS, extra=ops, profiles=(BOOL_PROFILE,),
+                                          argument_decoder=_decode_bool_argument))
+    return real, boolean
+
+
+_real_reference, _bool_reference = _references(OPS)
+_real_check_output = make_output_checker(ATEN_COVERS, extra=OPS, profiles=(REAL_PROFILE,),
                                          argument_decoder=_decode_argument)
+_bool_check_output = make_output_checker(ATEN_COVERS, extra=OPS, profiles=(BOOL_PROFILE,),
+                                         argument_decoder=_decode_bool_argument)
 
 
 def _complete_tensor(value, name):
@@ -340,9 +527,17 @@ def _cat_autograd(inp, *, mode="correct"):
     return Result("value", {"out": encode(out), "grads": [encode(grad) for grad in grads]})
 
 
+def _aten_call(inp):
+    return isinstance(inp, dict) and isinstance(inp.get("op"), str) and inp["op"].startswith("aten.")
+
+
 def reference(profile, inp):
     if profile == REAL_PROFILE:
         return _real_reference(profile, inp)
+    if profile == BOOL_PROFILE:
+        return _bool_reference(profile, inp)
+    if profile in (PAD_PROFILE, CAT_PROFILE) and _aten_call(inp):
+        raise Unsupported(f"profile {profile} selects a public functional task, not an ATen call")
     if profile == PAD_PROFILE:
         return _pad_autograd(inp)
     if profile == CAT_PROFILE:
@@ -401,6 +596,10 @@ def _check_cat_output(inp, observed):
 def check_output(profile, inp, observed):
     if profile == REAL_PROFILE:
         return _real_check_output(profile, inp, observed)
+    if profile == BOOL_PROFILE:
+        if not isinstance(observed, dict) or set(observed) != {"bool_out"}:
+            return False
+        return _bool_check_output(profile, inp, {"out": observed["bool_out"]})
     if profile == PAD_PROFILE:
         return _check_pad_output(inp, observed)
     if profile == CAT_PROFILE:
@@ -409,8 +608,13 @@ def check_output(profile, inp, observed):
 
 
 def _mut(**replacements):
-    return make_reference(COVERS, extra={**OPS, **replacements}, profiles=PROFILE,
-                          argument_decoder=_decode_argument)
+    real, boolean = _references({**OPS, **replacements})
+
+    def mutant(profile, inp):
+        if profile == BOOL_PROFILE:
+            return boolean(profile, inp)
+        return real(profile, inp)
+    return mutant
 
 
 def _view_colmajor(a, shape):
@@ -486,6 +690,62 @@ def _triu_flipped(a, diagonal=0):
     return A.triu(a, -diagonal)
 
 
+def _pad_zero_fill(a, pad, mode="constant", value=None):
+    _pad(a, pad, mode, value)
+    return A.constant_pad_nd(a, pad, _zero(a.dtype))
+
+
+def _pad_truncating_fill(a, pad, mode="constant", value=None):
+    # Misreading: an integer tensor truncates a non-integral fill toward zero (undocumented conversion).
+    a = _tensor(a)
+    if mode != "constant":
+        raise Unsupported("constant mode only")
+    raw = Fraction(0 if value is None else value)
+    if a.dtype in INT_DTYPES:
+        fill = int(raw)  # int() truncates toward zero
+    elif a.dtype in BOOL_DTYPES:
+        fill = raw != 0
+    else:
+        fill = raw
+    return A.constant_pad_nd(a, pad, fill)
+
+
+def _slice_backward_at_zero(grad_output, input_sizes, dim, start, end, step):
+    _slice_backward(grad_output, input_sizes, dim, start, end, step)
+    return _slice_backward(grad_output, input_sizes, dim, 0, grad_output.shape[dim], 1)
+
+
+def _slice_backward_no_step(grad_output, input_sizes, dim, start, end, step):
+    _slice_backward(grad_output, input_sizes, dim, start, end, step)
+    axis = A._layout_axis(dim, len(grad_output.shape))
+    begin = A._slice_bounds(input_sizes[axis], start, end, step)[0]
+    return _slice_backward(grad_output, input_sizes, dim, begin, begin + grad_output.shape[axis], 1)
+
+
+def _repeat_tiled(a, repeats=None, dim=None, *, output_size=None):
+    # Misreading: Tensor.repeat semantics, the whole axis is repeated instead of each element.
+    expected = _repeat_interleave(a, repeats, dim, output_size=output_size)
+    array = a.a.reshape(-1) if dim is None else a.a
+    axis = 0 if dim is None else A._layout_axis(dim, a.a.ndim)
+    out = np.empty(expected.shape, dtype=object)
+    for index in np.ndindex(out.shape):
+        source = list(index)
+        source[axis] = index[axis] % array.shape[axis]
+        out[index] = array[tuple(source)]
+    return A.Ten(out, a.dtype)
+
+
+def _repeat_flattened(a, repeats=None, dim=None, *, output_size=None):
+    # Misreading: dim is ignored and the flattened input is always repeated.
+    _repeat_interleave(a, repeats, dim, output_size=output_size)
+    return _repeat_interleave(a, repeats, None)
+
+
+def _tril_upper(a, diagonal=0):
+    _tril(a, diagonal)
+    return A.triu(a, diagonal)
+
+
 MUTANTS = {
     "LY.M1": _mut(**{"aten.view": _view_colmajor}),
     "LY.M2": _mut(**{"aten.permute": _permute_inverse}),
@@ -513,5 +773,12 @@ MUTANTS = {
     if profile == CAT_PROFILE else reference(profile, inp),
     "LY.M18": lambda profile, inp: _cat_autograd(inp, mode="omit_last_gradient")
     if profile == CAT_PROFILE else reference(profile, inp),
+    "LY.M19": _mut(**{"aten.pad": _pad_zero_fill}),
+    "LY.M20": _mut(**{"aten.pad": _pad_truncating_fill}),
+    "LY.M21": _mut(**{"aten.slice_backward": _slice_backward_at_zero}),
+    "LY.M22": _mut(**{"aten.slice_backward": _slice_backward_no_step}),
+    "LY.M23": _mut(**{"aten.repeat_interleave": _repeat_tiled}),
+    "LY.M24": _mut(**{"aten.repeat_interleave": _repeat_flattened}),
+    "LY.M25": _mut(**{"aten.tril": _tril_upper}),
 }
 READINGS = {}

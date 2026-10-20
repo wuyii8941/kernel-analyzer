@@ -11,6 +11,8 @@ from __future__ import annotations
 from fractions import Fraction
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -19,9 +21,13 @@ from kernel_spec.aten_adapter import decode, encode, make_output_checker, make_r
 from kernel_spec.compare import check_enclosed_output
 from kernel_spec.num import Invalid, Result, Undefined, Unsupported, require_fields
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "ARITH.yaml").read_text())["covers"]
+# Read this adapter's own contract: next to the draft file (contracts/draft/ARITH_path_a_A2_20261020.yaml) or, when
+# staged as <stage>/adapters/ARITH.py, <stage>/contracts/ARITH.yaml. Never the top-level validated contract.
+_HERE = Path(__file__).resolve()
+_OWN_CONTRACT = next(p for p in (_HERE.parent / "ARITH_path_a_A2_20261020.yaml",
+                                 _HERE.parents[1] / "contracts" / "ARITH.yaml") if p.is_file())
+COVERS = yaml.safe_load(_OWN_CONTRACT.read_text())["covers"]
 REAL_PROFILE = "real"
 MASKED_FILL_PROFILE = "torch210_masked_fill_scalar_autograd"
 WHERE_PROFILE = "torch210_where_tensor_autograd"
@@ -31,6 +37,7 @@ PROFILE = (REAL_PROFILE,)
 DTYPES = {"f16", "bf16", "f32", "f64"}
 INT_DTYPES = {"i64", "i32", "i16", "i8", "u8"}
 INT64 = A.INT_RANGE["i64"]
+SCALAR_INTS = (INT64[0], 2 ** 64 - 1)   # AR.SCALAR_VALUE: Python ints PyTorch 2.10 accepts (int64 or uint64 Scalar)
 POW_EXPONENT_LIMIT = 64          # AR.POW: exact evaluation size bound for |integral exponent|
 
 
@@ -132,14 +139,15 @@ def _data_dtype(*values):
 
 def _received(value, name):
     """The exact value of a Python scalar as an ATen Scalar receives it (AR.SCALAR_VALUE): a binary64 number
-    (including +-inf), or an integer within int64. Other rationals cannot reach an ATen Scalar."""
+    (including +-inf), or an integer in [-2^63, 2^64) (int64 or uint64 Scalar). Boolean scalars and integers no
+    Scalar carries are unsupported; a non-binary64 rational (e.g. 1/3) cannot reach an ATen Scalar and is invalid."""
     if isinstance(value, A.Ten):
         raise Unsupported(f"tensor-valued {name} is outside the selected scalar overload")
     if isinstance(value, (bool, np.bool_)):
-        raise Invalid(f"{name} must be a real scalar")
+        raise Unsupported(f"a boolean {name} is a legal ATen Scalar outside the ARITH profile")
     if isinstance(value, (int, np.integer)):
-        if not INT64[0] <= int(value) <= INT64[1]:
-            raise Invalid(f"{name}={int(value)} is outside the int64 range of an ATen Scalar")
+        if not SCALAR_INTS[0] <= int(value) <= SCALAR_INTS[1]:
+            raise Unsupported(f"{name}={int(value)} is outside the integers an ATen Scalar carries")
         return R(int(value))
     if isinstance(value, (float, np.floating)):
         if value != value:
@@ -153,8 +161,10 @@ def _received(value, name):
         raise Invalid(f"{name} must be exact")
     if not item.finite:
         return item
-    if item.v.denominator == 1 and INT64[0] <= item.v <= INT64[1]:
-        return item
+    if item.v.denominator == 1:
+        if SCALAR_INTS[0] <= item.v <= SCALAR_INTS[1]:
+            return item
+        raise Unsupported(f"{name}={item.v} is outside the integers an ATen Scalar carries")
     stored = ieee.round_to(item, "f64")
     if not stored.exact or stored.v != item.v:
         raise Invalid(f"{name}={item!r} is neither a binary64 value nor an int64 integer, so no ATen Scalar carries it")
@@ -172,9 +182,7 @@ def _scalar(value, dtype, name, *, optional=False):
         item = _received(value, name)
         if not item.finite or item.v.denominator != 1:
             raise Unsupported(f"a non-integer {name} with an integer tensor is outside the ARITH profile")
-        lo, hi = A.INT_RANGE[dtype]
-        if not lo <= item.v <= hi:
-            raise Invalid(f"{name}={item.v} cannot be converted to {dtype} without overflow")
+        # The exact int64 value enters the formula; the result range is checked by _int_checked (AR.INT_OVERFLOW).
         return int(item.v)
     return _received(value, name)
 
@@ -245,11 +253,26 @@ def _mul(a, b):
     return _int_checked(A.mul(a, b))
 
 
+def _no_infinite_floor_operand(*operands):
+    """AR.FLOOR_INFINITE: floor division with an infinite operand has two documented readings; not selected.
+    A zero divisor has no value under either reading (AR.DIVISION) and is reported first."""
+    divisor = operands[-1]
+    items = divisor.a.flat if isinstance(divisor, A.Ten) else [divisor]
+    if any(isinstance(x, R) and x.finite and x.v == 0 for x in items):
+        raise Undefined("division by zero")
+    for value in operands:
+        items = value.a.flat if isinstance(value, A.Ten) else [value]
+        if any(isinstance(x, R) and not x.finite for x in items):
+            raise Unsupported("floor division with an infinite operand is outside the profile (AR.FLOOR_INFINITE)")
+
+
 def _div(a, b, *, rounding_mode=None):
     a, b, dtype = _binary_operands(a, b)
     _floating_only(dtype, "div")
     if rounding_mode not in (None, "trunc", "floor"):
         raise Invalid("rounding_mode must be None, trunc or floor")
+    if rounding_mode == "floor":
+        _no_infinite_floor_operand(a, b)
     return A.div(a, b, rounding_mode)
 
 
@@ -323,18 +346,18 @@ def _clamp(a, min=None, max=None):
     dtype = _data_dtype(a)
     if min is None and max is None:
         raise Invalid("clamp requires min, max or both")
-    return A.clamp(a, _scalar(min, dtype, "min", optional=True),
-                   _scalar(max, dtype, "max", optional=True))
+    return _int_checked(A.clamp(a, _scalar(min, dtype, "min", optional=True),
+                   _scalar(max, dtype, "max", optional=True)))
 
 
 def _clamp_min(a, min):
     dtype = _data_dtype(a)
-    return A.clamp_min(a, _scalar(min, dtype, "min"))
+    return _int_checked(A.clamp_min(a, _scalar(min, dtype, "min")))
 
 
 def _clamp_max(a, max):
     dtype = _data_dtype(a)
-    return A.clamp_max(a, _scalar(max, dtype, "max"))
+    return _int_checked(A.clamp_max(a, _scalar(max, dtype, "max")))
 
 
 def _maximum(a, b):
@@ -355,19 +378,20 @@ def _where(condition, a, b):
     if not isinstance(condition, A.Ten) or condition.dtype != "b8":
         raise Invalid("where condition must be a boolean tensor")
     a, b, _ = _binary_operands(a, b, require_left_tensor=False)
-    return A.where(condition, a, b)
+    return _int_checked(A.where(condition, a, b))
 
 
 def _masked_fill(a, mask, value):
     dtype = _data_dtype(a)
     if not isinstance(mask, A.Ten) or mask.dtype != "b8":
         raise Invalid("masked_fill mask must be a boolean tensor")
-    return A.masked_fill(a, mask, _scalar(value, dtype, "fill value"))
+    return _int_checked(A.masked_fill(a, mask, _scalar(value, dtype, "fill value")))
 
 
 def _floor_divide(a, b):
     a, b, dtype = _binary_operands(a, b)
     _floating_only(dtype, "floor_divide")
+    _no_infinite_floor_operand(a, b)
     return A.floor_divide(a, b)
 
 

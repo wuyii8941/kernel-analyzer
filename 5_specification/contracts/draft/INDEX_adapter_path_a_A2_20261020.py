@@ -8,6 +8,8 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from pathlib import Path
+
 import yaml
 
 from kernel_spec import aten as A
@@ -15,9 +17,13 @@ from kernel_spec import ieee
 from kernel_spec.aten_adapter import decode, make_output_checker, make_reference
 from kernel_spec.num import Invalid, Unsupported, rational
 from kernel_spec.real import R
-from kernel_spec.registry import CONTRACTS
 
-COVERS = yaml.safe_load((CONTRACTS / "INDEX.yaml").read_text())["covers"]
+# Read this adapter's own contract: next to the draft file (contracts/draft/INDEX_path_a_A2_20261020.yaml) or, when
+# staged as <stage>/adapters/INDEX.py, <stage>/contracts/INDEX.yaml. Never the top-level validated contract.
+_HERE = Path(__file__).resolve()
+_OWN_CONTRACT = next(p for p in (_HERE.parent / "INDEX_path_a_A2_20261020.yaml",
+                                 _HERE.parents[1] / "contracts" / "INDEX.yaml") if p.is_file())
+COVERS = yaml.safe_load(_OWN_CONTRACT.read_text())["covers"]
 PROFILE = ("real",)
 FLOAT_DTYPES = {"f16", "bf16", "f32", "f64"}
 INT_DTYPES = {"i64", "i32", "i16", "i8", "u8"}

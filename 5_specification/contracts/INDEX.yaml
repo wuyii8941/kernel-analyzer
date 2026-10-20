@@ -1,14 +1,16 @@
 schema_version: '1.2'
 id: INDEX
 role: GATHER
-title: Physical finite read-only gather, index-select and embedding lookup
+title: Physical read-only gather, index-select and embedding lookup
 review:
   status: reviewed_for_implementation
-  author: OpenAI Codex, independent implementation review
-  date: '2026-10-18'
-  scope: PyTorch 2.10 default functional read-only lookup schemas on physical finite floating tensors and int64 indices
+  reviewer: 'independent review 2026-10-21 (reviews/2026-10-20/A2_package_D_review.md)'
+  author: OpenAI Codex, independent implementation review; Claude (path A integer-data and padding_idx extension), 2026-10-20
+  date: '2026-10-21'
+  scope: PyTorch 2.10 default functional read-only lookup schemas on physical finite floating tensors (and, in the 2026-10-20 draft, integer gather/index_select data and a valid embedding padding_idx) with int64 indices
 activation:
   implementation_status: validated
+  implementation_evidence: evidence/arith_mathfn_index_domains.md (2026-10-20 change)
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
@@ -18,19 +20,21 @@ covers: [aten.gather, aten.index_select, aten.embedding, torch.gather, torch.ind
 profiles:
   real:
     meaning: >-
-      Read-only lookup for physical finite f16, bf16, f32 or f64 values and int64 indices. gather selects along one
-      integer dimension without broadcasting; index_select selects a one-dimensional index list; embedding selects
-      rows of a two-dimensional weight. Only the default non-sparse forward forms are selected.
+      Read-only lookup for physical finite f16, bf16, f32 or f64 values and int64 indices; gather and index_select
+      also move int64, int32, int16, int8 or uint8 data (IX.INTEGER_DATA). gather selects along one integer dimension
+      without broadcasting; index_select selects a one-dimensional index list; embedding selects rows of a
+      two-dimensional floating weight, with or without a valid padding_idx, which does not change the forward value
+      (IX.PADDING_FORWARD). Only the default non-sparse forward forms are selected.
     task_choice_required: false
-    basis: [IX.SCHEMA, IX.PHYSICAL, IX.LOOKUP]
+    basis: [IX.SCHEMA, IX.PHYSICAL, IX.LOOKUP, IX.INTEGER_DATA, IX.PADDING_FORWARD]
 outputs:
   out:
     shape: the complete logical result shape fixed by the selected operation
     guarantee: exact
 comparison:
   input_binding: >-
-    Floating tensor records are the exact physical values received in the declared dtype. Index records are literal
-    int64 values. Shape and dtype are part of both input and observed output records.
+    Floating tensor records are the exact physical values received in the declared dtype. Integer data records and
+    index records are literal integers of their dtype. Shape and dtype are part of both input and observed output records.
   quality: Exact logical values, dtype and shape; no tolerance and no partial output.
   test_evidence: Independent NumPy coordinate construction and PyTorch 2.10 comparisons over all selected dtypes.
   error_handling: Malformed physical records and illegal shapes or ranges are invalid_input; unselected dtypes,
@@ -40,7 +44,8 @@ decisions:
   status: reviewed
   statement: >-
     Select only the default functional gather, index_select and embedding schemas. gather's sparse_grad is fixed to
-    false; embedding's padding_idx, scale_grad_by_freq and sparse are fixed to their defaults. Out, backward,
+    false; embedding's scale_grad_by_freq and sparse are fixed to their defaults and padding_idx follows
+    IX.PADDING_FORWARD. Out, backward,
     scatter, mutation and named-dimension forms are different tasks and are outside this profile.
     gather and index_select accept the native self/index and public Python input/index keyword names, respectively.
     These map to internal a/idx before argument validation; legacy DSL names remain accepted, but duplicate
@@ -50,17 +55,43 @@ decisions:
   status: reviewed
   statement: >-
     Public torch.nn.functional.embedding takes input indices before weight; native aten.embedding takes weight
-    before indices. The public no-padding default is null and becomes the native sentinel -1. This read-only profile
-    accepts public max_norm=null, norm_type=2, scale_grad_by_freq=false and sparse=false only. Nondefault public
-    padding choices and frequency scaling belong to the separate EMB task; max_norm mutates weight and is not a lookup.
+    before indices. The public no-padding default is null and becomes the native sentinel -1; a public padding_idx in
+    [-V, V) is normalized by adding V when negative, and one outside that range is invalid. This read-only profile
+    accepts public max_norm=null, norm_type=2, scale_grad_by_freq=false and sparse=false only. Frequency scaling and
+    the padding gradient belong to the separate EMB task; max_norm mutates weight and is not a lookup.
   basis: [T_EMBEDDING_F.DEF, TS_FUNCTIONAL_EMB.EMB_PADDING, TS_FUNCTIONAL_EMB.EMB_RENORM]
 - id: IX.PHYSICAL
   status: reviewed
   statement: >-
     The executable profile is restricted to finite f16, bf16, f32 and f64 tensor records whose values are exactly
-    representable in the declared dtype, plus literal int64 index tensors. This is the declared usable domain; it
-    does not claim semantics for special values, integer data tensors, mixed records or other index dtypes.
+    representable in the declared dtype, integer data records for gather and index_select (IX.INTEGER_DATA), plus
+    literal int64 index tensors. This is the declared usable domain; it does not claim semantics for special values,
+    boolean or complex data, integer embedding weights, mixed records or other index dtypes.
   basis: [T_GATHER.DEF, T_INDEX_SELECT.DEF, T_EMBEDDING_F.DEF]
+- id: IX.INTEGER_DATA
+  status: reviewed
+  statement: >-
+    gather and index_select copy input elements to output coordinates; their documented definitions involve no
+    arithmetic on the copied values and place no floating restriction on input. Integer data (int64, int32, int16,
+    int8, uint8) is therefore moved exactly and keeps its dtype; values must be literal integers inside the dtype
+    range. Alternatives: keep integer data unsupported (refuses the recorded bert gather of an int64 buffer; rejected,
+    no documented reason), or admit boolean data as well (outputs would need a boolean output kind; not selected).
+    embedding is documented with a floating weight ("Embedding matrix of floating point type"), so integer weights
+    stay unsupported.
+  basis: [T_GATHER.DEF, T_INDEX_SELECT.DEF, T_EMBEDDING_F.DEF]
+- id: IX.PADDING_FORWARD
+  status: reviewed
+  statement: >-
+    The PyTorch 2.10 embedding pages define padding_idx only through the gradient: entries at padding_idx do not
+    contribute to the gradient and that row is not updated during training. The forward is the lookup of the rows of
+    weight given by the indices, and the native forward is weight.index_select(0, indices) without reading
+    padding_idx; the page's padding example returns zeros only because that row was zeroed beforehand. Hence the
+    forward value is the same lookup for every valid padding_idx; zeroing the padding row in the forward is a
+    misreading (it is nn.Embedding's construction-time initialisation, not part of the functional call). Accepted
+    values: native -1 or a row index 0 <= p < V; public null or [-V, V). Other native values are unsupported (not
+    documented); out-of-range public values are invalid. max_norm, scale_grad_by_freq=true and sparse=true stay
+    outside this forward profile.
+  basis: [T_EMBEDDING_F.DEF, T_EMBEDDING_F.PADDING, T_EMBEDDING.PADDING, TS_EMBEDDING_CPP.FORWARD, TS_FUNCTIONAL_EMB.EMB_PADDING]
 - id: IX.LOOKUP
   status: reviewed
   statement: >-
@@ -71,8 +102,8 @@ decisions:
 clauses:
 - id: IX.C1
   basis: [IX.SCHEMA, IX.PHYSICAL]
-  statement: Every selected call uses one physical finite floating source, literal int64 indices and the exact
-    default functional schema; all inputs are read-only.
+  statement: Every selected call uses one physical source (finite floating, or integer for gather and index_select),
+    literal int64 indices and the exact default functional schema; all inputs are read-only.
   observes: [out]
   evidence_kind: definition
 - id: IX.C2
@@ -91,18 +122,19 @@ clauses:
   observes: [out]
   evidence_kind: definition
 - id: IX.C4
-  basis: [T_EMBEDDING_F.DEF, TS_EMBEDDING_CPP.FORWARD, IX.LOOKUP, IX.PUBLIC_EMBEDDING]
+  basis: [T_EMBEDDING_F.DEF, TS_EMBEDDING_CPP.FORWARD, IX.LOOKUP, IX.PUBLIC_EMBEDDING, IX.PADDING_FORWARD]
   statement: >-
     embedding requires a two-dimensional weight and returns indices.shape followed by the embedding dimension; every
-    output row is the corresponding weight row. This profile selects native padding_idx=-1 or public padding_idx=null,
+    output row is the corresponding weight row, including rows at a valid padding_idx. This profile selects
     scale_grad_by_freq=false and sparse=false, so it makes no backward, renormalisation or sparse-layout claim.
   observes: [out]
   evidence_kind: definition
 - id: IX.C5
   basis: [IX.SCHEMA, IX.PHYSICAL]
   statement: >-
-    Scatter, mutation, backward accumulation, nondefault embedding options, sparse gradients, special floating
-    values, integer data tensors, non-int64 indices and out overloads receive no reference answer from this profile.
+    Scatter, mutation, backward accumulation, max_norm, frequency scaling, sparse gradients, special floating
+    values, boolean or complex data, integer embedding weights, non-int64 indices and out overloads receive no
+    reference answer from this profile.
   observes: [out]
   evidence_kind: definition
 examples:
@@ -136,8 +168,8 @@ examples:
       {t: i64, v: [0]}]}, expected: {outcome: invalid_input}}
 - {id: IX.E15, profile: real, clauses: [IX.C4], input: {op: aten.embedding, args: [{t: f32, v: [[1, 2], [3, 4]]},
       {t: i64, v: [2]}]}, expected: {outcome: invalid_input}}
-- {id: IX.E16, profile: real, clauses: [IX.C5], input: {op: aten.embedding, args: [{t: f32, v: [[1, 2], [3, 4]]},
-      {t: i64, v: [0]}], kwargs: {padding_idx: 0}}, expected: {outcome: unsupported}}
+- {id: IX.E16, profile: real, clauses: [IX.C4], input: {op: aten.embedding, args: [{t: f32, v: [[1, 2], [3, 4]]},
+      {t: i64, v: [0]}], kwargs: {padding_idx: 0}}, expected: {outcome: value, fields: {out: [[1, 2]]}}}
 - {id: IX.E17, profile: real, clauses: [IX.C5], input: {op: aten.index_select, args: [{t: f32, v: [inf]}, 0,
       {t: i64, v: [0]}]}, expected: {outcome: unsupported}}
 - {id: IX.E18, profile: real, clauses: [IX.C5], input: {op: aten.index_select, args: [{t: f32, v: ['1/3']}, 0,
@@ -160,22 +192,55 @@ examples:
 - {id: IX.E24, profile: real, clauses: [IX.C5], input: {op: torch.nn.functional.embedding,
       args: [{t: i64, v: [0]}, {t: f32, v: [[3, 4]]}], kwargs: {max_norm: 1}},
       expected: {outcome: unsupported}}
-- {id: IX.E25, profile: real, clauses: [IX.C5], input: {op: torch.nn.functional.embedding,
+- {id: IX.E25, profile: real, clauses: [IX.C4], input: {op: torch.nn.functional.embedding,
       args: [{t: i64, v: [0]}, {t: f32, v: [[3, 4]]}], kwargs: {padding_idx: -1}},
-      expected: {outcome: unsupported}}
+      expected: {outcome: value, fields: {out: [[3, 4]]}}}
 - {id: IX.E26, profile: real, clauses: [IX.C1], input: {op: torch.nn.functional.embedding,
       args: [{t: f32, v: [[3, 4]]}, {t: i64, v: [0]}]}, expected: {outcome: unsupported}}
+- id: IX.E27
+  profile: real
+  clauses: [IX.C1, IX.C4]
+  note: recorded bert call shape aten.embedding(weight, indices [1,128], 0) with the padding row nonzero
+  input: {op: aten.embedding, args: [{t: bf16, v: [[1, 2], [3, 4], [5, 6]]}, {t: i64, v: [[0, 2, 0]]}, 0]}
+  expected: {outcome: value, fields: {out: [[[1, 2], [5, 6], [1, 2]]]}}
+- {id: IX.E28, profile: real, clauses: [IX.C4], input: {op: torch.nn.functional.embedding,
+      args: [{t: i64, v: [1, 0]}, {t: f32, v: [[1, 2], [3, 4]]}], kwargs: {padding_idx: 1}},
+      expected: {outcome: value, fields: {out: [[3, 4], [1, 2]]}}}
+- {id: IX.E29, profile: real, clauses: [IX.C4], input: {op: torch.nn.functional.embedding,
+      args: [{t: i64, v: [0]}, {t: f32, v: [[1, 2], [3, 4]]}], kwargs: {padding_idx: 2}},
+      expected: {outcome: invalid_input}}
+- {id: IX.E30, profile: real, clauses: [IX.C4, IX.C5], input: {op: aten.embedding, args: [{t: f32, v: [[1, 2], [3, 4]]},
+      {t: i64, v: [0]}, 5]}, expected: {outcome: unsupported}}
+- id: IX.E31
+  profile: real
+  clauses: [IX.C1, IX.C2]
+  note: recorded bert call shape gather(int64 [1,512] buffer, 1, int64 [1,128]); 16777217 is not a float32 value
+  input: {op: aten.gather, args: [{t: i64, v: [[10, 16777217, 30, 40, 50]]}, 1, {t: i64, v: [[1, 0, 1]]}]}
+  expected: {outcome: value, fields: {out: [[16777217, 10, 16777217]]}}
+- {id: IX.E32, profile: real, clauses: [IX.C1, IX.C3], input: {op: aten.index_select, args: [{t: i32, v: [[1, -2], [3, 4]]},
+      1, {t: i64, v: [1, 1, 0]}]}, expected: {outcome: value, fields: {out: [[-2, -2, 1], [4, 4, 3]]}}}
+- {id: IX.E33, profile: real, clauses: [IX.C1, IX.C2], input: {op: aten.gather, args: [{t: u8, v: [255, 0]}, 0,
+      {t: i64, v: [0, 0]}]}, expected: {outcome: value, fields: {out: [255, 255]}}}
+- {id: IX.E34, profile: real, clauses: [IX.C1], input: {op: aten.gather, args: [{t: i64, v: ['3/2']}, 0,
+      {t: i64, v: [0]}]}, expected: {outcome: invalid_input}}
+- {id: IX.E35, profile: real, clauses: [IX.C5], input: {op: aten.gather, args: [{t: b8, v: [true]}, 0,
+      {t: i64, v: [0]}]}, expected: {outcome: unsupported}}
+- {id: IX.E36, profile: real, clauses: [IX.C5], input: {op: aten.embedding, args: [{t: i64, v: [[1, 2]]},
+      {t: i64, v: [0]}]}, expected: {outcome: unsupported}}
 signature:
   inputs: [selected default functional operation and exact positional or keyword arguments,
-    physical finite floating source tensor, literal int64 index tensor]
+    physical finite floating source tensor (or integer gather/index_select data), literal int64 index tensor]
   pre_state: [all input tensors are unchanged]
   post_state: [one complete newly returned logical tensor]
   observation_unit: every output coordinate together with dtype and shape
 domain:
-  valid: [finite physical f16/bf16/f32/f64 sources, int64 nonnegative in-range indices, selected shapes and defaults]
-  invalid_input: [unrepresentable source value, malformed record, invalid dimension, rank or shape, out-of-range index]
-  unsupported: [scatter and mutation, backward operations, integer or complex data, non-int64 indices, special floating
-      values, sparse gradients, nondefault embedding options, out overloads and layout or alias effects]
+  valid: [finite physical f16/bf16/f32/f64 sources, integer gather and index_select data, int64 nonnegative in-range indices,
+      selected shapes and defaults, valid embedding padding_idx]
+  invalid_input: [unrepresentable source value, non-integer or out-of-range integer data, malformed record, invalid dimension,
+      rank or shape, out-of-range index, public padding_idx outside -V..V-1]
+  unsupported: [scatter and mutation, backward operations, boolean or complex data, integer embedding weights, non-int64
+      indices, special floating values, sparse gradients, max_norm, frequency scaling, native padding_idx other than -1
+      or a row index, out overloads and layout or alias effects]
 mutation_requirements:
 - {id: IX.M1, misreading: gather indexes the next axis, witnesses: [IX.E1]}
 - {id: IX.M2, misreading: gather uses index plus one, witnesses: [IX.E1]}
@@ -183,11 +248,21 @@ mutation_requirements:
 - {id: IX.M4, misreading: index_select reverses the index list, witnesses: [IX.E10]}
 - {id: IX.M5, misreading: embedding uses the following row, witnesses: [IX.E12]}
 - {id: IX.M6, misreading: embedding flattens the index shape, witnesses: [IX.E12]}
+- {id: IX.M7, misreading: the padding_idx row is zeroed in the forward lookup, witnesses: [IX.E16, IX.E27]}
+- {id: IX.M8, misreading: integer gather data passes through float32, witnesses: [IX.E31]}
 nonclaims:
 - No result is certified for scatter, update, mutation, gradient accumulation, max_norm, sparse layout, aliasing,
   device placement, strides or another overload.
 - Exact copied logical values do not claim that every device uses the same physical addressing for unsupported layouts.
 changes:
+- date: '2026-10-20'
+  change: >-
+    gather and index_select move integer data exactly (IX.INTEGER_DATA); embedding accepts a valid native or public
+    padding_idx without changing the forward value (IX.PADDING_FORWARD). IX.E16 and IX.E25 change from unsupported
+    to values. Review and implementation status reset to drafted / pending.
+  trigger: >-
+    Path A closure (G7): the recorded bert gather of an int64 buffer and the recorded bert embedding with
+    padding_idx 0 were refused by the floating-only, default-padding profile.
 - date: '2026-10-19'
   change: Give public functional embedding its documented argument order and defaults, reusing native lookup only after validation.
   trigger: A real FlagGems public call matched native PyTorch but the reference misread its indices as weight.

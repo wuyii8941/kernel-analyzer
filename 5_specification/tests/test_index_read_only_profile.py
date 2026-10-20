@@ -39,8 +39,9 @@ class IndexReadOnlyProfile(unittest.TestCase):
 
     def test_source_values_must_be_finite_physical_values(self):
         index = {"t": "i64", "v": [0]}
-        for record in ({"t": "i64", "v": [1]}, {"t": "b8", "v": [True]},
-                       {"t": "complex64", "v": [1]}, {"t": "f32", "v": ["inf"]}):
+        # integer data is copied exactly since the reviewed 2026-10-20 extension (IX.INTEGER_DATA)
+        self.assertEqual(self.call("aten.index_select", [{"t": "i64", "v": [1]}, 0, index]).fields["out"], [1])
+        for record in ({"t": "b8", "v": [True]}, {"t": "complex64", "v": [1]}, {"t": "f32", "v": ["inf"]}):
             with self.subTest(record=record), self.assertRaises(Unsupported):
                 self.call("aten.index_select", [record, 0, index])
         for record in ({"t": "f16", "v": ["1/3"]}, {"t": "f32", "v": [-0.0]}):
@@ -61,8 +62,9 @@ class IndexReadOnlyProfile(unittest.TestCase):
             self.call("aten.index_select", [source, 2, {"t": "i64", "v": [0]}])
         with self.assertRaises(Unsupported):
             self.call("aten.gather", [source, 1, {"t": "i64", "v": [[0], [1]]}], {"sparse_grad": True})
-        with self.assertRaises(Unsupported):
-            self.call("aten.embedding", [source, {"t": "i64", "v": [0]}], {"padding_idx": 0})
+        # a valid padding_idx does not change the forward value (IX.PADDING_FORWARD)
+        self.assertEqual(self.call("aten.embedding", [source, {"t": "i64", "v": [0]}], {"padding_idx": 0}
+                                   ).fields["out"], [[1, 2]])
 
     def test_public_keyword_names_match_positional_calls(self):
         source = {"t": "f32", "v": [[1, 2], [3, 4]]}

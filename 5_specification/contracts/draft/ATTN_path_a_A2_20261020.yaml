@@ -1,0 +1,645 @@
+schema_version: '1.2'
+id: ATTN
+role: ATTN
+title: Defined-row public PyTorch 2.10 scaled dot-product attention forward and complete VJP, and the fused flash/efficient ATen overloads with dropout disabled
+review:
+  status: drafted
+  author: Claude (path A closure package B, 2026-10-20) on top of the reviewed public SDPA contract by OpenAI Codex
+  date: '2026-10-20'
+  scope: Public PyTorch 2.10 SDPA forward and its complete q/k/v VJP on finite dense rank-3 or rank-4 real tensors, dropout disabled;
+    ATen-call interface for aten._scaled_dot_product_flash_attention, aten._scaled_dot_product_flash_attention_backward and
+    aten._scaled_dot_product_efficient_attention_backward with dropout_p = 0
+activation:
+  implementation_status: pending
+  runtime_binding_status: pending
+  requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
+    reference_semantics_and_guarantees_validated, no_unresolved_contradiction,
+    reviewed_contract_and_adapter_match_current]
+covers: [torch.nn.functional.scaled_dot_product_attention, aten._scaled_dot_product_flash_attention,
+  aten._scaled_dot_product_flash_attention_backward, aten._scaled_dot_product_efficient_attention_backward]
+profiles:
+  torch210_sdpa_defined_real:
+    meaning: >-
+      One public PyTorch 2.10 scaled_dot_product_attention forward with dropout_p=0 on finite dense rank-3
+      [H,L,E] or rank-4 [B,H,L,E] real tensors. Batch sizes are equal, every query row has at least one finite
+      participating score, and only the documented upper-left causal mask, a Boolean mask or a same-dtype additive
+      mask is selected. The profile returns the complete public output only.
+    task_choice_required: false
+    basis: [AT.TASK, AT.MASKS, AT.HEADS, AT.DEFINED_ROWS]
+    outputs: [out]
+  torch210_sdpa_defined_real_vjp:
+    meaning: >-
+      The same selected public PyTorch 2.10 SDPA task with an explicit complete upstream tensor. It returns the public
+      forward output and the complete vector-Jacobian products for q, k and v. Shared key/value heads receive the sum
+      of contributions from every query head that uses them.
+    task_choice_required: false
+    basis: [AT.TASK, AT.MASKS, AT.HEADS, AT.DEFINED_ROWS, AT.VJP]
+    outputs: [out, dq, dk, dv]
+  torch210_aten_sdpa_fused_dropout0:
+    meaning: >-
+      One recorded call of a fused PyTorch 2.10 SDPA ATen overload, given as {op, args, kwargs} with the schema's
+      argument order: aten._scaled_dot_product_flash_attention, aten._scaled_dot_product_flash_attention_backward or
+      aten._scaled_dot_product_efficient_attention_backward. Dense finite rank-4 [B,H,L,E] tensors, dropout_p = 0,
+      no attention bias, is_causal only with equal query and key lengths (upper-left = lower-right). The flash
+      overloads take f16/bf16 and grouped key/value heads (contiguous groups); the efficient backward takes
+      f16/bf16/f32 with equal head counts. The single output out is the list of ATen return values in schema order:
+      flash forward (output, logsumexp, cum_seq_q, cum_seq_k, max_q, max_k, rng_state, unused, debug_attn_mask) with
+      positions 2, 3, 6, 7 and 8 not compared (null, decision AT.ATEN_AUX); flash backward (grad_query, grad_key,
+      grad_value), all compared; efficient backward (grad_query, grad_key, grad_value, grad_attn_bias) with
+      grad_attn_bias null because no bias exists and grad_input_mask[3] is false. The backward overloads use the
+      supplied out and logsumexp (decision AT.ATEN_SAVED).
+    task_choice_required: false
+    basis: [AT.ATEN_TASK, AT.ATEN_HEADS, AT.ATEN_CAUSAL, AT.ATEN_SAVED, AT.ATEN_AUX, AT.ATEN_RNG, AT.ATEN_DOMAIN]
+    outputs: [out]
+outputs:
+  out:
+    shape: >-
+      Public profiles: complete [Hq,L,Ev] or [B,Hq,L,Ev]. ATen profile torch210_aten_sdpa_fused_dropout0: the list of
+      ATen return values in schema order (9 for the flash forward, 3 for the flash backward, 4 for the efficient
+      backward); tensors complete with the dtypes and shapes of AT.ATEN_AUX, max_q and max_k as integers.
+    not_compared: >-
+      ATen profile only: flash forward positions 2 (cum_seq_q), 3 (cum_seq_k), 6 (rng_state), 7 (unused / philox
+      offset) and 8 (debug_attn_mask, not requested) are returned as null and not compared (AT.ATEN_AUX). Efficient
+      backward position 3 (grad_attn_bias) is null because attn_bias is None and grad_input_mask[3] is false.
+    guarantee: rigorous_enclosure
+  dq: {shape: 'complete shape of q', guarantee: rigorous_enclosure}
+  dk: {shape: 'complete shape of k', guarantee: rigorous_enclosure}
+  dv: {shape: 'complete shape of v', guarantee: rigorous_enclosure}
+comparison:
+  input_binding: >-
+    q, k, v, the optional mask and, for the VJP profile, upstream are the complete values received; dtype records
+    their common physical floating dtype. A binary floating value is bound as its exact rational value. Scale is null
+    for 1/sqrt(E) or an explicit finite real scalar.
+  complete_output: >-
+    The forward profile requires the complete public result. The VJP profile requires out, dq, dk and dv together.
+    Every tensor's dtype, rank, shape and coordinate is checked; a missing or extra gradient is a contradiction.
+  quality: Exact products and sums with rigorous outward enclosures for sqrt and exp; no tolerance is used.
+  test_evidence: >-
+    Independent high-precision softmax evaluation and public PyTorch 2.10 math-backend comparisons cover default and
+    explicit scale, Boolean and additive masks, non-square causal attention, GQA, head broadcasting, rank and dtype.
+  error_handling: >-
+    Malformed public calls are invalid_input. Dropout, empty effective rows, nonfinite data, unsupported dtype or rank,
+    softcap, windows, extra outputs, device layout and backend-specific rounding receive no answer.
+decisions:
+- id: AT.TASK
+  status: reviewed
+  statement: >-
+    Select the public PyTorch 2.10 scaled_dot_product_attention forward and its documented equivalent formula:
+    scores are q times transposed k times scale, the chosen bias is applied, softmax is taken on the last dimension,
+    and the probabilities multiply v. Only the returned output belongs to this task; backend LSE buffers and VJP
+    outputs are separate interfaces.
+  basis: [T_SDPA.SIGNATURE, T_SDPA.REFERENCE, T_SDPA.SCALE]
+- id: AT.MASKS
+  status: reviewed
+  statement: >-
+    A true Boolean entry participates, a same-dtype additive mask is added to the score, and is_causal uses the
+    documented inclusive upper-left triangle. An explicit mask and is_causal together are invalid.
+  basis: [T_SDPA.BOOL_MASK, T_SDPA.FLOAT_MASK, T_SDPA.MASK_SHAPE, T_SDPA.CAUSAL, T_SDPA.EXCLUSIVE,
+    TS_ATTN_CPP.MATH]
+- id: AT.HEADS
+  status: reviewed
+  statement: >-
+    With enable_gqa, key and value heads are repeated in contiguous groups and Hq must be divisible by the shared
+    key/value head count. Without enable_gqa, equal head counts and ordinary singleton-head broadcasting are the
+    selected cases.
+  basis: [T_SDPA.GQA, T_SDPA.REFERENCE, TS_ATTN_CPP.MATH]
+- id: AT.DEFINED_ROWS
+  status: reviewed
+  statement: >-
+    This profile is restricted to rows with at least one participating finite score. The public math backend sets an
+    all-negative-infinity row to zero, while the documentation's equivalent plain softmax formula does not by itself
+    establish that convention for every backend. Empty effective rows are therefore unsupported here rather than
+    assigned a guessed universal answer.
+  basis: [T_SDPA.REFERENCE, TS_ATTN_CPP.SAFE_SOFTMAX]
+- id: AT.VJP
+  status: reviewed
+  statement: >-
+    For explicit upstream U, let P be the selected forward softmax probabilities, O=P V, and
+    D_ij=P_ij*(dot(U_i,V_j)-dot(U_i,O_i)). Then dq_i=scale*sum_j D_ij*k_j,
+    dk_j=scale*sum_i D_ij*q_i, and dv_j=sum_i P_ij*U_i over participating entries. When key/value heads are shared,
+    dk and dv additionally sum over all query heads mapped to that original head. These are the chain-rule derivatives
+    of AT.TASK; the mask, scale and head mapping are identical to the forward call.
+  basis: [AT.TASK, AT.MASKS, AT.HEADS]
+- id: AT.ATEN_TASK
+  status: drafted
+  statement: >-
+    aten._scaled_dot_product_flash_attention is the fused backend of the public SDPA call: its output is the public
+    SDPA result for the same query, key, value, is_causal and scale (score = scale q.k, scale = 1/sqrt(E) when null,
+    softmax over the participating keys, probabilities times value). Its logsumexp is, per batch, query head and
+    query row, the natural logarithm of the sum over participating keys of exp(score), i.e. log of the softmax
+    normaliser of the scaled, masked scores (float32, shape (B, Hq, L)). Alternatives considered: base-2 LSE (used
+    internally by the FlexAttention kernel and converted back before returning, TS_FLEX_HOP.LSE_MASKED), or LSE of
+    the unscaled scores; rejected because the FlashAttention-2 algorithm and interface define L = m + log(l) of the
+    scaled scores and PyTorch 2.10 eager returns exactly that (evidence/attn_aten_interface.md).
+  basis: [TS_NATIVE_FUNCTIONS.SDPA_FUSED_SCHEMAS, TS_AUTOGRAD_DERIVATIVES.SDPA_FUSED, T_SDPA.REFERENCE, T_SDPA.SCALE,
+    FA2_PAPER.LSE, FA_IFACE.LSE, FA_IFACE.SCALE, TS_META_SDPA.FLASH_FWD]
+- id: AT.ATEN_HEADS
+  status: drafted
+  statement: >-
+    The flash overloads accept Hkv key/value heads with Hq divisible by Hkv (the public SDPA with enable_gqa calls
+    them directly with grouped heads); query head h uses key/value head h // (Hq/Hkv) (repeat_interleave, contiguous
+    groups), and the backward sums grad_key / grad_value over every query head of the group. Hq not divisible by
+    Hkv is invalid. The efficient backward is selected only with equal head counts (PyTorch rejects grouped heads
+    there); unequal heads are unsupported. Alternative (round-robin h mod Hkv) contradicts the documented
+    repeat_interleave and is a mutant.
+  basis: [T_SDPA.GQA, FA2_PAPER.GQA, FA_IFACE.GQA, AT.HEADS]
+- id: AT.ATEN_CAUSAL
+  status: drafted
+  statement: >-
+    is_causal permits key j for query i exactly when j <= i, and is selected only when L = S, where the documented
+    upper-left convention and the FlashAttention bottom-right convention coincide. For L != S the flash kernel uses
+    bottom-right alignment while the public documentation specifies upper-left (and the public dispatcher refuses
+    flash for that case); the efficient kernel uses top-left. Alternatives: define non-square calls per overload
+    from kernel source (reference programs only) or by the public convention (would assert a value the flash
+    kernel does not claim); both rejected, non-square causal calls are unsupported.
+  basis: [T_SDPA.CAUSAL, T_CAUSAL_UL.UL, FA_IFACE.CAUSAL_BR, TS_ATTN_CU.EFF_CAUSAL]
+- id: AT.ATEN_SAVED
+  status: drafted
+  statement: >-
+    The backward overloads are functions of all their arguments, including the supplied out O and logsumexp L:
+    P_ij = exp(scale q_i.k_j - L_i) on participating keys, D_i = dO_i.O_i, dS_ij = P_ij (dO_i.v_j - D_i),
+    grad_query_i = scale sum_j dS_ij k_j, grad_key_j = scale sum_i dS_ij q_i, grad_value_j = sum_i P_ij dO_i, with
+    grouped-head sums per AT.ATEN_HEADS. Alternatives: (a) supplied values (chosen); (b) recompute P and O exactly
+    from q, k, v and ignore out / logsumexp (the exact VJP of AT.VJP). Rationale: the schema and derivatives.yaml
+    pass the forward's own output and logsumexp as inputs, FlashAttention-2 Algorithm 2 defines the backward from
+    O and L, the SOFTMAX contract uses the supplied output for _log_softmax_backward_data, and PyTorch 2.10 eager
+    demonstrably uses the supplied values (a shifted logsumexp scales grad_value by exp(-1)). Both readings coincide
+    when the supplied values are the exact forward results; (b) is kept as the diagnostic reading recompute_saved.
+    Under (a) the forward's correctness is checked at the forward call, not here.
+  basis: [TS_AUTOGRAD_DERIVATIVES.SDPA_FUSED, TS_NATIVE_FUNCTIONS.SDPA_FUSED_SCHEMAS, FA2_PAPER.BWD, FA2_PAPER.CHAIN,
+    TS_DECOMP.LOG_SOFTMAX_BWD, AT.VJP]
+- id: AT.ATEN_AUX
+  status: drafted
+  statement: >-
+    Return positions of the flash forward: 0 output (query dtype, (B,Hq,L,Ev)) and 1 logsumexp (float32, (B,Hq,L))
+    are compared; 4 max_q = L and 5 max_k = S are compared as integers (fixed by the meta registration and the CUDA
+    implementation for dense inputs); 2 cum_seq_q and 3 cum_seq_k (undefined tensors for dense inputs), 6 rng_state,
+    7 unused (philox seed / offset; PyTorch 2.10 CUDA returns zeros when dropout_p = 0, but no document defines
+    them) and 8 debug_attn_mask (empty when not requested) carry no task value and are not compared. Backward
+    gradients have the dtypes and shapes of query, key and value. The efficient backward's fourth position is null
+    when attn_bias is None. Alternatives: compare only output and logsumexp; or also compare the RNG positions
+    against observed eager zeros; or compare the empty debug mask. Rejected: the first drops deterministic,
+    source-fixed values; the second and third would turn backend bookkeeping into task semantics.
+  basis: [TS_META_SDPA.FLASH_FWD, TS_ATTN_CU.FLASH_RETURN, TS_META_SDPA.FLASH_BWD, TS_META_SDPA.EFF_BWD]
+- id: AT.ATEN_RNG
+  status: drafted
+  statement: >-
+    Only dropout_p = 0 is defined. With dropout_p > 0 the result depends on a dropout mask regenerated from the philox
+    seed/offset inputs. PyTorch documentation states only that dropout zeroes elements with probability p (Bernoulli)
+    and that results are not reproducible across releases or platforms even with identical seeds; the mapping from
+    (seed, offset) to the mask exists only in the CUDA kernel source (cuRAND Philox4_32_10 with a kernel-specific
+    per-element offset layout) and differs between kernels. Alternatives: (a) refuse (chosen, unsupported);
+    (b) a task-choice profile emulating the PyTorch CUDA kernel stream (would define f by one implementation's
+    code, not by what the overload claims, and is not implemented); (c) a distributional / allowed-set reading over
+    all masks (not a single-valued task for a fixed call); (d) condition on an observed mask, as RANDOM does for
+    native_dropout with a returned mask: impossible here, because neither the forward nor the backward overload
+    returns or receives the mask; the backward regenerates it internally from philox_seed / philox_offset. No RNG model is assumed.
+  basis: [T_SDPA.DROPOUT, T_DROPOUT_F.DEF, T_RANDOMNESS.NO_GUARANTEE, TS_MEMEFF_FWD_H.DROPOUT_RNG,
+    TS_NATIVE_FUNCTIONS.SDPA_FUSED_SCHEMAS]
+- id: AT.ATEN_DOMAIN
+  status: drafted
+  statement: >-
+    Selected argument structures: rank-4 dense finite tensors of one dtype (flash f16/bf16, the CUDA op's dtypes;
+    efficient f16/bf16/f32; the domain is limited by dtype only, backend limits such as the flash CUDA head-dimension
+    alignment are not part of it); scale null or a finite real; for the flash overloads the value head dimension
+    equals the query/key head dimension (the forward returns attention = empty_like(query) and PyTorch refuses
+    Ev != E), otherwise invalid_input; the efficient backward accepts Ev != E; return_debug_mask false; flash backward cum_seq_q and
+    cum_seq_k null with max_q = L and max_k = S; efficient backward attn_bias null and grad_input_mask
+    [true, true, true, false]; logsumexp float32 (B, Hq, L), and for the efficient backward also the 32-aligned
+    padded width produced by its forward, whose padding entries must be +inf (entries beyond L are ignored). The
+    unpadded width L is also accepted for the efficient backward although the PyTorch CUDA kernel rejects it when
+    L is not a multiple of 32: the first L entries carry exactly the defined row values, and the alignment is a
+    kernel storage requirement, not task semantics (alternative: refuse width L unless L is a multiple of 32). Philox
+    seed/offset arguments are ignored at dropout_p = 0. Other structures are unsupported, malformed ones invalid.
+  basis: [TS_NATIVE_FUNCTIONS.SDPA_FUSED_SCHEMAS, TS_META_SDPA.EFF_FWD_LSE, TS_META_SDPA.EFF_BWD, TS_MEMEFF_FWD_H.DROPOUT_RNG,
+    TS_META_SDPA.FLASH_FWD]
+clauses:
+- {id: AT.C1, basis: [T_SDPA.SCALE, AT.TASK], statement: 'score_ij = scale * dot(q_i,k_j), where scale is 1/sqrt(E) when null and otherwise the supplied scalar.', observes: [out], evidence_kind: definition}
+- {id: AT.C2, basis: [AT.MASKS], statement: 'A Boolean false or -inf additive entry does not participate; a finite additive entry is added before softmax.', observes: [out], evidence_kind: definition}
+- {id: AT.C3, basis: [AT.MASKS], statement: 'is_causal permits key j for query i exactly when j <= i, including when L and S differ.', observes: [out], evidence_kind: definition}
+- {id: AT.C4, basis: [AT.HEADS], statement: 'enable_gqa repeats each key/value head for a contiguous group of Hq/Hkv query heads; without it only equal heads or a singleton key/value head are selected.', observes: [out], evidence_kind: definition}
+- {id: AT.C5, basis: [T_SDPA.REFERENCE, AT.TASK], statement: 'P_i is softmax of all participating biased scores and out_i is the complete sum over j of P_ij v_j.', observes: [out], evidence_kind: definition}
+- {id: AT.C6, basis: [T_SDPA.EXCLUSIVE, AT.MASKS], statement: 'attn_mask together with is_causal is invalid_input.', observes: [out], evidence_kind: definition}
+- {id: AT.C7, basis: [T_SDPA.DROPOUT, AT.TASK], statement: 'Only dropout_p=0 is deterministic and belongs to this profile.', observes: [out], evidence_kind: definition}
+- {id: AT.C8, basis: [AT.DEFINED_ROWS], statement: 'A row with no participating finite score is unsupported and cannot produce a semantic verdict under this profile.', observes: [out], evidence_kind: definition}
+- {id: AT.C9, basis: [AT.TASK], statement: 'The selected call requires all public inputs and excludes undeclared options, unsupported dtypes and ranks, backend buffers and backward outputs.', observes: [out], evidence_kind: definition}
+- {id: AT.C10, basis: [AT.VJP], statement: 'With an explicit upstream of the complete output shape, return out and complete dq, dk and dv according to AT.VJP; shared key/value heads sum all mapped query-head contributions.', observes: [out, dq, dk, dv], evidence_kind: derived}
+- {id: AT.C11, basis: [AT.ATEN_TASK], statement: 'flash forward position 0 is the public SDPA output and position 1 the natural logsumexp of the scaled participating scores per row; scale null means 1/sqrt(E).', observes: [out], evidence_kind: definition}
+- {id: AT.C12, basis: [AT.ATEN_HEADS], statement: 'flash overloads map query head h to key/value head h // (Hq/Hkv); Hq not divisible by Hkv is invalid_input; the efficient backward requires Hq = Hkv.', observes: [out], evidence_kind: definition}
+- {id: AT.C13, basis: [AT.ATEN_CAUSAL], statement: 'is_causal allows j <= i and is selected only for L = S; non-square causal calls are unsupported.', observes: [out], evidence_kind: definition}
+- {id: AT.C14, basis: [AT.ATEN_SAVED], statement: 'backward gradients follow AT.ATEN_SAVED with the supplied out and logsumexp.', observes: [out], evidence_kind: derived}
+- {id: AT.C15, basis: [AT.ATEN_HEADS, AT.ATEN_SAVED], statement: 'grad_key and grad_value sum the contributions of every query head of the group.', observes: [out], evidence_kind: derived}
+- {id: AT.C16, basis: [AT.ATEN_AUX], statement: 'the result is the complete list of ATen return values; flash forward positions 2, 3, 6, 7, 8 are null and not compared, max_q and max_k equal L and S.', observes: [out], evidence_kind: definition}
+- {id: AT.C17, basis: [AT.ATEN_RNG], statement: 'dropout_p > 0 is unsupported for every covered overload.', observes: [out], evidence_kind: definition}
+- {id: AT.C18, basis: [AT.ATEN_DOMAIN], statement: 'argument structures outside AT.ATEN_DOMAIN are unsupported; malformed shapes, including a flash value head dimension different from the query head dimension, are invalid_input; the efficient backward accepts Ev != E and the +inf-padded logsumexp width.', observes: [out], evidence_kind: definition}
+examples:
+- id: AT.E1
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C1, AT.C5]
+  input: &base
+    q: [[[1, 1, 1, 1]]]
+    k: [[[1, 1, 1, 1], [0, 0, 0, 0]]]
+    v: [[[1], [0]]]
+    dtype: f32
+    attn_mask: null
+    attn_mask_dtype: null
+    is_causal: false
+    scale: null
+    enable_gqa: false
+    dropout_p: 0
+  expected: {outcome: value, fields: {out: [[[exp(2)/(1 + exp(2))]]]}}
+- id: AT.E2
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C1]
+  input: {<<: *base, scale: 1}
+  expected: {outcome: value, fields: {out: [[[exp(4)/(1 + exp(4))]]]}}
+- id: AT.E3
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2]
+  input: {<<: *base, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], attn_mask: [[true, false]], attn_mask_dtype: b8}
+  expected: {outcome: value, fields: {out: [[[1]]]}}
+- id: AT.E4
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2, AT.C5]
+  input: {<<: *base, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [0]]], attn_mask: [[1, 0]], attn_mask_dtype: f32}
+  expected: {outcome: value, fields: {out: [[[exp(1)/(1 + exp(1))]]]}}
+- id: AT.E5
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2]
+  input: {<<: *base, q: [[[2]]], k: [[[1], [5]]], v: [[[1], [3]]], attn_mask: [[0, -inf]], attn_mask_dtype: f32}
+  expected: {outcome: value, fields: {out: [[[1]]]}}
+- id: AT.E6
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C3]
+  input: {<<: *base, q: [[[0], [0]]], k: [[[0], [0], [0]]], v: [[[0], [1], [2]]], is_causal: true}
+  expected: {outcome: value, fields: {out: [[[0], [1/2]]]}}
+- id: AT.E7
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C4]
+  input: {<<: *base, q: [[[0]], [[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[1]], [[2]]], enable_gqa: true}
+  expected: {outcome: value, fields: {out: [[[1]], [[1]], [[2]], [[2]]]}}
+- id: AT.E8
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C4]
+  input: {<<: *base, q: [[[0]], [[0]]], k: [[[0]]], v: [[[3]]], enable_gqa: false}
+  expected: {outcome: value, fields: {out: [[[3]], [[3]]]}}
+- id: AT.E9
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C5]
+  input: {<<: *base, q: [[[[0]]], [[[0]]]], k: [[[[0]]], [[[0]]]], v: [[[[1]]], [[[2]]]]}
+  expected: {outcome: value, fields: {out: [[[[1]]], [[[2]]]]}}
+- id: AT.E10
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C8]
+  input: {<<: *base, q: [[[0]]], k: [[[0], [0]]], v: [[[1], [3]]], attn_mask: [[false, false]], attn_mask_dtype: b8}
+  expected: {outcome: unsupported}
+- id: AT.E11
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C6]
+  input: {<<: *base, q: [[[0]]], k: [[[0]]], v: [[[1]]], attn_mask: [[true]], attn_mask_dtype: b8, is_causal: true}
+  expected: {outcome: invalid_input}
+- id: AT.E12
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C7]
+  input: {<<: *base, dropout_p: 1/10}
+  expected: {outcome: unsupported}
+- id: AT.E13
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C4]
+  input: {<<: *base, q: [[[0]], [[0]], [[0]]], k: [[[0]], [[0]]], v: [[[1]], [[2]]], enable_gqa: true}
+  expected: {outcome: invalid_input}
+- id: AT.E14
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C9]
+  input: {<<: *base, window: [1, 1]}
+  expected: {outcome: unsupported}
+- id: AT.E15
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C9]
+  input: {<<: *base, dtype: i32}
+  expected: {outcome: unsupported}
+- id: AT.E16
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C9]
+  input: {q: [[[0]]], k: [[[0]]], v: [[[1]]], dtype: f32, attn_mask: null, attn_mask_dtype: null,
+    is_causal: false, scale: null, enable_gqa: false}
+  expected: {outcome: invalid_input}
+- id: AT.E17
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C2]
+  input: {<<: *base, q: [[[0]]], k: [[[0]]], v: [[[1]]], attn_mask: [[0]], attn_mask_dtype: f64}
+  expected: {outcome: invalid_input}
+- id: AT.E18
+  profile: torch210_sdpa_defined_real
+  clauses: [AT.C1]
+  input: {<<: *base, q: [[0]], k: [[0]], v: [[1]]}
+  expected: {outcome: invalid_input}
+- id: AT.E19
+  profile: torch210_sdpa_defined_real_vjp
+  clauses: [AT.C10]
+  input: {<<: *base, q: [[[0]]], k: [[[1], [3]]], v: [[[1], [3]]], scale: 1, upstream: [[[2]]]}
+  expected: {outcome: value, fields: {out: [[[2]]], dq: [[[2]]], dk: [[[0], [0]]], dv: [[[1], [1]]]}}
+- id: AT.E20
+  profile: torch210_sdpa_defined_real_vjp
+  clauses: [AT.C4, AT.C10]
+  input: {<<: *base, q: [[[0]], [[0]], [[0]], [[0]]], k: [[[1]], [[2]]], v: [[[1]], [[2]]],
+    enable_gqa: true, scale: 1, upstream: [[[1]], [[2]], [[4]], [[8]]]}
+  expected: {outcome: value, fields: {out: [[[1]], [[1]], [[2]], [[2]]], dq: [[[0]], [[0]], [[0]], [[0]]],
+    dk: [[[0]], [[0]]], dv: [[[3]], [[12]]]}}
+- id: AT.E21
+  profile: torch210_sdpa_defined_real_vjp
+  clauses: [AT.C10]
+  input: {<<: *base, q: [[[0]]], k: [[[1], [3]]], v: [[[1], [3]]], scale: 1, upstream: [[2]]}
+  expected: {outcome: invalid_input}
+- id: AT.E22
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C11, AT.C13, AT.C16]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[1], [1]]]]}, {t: bf16, v: [[[[0], [2]]]]}, {t: bf16, v: [[[[1], [3]]]]}, 0.0, true]
+    kwargs: {scale: 1/2}
+  expected: {outcome: value, fields: {out: [[[[[1], [(1 + 3*exp(1))/(1 + exp(1))]]]], [[[0, log(1 + exp(1))]]],
+        null, null, 2, 2, null, null, null]}}
+- id: AT.E23
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C12, AT.C16]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[0]], [[0]], [[0]], [[0]]]]}, {t: bf16, v: [[[[0]], [[0]]]]}, {t: bf16, v: [[[[1]], [[2]]]]},
+      0.0, false]
+  expected: {outcome: value, fields: {out: [[[[[1]], [[1]], [[2]], [[2]]]], [[[0], [0], [0], [0]]], null, null, 1, 1,
+        null, null, null]}}
+- id: AT.E24
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C11]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[1, 1, 1, 1]]]]}, {t: bf16, v: [[[[1, 1, 1, 1], [0, 0, 0, 0]]]]},
+      {t: bf16, v: [[[[1, 1, 1, 1], [0, 0, 0, 0]]]]}, 0.0, false]
+  expected: {outcome: value, fields: {out: [[[[[exp(2)/(1 + exp(2)), exp(2)/(1 + exp(2)), exp(2)/(1 + exp(2)),
+              exp(2)/(1 + exp(2))]]]], [[[log(1 + exp(2))]]], null, null, 1, 2, null, null, null]}}
+- id: AT.E41
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C18]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[1, 1]]]]}, {t: bf16, v: [[[[1, 1]]]]}, {t: bf16, v: [[[[3]]]]}, 0.0, false]
+  expected: {outcome: invalid_input}
+- id: AT.E42
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C14, AT.C18]
+  input:
+    op: aten._scaled_dot_product_efficient_attention_backward
+    args: [{t: f32, v: [[[[5]]]]}, {t: f32, v: [[[[1, 1]]]]}, {t: f32, v: [[[[1, 1]]]]}, {t: f32, v: [[[[3]]]]}, null,
+      {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[1]]]}, {t: i64, v: 0, shape: []}, {t: i64, v: 0, shape: []}, 0.0,
+      [true, true, true, false]]
+    kwargs: {scale: 1/2}
+  expected: {outcome: value, fields: {out: [[[[[5, 5]]]], [[[[5, 5]]]], [[[[5]]]], null]}}
+- id: AT.E25
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C17]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[1], [1]]]]}, {t: bf16, v: [[[[0], [2]]]]}, {t: bf16, v: [[[[1], [3]]]]}, 0.1, true]
+    kwargs: {scale: 1/2}
+  expected: {outcome: unsupported}
+- id: AT.E26
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C18]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: f32, v: [[[[1]]]]}, {t: f32, v: [[[[0]]]]}, {t: f32, v: [[[[1]]]]}, 0.0, false]
+  expected: {outcome: unsupported}
+- id: AT.E27
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C18]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[1]]]]}, {t: bf16, v: [[[[0]]]]}, {t: bf16, v: [[[[1]]]]}, 0.0, false, true]
+  expected: {outcome: unsupported}
+- id: AT.E28
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C12]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[0]], [[0]], [[0]]]]}, {t: bf16, v: [[[[0]], [[0]]]]}, {t: bf16, v: [[[[1]], [[2]]]]}, 0.0, false]
+  expected: {outcome: invalid_input}
+- id: AT.E29
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C13]
+  input:
+    op: aten._scaled_dot_product_flash_attention
+    args: [{t: bf16, v: [[[[0]]]]}, {t: bf16, v: [[[[0], [0]]]]}, {t: bf16, v: [[[[1], [3]]]]}, 0.0, true]
+  expected: {outcome: unsupported}
+- id: AT.E30
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C14, AT.C16]
+  input:
+    op: aten._scaled_dot_product_flash_attention_backward
+    args: [{t: bf16, v: [[[[5]]]]}, {t: bf16, v: [[[[1]]]]}, {t: bf16, v: [[[[2]]]]}, {t: bf16, v: [[[[3]]]]},
+      {t: bf16, v: [[[[3]]]]}, {t: f32, v: [[[1]]]}, null, null, 1, 1, 0.0, true, {t: i64, v: [0, 0]},
+      {t: i64, v: 0, shape: []}]
+    kwargs: {scale: 1/2}
+  expected: {outcome: value, fields: {out: [[[[[0]]]], [[[[0]]]], [[[[5]]]]]}}
+- id: AT.E31
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C14]
+  input:
+    op: aten._scaled_dot_product_flash_attention_backward
+    args: [{t: bf16, v: [[[[1]]]]}, {t: bf16, v: [[[[1]]]]}, {t: bf16, v: [[[[0], [0]]]]}, {t: bf16, v: [[[[1], [3]]]]},
+      {t: bf16, v: [[[[2]]]]}, {t: f32, v: [[[0]]]}, null, null, 1, 2, 0.0, false, {t: i64, v: [0, 0]},
+      {t: i64, v: 0, shape: []}]
+    kwargs: {scale: 1}
+  expected: {outcome: value, fields: {out: [[[[[0]]]], [[[[-1], [1]]]], [[[[1], [1]]]]]}}
+  readings:
+    recompute_saved: {outcome: value, fields: {out: [[[[[0]]]], [[[['-1/2'], ['1/2']]]], [[[['1/2'], ['1/2']]]]]}}
+- id: AT.E32
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C14]
+  input:
+    op: aten._scaled_dot_product_flash_attention_backward
+    args: [{t: bf16, v: [[[[5]]]]}, {t: bf16, v: [[[[1]]]]}, {t: bf16, v: [[[[2]]]]}, {t: bf16, v: [[[[3]]]]},
+      {t: bf16, v: [[[[1]]]]}, {t: f32, v: [[[1]]]}, null, null, 1, 1, 0.0, false, {t: i64, v: [0, 0]},
+      {t: i64, v: 0, shape: []}]
+    kwargs: {scale: 1/2}
+  expected: {outcome: value, fields: {out: [[[[[10]]]], [[[[5]]]], [[[[5]]]]]}}
+  readings:
+    recompute_saved: {outcome: value, fields: {out: [[[[[0]]]], [[[[0]]]], [[[[5]]]]]}}
+- id: AT.E33
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C12, AT.C15]
+  input:
+    op: aten._scaled_dot_product_flash_attention_backward
+    args: [{t: bf16, v: [[[[5]], [[7]]]]}, {t: bf16, v: [[[[1]], [[1]]]]}, {t: bf16, v: [[[[2]]]]}, {t: bf16, v: [[[[3]]]]},
+      {t: bf16, v: [[[[1]], [[1]]]]}, {t: f32, v: [[[1], [1]]]}, null, null, 1, 1, 0.0, true, {t: i64, v: [0, 0]},
+      {t: i64, v: 0, shape: []}]
+    kwargs: {scale: 1/2}
+  expected: {outcome: value, fields: {out: [[[[[10]], [[14]]]], [[[[12]]]], [[[[12]]]]]}}
+- id: AT.E34
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C13, AT.C14]
+  input:
+    op: aten._scaled_dot_product_flash_attention_backward
+    args: [{t: bf16, v: [[[[1], [1]]]]}, {t: bf16, v: [[[[1], [1]]]]}, {t: bf16, v: [[[[0], [0]]]]}, {t: bf16, v: [[[[1], [3]]]]},
+      {t: bf16, v: [[[[1], [2]]]]}, {t: f32, v: [[[0, 0]]]}, null, null, 2, 2, 0.0, true, {t: i64, v: [0, 0]},
+      {t: i64, v: 0, shape: []}]
+    kwargs: {scale: 1}
+  expected: {outcome: value, fields: {out: [[[[[0], [0]]]], [[[[-1], [1]]]], [[[[2], [1]]]]]}}
+- id: AT.E35
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C18]
+  input:
+    op: aten._scaled_dot_product_flash_attention_backward
+    args: [{t: bf16, v: [[[[1]]]]}, {t: bf16, v: [[[[1], [1]]]]}, {t: bf16, v: [[[[0], [0]]]]}, {t: bf16, v: [[[[1], [3]]]]},
+      {t: bf16, v: [[[[1], [2]]]]}, {t: f32, v: [[[0, 0]]]}, null, null, 2, 2, 0.0, true, {t: i64, v: [0, 0]},
+      {t: i64, v: 0, shape: []}]
+    kwargs: {scale: 1}
+  expected: {outcome: invalid_input}
+- id: AT.E36
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C14, AT.C18]
+  input:
+    op: aten._scaled_dot_product_efficient_attention_backward
+    args: [{t: f32, v: [[[[5]]]]}, {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[[2]]]]}, {t: f32, v: [[[[3]]]]}, null,
+      {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[1, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf, inf]]]}, {t: i64, v: 0, shape: []}, {t: i64, v: 0, shape: []}, 0.0,
+      [true, true, true, false]]
+    kwargs: {scale: 1/2}
+  expected: {outcome: value, fields: {out: [[[[[10]]]], [[[[5]]]], [[[[5]]]], null]}}
+- id: AT.E37
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C17]
+  input:
+    op: aten._scaled_dot_product_efficient_attention_backward
+    args: [{t: f32, v: [[[[5]]]]}, {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[[2]]]]}, {t: f32, v: [[[[3]]]]}, null,
+      {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[1]]]}, {t: i64, v: 7, shape: []}, {t: i64, v: 0, shape: []}, 0.1,
+      [true, true, true, false], true]
+    kwargs: {scale: 1/2}
+  expected: {outcome: unsupported}
+- id: AT.E38
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C13, AT.C14]
+  input:
+    op: aten._scaled_dot_product_efficient_attention_backward
+    args: [{t: f32, v: [[[[1], [1]]]]}, {t: f32, v: [[[[1], [1]]]]}, {t: f32, v: [[[[0], [0]]]]}, {t: f32, v: [[[[1], [3]]]]},
+      null, {t: f32, v: [[[[1], [2]]]]}, {t: f32, v: [[[0, 0]]]}, {t: i64, v: 0, shape: []}, {t: i64, v: 0, shape: []},
+      0.0, [true, true, true, false], true]
+    kwargs: {scale: 1}
+  expected: {outcome: value, fields: {out: [[[[[0], [0]]]], [[[[-1], [1]]]], [[[[2], [1]]]], null]}}
+- id: AT.E39
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C18]
+  input:
+    op: aten._scaled_dot_product_efficient_attention_backward
+    args: [{t: f32, v: [[[[5]]]]}, {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[[2]]]]}, {t: f32, v: [[[[3]]]]}, null,
+      {t: f32, v: [[[[1]]]]}, {t: f32, v: [[[1]]]}, {t: i64, v: 0, shape: []}, {t: i64, v: 0, shape: []}, 0.0,
+      [true, true, true, true]]
+    kwargs: {scale: 1/2}
+  expected: {outcome: unsupported}
+- id: AT.E40
+  profile: torch210_aten_sdpa_fused_dropout0
+  clauses: [AT.C12]
+  input:
+    op: aten._scaled_dot_product_efficient_attention_backward
+    args: [{t: f32, v: [[[[5]], [[5]]]]}, {t: f32, v: [[[[1]], [[1]]]]}, {t: f32, v: [[[[2]]]]}, {t: f32, v: [[[[3]]]]}, null,
+      {t: f32, v: [[[[1]], [[1]]]]}, {t: f32, v: [[[1], [1]]]}, {t: i64, v: 0, shape: []}, {t: i64, v: 0, shape: []}, 0.0,
+      [true, true, true, false]]
+    kwargs: {scale: 1/2}
+  expected: {outcome: unsupported}
+signature:
+  inputs: [complete q, complete k, complete v, common dtype, complete optional mask and mask dtype,
+    is_causal, scale, enable_gqa, dropout_p, and complete upstream for the VJP profile]
+  pre_state: []
+  post_state: [complete public output; the VJP profile additionally returns complete dq, dk and dv]
+  observation_unit: one complete public scaled_dot_product_attention forward call, optionally followed by its q/k/v VJP;
+    or one complete fused SDPA ATen overload call (ATen profile)
+domain:
+  valid: [rank-3 or rank-4 nonempty positive dense tensors, f16/bf16/f32/f64 common dtype,
+    finite exactly represented q/k/v values and, for VJP, same-dtype finite exactly represented upstream values,
+    compatible query/key dimensions and key/value lengths,
+    equal batch sizes, documented equal/broadcast/GQA head relation, dropout_p=0,
+    no mask or broadcastable Boolean/same-dtype finite-or-negative-infinity additive mask,
+    every row has a finite participating score]
+  domain_undefined: []
+  invalid_input: [missing required field, ragged tensor, incompatible shape, mixed or mismatched mask dtype,
+    VJP upstream shape or dtype different from the complete public output, attn_mask together with is_causal,
+    invalid Boolean or probability]
+  unsupported: [empty effective row, nonfinite q/k/v, positive-infinity mask, dtype outside f16/bf16/f32/f64,
+    dropout, rank outside three or four, arbitrary batch broadcasting, softcap, window, LSE or backend gradient buffers,
+    sparse or complex data, layout and backend-specific device rounding]
+  aten_profile_valid:
+  - 'rank-4 dense finite exactly represented query, key, value, grad_out and out of one dtype (flash f16/bf16, efficient f16/bf16/f32)'
+  - 'float32 finite logsumexp of shape (B, Hq, L); for the efficient backward also the 32-aligned padded width with +inf padding'
+  - 'dropout_p = 0; is_causal only with L = S; scale null or finite'
+  - 'flash: Hq divisible by Hkv, return_debug_mask false, cum_seq_q / cum_seq_k null, max_q = L, max_k = S'
+  - 'efficient backward: Hq = Hkv, attn_bias null, grad_input_mask (true, true, true, false)'
+  aten_profile_invalid_input:
+  - 'non-rank-4 tensors; mismatched batch, head dimension or key/value lengths'
+  - 'flash Hq not divisible by Hkv; grad_out or out shape different from the forward output'
+  - 'malformed booleans or integers; grad_input_mask not four booleans; dropout_p outside [0, 1]'
+  - 'values not representable in the declared dtype'
+  aten_profile_unsupported:
+  - 'dropout_p > 0 (AT.ATEN_RNG); is_causal with L != S (AT.ATEN_CAUSAL)'
+  - 'return_debug_mask true; attention bias; bias gradient requested; unrequested query/key/value gradient'
+  - 'efficient Hq != Hkv; packed cum_seq inputs; max_q / max_k different from L / S'
+  - 'nonfinite inputs; logsumexp padding other than +inf; dtypes outside the overload set; empty dimensions'
+mutation_requirements:
+- {id: AT.M1, misreading: use 1/E instead of 1/sqrt(E) for default scale, witnesses: [AT.E1]}
+- {id: AT.M2, misreading: ignore an explicit scale and use the default, witnesses: [AT.E2]}
+- {id: AT.M3, misreading: invert the Boolean mask convention, witnesses: [AT.E3]}
+- {id: AT.M4, misreading: interpret a numeric additive mask as a Boolean keep mask, witnesses: [AT.E4]}
+- {id: AT.M5, misreading: use bottom-right rather than upper-left causal alignment, witnesses: [AT.E6]}
+- {id: AT.M6, misreading: assign GQA heads round-robin rather than in contiguous groups, witnesses: [AT.E7]}
+- {id: AT.M7, misreading: manufacture a uniform result for a row without a participating score, witnesses: [AT.E10]}
+- {id: AT.M8, misreading: accept an explicit mask together with is_causal and silently combine them, witnesses: [AT.E11]}
+- {id: AT.M9, misreading: ignore the explicit scale keyword of the ATen call and use 1/sqrt(E), witnesses: [AT.E22]}
+- {id: AT.M10, misreading: causal off-by-one (key j allowed only for j < i), witnesses: [AT.E22, AT.E34]}
+- {id: AT.M11, misreading: return the logsumexp in base 2 instead of the natural logarithm, witnesses: [AT.E22, AT.E24]}
+- {id: AT.M12, misreading: map query heads to key/value heads round-robin instead of contiguous groups, witnesses: [AT.E23]}
+- {id: AT.M13, misreading: do not sum grad_key / grad_value over all query heads of a group, witnesses: [AT.E33]}
+- {id: AT.M14, misreading: recompute the logsumexp from q and k instead of using the supplied logsumexp, witnesses: [AT.E31]}
+- {id: AT.M15, misreading: recompute the output for D instead of using the supplied out, witnesses: [AT.E32]}
+- {id: AT.M16, misreading: treat dropout_p > 0 as if it were 0, witnesses: [AT.E37]}
+- {id: AT.M17, misreading: accept non-square causal calls with the flash kernel's bottom-right alignment, witnesses: [AT.E29]}
+- {id: AT.M18, misreading: ignore the GQA head mapping (every query head uses key/value head 0), witnesses: [AT.E23]}
+- {id: AT.M19, misreading: accept a flash value head dimension different from the query head dimension, witnesses: [AT.E41]}
+readings:
+  recompute_saved:
+    meaning: >-
+      Diagnostic reading for the backward overloads: the exact VJP of the forward at (q, k, v), recomputing the
+      probabilities and the output instead of using the supplied out and logsumexp. It coincides with the profile
+      when the supplied values equal the exact forward results; it is not the task definition (AT.ATEN_SAVED).
+    basis: [AT.VJP, TS_AUTOGRAD_DERIVATIVES.SDPA_FUSED]
+nonclaims:
+- These profiles do not define FlashAttention bottom-right alignment, window or softcap options, FlexAttention score modifications, Triton tutorial LSE storage, or backend-specific backward interfaces.
+- The VJP profile defines derivatives of the selected public result for an explicit upstream. It does not claim that every backend stores the same probabilities or LSE internally.
+- The defined-row restriction avoids claiming that one backend's all-masked-row convention is universal public SDPA behavior.
+- Rigorous real arithmetic defines f. Device dtype rounding and backend selection are measured separately as K-f.
+- Rejected mutants witness listed mistakes only and do not prove completeness.
+- The ATen profile defines no dropout_p > 0 result. The mask stream exists only in the CUDA kernel source (cuRAND Philox with a kernel-specific offset layout) and is not specified by PyTorch documentation; no RNG model is assumed.
+- The ATen profile does not compare RNG bookkeeping (philox seed/offset), cum_seq positions or the debug mask, and makes no claim about their values.
+- The ATen backward profile is conditional on the supplied out and logsumexp; it does not establish that the forward call produced them correctly (that is the forward call's own check).
+- PyTorch's own fused kernels are the conventions' cross-check (evidence/attn_aten_interface.md), not their definition.
+changes:
+- date: '2026-10-20'
+  change: >-
+    Added the ATen-call profile torch210_aten_sdpa_fused_dropout0 covering aten._scaled_dot_product_flash_attention,
+    aten._scaled_dot_product_flash_attention_backward and aten._scaled_dot_product_efficient_attention_backward with
+    dropout_p = 0, decisions AT.ATEN_TASK, AT.ATEN_HEADS, AT.ATEN_CAUSAL, AT.ATEN_SAVED, AT.ATEN_AUX, AT.ATEN_RNG and
+    AT.ATEN_DOMAIN, clauses AT.C11-AT.C18, examples AT.E22-AT.E42, mutants AT.M9-AT.M19 and the diagnostic reading
+    recompute_saved. The public profiles are unchanged. Review status reset to drafted and implementation status to
+    pending. After independent review (reviews/2026-10-20/A2_package_B_review.md): flash overloads refuse a value
+    head dimension different from the query head dimension (invalid_input, example AT.E41, mutant AT.M19);
+    efficient backward keeps Ev != E (AT.E42); AT.ATEN_DOMAIN states the dtype-only domain and the unpadded
+    logsumexp choice; AT.ATEN_RNG lists conditioning on an observed mask as an impossible alternative.
+  trigger: >-
+    Path A closure (G6): recorded qwen2.5 bf16 flash forward/backward calls and bert-tiny / gpt2 f32 efficient
+    backward calls had no contract with an ATen-call interface.
+- date: '2026-10-19'
+  change: >-
+    Added a separate complete VJP profile for the already reviewed public SDPA task. It requires explicit upstream and
+    returns out, dq, dk and dv; GQA gradients are summed back to the original key/value head shapes. The forward-only
+    profile and its interface remain unchanged.
+  trigger: >-
+    Real training calls need all three operand gradients. The derivative is obtained from the reviewed forward formula
+    and is checked independently; the broader draft combining FlashAttention, FlexAttention, LSE, window and softcap
+    remains unadmitted.
