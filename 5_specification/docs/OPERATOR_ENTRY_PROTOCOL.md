@@ -163,3 +163,22 @@
 ## 9 偏差记录
 
 （提交后追加，不改上文。）
+- 登记提交 F_A = c09b655。
+- 2026-10-20 记录阶段的结果：5 个触发都成功，6 个模型配置都失败。按原因分为两类：
+  - **工具链问题**：
+    - bert-tiny 两个配置：transformers 5.19 不接受没有 `model_type` 的 config.json；
+    - Qwen2.5-0.5B fp32：保存时有一个参数含不可序列化的 module 对象，整个记录目录没有写完。
+  - **被测实现运行失败**：都在热身步发生，此时记录器尚未启用；用 `CUDA_LAUNCH_BLOCKING=1` 定位到具体算子：
+    - gpt2 fp32：FlagGems `layer_norm_backward`（`aten.native_layer_norm_backward`，1×128×768 fp32）非法内存访问；
+    - gpt2 bf16：FlagGems 的 `_flash_attention_forward` 把 philox 种子返回为 int64，PyTorch 原生的
+      `_scaled_dot_product_flash_attention_backward` 期望 uint64，反向报「expected scalar type UInt64 but found Long」；
+    - Qwen2.5-0.5B bf16：FlagGems `mm`（128×151936 @ 151936×896 bf16）的配置需要 128 KB 共享内存，A6000（sm_86）上限是 99 KB。
+- 偏差 D-A1（工具链）：config.json 没有 `model_type` 时，用 `AutoConfig.for_model("bert", ...)` 读取。bert-tiny 是 BERT 结构。
+- 偏差 D-A2（工具链）：单个调用键的参数无法序列化时，不保存该键的数值，键仍在分母中，记「运行或证据不足：记录的参数不可序列化」。
+  失败的部分记录移入 `failed_harness_20261020/`。
+- 偏差 D-A3（被测配置）：对每个工作负载，把运行失败的 FlagGems 函数逐一定位。每轮在新进程里重跑、加入新排除，直到整步能跑通。
+  然后只为该工作负载**额外排除**这些函数，重新记录，使其余调用能被评价。具体做法：
+  - 额外排除的清单固定在 `sufficiency/operator_entry/run_failures_20261020.json`；
+  - 记录与重放使用同一排除集合（`run.json` 的 `exclude`）；
+  - 运行失败本身作为结果单独报告：哪个函数、什么输入、什么错误。它们是被测实现在真实负载上的运行失败；是否构成缺陷，另行用独立复现确认；
+  - 这些调用不计入「原样可用」的分母，单独列为「被测实现运行失败」。

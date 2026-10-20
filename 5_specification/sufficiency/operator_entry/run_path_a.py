@@ -46,9 +46,21 @@ def log(root, rec):
         fh.write(json.dumps(rec) + "\n")
 
 
+RUN_FAILURES = HERE / "run_failures_20261020.json"   # deviation D-A3
+
+
+def extra_exclude(name):
+    if not RUN_FAILURES.exists():
+        return []
+    return sorted({f["flaggems_function"] for f in json.loads(RUN_FAILURES.read_text()) if f["workload"] == name})
+
+
 def stage_record(root, only):
     (root / "rec").mkdir(parents=True, exist_ok=True)
     for i, (name, args) in enumerate(WORKLOADS):
+        ex = extra_exclude(name)
+        if ex:
+            args = [*args, "--extra-exclude", *ex]
         out = root / "rec" / name
         if (only and name not in only) or out.exists():
             continue

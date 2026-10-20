@@ -28,7 +28,13 @@ CAP_BYTES = 200 * 2**20
 
 def model_step(model_dir, config):
     from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSeq2SeqLM, AutoTokenizer
-    cfg = AutoConfig.from_pretrained(model_dir)
+    try:
+        cfg = AutoConfig.from_pretrained(model_dir)
+    except ValueError:                    # deviation D-A1: a config.json without model_type (bert-tiny) under transformers 5
+        raw = json.loads((Path(model_dir) / "config.json").read_text())
+        if "model_type" in raw:
+            raise
+        cfg = AutoConfig.for_model("bert", **raw)
     text_cfg = getattr(cfg, "text_config", None) or cfg
     for key in ("num_hidden_layers", "n_layer", "num_layers", "num_decoder_layers", "n_layers"):
         if isinstance(getattr(text_cfg, key, None), int):
@@ -107,8 +113,11 @@ def main():
     ap.add_argument("--config", default="fp32")
     ap.add_argument("--trigger")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--extra-exclude", nargs="*", default=[],
+                    help="deviation D-A3: FlagGems functions that fail to run on this workload (reported separately)")
     a = ap.parse_args()
-    flag_gems.enable(unused=list(FLAGGEMS_EXCLUDE))
+    exclude = list(FLAGGEMS_EXCLUDE) + list(a.extra_exclude)
+    flag_gems.enable(unused=exclude)
     step = trigger_step(a.trigger) if a.trigger else model_step(a.model, a.config)
     step()
     torch.cuda.synchronize()
@@ -146,7 +155,7 @@ def main():
         "launches_without_recorder": len(seq_a), "launches_with_recorder": len(seq_b),
         "launches_outside_recorded_calls": unattributed, "calls": len(rec.calls), "keys": len(rec.keys),
         "keys_over_capture_cap": over_cap, "flag_gems": md.version("flag_gems"), "torch": torch.__version__,
-        "exclude": list(FLAGGEMS_EXCLUDE)})
+        "exclude": exclude, "extra_exclude": list(a.extra_exclude)})
     print(json.dumps({"calls": len(rec.calls), "keys": len(rec.keys), "t1": first_diff is None,
                       "unattributed": unattributed, "over_cap": len(over_cap)}))
 

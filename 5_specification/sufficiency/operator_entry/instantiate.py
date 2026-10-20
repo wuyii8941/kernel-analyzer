@@ -76,7 +76,8 @@ def _literals(x, path, out):
         raise Refuse("argument encoding", str(err)) from None
 
 
-def generate(spec: Path, name: str, op: str, values_pt: Path, contract: dict, profile: str, runtime: dict):
+def generate(spec: Path, name: str, op: str, values_pt: Path, contract: dict, profile: str, runtime: dict,
+             exclude=FLAGGEMS_EXCLUDE):
     """Write the five files; return the declaration path. contract: loaded contract data (dict)."""
     fn = overload(op)
     schema = fn._schema
@@ -113,7 +114,7 @@ def generate(spec: Path, name: str, op: str, values_pt: Path, contract: dict, pr
     data = spec / "corpus/calls" / f"{name}_values.pt"
     torch.save({"args": t_args, "kwargs": t_kwargs, "tensors": {k: t for k, (_, t) in tensors.items()}}, data)
     plan_id = f"path_a.{name}"
-    call_src = CALL_TEMPLATE.format(op=op, rule=RULE, data=data.name, exclude=tuple(FLAGGEMS_EXCLUDE))
+    call_src = CALL_TEMPLATE.format(op=op, rule=RULE, data=data.name, exclude=tuple(exclude))
     (calls / f"{name}.py").write_text(call_src)
     (calls / f"{name}_inputs.py").write_text(INPUTS_TEMPLATE.format(data=data.name) + "".join(
         f"\n\ndef {t}(seed, shape, dtype):\n    return _get({t!r})\n" for t in tensors))

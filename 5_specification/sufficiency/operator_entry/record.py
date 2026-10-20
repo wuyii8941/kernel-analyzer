@@ -151,6 +151,7 @@ def save(recorder: Recorder, out_dir, extra=None):
     with open(out / "calls.jsonl", "w") as fh:
         for c in recorder.calls:
             fh.write(json.dumps(c) + "\n")
+    unserializable = []
     by_key = {}
     for c in recorder.calls:
         by_key.setdefault(c["key"], []).append(c)
@@ -163,8 +164,13 @@ def save(recorder: Recorder, out_dir, extra=None):
                                  "launch_sets_agree": all(c["launches"] == first["launches"] for c in calls),
                                  "args": describe(args), "kwargs": describe(kwargs)}) + "\n")
             if args is not None:
-                torch.save({"args": args, "kwargs": kwargs}, out / "values" / f"{k}.pt")
+                try:
+                    torch.save({"args": args, "kwargs": kwargs}, out / "values" / f"{k}.pt")
+                except Exception as err:  # noqa: BLE001 -- deviation D-A2: the key stays in the account
+                    (out / "values" / f"{k}.pt").unlink(missing_ok=True)
+                    unserializable.append({"key": k, "error": f"{type(err).__name__}: {err}"[:200]})
     if extra is not None:
+        extra = dict(extra, keys_values_unserializable=unserializable)
         (out / "run.json").write_text(json.dumps(extra, indent=1))
 
 

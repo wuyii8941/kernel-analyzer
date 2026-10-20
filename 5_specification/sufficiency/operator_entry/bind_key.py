@@ -147,6 +147,9 @@ def main():
         res["note"] = "calls sharing this key launched different kernel sequences; the first call's is used"
     if a.key in run.get("keys_over_capture_cap", []):
         return done(EVID, "capture size limit (200 MB)")
+    bad = [u for u in run.get("keys_values_unserializable", []) if u["key"] == a.key]
+    if bad:
+        return done(EVID, "recorded arguments not serializable: " + bad[0]["error"])
     base = "aten." + k["op"].split(".")[1]
     val, other = candidates(a.spec, base)
     if not val:
@@ -165,7 +168,7 @@ def main():
     for c, p in cands:
         name = f"pa_{a.workload.name}_{a.key}_{c['id']}_{p}".replace("-", "_").replace(".", "_")
         try:
-            d = I.generate(a.spec, name, k["op"], values, c, p, rt)
+            d = I.generate(a.spec, name, k["op"], values, c, p, rt, exclude=tuple(run.get("exclude", I.FLAGGEMS_EXCLUDE)))
         except I.Refuse as e:
             refusals.append({"contract": c["id"], "profile": p, "stage": e.stage, "why": e.why})
             continue
