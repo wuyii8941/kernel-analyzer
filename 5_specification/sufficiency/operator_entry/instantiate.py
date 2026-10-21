@@ -310,7 +310,14 @@ def _load_on_recorded_devices(values_pt):
 
     def place(x):
         if isinstance(x, torch.Tensor):
-            return x.to("cpu" if next(order, "cuda") == "cpu" else "cuda")
+            device = "cpu" if next(order, "cuda") == "cpu" else "cuda"
+            if device == "cpu" or x.numel() == 0:
+                return x if device == "cpu" else torch.empty_strided(x.size(), x.stride(), dtype=x.dtype, device=device)
+            # move the storage span, not the view: Tensor.to makes a non-dense view contiguous, which changes the
+            # layout the recorded call received (and FlagGems' kernel choice)
+            span = 1 + sum((n - 1) * st for n, st in zip(x.size(), x.stride()))
+            flat = torch.as_strided(x, (span,), (1,), x.storage_offset()).contiguous().to(device)
+            return flat.as_strided(x.size(), x.stride(), 0)
         if isinstance(x, (list, tuple)):
             return type(x)(place(v) for v in x)
         if isinstance(x, dict) and set(x) != {"__memory_format__"}:

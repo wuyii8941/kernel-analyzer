@@ -52,10 +52,18 @@ def key_work(k):
     return max(math.prod(x) for x in sizes)
 
 
+def key_elements(k):
+    import math
+    sizes = [d["tensor"]["size"] for d in (k.get("args") or []) if isinstance(d, dict) and "tensor" in d]
+    return max((math.prod(x) for x in sizes), default=0)
+
+
 def a2_budget(k):
-    """A2 case budget (seconds): 1800, or 4e-6 s per scalar operation for model-sized products (profile of a
-    128x768x50257 mm: about 0.8e-6 s per multiply-add over three units), capped at 8 h."""
-    return int(min(28800, max(1800, 4e-6 * key_work(k))))
+    """A2 case budget (seconds): 1800, or 4e-6 s per scalar operation of a matrix product (profile of a
+    128x768x50257 mm: about 0.8e-6 s per multiply-add over three units), or 5e-4 s per element of the largest tensor
+    (element-wise calls on 6-40M elements ran over 1800 s: program reference and statistics over three units), capped
+    at 8 h (deviation D-A2-5)."""
+    return int(min(28800, max(1800, 4e-6 * key_work(k), 5e-4 * key_elements(k))))
 
 
 def recorded_choice(cid, profile, base):
@@ -161,6 +169,9 @@ def verdict_a2(report):
         if sv.get("judgment") == "contradiction":
             special += int(sv.get("mismatched_coordinates") or 0)
         rate = (o.get("reference") or {}).get("complete_rate")
+        empty = o.get("status") == "evaluated" and (o.get("reference") or {}).get("elements") == 0
+        if empty:
+            continue      # an empty output of the specified shape: nothing to compare (vacuously complete)
         if o.get("status") != "evaluated" or (rate or 0) < 1.0 or not sem:
             complete = False
             reasons.append(f"{name}: {o.get('status')} reference complete_rate={rate}")

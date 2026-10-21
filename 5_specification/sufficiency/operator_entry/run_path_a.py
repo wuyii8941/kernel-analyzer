@@ -141,9 +141,11 @@ def stage_bind(root, workers, only, protocol="v1", work_range=(0, float("inf")))
 
 
 def _work(k):
+    """Scheduling weight: the larger of the product work and 125 x the element count (so large element-wise calls go
+    to the pass with fewer workers, matching their budget in bind_key.a2_budget)."""
     sys.path.insert(0, str(HERE))
-    from bind_key import key_work
-    return key_work(k)
+    from bind_key import key_elements, key_work
+    return max(key_work(k), 125 * key_elements(k))
 
 
 def wilson(k, n):
