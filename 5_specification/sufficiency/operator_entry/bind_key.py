@@ -239,6 +239,52 @@ def reference_outcome(spec, decl_path, values, budget=300):
         signal.signal(signal.SIGALRM, old)
 
 
+EXACT_MOVE = {"LAYOUT", "INDEX", "CREATE"}       # data movement: f is representable, a correct K reproduces it bit for bit
+
+
+def blackbox_exact(spec, decl_path, name, budget=600):
+    """D-A2-8: the call's outputs against f coordinate by coordinate, for exact data-movement profiles whose program
+    reference is refused (state outside the declared inputs). Returns (mismatching coordinates, compared coordinates)."""
+    import numpy as np
+    from fractions import Fraction
+    from kernel_analyzer.contract_binding import _tensor_record
+    from kernel_spec import registry
+    sys.path.insert(0, str(HERE.parents[1] / "corpus"))
+    import call_binding
+    decl = json.loads(decl_path.read_text())
+    plan = json.loads((decl_path.parent / decl["compare"]["binding_plan"]).read_text())
+    task = plan["tasks"][0]
+    call = load_module(spec / "corpus/calls" / f"{name}.py", f"bb_call_{name}")
+    gen = load_module(spec / "corpus/calls" / f"{name}_inputs.py", f"bb_gen_{name}")
+    inputs = {t: getattr(gen, t)(0, None, None) for t in sorted(decl["inputs"])}
+    obs = {"tensor_arguments": {k: {"before": _tensor_record(t)} for k, t in inputs.items()}}
+    outs = call.call(inputs)
+    torch.cuda.synchronize()
+    obs["returns"] = {k: _tensor_record(v) for k, v in outs.items()}
+    mapped, _, _ = call_binding._mapped(task["input_map"], obs)
+    r = registry.query(task["contract"], task["profile"], mapped, task_bindings={task["profile"]: task["task_statement"]})
+    if r.outcome != "value":
+        return None, f"reference outcome {r.outcome}: {r.note[:120]}"
+    bad = total = 0
+    for item in task["output_map"]:
+        if "measure_output" not in item:
+            continue
+        f = r.fields[item["target"].strip("/").split("/")[0]]
+        for part in item["target"].strip("/").split("/")[1:]:
+            f = f[int(part)]
+        k = outs[item["measure_output"]].detach().to("cpu")
+        k = k.to(torch.float64).numpy().ravel() if k.dtype != torch.bool else k.numpy().ravel().astype(np.float64)
+        fv = np.asarray(call_binding._plain(f), dtype=object).ravel()
+        if fv.size != k.size:
+            return None, f"shape differs: K {k.size} coordinates, f {fv.size}"
+        for kv, ref in zip(k.tolist(), fv.tolist()):
+            ref = 1 if ref is True else 0 if ref is False else ref
+            total += 1
+            if kv != kv or Fraction(kv) != Fraction(ref):
+                bad += 1
+    return bad, total
+
+
 def evaluated(report):
     return any(o.get("status") == "evaluated" for lv in (report or {}).get("levels", [])
                for o in (lv.get("outputs") or {}).values())
@@ -359,6 +405,20 @@ def main():
             entry["applies"] = True
             entry["verdict"] = ("detected", f"read-only input {changed.group(1)} changed during the measured call "
                                             f"(the ATen schema has no write annotation for it)")
+        if (PROTOCOL[0] == "A2" and not entry["evaluated"] and c["id"] in EXACT_MOVE and freason
+                and "public output depends on tensor state not accounted for" in freason):
+            try:
+                bad, total = blackbox_exact(a.spec, d, name)
+            except Exception as err:  # noqa: BLE001 -- recorded
+                bad, total = None, f"{type(err).__name__}: {err}"[:200]
+            entry["blackbox_exact"] = {"mismatches": bad, "compared": total}
+            if isinstance(bad, int):
+                entry["applies"] = True
+                entry["verdict"] = (("detected", f"black-box exact comparison: {bad} of {total} coordinates differ from f "
+                                                 f"(data movement; program reference refused: unaccounted state)")
+                                    if bad else
+                                    ("consistent", f"black-box exact comparison: all {total} coordinates equal f "
+                                                   f"(data movement; program reference refused: unaccounted state)"))
         shape = SHAPE_DIFF.search(freason or "") if PROTOCOL[0] == "A2" else None
         if not entry["evaluated"] and shape:
             # verdict rule v2: the specification fixes the returned tensor's shape; a different shape is a detection
