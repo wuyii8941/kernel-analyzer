@@ -146,6 +146,8 @@ def _tensor_record(value):
         raise BindingError("tensor shape must contain nonnegative integers")
 
     def has_shape(x, expected):
+        if isinstance(x, np.ndarray):
+            return tuple(x.shape) == tuple(expected)
         if not expected:
             return not isinstance(x, list)
         if not isinstance(x, list) or len(x) != expected[0]:
@@ -212,6 +214,8 @@ def _mapped(mappings, observation):
 
 
 def _plain(value):
+    if isinstance(value, np.ndarray):          # a NumPy-array record value (large tensors): the same nested values
+        return value.tolist()
     return value.v if isinstance(value, R) else value
 
 

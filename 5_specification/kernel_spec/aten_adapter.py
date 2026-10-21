@@ -48,6 +48,8 @@ def decode(x, *, allow_ignored_nan=False):
 
 
 def _vals(v, d, *, allow_ignored_nan=False):
+    if hasattr(v, "tolist") and hasattr(v, "dtype"):      # a NumPy-array record (large tensors): same values
+        v = v.tolist()
     if isinstance(v, list):
         return [_vals(x, d, allow_ignored_nan=allow_ignored_nan) for x in v]
     if isinstance(v, str):

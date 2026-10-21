@@ -53,9 +53,15 @@ def key_work(k):
 
 
 def key_elements(k):
+    """Element count of the largest tensor involved; for embedding_backward the output (num_weights x D)."""
     import math
-    sizes = [d["tensor"]["size"] for d in (k.get("args") or []) if isinstance(d, dict) and "tensor" in d]
-    return max((math.prod(x) for x in sizes), default=0)
+    args = k.get("args") or []
+    sizes = [d["tensor"]["size"] for d in args if isinstance(d, dict) and "tensor" in d]
+    n = max((math.prod(x) for x in sizes), default=0)
+    if k["op"].split(".")[1] in ("embedding_backward", "embedding_dense_backward") and len(args) > 2 \
+            and isinstance(args[2], int) and sizes:
+        n = max(n, args[2] * sizes[0][-1])
+    return n
 
 
 def a2_budget(k):
@@ -63,7 +69,8 @@ def a2_budget(k):
     128x768x50257 mm: about 0.8e-6 s per multiply-add over three units), or 5e-4 s per element of the largest tensor
     (element-wise calls on 6-40M elements ran over 1800 s: program reference and statistics over three units), capped
     at 8 h (deviation D-A2-5)."""
-    return int(min(28800, max(1800, 4e-6 * key_work(k), 5e-4 * key_elements(k))))
+    attention = 10800 if "scaled_dot_product" in k["op"] else 0
+    return int(min(28800, max(1800, attention, 4e-6 * key_work(k), 5e-4 * key_elements(k))))
 
 
 def recorded_choice(cid, profile, base):
@@ -168,11 +175,16 @@ def verdict_a2(report):
         sv = o.get("task_special_value_verdict") or {}
         if sv.get("judgment") == "contradiction":
             special += int(sv.get("mismatched_coordinates") or 0)
-        rate = (o.get("reference") or {}).get("complete_rate")
-        empty = o.get("status") == "evaluated" and (o.get("reference") or {}).get("elements") == 0
-        if empty:
-            continue      # an empty output of the specified shape: nothing to compare (vacuously complete)
-        if o.get("status") != "evaluated" or (rate or 0) < 1.0 or not sem:
+        ref = o.get("reference") or {}
+        rate = ref.get("complete_rate")
+        if o.get("status") == "evaluated" and (o.get("total") or {}).get("elements_per_seed") == 0:
+            continue      # the output has no element (e.g. zeros([0])): nothing to compare, vacuously complete
+        special_f = int((o.get("special_values") or {}).get("elements_with_special_f") or 0)
+        if special_f and sv.get("judgment") == "consistent" and ref.get("elements"):
+            # coordinates where f is +-inf are decided by the special-value class comparison (K matches f there)
+            rate = (int(ref.get("complete_finite") or 0) + special_f) / ref["elements"]
+        all_special = bool(special_f) and special_f == ref.get("elements") and sv.get("judgment") == "consistent"
+        if o.get("status") != "evaluated" or (rate or 0) < 1.0 or not (sem or all_special):
             complete = False
             reasons.append(f"{name}: {o.get('status')} reference complete_rate={rate}")
     if excl or special:

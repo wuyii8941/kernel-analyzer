@@ -69,7 +69,20 @@ def _tensor_record(tensor: torch.Tensor) -> dict:
     if dtype is None:
         raise ContractBindingError(f"tensor dtype {tensor.dtype} is not representable by the contract input format")
     value = tensor.detach().cpu()
+    if value.numel() >= LARGE_RECORD:
+        # a NumPy array instead of nested lists (exact: every recorded dtype embeds in float64 / int64 / bool);
+        # nested Python lists of 10^8 elements exhaust memory (path A2 deviation D-A2-6)
+        if value.dtype.is_floating_point:
+            array = value.to(torch.float64).numpy()
+        elif value.dtype == torch.bool:
+            array = value.numpy()
+        else:
+            array = value.to(torch.int64).numpy()
+        return {"t": dtype, "v": array, "shape": list(value.shape)}
     return {"t": dtype, "v": value.tolist(), "shape": list(value.shape)}
+
+
+LARGE_RECORD = 1 << 22
 
 
 def _record(value):
