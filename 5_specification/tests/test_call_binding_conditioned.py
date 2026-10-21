@@ -86,3 +86,16 @@ class Conditioned(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShapeDifference(unittest.TestCase):
+    def test_tensor_shape_difference_is_reported_with_both_shapes(self):
+        from test_call_binding import CallBinding
+        plan, observation = CallBinding.exp_fixture(None)
+        plan["tasks"][0]["output_map"] = [{"target": "/out", "source": "/returns/out", "conversion": "tensor_record"}]
+        observation["tensor_arguments"]["x"] = {"before": tensor("f32", [[0.0], [1.0]], [2, 1]),
+                                                "after": tensor("f32", [[0.0], [1.0]], [2, 1])}
+        observation["returns"]["out"] = tensor("f32", [1.0, 2.7182817459106445], [2])
+        report = B.inspect(plan, observation)
+        self.assertEqual(report["binding_status"], "rejected")
+        self.assertIn("observed tensor out has shape (2,), the specification (2, 1)", report["reason"])

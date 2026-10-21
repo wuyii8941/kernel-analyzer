@@ -299,7 +299,9 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
     tensors = {}
     t_args = [_template_v2(v, tensors, f"/args/{i}") for i, v in enumerate(args)]
     t_kwargs = {k: _template_v2(v, tensors, f"/kwargs/{k}") for k, v in contract_kwargs.items()}
-    t_call_kwargs = dict(t_kwargs, **{d["argument"]: _template_v2(all_kwargs[d["argument"]], tensors, "")
+    # replayed non-semantic keywords keep their recorded (picklable) form: memory formats stay tags
+    raw_kwargs = rec["kwargs"]
+    t_call_kwargs = dict(t_kwargs, **{d["argument"]: _template_v2(raw_kwargs[d["argument"]], tensors, "")
                                       for d in dropped})
     rule = f"rule {RULE_V2}"
     input_map = [{"target": "/op", "literal": base, "basis": f"recorded overload {op} ({rule})"}]

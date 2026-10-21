@@ -36,7 +36,8 @@ CHOSEN = "usable with recorded task choice (step 2)"   # A2: a task-choice profi
 RUNFAIL = "run failure of the implementation (replayed)"  # A2 G12: an excluded FlagGems function replayed alone
 PROTOCOL = ["v1"]
 CHOICES = HERE / "task_choices_A2.json"
-SHAPE_DIFF = __import__("re").compile(r"reference target \S+ shape \([^)]*\) differs from output \S+ \([^)]*\)")
+SHAPE_DIFF = __import__("re").compile(r"reference target \S+ shape \([^)]*\) differs from output \S+ \([^)]*\)"
+                                    r"|observed tensor \S+ has shape \([^)]*\), the specification \([^)]*\)")
 
 
 def key_work(k):

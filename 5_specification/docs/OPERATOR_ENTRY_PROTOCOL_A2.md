@@ -72,3 +72,14 @@
 ## 7 偏差
 
 （提交后追加，不改上文。）
+- 登记提交 F_A2 = 25873b1（绑定开始前）。
+- 偏差 D-A2-1（运行中发现的两处工具问题，2026-10-21）：
+  1. 生成规则 v2 把重放用的 memory_format 解码成 torch 对象后再保存，torch.save 失败（`ones_like` 键）；
+     改为保存记录时的标签形式。
+  2. 元组输出中出现形状不同时，绑定只报「omits or adds promised fields」。结论规则 v2 本来就要把形状不同记为检出，
+     但识别不了这条笼统的报告。现在 `call_binding` 给出两边的形状，结论规则 v2 据此识别。
+     测试：`tests/test_call_binding_conditioned.py::ShapeDifference`。
+  修复后的 `call_binding.py` 同步进本次运行的临时规格树，`instantiate.py` 和 `bind_key.py` 由此后启动的任务直接读取。
+  修复前已完成的受影响键移到 `failed_harness_A2/`，在本次运行结束后重绑。
+  另：bert-tiny bf16 key 53（`native_layer_norm_backward`）在并行运行中报告输入 a3「被改变」，
+  单独重测和直接调用都没有复现。按「观察到但未复现」报告，不当作已证实的缺陷。

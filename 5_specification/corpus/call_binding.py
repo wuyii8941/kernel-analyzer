@@ -294,6 +294,38 @@ def _reference(contract, cid, profile, inputs):
     return result, bulk.VERSION
 
 
+def _nested_shape(value):
+    value = _plain(value)
+    if _is_bulk(value):
+        return tuple(value.shape)
+    shape = []
+    while isinstance(value, (list, tuple)):
+        shape.append(len(value))
+        if not value:
+            break
+        value = _plain(value[0])
+    return tuple(shape)
+
+
+def _shape_difference(observed, reference, path):
+    """The first position where an observed tensor record and the reference tensor differ in shape, described as
+    'observed tensor <path> has shape X, the specification Y'; None when the difference is not a tensor shape."""
+    observed, reference = _plain(observed), _plain(reference)
+    if isinstance(observed, dict) and set(observed) == {"t", "v", "shape"} and not isinstance(reference, dict):
+        if isinstance(reference, (list, tuple)) or _is_bulk(reference) or not isinstance(reference, dict):
+            want = _nested_shape(reference)
+            got = tuple(observed["shape"])
+            if got != want and (isinstance(reference, (list, tuple)) or _is_bulk(reference)):
+                return f"observed tensor {path} has shape {got}, the specification {want}"
+        return None
+    if isinstance(observed, (list, tuple)) and isinstance(reference, (list, tuple)) and len(observed) == len(reference):
+        for i, (o, r) in enumerate(zip(observed, reference)):
+            found = _shape_difference(o, r, f"{path}[{i}]")
+            if found:
+                return found
+    return None
+
+
 def _same_structure(observed, reference):
     """Whether every promised field and sequence position is present.
 
@@ -481,6 +513,9 @@ def inspect(plan, observation, *, plan_path=None, reviewed_root=None, _reference
                         }
                     else:
                         if not _same_structure(observed_value, result.fields[name]):
+                            shape = _shape_difference(outputs[name], result.fields[name], name)
+                            if shape:
+                                raise BindingError(f"task {task['id']}: {shape}")
                             raise BindingError(
                                 f"task {task['id']}: observed output {name!r} omits or adds promised fields or positions")
                     if output.get("guarantee") == "allowed_set":
