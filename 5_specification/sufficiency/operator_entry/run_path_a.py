@@ -95,7 +95,7 @@ def replay_ops(name):
     return out
 
 
-def stage_bind(root, workers, only, protocol="v1", work_range=(0, float("inf"))):
+def stage_bind(root, workers, only, protocol="v1", work_range=(0, float("inf")), max_mac=float("inf"), keys_file=None):
     spec = root / "spec"
     if not spec.exists():
         shutil.copytree(SPEC_SRC, spec, ignore=shutil.ignore_patterns("__pycache__", "sufficiency"))
@@ -109,10 +109,17 @@ def stage_bind(root, workers, only, protocol="v1", work_range=(0, float("inf")))
             k = json.loads(line)
             if not work_range[0] <= _work(k) < work_range[1]:
                 continue
+            if _mac(k) >= max_mac:
+                continue
             if k["launches"]:
                 jobs.append((wdir, k["key"], None))
             elif k["op"] in replay:
                 jobs.append((wdir, k["key"], replay[k["op"]]))
+
+    if keys_file is not None:      # an explicit rebind list: [[result file name, reason], ...]
+        wanted = {name for name, _ in json.loads(Path(keys_file).read_text())}
+        jobs = [j for j in jobs if (f"{j[0].name}__{j[1]}.json" if j[2] is None else
+                                    f"{j[0].name}__{j[1]}__enable_{j[2]}.json") in wanted]
 
     def one(i_job):
         i, (wdir, key, enable) = i_job
@@ -138,6 +145,12 @@ def stage_bind(root, workers, only, protocol="v1", work_range=(0, float("inf")))
 
     with ThreadPoolExecutor(workers) as ex:
         list(ex.map(one, enumerate(jobs)))
+
+
+def _mac(k):
+    sys.path.insert(0, str(HERE))
+    from bind_key import key_work
+    return key_work(k)
 
 
 def _work(k):
@@ -210,6 +223,9 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--protocol", choices=("v1", "A2"), default="A2")
+    ap.add_argument("--keys-file", type=Path, help="bind only the result files listed in this JSON")
+    ap.add_argument("--max-mac", type=float, default=float("inf"),
+                    help="skip keys whose matrix-product work reaches this (keys another runner is binding)")
     ap.add_argument("--work-range", nargs=2, type=float, default=[0, float("inf")],
                     help="bind only keys whose scalar-operation estimate lies in [lo, hi) (large keys get fewer workers)")
     a = ap.parse_args()
@@ -217,7 +233,7 @@ def main():
     if a.stage in ("record", "all"):
         stage_record(a.root, a.only, a.protocol)
     if a.stage in ("bind", "all"):
-        stage_bind(a.root, a.workers, a.only, a.protocol, tuple(a.work_range))
+        stage_bind(a.root, a.workers, a.only, a.protocol, tuple(a.work_range), a.max_mac, a.keys_file)
     if a.stage in ("analyze", "all"):
         stage_analyze(a.root)
     return 0
