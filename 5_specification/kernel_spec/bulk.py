@@ -337,8 +337,11 @@ def _arith(inp):
 
 def _index(inp):
     op, args, kwargs = inp["op"], list(inp.get("args") or []), dict(inp.get("kwargs") or {})
-    if op != "aten.embedding" or len(args) != 2 or kwargs:
+    if op != "aten.embedding" or not 2 <= len(args) <= 5 or kwargs:
         raise _Decline("operation")
+    extra = args[2:]
+    if len(extra) >= 2 and extra[1] is not False or len(extra) == 3 and extra[2] is not False:
+        raise _Decline("scale_grad_by_freq / sparse")
     weight, dtype = _float_tensor(args[0])
     if np.any((weight == 0) & np.signbit(weight)):
         raise Invalid("weight contains negative zero outside the logical-value profile")
@@ -347,6 +350,11 @@ def _index(inp):
         raise _Decline("weight rank")
     if idx.size and (idx.min() < 0 or idx.max() >= weight.shape[0]):
         raise _Decline("index out of range")
+    if extra:
+        # IX.PADDING_FORWARD: a native padding_idx of -1 or in [0, V) leaves the forward value unchanged
+        pad = _int_scalar(extra[0])
+        if not (pad == -1 or 0 <= pad < weight.shape[0]):
+            raise _Decline("padding_idx")
     out = np.take(weight, idx, axis=0)
     return BulkTensor(out, out.copy(), dtype, True)
 
@@ -549,7 +557,48 @@ def _nll(inp):
     return BulkTensor(lo, hi, dtype, True)
 
 
-ENTRIES = {("CAST", "finite_rne"): _cast, ("NLL", "aten_real"): _nll, ("MATMUL", "real"): _matmul, ("ARITH", "real"): _arith, ("INDEX", "real"): _index,
+def _emb_backward(inp):
+    """EMB aten_dense_backward (kernel_spec.norm_emb_nll_aten.embedding_dense_backward): exact row sums over the
+    positions of each index; padding_idx compared literally; scale_grad_by_freq False only (otherwise the adapter)."""
+    op, args, kwargs = inp["op"], list(inp.get("args") or []), dict(inp.get("kwargs") or {})
+    if kwargs:
+        raise _Decline("keywords")
+    if op == "aten.embedding_backward" and len(args) == 6:
+        grad, indices, num_weights, pad, freq, sparse = args
+        if sparse is not False:
+            raise _Decline("sparse")
+    elif op == "aten.embedding_dense_backward" and len(args) == 5:
+        grad, indices, num_weights, pad, freq = args
+    else:
+        raise _Decline("operation")
+    if freq is not False:
+        raise _Decline("scale_grad_by_freq")
+    v, pad = _int_scalar(num_weights), _int_scalar(pad)
+    g, dtype = _float_tensor(grad)
+    if not isinstance(indices, dict) or indices.get("t") != "i64":
+        raise _Decline("index dtype")
+    ix, _ = _record(indices, floating=False)
+    if v < 0 or g.ndim != ix.ndim + 1 or tuple(g.shape[:-1]) != tuple(ix.shape):
+        raise _Decline("shapes")
+    flat = ix.ravel()
+    if flat.size and (flat.min() < 0 or flat.max() >= v):
+        raise _Decline("index out of range")
+    d = g.shape[-1]
+    rows = g.reshape(-1, d)
+    lo, hi = np.zeros((v, d)), np.zeros((v, d))
+    keep = flat != pad
+    for k in np.unique(flat[keep]).tolist():
+        sel = rows[flat == k]
+        if sel.shape[0] == 1:
+            lo[k], hi[k] = sel[0], sel[0]
+            continue
+        nums, e = _ints(np.ascontiguousarray(sel))
+        n = np.array(nums, dtype=object).reshape(sel.shape).sum(axis=0).tolist()
+        lo[k], hi[k] = _dyadic_bounds(n, e, (d,))
+    return BulkTensor(lo, hi, dtype, True)
+
+
+ENTRIES = {("CAST", "finite_rne"): _cast, ("EMB", "aten_dense_backward"): _emb_backward, ("NLL", "aten_real"): _nll, ("MATMUL", "real"): _matmul, ("ARITH", "real"): _arith, ("INDEX", "real"): _index,
            ("SOFTMAX", "real"): _softmax, ("ACT", "torch"): _act}
 
 # Below this many scalar operations the adapter itself is fast enough and stays the evaluator.

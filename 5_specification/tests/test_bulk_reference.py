@@ -233,6 +233,28 @@ class Bulk(unittest.TestCase):
             bwd = {"op": "aten.nll_loss_backward", "args": [go, record(x, dtype), index_record(t), None, red, -100, tw]}
             self.assertEqual(self.compare("NLL", "aten_real", bwd, True), "evaluated")
 
+    def test_embedding_backward(self):
+        for seed in range(10):
+            g = self.rng(800 + seed)
+            v, d = int(g.integers(2, 9)), int(g.integers(1, 5))
+            idx = g.integers(0, v, (1, int(g.integers(1, 7))))
+            dtype = ["f32", "bf16"][seed % 2]
+            pad = [-1, 0, 1, v + 3][seed % 4]
+            grad = g.standard_normal(idx.shape + (d,))
+            for op, extra in (("aten.embedding_backward", [False, False]), ("aten.embedding_dense_backward", [False])):
+                inp = {"op": op, "args": [record(grad, dtype), index_record(idx), v, pad, *extra]}
+                self.assertEqual(self.compare("EMB", "aten_dense_backward", inp, True), "evaluated")
+
+    def test_embedding_padding_forward(self):
+        g = self.rng(900)
+        w = g.standard_normal((6, 3))
+        idx = g.integers(0, 6, (2, 4))
+        for pad in (-1, 0, 5):
+            self.assertEqual(self.compare("INDEX", "real", {"op": "aten.embedding", "args": [
+                record(w, "f32"), index_record(idx), pad]}, True), "evaluated")
+        self.assertIn(self.compare("INDEX", "real", {"op": "aten.embedding", "args": [
+            record(w, "f32"), index_record(idx), 9]}, True), ("declined", "raised"))
+
     def test_threshold_and_unlisted(self):
         small = {"op": "aten.mm", "args": [record(np.ones((2, 2)), "f32"), record(np.ones((2, 2)), "f32")]}
         self.assertIsNone(bulk.evaluate("MATMUL", "real", small))
