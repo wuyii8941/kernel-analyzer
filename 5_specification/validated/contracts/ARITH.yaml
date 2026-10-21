@@ -1,31 +1,35 @@
 schema_version: '1.2'
 id: ARITH
 role: ATEN_ARITH
-title: Common finite floating element-wise arithmetic and selected PyTorch 2.10 autograd tasks
+title: Common element-wise arithmetic (floating with infinities, integer subset, integral pow) and selected PyTorch 2.10 autograd tasks
 review:
   status: reviewed_for_implementation
-  author: Claude (original broad draft) and Codex (finite common-operation revision), 2026-10-18
-  date: '2026-10-18'
-  reviewer: Codex source, formula, domain and complete-output review with separate exact-rational tests
-  scope: Finite same-dtype f16/bf16/f32/f64 default functional operations; scalar masked_fill, Tensor/Tensor where, scalar-bound clamp and Tensor/Tensor maximum/minimum additionally have complete public-call forward and VJP profiles
+  author: Claude (original broad draft), Codex (finite common-operation revision, 2026-10-18), Claude (path A domain extension, 2026-10-20)
+  date: '2026-10-21'
+  reviewer: 'Codex source, formula, domain and complete-output review with separate exact-rational tests; independent review 2026-10-21 (reviews/2026-10-20/A2_package_D_review.md)'
+  scope: Same-dtype f16/bf16/f32/f64 default functional operations (2026-10-20 draft adds infinities, exact received scalars, integral pow and an integer subset to the real profile, pending review); scalar masked_fill, Tensor/Tensor where, scalar-bound clamp and Tensor/Tensor maximum/minimum additionally have complete public-call forward and VJP profiles
 activation:
   implementation_status: validated
-  implementation_evidence: evidence/arith_implementation.md
+  implementation_evidence: evidence/arith_implementation.md (finite scope); evidence/arith_mathfn_index_domains.md (2026-10-20 extension)
   runtime_binding_status: pending
   requires: [source_profile_matched, input_contract_validated, all_required_outputs_bound,
     reference_semantics_and_guarantees_validated, no_unresolved_contradiction, reviewed_contract_and_adapter_match_current]
 covers: [aten.add, aten.sub, aten.rsub, aten.mul, aten.div, aten.neg, aten.reciprocal, aten.abs, aten.sign,
-  prims.fma, aten.floor, aten.ceil, aten.clamp, aten.clamp_min, aten.clamp_max, aten.maximum, aten.minimum,
+  aten.pow, prims.fma, aten.floor, aten.ceil, aten.clamp, aten.clamp_min, aten.clamp_max, aten.maximum, aten.minimum,
   aten.where, aten.masked_fill, aten.floor_divide, torch.Tensor.masked_fill, torch.where, torch.clamp,
   torch.maximum, torch.minimum]
 profiles:
   real:
     meaning: >-
-      Exact real formulas for common default functional operations on dense finite f16, bf16, f32 or f64 values.
-      Every tensor value must be exactly representable in its declared source dtype. All data tensors in one call
-      have the same dtype; finite scalar operands, alpha and scalar bounds must also be exactly representable in it.
-      Operation rounding and output storage rounding belong to K-G, not to this task value.
+      Exact extended-real formulas for common default functional operations on dense f16, bf16, f32 or f64 values,
+      including +inf and -inf where the extended-real result is defined (AR.EXTENDED_REAL), and exact integer formulas
+      for a subset of operations on same-dtype integer tensors (AR.INTEGER, AR.INT_OVERFLOW). Every tensor value must
+      be exactly representable in its declared source dtype; NaN is refused. All data tensors in one call have the
+      same dtype. A Python scalar operand, alpha, bound or fill value is the exact value the call received
+      (AR.SCALAR_VALUE), not that value rounded to the tensor dtype. pow takes an integral scalar exponent (AR.POW,
+      AR.ZERO_POW). Operation rounding and output storage rounding belong to K-G, not to this task value.
     task_choice_required: false
+    basis: [AR.SCHEMA, AR.FINITE, AR.SCALAR_VALUE, AR.EXTENDED_REAL, AR.POW, AR.INTEGER, AR.INT_OVERFLOW]
     outputs: [out]
   torch210_masked_fill_scalar_autograd:
     meaning: >-
@@ -63,6 +67,19 @@ profiles:
     task_choice_required: false
     basis: [AR.EXTREMA_TASK, AR.EXTREMA_VJP]
     outputs: [out, grad_input, grad_other]
+readings:
+  scalar_rounded_to_dtype:
+    meaning: >-
+      Diagnostic reading of AR.SCALAR_VALUE alternative (b) for the real profile on floating tensors: every Python
+      scalar operand, alpha, bound or fill value is first rounded to nearest even in the tensor dtype. The pow
+      exponent is not rounded. Not the task.
+    basis: [AR.SCALAR_VALUE]
+  scalar_rounded_to_opmath:
+    meaning: >-
+      Diagnostic reading of AR.SCALAR_VALUE alternative (c): scalars are first rounded to nearest even in the internal
+      computation type (float32 for bf16/f16 tensors, the tensor dtype for f32/f64). The pow exponent is not rounded.
+      Not the task.
+    basis: [AR.SCALAR_VALUE]
 outputs:
   out: {shape: 'complete broadcast output shape; prims.fma requires three equal shapes', guarantee: exact}
   grad: {shape: 'complete selected masked_fill or clamp input shape', guarantee: exact}
@@ -70,7 +87,9 @@ outputs:
   grad_other: {shape: 'complete selected where or extrema other shape', guarantee: exact}
 comparison:
   input_binding: >-
-    Tensor records are physical source values, not arbitrary mathematical reals labelled with a dtype. Boolean
+    Tensor records are physical source values, not arbitrary mathematical reals labelled with a dtype. In the real
+    profile a Python scalar is the exact rational value received (a binary64 number or an int64 integer,
+    CONTRACT_PROTOCOL 4.1); in the autograd profiles it must be exactly representable in the data dtype. Boolean
     condition and mask tensors are accepted only by where and masked_fill. Clamp bounds are optional Python scalars,
     not tensors. The autograd profiles require explicit shape records for every tensor and upstream. Inputs and
     outputs are otherwise dense.
@@ -79,7 +98,10 @@ comparison:
     It checks result dtype, every complete broadcast or input shape and every coordinate, including empty tensors.
   equality: Exact rational equality with no tolerance.
   test_evidence: Separate Fraction-based broadcasting and scalar formulas, plus PyTorch 2.10 dtype/shape cross-checks.
-  error_handling: Division or reciprocal by zero is domain_undefined; malformed calls are invalid_input; unreviewed variants are unsupported.
+  error_handling: >-
+    Division or reciprocal by zero, opposite infinities in a sum, zero times infinity, infinity divided by infinity,
+    zero to a negative power and integer results outside the result dtype are domain_undefined; NaN and malformed
+    calls are invalid_input; unreviewed variants are unsupported.
 decisions:
 - id: AR.SCHEMA
   status: reviewed
@@ -89,15 +111,100 @@ decisions:
     uses its scalar-value overload. Except for where's scalar branch overloads, the first data argument is a tensor;
     where must still have at least one tensor branch to determine the reviewed dtype. In-place, out, tensor-bound clamp,
     one-argument where and other overloads are outside this profile. prims.fma is the retained Inductor primitive and
-    requires three same-dtype, same-shape tensors here.
-  basis: [TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS, TS_INDUCTOR_PRIMS.FMA, TS_REFS.RSUB]
+    requires three same-dtype, same-shape tensors here. The 2026-10-20 draft adds torch.pow with a floating tensor
+    base and a scalar exponent (aten.pow.Tensor_Scalar); the scalar-base and tensor-exponent forms stay outside.
+  basis: [TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS, TS_INDUCTOR_PRIMS.FMA, TS_REFS.RSUB, T_POW.DEF]
 - id: AR.FINITE
   status: reviewed
   statement: >-
-    This profile accepts only finite f16/bf16/f32/f64 tensor values exactly representable in the declared dtype.
-    All data tensors in a call share a dtype. Scalar data, alpha, fill values and clamp bounds are finite and exactly
-    representable in that dtype. This is the reviewed support boundary, not a claim that PyTorch lacks other variants.
+    Support boundary. Tensor values are exactly representable in the declared dtype; all data tensors in a call
+    share one dtype, so the documented promotion keeps that dtype for the result. The real profile accepts
+    f16/bf16/f32/f64 values including +-inf (AR.EXTENDED_REAL) and, for the operations listed in AR.INTEGER, integer
+    dtypes; NaN is not a real value and is invalid. The four autograd profiles keep the reviewed finite floating
+    scope with scalars exactly representable in the data dtype. This is a support boundary, not a claim that PyTorch
+    lacks other variants (mixed dtypes, booleans, complex and float8 stay unsupported).
   basis: [T_TENSOR_ATTR.PROMOTION, TS_NATIVE_FUNCTIONS.ARITH_SCHEMAS]
+- id: AR.SCALAR_VALUE
+  status: reviewed
+  statement: >-
+    What a Python scalar operand (also alpha, clamp bounds and fill values) means in the real-profile task. The
+    PyTorch 2.10 Tensor Attributes page says that for type promotion "a floating point scalar operand has dtype
+    torch.get_default_dtype() and an integral non-boolean scalar operand has dtype torch.int64", that values are not
+    inspected to choose dtypes, and that a same-category scalar does not change the result dtype; torch.add and
+    torch.mul only state out = input + alpha*other and out = input*other with type promotion. Alternatives: (a) the
+    exact value received by the call, i.e. the binary64 value of a Python float or the exact value of a Python int
+    that an ATen Scalar carries (int64, or uint64 for [2^63, 2^64)) (CONTRACT_PROTOCOL 4.1); (b) that value rounded to
+    nearest even in the tensor dtype (so 0.044715 with a bf16 tensor means 183/4096); (c) that value rounded to the
+    operator's internal computation type (float32 for bf16/f16 tensors, the dtype itself for f32/f64); (d) the value
+    rounded to the default dtype float32, suggested by the Tensor Attributes sentence (identical to (c) for
+    bf16/f16/f32 tensors, different for f64 tensors). Choice: (a). (d) is rejected because that sentence assigns a
+    dtype category for the promotion algorithm only (it decides the result dtype, and the same page says values are
+    not inspected); it does not say the operand's value is converted, and (d) would round a scalar used with an f64
+    tensor below f64 precision. (b) and (c) are numerical choices of a particular kernel and belong to K-G; they are
+    recorded as the diagnostic readings scalar_rounded_to_dtype and scalar_rounded_to_opmath, never as the task.
+    Plain consequence: PyTorch 2.10 eager itself follows reading (c) (it converts the scalar to float32 before the
+    operation), so on the recorded f32 calls (x 0.044715, x 0.7978845608028654, x 0.3535533905932738, + 1e-06)
+    eager deviates from RN(f) by up to about 1 ulp on a large share of coordinates (evidence
+    arith_mathfn_index_domains.md section 3); under this choice that deviation is a K-G effect of the scalar
+    conversion, which the readings identify, not a different task. Further consequences: a rational that no ATen
+    Scalar can carry (neither binary64 nor an integer, e.g. 1/3) is invalid_input; boolean scalars and integers
+    outside [-2^63, 2^64), which are legal Python values but not admitted here, are unsupported; for selection
+    operations (where, masked_fill, clamp) the readings coincide after output rounding because rounding is monotone
+    and the other operands are representable. The pow exponent is read exactly in every reading.
+  basis: [T_TENSOR_ATTR.PROMOTION, T_TENSOR_ATTR.SCALAR_DTYPE, T_ADD.DEF, T_MUL.DEF]
+- id: AR.EXTENDED_REAL
+  status: reviewed
+  statement: >-
+    The real profile admits +inf and -inf in floating tensors and scalars. A result is the extended-real value where
+    the operation has one: finite + inf = inf, finite * inf = +-inf by sign, finite / inf = 0, reciprocal of +-inf is
+    0, abs, sign, neg, floor, ceil, maximum, minimum and clamp order the extended reals, and where / masked_fill pass
+    an infinite selected value through unchanged. inf + (-inf) (including through sub and alpha), 0 * inf, inf / inf
+    and x / 0 have no extended-real value and are domain_undefined; this contract does not demand the NaN that
+    IEEE 754 delivers there. There is no signed zero: -1 / inf is the real 0. NaN is invalid_input.
+  basis: [IEEE754.INF_ARITH, IEEE754.INVALID, T_ADD.DEF, T_MUL.DEF, T_DIV.TRUE, T_WHERE.DEF]
+- id: AR.POW
+  status: reviewed
+  statement: >-
+    torch.pow with a scalar exponent is out_i = x_i ** exponent. The exponent is the exact value received; when it
+    is an integer n (a Python int, or a float such as 3.0 whose exact value is an integer) the task value is the exact
+    integer power, defined for every real base including negative bases (x**3 of -2 is -8; the float type of 3.0 does
+    not turn it into the principal power exp(y log x)). n < 0 is 1 / x**|n|; a zero base with n < 0 is
+    domain_undefined; +-inf bases follow AR.EXTENDED_REAL (inf**n = inf or 0, (-inf)**n by the parity of n). A
+    non-integral exponent has a transcendental value outside this exact-output profile and is unsupported (a negative
+    base would additionally have no real value); so are |n| > 64 (an exact evaluation size bound), tensor exponents,
+    scalar bases and integer tensors.
+  basis: [T_POW.DEF, AR.EXTENDED_REAL]
+- id: AR.ZERO_POW
+  status: reviewed
+  statement: >-
+    x ** 0 = 1 for every admitted x, including 0 ** 0 and (+-inf) ** 0. torch.pow's page does not state the case;
+    IEEE 754 pow(x, +-0) = 1 for any x and the empty-product convention agree. Alternative (0 ** 0 undefined) rejected
+    because both sources give 1.
+  basis: [IEEE754.POW0, T_POW.DEF]
+- id: AR.INTEGER
+  status: reviewed
+  statement: >-
+    The real profile admits same-dtype integer tensors (int64, int32, int16, int8, uint8) for add, sub, rsub, mul,
+    neg, abs, sign, maximum, minimum, clamp, clamp_min, clamp_max, where and masked_fill. The values are literal
+    integers in the dtype range and the task value is exact integer arithmetic; the result keeps the tensor dtype
+    (a same-category Python int does not promote). An integer scalar or alpha enters exactly as the int64 value
+    received; the documentation does not say that one outside the tensor dtype is an error (PyTorch 2.10 eager accepts
+    int8 + 1000), so only the exact result is tested against the dtype range (AR.INT_OVERFLOW). A Python float scalar or alpha would promote the result to the default floating
+    dtype and is outside this same-dtype profile (unsupported). div, floor_divide, reciprocal, floor, ceil, pow and
+    fma on integer tensors are unsupported.
+  basis: [T_TENSOR_ATTR.PROMOTION, T_ADD.DEF, T_SUB.DEF, T_MUL.DEF]
+- id: AR.INT_OVERFLOW
+  status: reviewed
+  statement: >-
+    The PyTorch 2.10 pages fix the result dtype of integer arithmetic but say nothing about results outside its range.
+    Alternatives: (a) two's-complement wraparound modulo 2^bits (what common CPU/GPU kernels do in practice); (b) no
+    task value, domain_undefined; (c) unsupported. Choice: (b). The documentation gives no rule, signed overflow is
+    undefined behaviour in the C++ the kernels are written in, and a wraparound answer would be an observed
+    implementation behaviour rather than the operator's stated semantics. Consequence: when the exact integer result
+    of a coordinate lies outside the result dtype, the call is domain_undefined and the device value is not judged;
+    results inside the range are exact. This applies also to selection (where, masked_fill, clamp) when an exact int64
+    scalar outside the tensor dtype would be selected.
+  basis: [T_TENSOR_ATTR.PROMOTION, T_ADD.DEF]
 - id: AR.REAL
   status: reviewed
   statement: >-
@@ -110,6 +217,20 @@ decisions:
     div with no rounding mode is exact real division; trunc rounds the real quotient toward zero; floor and
     floor_divide round it toward negative infinity. A zero divisor and reciprocal of zero have no real task value.
   basis: [T_DIV.TRUE, T_DIV.TRUNC, T_DIV.FLOOR, T_FLOOR_DIVIDE.DEF, T_RECIP.DEF]
+- id: AR.FLOOR_INFINITE
+  status: reviewed
+  statement: >-
+    Floor division (div with rounding_mode floor, and floor_divide) with an infinite operand. The torch.div page
+    defines floor mode as rounding the quotient down, "equivalent to floor division in Python (the // operator) and
+    NumPy's np.floor_divide", which give inf // 2 = nan and -1 // inf = -1 (PyTorch 2.10 eager agrees on CPU and
+    CUDA). The torch.floor_divide page gives floor(input / other), whose extended-real reading gives floor(inf/2) = inf
+    and floor(-1/inf) = 0. Alternatives: (a) the extended-real floor of the quotient; (b) the Python // /
+    np.floor_divide convention; (c) leave these cases outside the profile. Choice: (c), for both operations: the two
+    retained pages disagree on exactly these inputs and neither reading is selected by the documentation, so the
+    profile gives no answer (unsupported) instead of choosing for an implementation. A zero divisor has no value under
+    either reading and stays domain_undefined (AR.DIVISION) even with an infinite dividend. Finite operands are unaffected,
+    and trunc mode and true division with infinities follow AR.EXTENDED_REAL.
+  basis: [T_DIV.FLOOR, T_FLOOR_DIVIDE.DEF, AR.EXTENDED_REAL]
 - id: AR.SELECTION
   status: reviewed
   statement: >-
@@ -188,7 +309,7 @@ clauses:
 - {id: AR.C6, basis: [T_CLAMP.DEF, T_CLAMP.MINMAX], statement: 'clamp applies the lower then upper scalar bound; if min exceeds max every result is max; clamp_min and clamp_max apply one bound', observes: [out], evidence_kind: definition}
 - {id: AR.C7, basis: [T_MAXIMUM.DEF, T_MINIMUM.DEF], statement: 'maximum and minimum select the element-wise larger and smaller finite values', observes: [out], evidence_kind: definition}
 - {id: AR.C8, basis: [AR.SELECTION], statement: 'where and masked_fill use the complete boolean condition or mask after broadcasting', observes: [out], evidence_kind: definition}
-- {id: AR.C9, basis: [AR.SCHEMA, AR.FINITE], statement: 'only the selected finite, same-dtype, default functional calls and complete output are admitted', observes: [out], evidence_kind: definition}
+- {id: AR.C9, basis: [AR.SCHEMA, AR.FINITE], statement: 'only the selected same-dtype default functional calls inside the declared support boundary and their complete output are admitted', observes: [out], evidence_kind: definition}
 - {id: AR.C10, basis: [AR.MASKED_FILL_TASK], statement: 'the public scalar masked_fill output is where(mask,value,input) on the complete broadcast shape and the functional call leaves input, mask and upstream unchanged', observes: [out, grad], evidence_kind: definition}
 - {id: AR.C11, basis: [AR.MASKED_FILL_VJP], statement: 'the complete input VJP sums upstream values from unmasked broadcast output coordinates back to each input coordinate; masked coordinates contribute zero', observes: [out, grad], evidence_kind: derived}
 - {id: AR.C12, basis: [AR.WHERE_TASK], statement: 'public Tensor/Tensor where returns the complete three-way broadcast selection and leaves condition, input, other and upstream unchanged', observes: [out, grad_input, grad_other], evidence_kind: definition}
@@ -197,6 +318,10 @@ clauses:
 - {id: AR.C15, basis: [AR.CLAMP_VJP], statement: 'the complete input VJP passes upstream inside the inclusive selected bounds, including equality at either boundary, and is zero outside or everywhere when min exceeds max', observes: [out, grad], evidence_kind: definition}
 - {id: AR.C16, basis: [AR.EXTREMA_TASK], statement: 'public Tensor/Tensor maximum or minimum returns every coordinate of the selected broadcast extremum and leaves both inputs and upstream unchanged', observes: [out, grad_input, grad_other], evidence_kind: definition}
 - {id: AR.C17, basis: [AR.EXTREMA_VJP], statement: 'both complete VJPs route full upstream to the strict selected operand, split equality upstream equally, and reduce each broadcast gradient to its own input shape', observes: [out, grad_input, grad_other], evidence_kind: definition}
+- {id: AR.C18, basis: [AR.SCALAR_VALUE], statement: 'a Python scalar operand, alpha, bound or fill value enters the real-profile formula as the exact binary64 or int64 value received, without rounding to the tensor dtype or to a computation type', observes: [out], evidence_kind: definition}
+- {id: AR.C19, basis: [AR.POW, AR.ZERO_POW], statement: 'pow with an integral scalar exponent n is the exact n-th power for every real or infinite base, x**0 = 1 including 0**0, and a zero base with n < 0 is undefined; non-integral exponents are unsupported', observes: [out], evidence_kind: definition}
+- {id: AR.C20, basis: [AR.EXTENDED_REAL], statement: 'infinite floating values give the extended-real result where it exists, are passed through unchanged by selection, and make inf - inf, 0*inf, inf/inf undefined', observes: [out], evidence_kind: definition}
+- {id: AR.C21, basis: [AR.INTEGER, AR.INT_OVERFLOW], statement: 'the integer subset is exact integer arithmetic in the tensor dtype; a coordinate whose exact result leaves the dtype range makes the call undefined', observes: [out], evidence_kind: definition}
 examples:
 - {id: AR.E1, profile: real, clauses: [AR.C1], input: {op: aten.add, args: [{t: f32, v: [1, 2]}, {t: f32, v: [10, 20]}], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [21, 42]}}}
 - {id: AR.E2, profile: real, clauses: [AR.C1], input: {op: aten.add, args: [{t: f16, v: [[1], [2]]}, '1/2']}, expected: {outcome: value, fields: {out: [['3/2'], ['5/2']]}}}
@@ -225,10 +350,10 @@ examples:
 - {id: AR.E25, profile: real, clauses: [AR.C8], input: {op: aten.where, args: [{t: b8, v: [[true], [false]]}, {t: f32, v: [1, 2]}, {t: f32, v: [10, 20]}]}, expected: {outcome: value, fields: {out: [[1, 2], [10, 20]]}}}
 - {id: AR.E26, profile: real, clauses: [AR.C8], input: {op: aten.masked_fill, args: [{t: f32, v: [1, 2, 3]}, {t: b8, v: [false, true, false]}, '-1/2']}, expected: {outcome: value, fields: {out: [1, '-1/2', 3]}}}
 - {id: AR.E27, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f16, v: ['1/3']}, 1]}, expected: {outcome: invalid_input}}
-- {id: AR.E28, profile: real, clauses: [AR.C9], input: {op: aten.mul, args: [{t: i64, v: [2]}, 3]}, expected: {outcome: unsupported}}
-- {id: AR.E29, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f32, v: [inf]}, 1]}, expected: {outcome: unsupported}}
+- {id: AR.E28, profile: real, clauses: [AR.C9, AR.C21], input: {op: aten.mul, args: [{t: i64, v: [2]}, 3]}, expected: {outcome: value, fields: {out: [6]}}}
+- {id: AR.E29, profile: real, clauses: [AR.C9, AR.C20], input: {op: aten.add, args: [{t: f32, v: [inf]}, 1]}, expected: {outcome: value, fields: {out: [inf]}}}
 - {id: AR.E30, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f16, v: [1]}, {t: f32, v: [2]}]}, expected: {outcome: unsupported}}
-- {id: AR.E31, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f32, v: [1]}, '1/3']}, expected: {outcome: invalid_input}}
+- {id: AR.E31, profile: real, clauses: [AR.C9, AR.C18], note: '1/3 is neither a binary64 value nor an integer, so no ATen Scalar carries it', input: {op: aten.add, args: [{t: f32, v: [1]}, '1/3']}, expected: {outcome: invalid_input}}
 - {id: AR.E32, profile: real, clauses: [AR.C9], input: {op: prims.fma, args: [{t: f32, v: [[1], [2]]}, {t: f32, v: [3, 4]}, {t: f32, v: [[5], [6]]}]}, expected: {outcome: unsupported}}
 - {id: AR.E33, profile: real, clauses: [AR.C9], input: {op: aten.clamp, args: [{t: f32, v: [1]}]}, expected: {outcome: invalid_input}}
 - {id: AR.E34, profile: real, clauses: [AR.C9], input: {op: aten.add, args: [{t: f32, v: [1]}, 2], kwargs: {out: {t: f32, v: [0]}}}, expected: {outcome: unsupported}}
@@ -413,16 +538,118 @@ examples:
   clauses: [AR.C16]
   input: {op: torch.minimum, input: {t: f32, shape: [2], v: [1, 2]}, other: {t: f32, shape: [2], v: [2, 1]}, upstream: {t: f32, shape: [1], v: [1]}}
   expected: {outcome: invalid_input}
+- id: AR.E59
+  profile: real
+  clauses: [AR.C1, AR.C18]
+  note: recorded gpt2 GELU call shape (bf16 tensor times the Python float 0.044715); q = 6444110634811895/2^57 is its exact binary64 value
+  input: {op: aten.mul, args: [{t: bf16, v: [2, -3]}, 0.044715]}
+  expected: {outcome: value, fields: {out: ['6444110634811895/72057594037927936', '-19332331904435685/144115188075855872']}}
+  readings:
+    scalar_rounded_to_dtype: {outcome: value, fields: {out: ['183/2048', '-549/4096']}}
+    scalar_rounded_to_opmath: {outcome: value, fields: {out: ['12003091/134217728', '-36009273/268435456']}}
+- id: AR.E60
+  profile: real
+  clauses: [AR.C1, AR.C18]
+  note: recorded gpt2 call shape, f32 tensor times sqrt(2/pi) as a Python float
+  input: {op: aten.mul, args: [{t: f32, v: [1, '1/2']}, 0.7978845608028654]}
+  expected: {outcome: value, fields: {out: ['7186705221432913/9007199254740992', '7186705221432913/18014398509481984']}}
+  readings:
+    scalar_rounded_to_dtype: {outcome: value, fields: {out: ['6693141/8388608', '6693141/16777216']}}
+    scalar_rounded_to_opmath: {outcome: value, fields: {out: ['6693141/8388608', '6693141/16777216']}}
+- id: AR.E61
+  profile: real
+  clauses: [AR.C1, AR.C18]
+  note: recorded Qwen attention-scale call shape (aten.mul.Scalar, f32, 1/sqrt(8) as a Python float)
+  input: {op: aten.mul, args: [{t: f32, v: [[2], [-1]]}, 0.3535533905932738]}
+  expected: {outcome: value, fields: {out: [['6369051672525773/9007199254740992'], ['-6369051672525773/18014398509481984']]}}
+  readings:
+    scalar_rounded_to_dtype: {outcome: value, fields: {out: [['11863283/16777216'], ['-11863283/33554432']]}}
+    scalar_rounded_to_opmath: {outcome: value, fields: {out: [['11863283/16777216'], ['-11863283/33554432']]}}
+- id: AR.E62
+  profile: real
+  clauses: [AR.C1, AR.C18]
+  note: recorded RMSNorm epsilon call shape (f32 [*,1] plus the Python float 1e-06)
+  input: {op: aten.add, args: [{t: f32, v: [[1], [0]]}, 1.0e-06]}
+  expected: {outcome: value, fields: {out: [['1+4722366482869645/4722366482869645213696'], ['4722366482869645/4722366482869645213696']]}}
+  readings:
+    scalar_rounded_to_dtype: {outcome: value, fields: {out: [['1+8796093/8796093022208'], ['8796093/8796093022208']]}}
+    scalar_rounded_to_opmath: {outcome: value, fields: {out: [['1+8796093/8796093022208'], ['8796093/8796093022208']]}}
+- id: AR.E63
+  profile: real
+  clauses: [AR.C18]
+  note: a Python int reaches ATen as an exact int64 Scalar even when it is not a binary64 value
+  input: {op: aten.add, args: [{t: f64, v: [0]}, 9007199254740993]}
+  expected: {outcome: value, fields: {out: [9007199254740993]}}
+  readings:
+    scalar_rounded_to_dtype: {outcome: value, fields: {out: [9007199254740992]}}
+    scalar_rounded_to_opmath: {outcome: value, fields: {out: [9007199254740992]}}
+- {id: AR.E64, profile: real, clauses: [AR.C19], note: 'recorded gpt2 exponent 3.0 (a Python float with an integral value)', input: {op: aten.pow, args: [{t: f32, v: [2, -3, '1/2', 0]}, 3.0]}, expected: {outcome: value, fields: {out: [8, -27, '1/8', 0]}}}
+- {id: AR.E65, profile: real, clauses: [AR.C19], note: 'recorded Qwen exponent 2 (a Python int)', input: {op: aten.pow, args: [{t: bf16, v: [-2, 3, '-1/4']}, 2]}, expected: {outcome: value, fields: {out: [4, 9, '1/16']}}}
+- {id: AR.E66, profile: real, clauses: [AR.C19], note: 'a negative base with the float exponent 3.0 keeps the integer power', input: {op: aten.pow, args: [{t: f32, v: [-2, '-1/2']}, 3.0]}, expected: {outcome: value, fields: {out: [-8, '-1/8']}}}
+- {id: AR.E67, profile: real, clauses: [AR.C19], input: {op: aten.pow, args: [{t: f32, v: [1, '3/2', -2]}, 1.0]}, expected: {outcome: value, fields: {out: [1, '3/2', -2]}}}
+- {id: AR.E68, profile: real, clauses: [AR.C19, AR.C20], input: {op: aten.pow, args: [{t: f32, v: [0, -5, inf, -inf]}, 0]}, expected: {outcome: value, fields: {out: [1, 1, 1, 1]}}}
+- {id: AR.E69, profile: real, clauses: [AR.C19], input: {op: aten.pow, args: [{t: f64, v: [2, '-1/2']}, -2]}, expected: {outcome: value, fields: {out: ['1/4', 4]}}}
+- {id: AR.E70, profile: real, clauses: [AR.C19], input: {op: aten.pow, args: [{t: f32, v: [4]}, 2.5]}, expected: {outcome: unsupported}}
+- {id: AR.E71, profile: real, clauses: [AR.C19], input: {op: aten.pow, args: [{t: f32, v: [0]}, -1]}, expected: {outcome: domain_undefined}}
+- {id: AR.E72, profile: real, clauses: [AR.C19, AR.C20], input: {op: aten.pow, args: [{t: f32, v: [-inf, inf, -inf]}, 3]}, expected: {outcome: value, fields: {out: [-inf, inf, -inf]}}}
+- {id: AR.E73, profile: real, clauses: [AR.C19, AR.C20], input: {op: aten.pow, args: [{t: f32, v: [inf, -inf]}, -1]}, expected: {outcome: value, fields: {out: [0, 0]}}}
+- {id: AR.E74, profile: real, clauses: [AR.C19, AR.C21], input: {op: aten.pow, args: [{t: i64, v: [2]}, 2]}, expected: {outcome: unsupported}}
+- {id: AR.E75, profile: real, clauses: [AR.C19], input: {op: aten.pow, args: [{t: f32, v: [2]}, {t: f32, v: [3]}]}, expected: {outcome: unsupported}}
+- id: AR.E76
+  profile: real
+  clauses: [AR.C1, AR.C20]
+  note: additive attention mask with -inf broadcast over a leading axis (recorded shape [1,14,128,128] + [128,128])
+  input: {op: aten.add, args: [{t: f32, v: [[[1, 2]], [[3, 4]]]}, {t: f32, v: [[0, -inf], [0, 0]]}]}
+  expected: {outcome: value, fields: {out: [[[1, -inf], [1, 2]], [[3, -inf], [3, 4]]]}}
+- {id: AR.E77, profile: real, clauses: [AR.C20], input: {op: aten.add, args: [{t: f32, v: [inf, 1]}, {t: f32, v: [-inf, 1]}]}, expected: {outcome: domain_undefined}}
+- {id: AR.E78, profile: real, clauses: [AR.C20], input: {op: aten.sub, args: [{t: f32, v: [inf]}, {t: f32, v: [inf]}]}, expected: {outcome: domain_undefined}}
+- {id: AR.E79, profile: real, clauses: [AR.C20], input: {op: aten.mul, args: [{t: f32, v: [-inf, inf]}, -2]}, expected: {outcome: value, fields: {out: [inf, -inf]}}}
+- {id: AR.E80, profile: real, clauses: [AR.C20], input: {op: aten.mul, args: [{t: f32, v: [inf]}, 0]}, expected: {outcome: domain_undefined}}
+- {id: AR.E81, profile: real, clauses: [AR.C2, AR.C20], input: {op: aten.div, args: [{t: f32, v: [1, -3]}, -inf]}, expected: {outcome: value, fields: {out: [0, 0]}}}
+- {id: AR.E82, profile: real, clauses: [AR.C2, AR.C20], input: {op: aten.div, args: [{t: f32, v: [inf]}, {t: f32, v: [inf]}]}, expected: {outcome: domain_undefined}}
+- {id: AR.E83, profile: real, clauses: [AR.C2, AR.C3, AR.C20], input: {op: aten.reciprocal, args: [{t: f32, v: [inf, -inf]}]}, expected: {outcome: value, fields: {out: [0, 0]}}}
+- {id: AR.E84, profile: real, clauses: [AR.C3, AR.C5, AR.C20], input: {op: aten.sign, args: [{t: bf16, v: [-inf, inf]}]}, expected: {outcome: value, fields: {out: [-1, 1]}}}
+- {id: AR.E85, profile: real, clauses: [AR.C6, AR.C7, AR.C20], input: {op: aten.clamp, args: [{t: f32, v: [-inf, inf, 0]}], kwargs: {min: -1, max: 1}}, expected: {outcome: value, fields: {out: [-1, 1, 0]}}}
+- {id: AR.E86, profile: real, clauses: [AR.C7, AR.C20], input: {op: aten.maximum, args: [{t: f32, v: [-inf, 1]}, {t: f32, v: [0, inf]}]}, expected: {outcome: value, fields: {out: [0, inf]}}}
+- id: AR.E87
+  profile: real
+  clauses: [AR.C8, AR.C20]
+  note: recorded Qwen mask construction where.self(cond [128,128], scalar tensor -inf, scalar tensor 0)
+  input: {op: aten.where, args: [{t: b8, v: [[true, false], [false, true]]}, {t: f32, v: -inf, shape: []}, {t: f32, v: 0, shape: []}]}
+  expected: {outcome: value, fields: {out: [[-inf, 0], [0, -inf]]}}
+- {id: AR.E88, profile: real, clauses: [AR.C8, AR.C20], input: {op: aten.masked_fill, args: [{t: f32, v: [1, 2, 3]}, {t: b8, v: [false, true, false]}, -inf]}, expected: {outcome: value, fields: {out: [1, -inf, 3]}}}
+- {id: AR.E89, profile: real, clauses: [AR.C9, AR.C20], input: {op: aten.add, args: [{t: f32, v: [.nan]}, 1]}, expected: {outcome: invalid_input}}
+- {id: AR.E90, profile: real, clauses: [AR.C1, AR.C21], note: 'recorded position-ids call add.Tensor(int64 [128], 0)', input: {op: aten.add, args: [{t: i64, v: [0, 1, 127]}, 0]}, expected: {outcome: value, fields: {out: [0, 1, 127]}}}
+- {id: AR.E91, profile: real, clauses: [AR.C1, AR.C21], input: {op: aten.add, args: [{t: i64, v: [16777217, -5]}, 3]}, expected: {outcome: value, fields: {out: [16777220, -2]}}}
+- {id: AR.E92, profile: real, clauses: [AR.C21], input: {op: aten.add, args: [{t: i64, v: [9223372036854775807]}, 1]}, expected: {outcome: domain_undefined}}
+- {id: AR.E93, profile: real, clauses: [AR.C21], input: {op: aten.mul, args: [{t: i16, v: [300]}, 200]}, expected: {outcome: domain_undefined}}
+- {id: AR.E94, profile: real, clauses: [AR.C1, AR.C21], input: {op: aten.sub, args: [{t: i32, v: [5, -7]}, {t: i32, v: [7, 2]}], kwargs: {alpha: 2}}, expected: {outcome: value, fields: {out: [-9, -11]}}}
+- {id: AR.E95, profile: real, clauses: [AR.C8, AR.C21], input: {op: aten.where, args: [{t: b8, v: [true, false]}, {t: i64, v: [1, 2]}, {t: i64, v: [3, 4]}]}, expected: {outcome: value, fields: {out: [1, 4]}}}
+- {id: AR.E96, profile: real, clauses: [AR.C21], input: {op: aten.add, args: [{t: i64, v: [1]}, 0.5]}, expected: {outcome: unsupported}}
+- {id: AR.E97, profile: real, clauses: [AR.C21], input: {op: aten.add, args: [{t: i8, v: [1]}, 1000]}, expected: {outcome: domain_undefined}}
+- {id: AR.E103, profile: real, clauses: [AR.C6, AR.C21], input: {op: aten.clamp, args: [{t: i8, v: [-100, 5]}], kwargs: {min: -1000, max: 3}}, expected: {outcome: value, fields: {out: [-100, 3]}}}
+- {id: AR.E105, profile: real, clauses: [AR.C2, AR.C20], input: {op: aten.div, args: [{t: f32, v: [inf, 4]}, 2], kwargs: {rounding_mode: floor}}, expected: {outcome: unsupported}}
+- {id: AR.E106, profile: real, clauses: [AR.C2, AR.C20], input: {op: aten.floor_divide, args: [{t: f32, v: [-1]}, -inf]}, expected: {outcome: unsupported}}
+- {id: AR.E107, profile: real, clauses: [AR.C2, AR.C20], input: {op: aten.div, args: [{t: f32, v: [inf, -3]}, 2], kwargs: {rounding_mode: trunc}}, expected: {outcome: value, fields: {out: [inf, -1]}}}
+- {id: AR.E108, profile: real, clauses: [AR.C18], note: 'a Python int in [2^63, 2^64) reaches ATen as an exact uint64 Scalar', input: {op: aten.add, args: [{t: f64, v: [0]}, 18446744073709551615]}, expected: {outcome: value, fields: {out: [18446744073709551615]}}}
+- {id: AR.E109, profile: real, clauses: [AR.C18], input: {op: aten.add, args: [{t: f64, v: [1]}, true]}, expected: {outcome: unsupported}}
+- {id: AR.E104, profile: real, clauses: [AR.C8, AR.C21], input: {op: aten.masked_fill, args: [{t: i8, v: [1, 2]}, {t: b8, v: [true, false]}, 1000]}, expected: {outcome: domain_undefined}}
+- {id: AR.E98, profile: real, clauses: [AR.C21], input: {op: aten.div, args: [{t: i64, v: [7]}, 2]}, expected: {outcome: unsupported}}
+- {id: AR.E99, profile: real, clauses: [AR.C21], input: {op: aten.add, args: [{t: i64, v: [1]}, {t: i32, v: [1]}]}, expected: {outcome: unsupported}}
+- {id: AR.E100, profile: real, clauses: [AR.C21], input: {op: aten.add, args: [{t: i64, v: [1]}, 1], kwargs: {alpha: 0.5}}, expected: {outcome: unsupported}}
+- {id: AR.E101, profile: real, clauses: [AR.C21], input: {op: aten.neg, args: [{t: u8, v: [0, 3]}]}, expected: {outcome: domain_undefined}}
+- {id: AR.E102, profile: real, clauses: [AR.C7, AR.C21], input: {op: aten.minimum, args: [{t: i64, v: [[1], [5]]}, {t: i64, v: [3, -9223372036854775808]}]}, expected: {outcome: value, fields: {out: [[1, -9223372036854775808], [3, -9223372036854775808]]}}}
 signature:
-  inputs: ['real: one selected default functional op with args/kwargs', 'masked_fill autograd: public op, complete input, Boolean mask, Python scalar value and complete upstream', 'where autograd: public op, complete Boolean condition, two complete data tensors and complete upstream', 'clamp autograd: public op, complete input, optional scalar bounds and complete upstream', 'extrema autograd: public maximum or minimum, two complete data tensors and complete upstream']
+  inputs: ['real: one selected default functional op with args/kwargs (Python scalars as received)', 'masked_fill autograd: public op, complete input, Boolean mask, Python scalar value and complete upstream', 'where autograd: public op, complete Boolean condition, two complete data tensors and complete upstream', 'clamp autograd: public op, complete input, optional scalar bounds and complete upstream', 'extrema autograd: public maximum or minimum, two complete data tensors and complete upstream']
   pre_state: [all inputs are unchanged]
   post_state: [the complete output tensor; masked_fill and clamp autograd also return an input VJP; where and extrema autograd return both data VJPs]
   observation_unit: every declared output coordinate together with dtype and shape
 domain:
-  valid: [exactly representable finite f16/bf16/f32/f64 values; same data dtype; documented broadcasting; representable finite scalars; complete same-dtype upstream for selected autograd profiles]
-  domain_undefined: [zero divisor in div or floor_divide; zero input to reciprocal]
-  invalid_input: [NaN; value not representable in its declared tensor dtype; scalar not representable in the data dtype; malformed call; nonboolean condition or mask; clamp without a bound]
-  unsupported: [integer, boolean data, float8, complex or infinite data; mixed data dtypes; pow; tensor clamp bounds; fma broadcasting; out or in-place variants; device, layout or aliasing effects]
+  valid: ['real: exactly representable f16/bf16/f32/f64 values including +-inf; same data dtype; documented broadcasting; Python scalars received as binary64 values or integers from -2^63 to 2^64-1; pow with an integral scalar exponent |n| <= 64; integer tensors (int64/int32/int16/int8/uint8) for add, sub, rsub, mul, neg, abs, sign, maximum, minimum, clamp, clamp_min, clamp_max, where, masked_fill',
+    'autograd profiles: exactly representable finite floating values, representable finite scalars and complete same-dtype upstream']
+  domain_undefined: [zero divisor in div or floor_divide; zero input to reciprocal; inf - inf; 0 * inf; inf / inf; zero base with a negative integral exponent; integer result outside the result dtype range]
+  invalid_input: [NaN; value not representable in its declared tensor dtype; non-integer or out-of-range integer tensor value; non-integer scalar that is not a binary64 value; malformed call; nonboolean condition or mask; clamp without a bound]
+  unsupported: [boolean data, float8 or complex data; boolean scalars and integer scalars outside -2^63 .. 2^64-1; floor division or floor_divide with an infinite operand (AR.FLOOR_INFINITE); mixed data dtypes, including a floating scalar or alpha with an integer tensor; non-integral, infinite or |n| > 64 pow exponents, tensor exponents, scalar bases and integer pow; div, floor_divide, reciprocal, floor, ceil and fma on integers; infinite values in the autograd profiles; tensor clamp bounds; fma broadcasting; out or in-place variants; device, layout or aliasing effects]
 mutation_requirements:
 - {id: AR.M1, misreading: alpha is ignored in add and sub, witnesses: [AR.E1, AR.E3]}
 - {id: AR.M2, misreading: rsub does not reverse its operands, witnesses: [AR.E4]}
@@ -452,10 +679,40 @@ mutation_requirements:
 - {id: AR.M26, misreading: maximum and minimum exchange their forward and strict-gradient branches, witnesses: [AR.E52, AR.E53]}
 - {id: AR.M27, misreading: an extrema input gradient is not summed back over broadcast axes, witnesses: [AR.E52]}
 - {id: AR.M28, misreading: the complete other gradient may be omitted from extrema, witnesses: [AR.E52]}
+- {id: AR.M29, misreading: a Python scalar is rounded to the tensor dtype (bf16 0.044715 becomes 183/4096) before the exact formula, witnesses: [AR.E59, AR.E63]}
+- {id: AR.M30, misreading: a Python scalar is rounded to the float32 computation type before the exact formula, witnesses: [AR.E59]}
+- {id: AR.M31, misreading: a float-typed integral exponent such as 3.0 is the principal power exp(y log x), so negative bases become undefined, witnesses: [AR.E66]}
+- {id: AR.M32, misreading: a non-integral exponent is truncated and evaluated as an integer power, witnesses: [AR.E70]}
+- {id: AR.M33, misreading: 0 ** 0 is 0, witnesses: [AR.E68]}
+- {id: AR.M34, misreading: an infinite operand makes a sum undefined even when the other operand is finite, witnesses: [AR.E76]}
+- {id: AR.M35, misreading: opposite infinities add to zero, witnesses: [AR.E77]}
+- {id: AR.M36, misreading: a selected infinite value is replaced by the largest finite value of the dtype, witnesses: [AR.E87, AR.E88]}
+- {id: AR.M37, misreading: integer results wrap modulo 2^bits instead of having no task value, witnesses: [AR.E92, AR.E93]}
+- {id: AR.M38, misreading: integer data is converted to float32 before the arithmetic, witnesses: [AR.E91]}
 nonclaims:
 - Floating operation rounding, output storage rounding and device instruction choice are numerical effects in K-G.
-- Mixed dtype promotion, integers and overflow, pow, complex values, NaN/inf behavior, signed zero, gradients other than the selected masked_fill, where, scalar-bound clamp and Tensor/Tensor extrema VJPs, in-place and out variants are not certified here.
+- Mixed dtype promotion, integer division and integer pow, non-integral pow, complex values, NaN behavior, signed zero, the IEEE NaN results at undefined points, gradients other than the selected masked_fill, where, scalar-bound clamp and Tensor/Tensor extrema VJPs, in-place and out variants are not certified here.
+- The diagnostic scalar readings explain a kernel's internal scalar conversion; matching one of them is not task conformance.
+- Integer overflow has no task value (AR.INT_OVERFLOW); a wrapped device result is neither confirmed nor refuted.
 changes:
+- date: '2026-10-21'
+  change: >-
+    Review A2 package D fixes: floor division with an infinite operand is unsupported (new AR.FLOOR_INFINITE, examples
+    AR.E105-E107); boolean scalars and integers outside [-2^63, 2^64) are unsupported and Python ints in [2^63, 2^64)
+    take their exact uint64 value (AR.E108-E109); AR.SCALAR_VALUE cites T_TENSOR_ATTR.SCALAR_DTYPE, rejects the
+    default-dtype reading (d) and states that eager follows the op-math reading.
+  trigger: Independent review reviews/2026-10-20/A2_package_D_review.md issues A1-A3.
+- date: '2026-10-20'
+  change: >-
+    Extend the real profile: Python scalars are the exact received binary64/int64 values (AR.SCALAR_VALUE, with the
+    dtype- and opmath-rounded readings as diagnostics); +-inf with extended-real results (AR.EXTENDED_REAL); torch.pow
+    with an integral scalar exponent including 0**0 = 1 and negative bases (AR.POW, AR.ZERO_POW; aten.pow added to
+    covers); an integer subset with overflow undefined (AR.INTEGER, AR.INT_OVERFLOW). AR.E28 and AR.E29 change from
+    unsupported to values. Review and implementation status reset to drafted / pending.
+  trigger: >-
+    Path A closure (PATH_A_CLOSURE_PLAN G7): recorded calls mul/add with Python floats not representable in the tensor
+    dtype, pow.Tensor_Scalar with exponents 1.0/2/2.0/3/3.0, an additive -inf attention mask, where.self with -inf
+    scalar-tensor branches and int64 position-id addition were refused by the finite profile.
 - date: '2026-10-19'
   change: >-
     Add a PyTorch 2.10 public Tensor/Tensor maximum/minimum profile with complete forward and both broadcast VJPs,

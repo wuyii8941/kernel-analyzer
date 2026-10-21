@@ -5,9 +5,21 @@
     {
       "contract": "CAST",
       "profile": "finite_rne",
-      "operations": ["aten._to_copy"],
+      "operations": [
+        "aten._to_copy"
+      ],
       "statement": "The recorded aten._to_copy call is read as the finite dtype conversion with IEEE 754 roundTiesToEven (CAST CA.PROFILE: the PyTorch Tensor.to page does not name the rounding direction, so the task names it). Choice proposed by the executor on 2026-10-20, pending the user's confirmation.",
       "alternatives": "another rounding direction (toward zero, stochastic) would be a different task; no FlagGems behaviour was consulted"
+    },
+    {
+      "contract": "POOL",
+      "profile": "torch210_aten_avg2d",
+      "operations": [
+        "aten.avg_pool2d",
+        "aten.avg_pool2d_backward"
+      ],
+      "statement": "Select the PyTorch 2.10 ATen avg_pool2d / avg_pool2d_backward task with the PA.DIVISOR divisor: with count_include_pad=true, the size of the window intersected with the explicit padded domain [-padding, size+padding), so a ceil-mode overhang beyond that domain is not counted; with count_include_pad=false, the number of real input positions; a nonzero divisor_override takes precedence; forward and backward use the same divisor. Choice proposed by the executor on 2026-10-21 (wording from POOL PA.ATEN), pending the user's confirmation.",
+      "alternatives": "divide every window by the full kernel size (the functional page calls kernel_size the 'size of the pooling region'); or count only real input positions also with count_include_pad=true. The documentation does not settle the ceil-mode overhang; no FlagGems behaviour was consulted"
     }
   ]
 }

@@ -95,7 +95,7 @@ def replay_ops(name):
     return out
 
 
-def stage_bind(root, workers, only, protocol="v1"):
+def stage_bind(root, workers, only, protocol="v1", work_range=(0, float("inf"))):
     spec = root / "spec"
     if not spec.exists():
         shutil.copytree(SPEC_SRC, spec, ignore=shutil.ignore_patterns("__pycache__", "sufficiency"))
@@ -107,6 +107,8 @@ def stage_bind(root, workers, only, protocol="v1"):
         replay = replay_ops(wdir.name) if protocol == "A2" else {}
         for line in open(wdir / "keys.jsonl"):
             k = json.loads(line)
+            if not work_range[0] <= _work(k) < work_range[1]:
+                continue
             if k["launches"]:
                 jobs.append((wdir, k["key"], None))
             elif k["op"] in replay:
@@ -125,7 +127,7 @@ def stage_bind(root, workers, only, protocol="v1"):
                                 "--timeout", "2000" if protocol == "A2" else "700",
                                 *(["--enable", enable] if enable else [])], cwd=REPO,
                                env=dict(ENV, CUDA_VISIBLE_DEVICES=GPUS[i % len(GPUS)]), capture_output=True, text=True,
-                               timeout=9000 if protocol == "A2" else 4000)
+                               timeout=40000 if protocol == "A2" else 4000)
             rc, err = p.returncode, p.stderr[-600:]
         except subprocess.TimeoutExpired:
             rc, err = "timeout", ""
@@ -136,6 +138,12 @@ def stage_bind(root, workers, only, protocol="v1"):
 
     with ThreadPoolExecutor(workers) as ex:
         list(ex.map(one, enumerate(jobs)))
+
+
+def _work(k):
+    sys.path.insert(0, str(HERE))
+    from bind_key import key_work
+    return key_work(k)
 
 
 def wilson(k, n):
@@ -200,12 +208,14 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--protocol", choices=("v1", "A2"), default="A2")
+    ap.add_argument("--work-range", nargs=2, type=float, default=[0, float("inf")],
+                    help="bind only keys whose scalar-operation estimate lies in [lo, hi) (large keys get fewer workers)")
     a = ap.parse_args()
     a.root.mkdir(parents=True, exist_ok=True)
     if a.stage in ("record", "all"):
         stage_record(a.root, a.only, a.protocol)
     if a.stage in ("bind", "all"):
-        stage_bind(a.root, a.workers, a.only, a.protocol)
+        stage_bind(a.root, a.workers, a.only, a.protocol, tuple(a.work_range))
     if a.stage in ("analyze", "all"):
         stage_analyze(a.root)
     return 0

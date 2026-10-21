@@ -43,11 +43,12 @@ class ArithmeticProfileDomains(unittest.TestCase):
             self.call("aten.add", [{"t": "f32", "v": [float("nan")]}, 1])
 
     def test_unreviewed_types_nonfinite_values_and_mixed_dtypes_are_refused(self):
+        # integer data and infinities were admitted by the reviewed 2026-10-20 extension (AR.INTEGER, AR.EXTENDED_REAL)
+        self.assertEqual(self.call("aten.mul", [{"t": "i64", "v": [1]}, 2]).fields["out"], [2])
+        self.assertEqual(self.call("aten.mul", [{"t": "f32", "v": [float("inf")]}, 2]).fields["out"], ["+inf"])
         values = (
-            {"t": "i64", "v": [1]},
             {"t": "b8", "v": [True]},
             {"t": "f8e4m3", "v": [1]},
-            {"t": "f32", "v": [float("inf")]},
             {"t": "complex64", "v": [1]},
         )
         for value in values:
@@ -91,8 +92,9 @@ class ArithmeticProfileDomains(unittest.TestCase):
             self.call("aten.add", [x, 2], {"out": x})
         with self.assertRaises(Invalid):
             self.call("aten.clamp", [x])
+        # integral exponents are admitted (AR.POW); a non-integral exponent stays outside the profile
         with self.assertRaises(Unsupported):
-            self.call("aten.pow", [x, 2])
+            self.call("aten.pow", [x, 2.5])
         with self.assertRaises(Unsupported):
             self.call("aten.add", [x, 2], profile="unknown")
 

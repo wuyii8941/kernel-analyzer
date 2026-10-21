@@ -39,6 +39,24 @@ CHOICES = HERE / "task_choices_A2.json"
 SHAPE_DIFF = __import__("re").compile(r"reference target \S+ shape \([^)]*\) differs from output \S+ \([^)]*\)")
 
 
+def key_work(k):
+    """Scalar-operation estimate of a recorded call from its argument description (matrix products: m*k*n)."""
+    import math
+    sizes = [d["tensor"]["size"] for d in (k.get("args") or []) if isinstance(d, dict) and "tensor" in d]
+    if not sizes:
+        return 0
+    if k["op"].split(".")[1] in ("mm", "addmm", "bmm") and len(sizes) >= 2:
+        a, b = sizes[-2], sizes[-1]
+        return math.prod(a) * (b[-1] if b else 1)
+    return max(math.prod(x) for x in sizes)
+
+
+def a2_budget(k):
+    """A2 case budget (seconds): 1800, or 4e-6 s per scalar operation for model-sized products (profile of a
+    128x768x50257 mm: about 0.8e-6 s per multiply-add over three units), capped at 8 h."""
+    return int(min(28800, max(1800, 4e-6 * key_work(k))))
+
+
 def recorded_choice(cid, profile, base):
     """A2: the recorded task choice for (contract, profile, operation), or None."""
     if PROTOCOL[0] != "A2" or not CHOICES.exists():
@@ -256,7 +274,7 @@ def main():
                 from kernel_spec import registry
                 pick = chosen.get((c["id"], p))
                 d = I.generate_v2(a.spec, name, k["op"], values, c, p, rt, registry.load(c["id"]).adapter,
-                                  exclude=exclude,
+                                  exclude=exclude, budget=a2_budget(k),
                                   task_statement=pick["statement"] if pick else None)
             else:
                 d = I.generate(a.spec, name, k["op"], values, c, p, rt,
@@ -282,7 +300,8 @@ def main():
         rp = a.out.with_name(a.out.stem + f"__{c['id']}_{p}.report.json")
         try:
             pr = subprocess.run([sys.executable, str(TOOL), "--declaration", str(d), "--out", str(rp)],
-                                capture_output=True, text=True, timeout=a.timeout)
+                                capture_output=True, text=True,
+                                timeout=max(a.timeout, a2_budget(k) + 1800) if PROTOCOL[0] == "A2" else a.timeout)
             rc = pr.returncode
             err = pr.stderr[-300:]
         except subprocess.TimeoutExpired:

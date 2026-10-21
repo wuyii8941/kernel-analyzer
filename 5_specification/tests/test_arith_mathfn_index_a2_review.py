@@ -317,9 +317,11 @@ class ArithExtendedReal(Base):
                                    ("aten.minimum", lambda: min(x, y), None)):
                     floor_like = op == "aten.floor_divide" or (kw or {}).get("rounding_mode") == "floor"
                     if floor_like and any(isinstance(v, float) for v in (x, y)) and y != 0:
-                        # Review issue A1: floor division with an infinite operand has no decision in the draft;
-                        # T_DIV.FLOOR's referent (Python //, np.floor_divide) gives nan for inf//2 and -1 for
-                        # -1//inf, the draft gives inf and 0. Not asserted until the contract decides.
+                        # Review issue A1, resolved by AR.FLOOR_INFINITE: the two retained pages disagree here
+                        # (Python // vs floor(x/y)), so the profile leaves these points unsupported.
+                        with self.subTest(op=op, kw=kw, x=x, y=y, floor_infinite=True):
+                            res = run("ARITH", op, [T("f32", [fx(x)]), T("f32", [fx(y)])], kw)
+                            self.assertOutcome(res, "unsupported")
                         continue
                     want = outcome_of(fn)
                     with self.subTest(op=op, kw=kw, x=x, y=y):
@@ -492,6 +494,29 @@ class ArithScalarsReceived(Base):
         self.assertValue(run("ARITH", "aten.add", [T("f64", [0]), 2 ** 53 + 1]), [2 ** 53 + 1])
         self.assertValue(run("ARITH", "aten.add", [T("f32", [1]), 2.0 ** 100]), [1 + 2 ** 100])
         self.assertValue(run("ARITH", "aten.add", [T("f16", [1]), 1e308]), [1 + Fraction(1e308)])
+
+    def test_recheck_floor_infinite_and_scalar_classes(self):
+        # AR.FLOOR_INFINITE: zero divisor first (domain_undefined), else any infinite operand -> unsupported
+        self.assertOutcome(run("ARITH", "aten.floor_divide", [T("f32", [INF]), 0]), "domain_undefined")
+        self.assertOutcome(run("ARITH", "aten.div", [T("f32", [INF, 1]), T("f32", [2, 0])],
+                               {"rounding_mode": "floor"}), "domain_undefined")
+        self.assertOutcome(run("ARITH", "aten.floor_divide", [T("f32", [1, 2]), T("f32", [2, -INF])]), "unsupported")
+        self.assertValue(run("ARITH", "aten.floor_divide", [T("f32", [-7, 7]), 2]), [-4, 3])
+        self.assertValue(run("ARITH", "aten.div", [T("f32", [INF, -7]), 2], {"rounding_mode": "trunc"}), [INF, -3])
+        # AR.SCALAR_VALUE classes: uint64 range exact, bool and integers outside [-2^63, 2^64) unsupported
+        for scalar, outcome, want in ((2 ** 63, "value", [1 + 2 ** 63]), (2 ** 64 - 1, "value", [2 ** 64]),
+                                      (-2 ** 63, "value", [1 - 2 ** 63]), (2 ** 64, "unsupported", None),
+                                      (-2 ** 63 - 1, "unsupported", None), (True, "unsupported", None),
+                                      ("1/3", "invalid_input", None), (str(2 ** 64), "unsupported", None)):
+            with self.subTest(scalar=scalar):
+                res = run("ARITH", "aten.add", [T("f64", [1]), scalar])
+                self.assertOutcome(res, outcome)
+                if want:
+                    self.assertEqual(norm(res.fields["out"]), want)
+        self.assertOutcome(run("ARITH", "aten.add", [T("i64", [1]), 2 ** 63]), "domain_undefined")
+        self.assertValue(run("ARITH", "aten.add", [T("i64", [-2 ** 63]), 2 ** 63]), [0])
+        self.assertOutcome(run("ARITH", "aten.pow", [T("f32", [2]), True]), "unsupported")
+        self.assertOutcome(run("ARITH", "aten.clamp", [T("i8", [1])], {"min": True}), "unsupported")
 
     def test_issue_A2_legal_scalars_are_not_invalid_input(self):
         # PyTorch 2.10 eager accepts a bool Scalar (tensor([1.]) + True == 2) and a Python int in [2^63, 2^64)

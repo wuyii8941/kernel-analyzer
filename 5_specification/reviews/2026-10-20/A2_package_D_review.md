@@ -119,3 +119,46 @@ cd /data1/tzh/kernel-analyzer/5_specification   # 先 export HOME/TMPDIR/... 与
 | test_embedding_public_call.py:47-51 `test_mutation_and_nondefault_public_tasks_are_refused` | 公开接口 padding_idx −1、0 unsupported | 两者都是 value `[[3,4],[5,6]]`；max_norm、norm_type=1、scale_grad_by_freq、sparse 仍为 unsupported |
 
 A1、A2 修复后，复核测试中 expectedFailure 的那一项要改成普通测试，A1 被跳过的那些组合按新决定补上断言。
+
+## 补充：ARITH 定向复核（2026-10-21，作者修订 A1–A4 后）
+
+本节对象文件：
+
+| 文件 | sha256 |
+|---|---|
+| ARITH yaml | 4c16bd34f1ec820ba8fe355c24f2c0a9c42122c2cbdaaabfab799bad6a7e0283 |
+| ARITH adapter | 796fa9fcac5fd51e1304c026c7639aa6d64700f29eb910e3b32e4bb4c8b5b3aa |
+
+MATHFN、INDEX 已按前文确认的哈希晋升。
+
+- **A1 已关闭。** 新增决定 AR.FLOOR_INFINITE：
+  - 正确引用 T_DIV 快照第 24–25 行（Python `//`、np.floor_divide）与 T_FLOOR_DIVIDE 的 floor(x/y)；
+  - 列出三种备选，选择 (c) unsupported；
+  - 零除数先判，仍为 domain_undefined；trunc 模式与真除法不受影响。
+
+  适配器 `_no_infinite_floor_operand`（:256-266）在 `_div` 的 floor 模式和 `_floor_divide` 中调用，与决定一致。复核测试的 7×7 网格现已断言：floor 模式和 floor_divide 遇到无穷操作数一律 unsupported，零除数优先判 domain_undefined。例子 E105–E107 的期望正确。
+- **A2 已关闭。** `_received`（:139-170）的分类：
+  - [−2^63, 2^64) 内的整数按精确值接受，uint64 段与 eager 的分派记录一致；
+  - bool 标量与该范围之外的整数为 unsupported；
+  - 非 binary64 的有理数（如 1/3）仍为 invalid_input。
+
+  整数张量配 uint64 标量时，只在结果越界时判 domain_undefined（例如 i64 + 2^63 越界，−2^63 + 2^63 = 0 正常）。pow 指数或 clamp 边界取 True 时为 unsupported。E108、E109 正确。
+
+  残余文字小瑕疵（不阻塞）：适配器 invalid 报错文字仍写 “nor an int64 integer”，与决定措辞不同，可在下次修改时顺手改。
+- **A3 已关闭。** 新来源条目 T_TENSOR_ATTR.SCALAR_DTYPE 与快照第 97–99 行原文相符。决定已补上：备选 (d) 及否决理由（该句只用于决定类别与结果 dtype）、“eager 采用读法 (c)、在记录的 f32 调用上出现最多约 1 ulp 偏差、计入 K−G” 这一后果，以及 bool 与超范围整数为 unsupported 的规定。
+- **A4 已关闭。** 证据第 37 行已与 AR.INT_OVERFLOW 一致。
+- 复核测试已更新：A1 网格改为断言 unsupported；新增 `test_recheck_floor_infinite_and_scalar_classes`；作者已去掉 A2 的 expectedFailure，该测试现为普通测试并通过。
+
+**ARITH 结论：CONFIRMED。** 上表两份文件可以晋升，并可放入 `validated/`。
+
+命令与结果（新暂存目录 `.cache/spec_a2_review/D/recheck`：ARITH 用草案，MATHFN/INDEX 用已晋升的顶层文件）：
+- `check_contracts --only ARITH MATHFN INDEX` 退出码 0；ARITH 109/109 例子、10/10 读法、38/38 变异；
+- `tests/test_arith_mathfn_index_a2_review.py`：35 passed，1342 subtests；
+- 作者测试 `tests/test_arith_mathfn_index_domains.py`：20 passed，157 subtests。
+
+ARITH 晋升时需要更新的既有测试：以当前工作树为底，在模拟晋升环境里运行 11 个引用 ARITH 的测试文件，另加 alpha、where 广播、bulk 测试。失败的只有下表两个测试（共 3 处断言，其中 2 处是第一个测试的子测试），其余 122 项测试通过。
+
+| 测试 | 新期望 |
+|---|---|
+| tests/test_arith_profile_domains.py `test_unreviewed_types_nonfinite_values_and_mixed_dtypes_are_refused`（:45-54） | `mul({i64,[1]},2)` 为 value `[2]`；`mul({f32,[inf]},2)` 为 value `[+inf]`；b8、f8e4m3、complex64 仍为 Invalid/Unsupported |
+| tests/test_arith_profile_domains.py `test_selected_functional_schemas_reject_other_overloads`（:93-94） | `pow({f32,[1]},2)` 为 value `[1]`；若要保留 unsupported 断言，可改用 `pow(x,2.5)` 或张量指数 |
