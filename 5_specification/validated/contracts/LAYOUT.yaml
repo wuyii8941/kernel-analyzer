@@ -5,8 +5,8 @@ title: Common layout and data-movement operations on floating, integer and boole
 review:
   status: reviewed_for_implementation
   author: Claude (original broad draft), Codex (finite common-operation revision, 2026-10-18) and Claude (path A closure package C, 2026-10-20)
-  date: '2026-10-21'
-  reviewer: 'Codex source, schema, domain and complete-output review with separate NumPy and PyTorch checks (2026-10-18 version); the 2026-10-20 extension awaits independent review; independent review 2026-10-21 (reviews/2026-10-20/A2_package_C_review.md)'
+  date: '2026-10-22'
+  reviewer: 'Codex source, schema, domain and complete-output review with separate NumPy and PyTorch checks (2026-10-18 version); the 2026-10-20 extension awaits independent review; independent review 2026-10-21 (reviews/2026-10-20/A2_package_C_review.md); the 2026-10-22 signed-zero decision awaits independent review; independent review 2026-10-22 (reviews/2026-10-20/A2_package_C_review.md)'
   scope: Logical values and shapes for selected functional layout and data-movement operations on finite floating and integer tensors (real) and boolean tensors (boolean), including aten.pad constant mode, slice_backward and repeat_interleave.self_int; constant pad and cat additionally have complete public-call forward and VJP profiles
 activation:
   implementation_status: validated
@@ -28,7 +28,7 @@ profiles:
       one dtype. Includes aten.pad in constant mode, aten.slice_backward and aten.repeat_interleave.self_int. The task
       does not promise strides, aliasing or storage identity.
     task_choice_required: false
-    basis: [LY.SCHEMA, LY.PHYSICAL, LY.EXACT_DATA, LY.ATEN_PAD, LY.SLICE_BACKWARD, LY.REPEAT_INTERLEAVE]
+    basis: [LY.SCHEMA, LY.PHYSICAL, LY.SIGNED_ZERO, LY.EXACT_DATA, LY.ATEN_PAD, LY.SLICE_BACKWARD, LY.REPEAT_INTERLEAVE]
     outputs: [out]
   boolean:
     meaning: >-
@@ -89,6 +89,21 @@ decisions:
     declared dtype. Multi-tensor calls require the same dtype, and scalar padding values must be exactly
     representable in it. Integer and boolean inputs are governed by LY.EXACT_DATA.
   basis: [T_TENSOR_ATTR.PROMOTION, TS_NATIVE_FUNCTIONS.LAYOUT_SCHEMAS]
+- id: LY.SIGNED_ZERO
+  status: reviewed
+  statement: >-
+    A floating record of the real profile's ATen data-movement operations may contain -0.0 (for example a gradient
+    produced by negating or multiplying zeros). Alternatives: (a) refuse it as invalid input, as the 2026-10-18
+    profile did; (b) read -0.0 as the real number 0 and do not judge the sign of zero in the output: IEEE 754 has two
+    signed zeros (IEEE754.ZERO_SIGN) whose comparison ignores the sign (IEEE754.ZERO_COMPARE), i.e. both denote the
+    real number zero; (c) treat the sign bit as part of the value and require every moved -0 to stay -0. Choice:
+    (b). The profile's task is the logical real value of each coordinate (LY.VALUE_ONLY, exact real equality), and
+    kernel_spec real values have a single zero, so (c) would need a signed-zero value model and a sign-of-zero
+    obligation that no retained PyTorch layout document states. (a) refuses legal recorded calls whose real values
+    are fully determined, and so prevents judging their value semantics (e.g. which input coordinate is copied where).
+    Consequence: a data-movement implementation that turns -0 into +0 (or the reverse) is not detected by this
+    profile; this is a nonclaim. The public functional autograd profiles keep their refusal.
+  basis: [IEEE754.ZERO_SIGN, IEEE754.ZERO_COMPARE, LY.VALUE_ONLY, LY.PHYSICAL]
 - id: LY.EXACT_DATA
   status: reviewed
   statement: >-
@@ -221,6 +236,7 @@ clauses:
 - {id: LY.C15, basis: [LY.ATEN_PAD], statement: 'aten.pad in constant mode pads or crops like constant_pad_nd with the given value or the default zero; other documented modes are unsupported', observes: [out, bool_out], evidence_kind: definition}
 - {id: LY.C16, basis: [LY.EXACT_DATA], statement: 'integer and boolean tensors move exactly; a fill is stored only when exactly representable (integer in range, or False/True/0/1 for b8) and other fills are unsupported', observes: [out, bool_out], evidence_kind: definition}
 - {id: LY.C17, basis: [LY.SLICE_BACKWARD], statement: 'slice_backward returns zeros of input_sizes with grad_output placed at the normalized slice dim[start:end:step]', observes: [out, bool_out], evidence_kind: derived}
+- {id: LY.C19, basis: [LY.SIGNED_ZERO], statement: 'in the real profile a received -0.0 is the real value 0; outputs are judged by real value, not by the sign of zero', observes: [out], evidence_kind: definition}
 - {id: LY.C18, basis: [LY.REPEAT_INTERLEAVE], statement: 'repeat_interleave.self_int repeats each element along dim (or the flattened input) repeats consecutive times and checks a given output_size', observes: [out, bool_out], evidence_kind: definition}
 examples:
 - {id: LY.E1, profile: real, clauses: [LY.C1], input: {op: aten.view, args: [{t: f32, v: [[1, 2, 3], [4, 5, 6]]}, [3, 2]]}, expected: {outcome: value, fields: {out: [[1, 2], [3, 4], [5, 6]]}}}
@@ -535,6 +551,26 @@ examples:
   clauses: [LY.C10, LY.C18]
   input: {op: aten.repeat_interleave, args: [{t: i64, v: [1, 2]}, {t: i64, v: [1, 2]}, 0]}
   expected: {outcome: unsupported}
+- id: LY.E79
+  profile: real
+  clauses: [LY.C17, LY.C19]
+  input: {op: aten.slice_backward, args: [{t: bf16, v: [[-0.0, 2], [3, -0.0]]}, [2, 4], 1, 0, 2, 1]}
+  expected: {outcome: value, fields: {out: [[0, 2, 0, 0], [3, 0, 0, 0]]}}
+- id: LY.E80
+  profile: real
+  clauses: [LY.C17, LY.C19]
+  input: {op: aten.slice_backward, args: [{t: f32, v: [[-0.0, -0.0]]}, [1, 4], 1, 2, 9223372036854775807, 1]}
+  expected: {outcome: value, fields: {out: [[0, 0, 0, 0]]}}
+- id: LY.E81
+  profile: real
+  clauses: [LY.C1, LY.C19]
+  input: {op: aten.view, args: [{t: f32, v: [1, -0.0, 3, 4]}, [2, 2]]}
+  expected: {outcome: value, fields: {out: [[1, 0], [3, 4]]}}
+- id: LY.E82
+  profile: torch210_functional_constant_pad_autograd
+  clauses: [LY.C11]
+  input: {op: torch.nn.functional.pad, input: {t: f32, shape: [1], v: [-0.0]}, pad: [1, 0], mode: constant, value: 0, upstream: {t: f32, shape: [2], v: [1, 1]}}
+  expected: {outcome: invalid_input}
 signature:
   inputs: ['real: one selected functional layout call', 'pad autograd: public op, complete input, even integer pad, constant mode, scalar/default value and complete upstream', 'cat autograd: public op, nonempty ordered complete tensor list, integer dim and complete upstream']
   pre_state: [all inputs are unchanged]
@@ -542,7 +578,7 @@ signature:
   observation_unit: every declared output coordinate together with dtype, shape and ordered result position
 domain:
   valid: [exactly representable finite f16/bf16/f32/f64 values; integer literals in range for i64/i32/i16/i8/u8 (real profile); boolean literals for b8 (boolean profile); same dtype for multi-tensor calls; documented shapes, dimensions and ranges]
-  invalid_input: [NaN; negative zero; unrepresentable floating value or scalar; out-of-range integer tensor literal; malformed call; incompatible shape, dimension, index, slice, split or scatter source; undocumented pad mode string; negative repeat count; output_size different from the total; slice_backward grad_output not matching the slice]
+  invalid_input: [NaN; negative zero in the public functional autograd profiles (the real profile reads it as 0, LY.SIGNED_ZERO); unrepresentable floating value or scalar; out-of-range integer tensor literal; malformed call; incompatible shape, dimension, index, slice, split or scatter source; undocumented pad mode string; negative repeat count; output_size different from the total; slice_backward grad_output not matching the slice]
   unsupported: [float8, complex or infinite data; non-integral or out-of-range fill for an integer tensor; fill other than False/True/0/1 for b8; b8 data under the real profile and non-b8 data under the boolean profile; mixed dtypes; reflect, replicate or circular pad modes; tensor-valued repeats; creation operations; copy or fill; dtype views; named dimensions; implicit expand; nondefault memory format; out or in-place variants; storage, stride, aliasing or device effects]
 mutation_requirements:
 - {id: LY.M1, misreading: view reads elements in column-major order, witnesses: [LY.E1]}
@@ -569,13 +605,22 @@ mutation_requirements:
 - {id: LY.M22, misreading: slice_backward ignores the step and writes a contiguous block, witnesses: [LY.E58]}
 - {id: LY.M23, misreading: repeat_interleave tiles the whole axis like Tensor.repeat, witnesses: [LY.E62, LY.E64]}
 - {id: LY.M24, misreading: repeat_interleave ignores dim and always flattens, witnesses: [LY.E62]}
+- {id: LY.M26, misreading: a received negative zero makes a data-movement call invalid input, witnesses: [LY.E79, LY.E81]}
 - {id: LY.M25, misreading: tril keeps the upper triangle, witnesses: [LY.E68, LY.E69]}
 nonclaims:
-- Storage identity, aliasing, strides, memory format, device placement and signed zero are not certified.
+- Storage identity, aliasing, strides, memory format, device placement and signed zero are not certified; in the real profile a received -0.0 is read as 0 and a sign change of a moved zero is not detected (LY.SIGNED_ZERO).
 - Creation, dtype conversion, copy/fill state effects, gradients other than the selected constant-pad, cat and slice_backward VJPs and unselected overloads are not certified. Integer and boolean data are certified only for the listed data-movement operations with one dtype per call.
 - slice_backward rests on PyTorch 2.10's derivative table and official decomposition (reference programs) together with the documented slice; agreement means agreement with that reference semantics.
 - PyTorch 2.10 eager accepts non-integral fills for integer tensors (truncating) and nonzero fills for b8 (as True); these undocumented conversions are refused, not judged.
 changes:
+- date: '2026-10-22'
+  change: >-
+    Decision LY.SIGNED_ZERO: the real profile's ATen data-movement operations read a received -0.0 as the real value 0
+    and do not judge the sign of zero (alternatives refuse / value 0 / signed value); clause LY.C19, examples
+    LY.E79-E82, mutant LY.M26. The public functional autograd profiles keep refusing negative zero.
+  trigger: >-
+    Path A2: three recorded aten.slice_backward calls (qwen bf16 keys 124, 129; qwen fp32 key 150) with -0.0 gradient
+    entries were refused as invalid_input, which blocked diagnosing a FlagGems stride defect on them.
 - date: '2026-10-21'
   change: >-
     A tensor record for any non-tensor parameter (size, dimension, index, range, repeat count or scalar), such as the

@@ -22,7 +22,7 @@ from kernel_spec.real import R
 _HERE = Path(__file__).resolve()
 # The contract next to this adapter: <root>/contracts/LAYOUT.yaml when staged as <root>/adapters/LAYOUT.py, or the
 # paired draft contract when read from contracts/draft/. Never the top-level validated contract by default.
-_CONTRACT = (_HERE.with_name("LAYOUT_path_a_A2_20261020.yaml") if _HERE.parent.name == "draft"
+_CONTRACT = (_HERE.with_name("LAYOUT_path_a_A2_negzero_20261022.yaml") if _HERE.parent.name == "draft"
              else _HERE.parents[1] / "contracts" / "LAYOUT.yaml")
 COVERS = yaml.safe_load(_CONTRACT.read_text())["covers"]
 REAL_PROFILE = "real"
@@ -76,7 +76,8 @@ def _exact_data_tensor(value, name, dtype):
     return tensor
 
 
-def _point_tensor(value, name, allowed=DTYPES):
+def _point_tensor(value, name, allowed=DTYPES, *, signed_zero="refuse"):
+    """signed_zero="value": a received -0.0 is the real value 0 and the sign of zero is not judged (LY.SIGNED_ZERO)."""
     dtype = _raw_dtype(value)
     if dtype is not None and dtype not in allowed:
         raise Unsupported(f"{name} dtype {dtype!r} is outside the selected LAYOUT profile")
@@ -84,7 +85,8 @@ def _point_tensor(value, name, allowed=DTYPES):
         return _exact_data_tensor(value, name, dtype)
     if isinstance(value, dict) and "v" in value:
         for raw in _raw_leaves(value["v"]):
-            if isinstance(raw, (float, np.floating)) and raw == 0 and math.copysign(1.0, float(raw)) < 0:
+            if signed_zero == "refuse" and isinstance(raw, (float, np.floating)) and raw == 0 \
+                    and math.copysign(1.0, float(raw)) < 0:
                 raise Invalid(f"{name} contains negative zero outside the logical-value profile")
     tensor = decode(value)
     if not isinstance(tensor, A.Ten):
@@ -113,12 +115,13 @@ def _contains_tensor_record(value):
     return False
 
 
-def _argument_decoder(allowed):
+def _argument_decoder(allowed, signed_zero="value"):
     def decode_argument(op, name, value, arguments):
         if name == "tensors":
             if not isinstance(value, (list, tuple)) or not value:
                 raise Invalid(f"{op}: tensors must be a nonempty list")
-            return [_point_tensor(item, f"tensors[{index}]", allowed) for index, item in enumerate(value)]
+            return [_point_tensor(item, f"tensors[{index}]", allowed, signed_zero=signed_zero)
+                    for index, item in enumerate(value)]
         if name not in TENSOR_PARAMETERS:
             # A tensor for a size, dimension, index, range, repeat count or scalar parameter selects another
             # overload (e.g. narrow.Tensor, repeat_interleave.self_Tensor): a legal call outside the profiles.
@@ -126,7 +129,7 @@ def _argument_decoder(allowed):
                 raise Unsupported(f"{op}: tensor-valued {name} belongs to another overload outside the selected profiles")
             return decode(value)
         if isinstance(value, dict) and ("t" in value or "v" in value):
-            return _point_tensor(value, name, allowed)
+            return _point_tensor(value, name, allowed, signed_zero=signed_zero)
         return decode(value)
     return decode_argument
 
@@ -746,6 +749,13 @@ def _tril_upper(a, diagonal=0):
     return A.triu(a, diagonal)
 
 
+def _refuse_negative_zero_reference(profile, inp):
+    # Misreading: a received -0.0 is outside the data-movement profile (the former refusal).
+    real = make_reference(ATEN_COVERS, extra=OPS, profiles=(REAL_PROFILE,),
+                          argument_decoder=_argument_decoder(REAL_DTYPES, signed_zero="refuse"))
+    return real(profile, inp) if profile == REAL_PROFILE else reference(profile, inp)
+
+
 MUTANTS = {
     "LY.M1": _mut(**{"aten.view": _view_colmajor}),
     "LY.M2": _mut(**{"aten.permute": _permute_inverse}),
@@ -780,5 +790,6 @@ MUTANTS = {
     "LY.M23": _mut(**{"aten.repeat_interleave": _repeat_tiled}),
     "LY.M24": _mut(**{"aten.repeat_interleave": _repeat_flattened}),
     "LY.M25": _mut(**{"aten.tril": _tril_upper}),
+    "LY.M26": _refuse_negative_zero_reference,
 }
 READINGS = {}

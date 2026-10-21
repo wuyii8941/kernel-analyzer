@@ -216,3 +216,56 @@ POOL 和 INTERP 已按第 6 节确认的哈希晋升。LAYOUT 在晋升检查时
   - `LAYOUT_ADAPTER=<C3>/adapters/LAYOUT.py`，运行 `tests/test_layout_profile_domains.py`：5 passed，20 个 subtests 全部通过。
 
 **LAYOUT 最终结论：CONFIRMED**。确认对象为上表中的文件对，可以晋升并复制到 validated/。
+
+## 8 LAYOUT signed-zero 草稿复核（2026-10-22）
+
+复核对象：
+
+| 文件 | sha256 |
+|---|---|
+| contracts/draft/LAYOUT_path_a_A2_negzero_20261022.yaml | 2bef9d18e2af3b070620ce35757a2dcba08c9c8fa841eeacd42e9441cebc7654 |
+| contracts/draft/LAYOUT_adapter_path_a_A2_negzero_20261022.py | 317ff3f973e3e84d5d7b455c1c85a0938006b839fc212b88f633d7f398eb2ff9 |
+
+**差异范围**
+与顶层 LAYOUT（yaml f723c4fe…，adapter 96640c39…）相比，改动只有以下几处：
+- 状态改回 drafted / pending；
+- 新增决定 LY.SIGNED_ZERO，并加入 real profile 的 basis；
+- 新增条款 LY.C19、例子 E79–E82、变异 M26；
+- 改写 domain 和 nonclaim 中涉及负零的表述；
+- adapter 中，`_point_tensor` 增加 `signed_zero` 参数，`_argument_decoder` 的默认值改为 "value"，另外修改了路径常量，并增加了变异 M26。
+
+各个 functional autograd profile 仍然沿用 `_point_tensor` 的默认值 "refuse"。
+
+**决定是否诚实**
+- 列出了三种备选：拒绝、读作 0、把符号当作值的一部分。
+- 选择"读作 0"的理由是：这个 profile 的任务是逻辑上的实数值（LY.VALUE_ONLY），而 PyTorch 的 layout 文档没有规定零的符号。
+- 这个理由并不是为了让某个实现通过：FlagGems 忽略 stride 的缺陷表现为数值放错位置，在这个读法下仍然能被检出（见下文的测试）。
+- 非主张已写明：零的符号被翻转不会被检出。
+
+**来源**
+- 新条目 IEEE754.ZERO_SIGN 引用 §3.3（两个有符号零）和 §6.3（零结果的符号）。
+- 新条目 IEEE754.ZERO_COMPARE 引用 §5.11（"comparisons shall ignore the sign of zero"）。
+- 两条都与 IEEE 754-2019 原文一致。该标准付费，所以按 kind standard 只引用版本和章节，这符合规范。
+
+**作者对测试的修改**
+- 增加了 `LAYOUT_DRAFT` 选择器，默认值保持原来的 A2 草稿对，三个测试文件都是同样的改法。
+- `test_layout_profile_domains.py` 中 -0 clone 这个 subtest 的期望值，改为按暂存合同里是否有 LY.SIGNED_ZERO 来决定。
+- 我检查过，这两处修改都正确。
+
+**我的独立测试**：`tests/test_layout_negzero_review.py`，9 项
+- slice_backward：覆盖记录到的 4 种结构（包括 key 124、129、150 的形状），grad 中带 -0.0，期望值由我自己的循环算出；
+- view、constant_pad_nd（填充值 -0.0）、aten.pad、cat、repeat_interleave、tril 中带 -0.0 的情形；
+- check_output：
+  - 保留 -0、翻成 +0、以 -0 作填充值，都判为通过，这正是非主张所说的不检出；
+  - 数值放错位置或偏移错误，都判为不通过，所以 FlagGems 的 stride 缺陷仍然可以诊断；
+- pad 和 cat 两个 autograd profile 在 input 或 upstream 中遇到 -0 时仍然是 invalid_input，同样的记录去掉 -0 后则给出值；
+- NaN 仍然是 invalid_input；i64 记录中的 -0.0 也是 invalid_input，因为它不是整数字面量；boolean profile 不受影响。
+
+**结果**（fresh stage `.cache/spec_a2_review/C4`）
+- check_contracts LAYOUT：退出码 0，例子 82/82，变异 26/26，consistent。
+- pytest：
+  - `test_layout_negzero_review.py`：9 passed；
+  - 设 `LAYOUT_DRAFT=path_a_A2_negzero_20261022`，运行 a2_review、aten、torch、negzero（作者）四个测试文件：381 passed；
+  - `test_layout_profile_domains.py`：`LAYOUT_ADAPTER` 指向 C4 时 5 passed（20 subtests）；指向顶层时也是 5 passed（20 subtests）。
+
+**结论：CONFIRMED**。确认对象为上表中的文件对，可以晋升并复制到 validated/。

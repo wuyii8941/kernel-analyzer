@@ -20,6 +20,12 @@ from kernel_spec import registry  # noqa: E402
 from kernel_spec.num import evaluate  # noqa: E402
 
 DRAFT = ROOT / "contracts" / "draft"
+
+
+def draft_tag(cid):
+    # LAYOUT_DRAFT selects a later LAYOUT draft pair (e.g. path_a_A2_negzero_20261022); default: the A2 package C pair.
+    import os
+    return os.environ.get("LAYOUT_DRAFT", "path_a_A2_20261020") if cid == "LAYOUT" else "path_a_A2_20261020"
 A = torch.ops.aten
 NAMES = {torch.float32: "f32", torch.bfloat16: "bf16", torch.int64: "i64", torch.bool: "b8"}
 DEVICES = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
@@ -31,8 +37,8 @@ def contracts(tmp_path_factory):
     (root / "contracts").mkdir()
     (root / "adapters").mkdir()
     for cid in ("LAYOUT", "POOL", "INTERP"):
-        shutil.copy(DRAFT / f"{cid}_path_a_A2_20261020.yaml", root / "contracts" / f"{cid}.yaml")
-        shutil.copy(DRAFT / f"{cid}_adapter_path_a_A2_20261020.py", root / "adapters" / f"{cid}.py")
+        shutil.copy(DRAFT / f"{cid}_{draft_tag(cid)}.yaml", root / "contracts" / f"{cid}.yaml")
+        shutil.copy(DRAFT / f"{cid}_adapter_{draft_tag(cid)}.py", root / "adapters" / f"{cid}.py")
     return {cid: registry.load(cid, contracts=root / "contracts", adapters=root / "adapters")
             for cid in ("LAYOUT", "POOL", "INTERP")}
 

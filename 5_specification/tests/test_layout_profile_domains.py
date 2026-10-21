@@ -45,9 +45,17 @@ class LayoutProfileDomains(unittest.TestCase):
         ):
             with self.subTest(record=record), self.assertRaises(Unsupported):
                 self.call("aten.clone", [record])
-        for record in ({"t": "f16", "v": ["1/3"]}, {"t": "f32", "v": [-0.0]}):
-            with self.subTest(record=record), self.assertRaises(Invalid):
-                self.call("aten.clone", [record])
+        with self.subTest(record="f16 1/3"), self.assertRaises(Invalid):
+            self.call("aten.clone", [{"t": "f16", "v": ["1/3"]}])
+        # LY.SIGNED_ZERO (LAYOUT draft 2026-10-22): the real profile reads -0.0 as 0; earlier versions refuse it.
+        import yaml
+        decisions = {d["id"] for d in yaml.safe_load(self.adapter._CONTRACT.read_text())["decisions"]}
+        with self.subTest(record="f32 -0.0"):
+            if "LY.SIGNED_ZERO" in decisions:
+                self.assertEqual(self.call("aten.clone", [{"t": "f32", "v": [-0.0]}]).fields["out"], [0])
+            else:
+                with self.assertRaises(Invalid):
+                    self.call("aten.clone", [{"t": "f32", "v": [-0.0]}])
 
     def test_multi_tensor_dtype_and_scalar_padding_are_strict(self):
         with self.assertRaises(Unsupported):

@@ -18,6 +18,12 @@ from kernel_spec import registry  # noqa: E402
 from kernel_spec.num import evaluate  # noqa: E402
 
 DRAFT = ROOT / "contracts" / "draft"
+
+
+def draft_tag(cid):
+    # LAYOUT_DRAFT selects a later LAYOUT draft pair (e.g. path_a_A2_negzero_20261022); default: the A2 package C pair.
+    import os
+    return os.environ.get("LAYOUT_DRAFT", "path_a_A2_20261020") if cid == "LAYOUT" else "path_a_A2_20261020"
 INT64_MAX = 9223372036854775807
 
 
@@ -27,8 +33,8 @@ def stage(tmp_path_factory):
     (root / "contracts").mkdir()
     (root / "adapters").mkdir()
     for cid in ("LAYOUT", "POOL", "INTERP"):
-        shutil.copy(DRAFT / f"{cid}_path_a_A2_20261020.yaml", root / "contracts" / f"{cid}.yaml")
-        shutil.copy(DRAFT / f"{cid}_adapter_path_a_A2_20261020.py", root / "adapters" / f"{cid}.py")
+        shutil.copy(DRAFT / f"{cid}_{draft_tag(cid)}.yaml", root / "contracts" / f"{cid}.yaml")
+        shutil.copy(DRAFT / f"{cid}_adapter_{draft_tag(cid)}.py", root / "adapters" / f"{cid}.py")
     return root
 
 
