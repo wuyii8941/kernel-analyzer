@@ -36,6 +36,7 @@ CHOSEN = "usable with recorded task choice (step 2)"   # A2: a task-choice profi
 RUNFAIL = "run failure of the implementation (replayed)"  # A2 G12: an excluded FlagGems function replayed alone
 PROTOCOL = ["v1"]
 CHOICES = HERE / "task_choices_A2.json"
+STATE_CHANGED = __import__("re").compile(r"tensor argument '(\w+)' changed but the plan declares it unchanged")
 SHAPE_DIFF = __import__("re").compile(r"reference target \S+ shape \([^)]*\) differs from output \S+ \([^)]*\)"
                                     r"|observed tensor \S+ has shape \([^)]*\), the specification \([^)]*\)")
 
@@ -351,6 +352,13 @@ def main():
                  "failure_class": fclass, "failure_reason": (freason or "")[:300],
                  "verdict": verdict(report) if report else ("not_established", err)}
         entry["applies"] = True if entry["evaluated"] else None      # None = undecided
+        changed = STATE_CHANGED.search(freason or "") if PROTOCOL[0] == "A2" else None
+        if not entry["evaluated"] and changed:
+            # verdict rule v2 (D-A2-7): the ATen schema marks the argument read-only (no write annotation) and the
+            # plan declares it unchanged; a change observed in the measured call is a detection
+            entry["applies"] = True
+            entry["verdict"] = ("detected", f"read-only input {changed.group(1)} changed during the measured call "
+                                            f"(the ATen schema has no write annotation for it)")
         shape = SHAPE_DIFF.search(freason or "") if PROTOCOL[0] == "A2" else None
         if not entry["evaluated"] and shape:
             # verdict rule v2: the specification fixes the returned tensor's shape; a different shape is a detection
