@@ -97,3 +97,9 @@
   4. 适用性探针在条件输入（来自返回值）存在时无法求值：探针改为跳过这些输入，profile 是否覆盖该算子仍由算子本身判定。
   5. A2 下，第一次执行（含规则 v2 探测返回位置是否为 None 的那次）都放在独立进程中，崩溃记为运行失败，不会使绑定进程退出。
   修复前已完成的受影响键，在本次两遍运行结束后移到 `failed_harness_A2/` 并重绑。
+- 偏差 D-A2-4（任务选择由用户决定，2026-10-21）：用户决定，文档没有说清的读法以 PyTorch 官方源码为准。核对 v2.10.0 源码后，两条原先「待确认」的选择都与源码一致。
+  - CAST：转 bfloat16 用 `round_to_nearest_even`，转 float16 用 IEEE 转换 `fp16_ieee_from_fp32_value`，都是 roundTiesToEven。
+  - POOL：CUDA 与 CPU 核的除数都是先把窗口截到 padding 后的范围、再截到输入之前算出的 `pool_size`，即 PA.DIVISOR。
+  - 源码作为参照程序保留：TS210_BFLOAT16_H、TS210_HALF_H、TS210_AVGPOOL2D_CU、TS210_AVGPOOL_CPU。
+  - `task_choices_A2.json` 改为「用户已决定」。按这两条选择得到的结论，含义是「与 PyTorch 官方实现的读法一致」。
+  - 此前用「待确认」措辞绑定的键，在收尾时按新措辞重绑。

@@ -5831,5 +5831,57 @@
     "snapshot_note": "raw file, byte for byte",
     "retrieval_method": "requested_url",
     "retrieved": "2026-10-20"
+  },
+  "TS210_BFLOAT16_H": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/torch/headeronly/util/BFloat16.h",
+    "title": "PyTorch v2.10.0 torch/headeronly/util/BFloat16.h",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "RNE": "detail::round_to_nearest_even(float) adds the rounding bias ((bits >> 16) & 1) + 0x7FFF to the float32 bit pattern and keeps the upper 16 bits: round to nearest, ties to even; NaN maps to 0x7FC0. The BFloat16(float) constructor uses it."
+    },
+    "snapshot": "sources/TS210_BFLOAT16_H.h.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-21"
+  },
+  "TS210_HALF_H": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/torch/headeronly/util/Half.h",
+    "title": "PyTorch v2.10.0 torch/headeronly/util/Half.h",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "FROM_FP32": "The Half(float) constructor converts with detail::fp16_ieee_from_fp32_value, the IEEE half-precision conversion of a float32 value."
+    },
+    "snapshot": "sources/TS210_HALF_H.h.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-21"
+  },
+  "TS210_AVGPOOL2D_CU": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/cuda/AveragePool2d.cu",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/cuda/AveragePool2d.cu",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "DIVISOR": "hstart = ph*stride - pad; hend = min(hstart + kernel, height + pad); pool_size = (hend - hstart)*(wend - wstart) is taken before hstart/hend are clipped to [0, height); the divisor is divisor_override when given, else pool_size when count_include_pad, else the clipped window size."
+    },
+    "snapshot": "sources/TS210_AVGPOOL2D_CU.cu.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-21"
+  },
+  "TS210_AVGPOOL_CPU": {
+    "url": "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/aten/src/ATen/native/cpu/AvgPoolKernel.cpp",
+    "title": "PyTorch v2.10.0 aten/src/ATen/native/cpu/AvgPoolKernel.cpp",
+    "kind": "reference_program",
+    "version": "v2.10.0",
+    "items": {
+      "DIVISOR": "ih0 = oh*dH - padH; ih1 = min(ih0 + kH, input_height + padH); pool_size = (ih1 - ih0)*(iw1 - iw0) before clipping to the input; divide_factor = divisor_override, else pool_size when count_include_pad, else the clipped window size (same rule as the CUDA kernel)."
+    },
+    "snapshot": "sources/TS210_AVGPOOL_CPU.cpp.gz",
+    "snapshot_note": "raw file, byte for byte",
+    "retrieval_method": "requested_url",
+    "retrieved": "2026-10-21"
   }
 }
