@@ -143,7 +143,8 @@ class Recorder(TorchDispatchMode):
 def describe(x):
     """JSON description of a recorded argument (tensors by metadata)."""
     if isinstance(x, torch.Tensor):
-        return {"tensor": {"dtype": str(x.dtype), "size": list(x.size()), "stride": list(x.stride())}}
+        return {"tensor": {"dtype": str(x.dtype), "size": list(x.size()), "stride": list(x.stride()),
+                           "device": x.device.type}}
     if isinstance(x, (list, tuple)):
         return [describe(v) for v in x]
     if isinstance(x, dict):

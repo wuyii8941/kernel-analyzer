@@ -1201,8 +1201,8 @@ def _within_input_mean_total(rows):
         okm = p["ok_total"]
         L = np.where(okm, np.stack(los), 0.0)
         H = np.where(okm, np.stack(his), 0.0)
-        s_lo, s_hi = iv.sum_bounds(L, H, axis=0)
-        n = len(ks)
+        s_lo, s_hi = iv.fsum_bounds(L, H, axis=0)
+        n = float(len(ks))
         lo_u.append(iv.div_bounds(s_lo, n)[0])
         hi_u.append(iv.div_bounds(s_hi, n)[1])
     return np.stack(lo_u), np.stack(hi_u)

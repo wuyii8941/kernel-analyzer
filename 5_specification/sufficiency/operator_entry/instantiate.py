@@ -248,6 +248,80 @@ def _template_v2(x, tensors, path):
     return _template(x, tensors, path)
 
 
+class RunFailure(Exception):
+    """The recorded call crashed when executed (rule v2 runs it once, in its own process)."""
+
+
+_PROBE = """
+import json, sys, torch, flag_gems
+sys.path.insert(0, {here!r})
+from instantiate import decode_tags, overload, _load_on_recorded_devices
+import core_aten
+rec = _load_on_recorded_devices({values!r})
+fn = overload({op!r})
+kwargs = core_aten.non_default_kwargs(fn, decode_tags(rec["kwargs"]))
+with flag_gems.use_gems(exclude={exclude!r}):
+    out = fn(*decode_tags(rec["args"]), **kwargs)
+torch.cuda.synchronize()
+print("NONE_POSITIONS", json.dumps([i for i, r in enumerate(out) if r is None]))
+"""
+
+
+def _none_positions(op, values_pt, exclude):
+    """Return positions that are None for this recorded call, from one execution in a separate process (a crash there
+    is the implementation's run failure, raised as RunFailure)."""
+    import os
+    import subprocess
+    code = _PROBE.format(here=str(HERE), values=str(values_pt), op=op, exclude=list(exclude))
+    env = dict(os.environ, CUDA_LAUNCH_BLOCKING="1",
+               PYTHONPATH=os.pathsep.join([str(HERE.parent), os.environ.get("PYTHONPATH", "")]))
+    try:
+        p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=1800, env=env)
+    except subprocess.TimeoutExpired:
+        raise RunFailure("timeout after 1800 s") from None
+    for line in p.stdout.splitlines():
+        if line.startswith("NONE_POSITIONS "):
+            return set(json.loads(line.split(" ", 1)[1]))
+    noise = ("Warning", "Overriding", "operator:", "registered at", "dispatch key", "previous kernel", "new kernel",
+             "self.m.impl", "warnings.warn")
+    lines = [l for l in p.stderr.strip().splitlines() if l.strip() and not any(n in l for n in noise)]
+    if p.returncode < 0:
+        import signal
+        lines.append(f"terminated by signal {-p.returncode} ({signal.Signals(-p.returncode).name})")
+    errs = [l for l in lines if "Error" in l or "error" in l or "terminated by signal" in l]
+    raise RunFailure((errs[-1] if errs else (lines[-1] if lines else f"rc={p.returncode}"))[:400])
+
+
+def _load_on_recorded_devices(values_pt):
+    """Recorded values with every tensor on the device it had in the recorded call (D-A2-2): the recorder saved host
+    copies, so values load on the CPU and move to CUDA unless REC/devices.jsonl records a CPU tensor (e.g. the
+    philox seed / offset of memory-efficient attention backward)."""
+    rec = torch.load(values_pt, map_location="cpu", weights_only=False)
+    key = int(Path(values_pt).stem)
+    table = Path(values_pt).parents[1] / "devices.jsonl"
+    devices = {"args": [], "kwargs": []}
+    if table.exists():
+        for line in open(table):
+            row = json.loads(line)
+            if row["key"] == key:
+                devices = row
+                break
+    order = iter(devices["args"] + devices["kwargs"])
+
+    def place(x):
+        if isinstance(x, torch.Tensor):
+            return x.to("cpu" if next(order, "cuda") == "cpu" else "cuda")
+        if isinstance(x, (list, tuple)):
+            return type(x)(place(v) for v in x)
+        if isinstance(x, dict) and set(x) != {"__memory_format__"}:
+            return {k: place(v) for k, v in x.items()}
+        return x
+    return {"args": place(rec["args"]), "kwargs": place(rec["kwargs"])}
+
+
+INPUTS_TEMPLATE_V2 = INPUTS_TEMPLATE.replace('map_location="cuda", ', "")
+
+
 def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict, profile: str, runtime: dict,
                 adapter, exclude=(), budget=1800, task_statement=None):
     """Rule v2: rule v1 plus (a) tuple returns mapped position by position under the adapter's ATEN_RETURNS
@@ -279,7 +353,7 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
         raise Refuse("output mapping", f"{n} returns without an ATEN_RETURNS declaration for {base}")
     not_compared = {int(k): v for k, v in ((meta or {}).get("not_compared") or {}).items()}
     observed = (getattr(adapter, "ATEN_OBSERVED_INPUTS", None) or {}).get(base)
-    rec = torch.load(values_pt, map_location="cuda", weights_only=False)
+    rec = _load_on_recorded_devices(values_pt)
     args, all_kwargs = rec["args"], core_aten.non_default_kwargs(fn, decode_tags(rec["kwargs"]))
     dropped, contract_kwargs = [], {}
     for k, v in all_kwargs.items():
@@ -291,21 +365,25 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
             contract_kwargs[k] = v
     none_positions = set()
     if n > 1:
-        import flag_gems
-        with flag_gems.use_gems(exclude=list(exclude)):
-            probe = fn(*decode_tags(args), **all_kwargs)
-        none_positions = {i for i, r in enumerate(probe) if r is None}
-        del probe
+        none_positions = _none_positions(op, values_pt, exclude)
     tensors = {}
     t_args = [_template_v2(v, tensors, f"/args/{i}") for i, v in enumerate(args)]
+    dummy = None
     t_kwargs = {k: _template_v2(v, tensors, f"/kwargs/{k}") for k, v in contract_kwargs.items()}
     # replayed non-semantic keywords keep their recorded (picklable) form: memory formats stay tags
     raw_kwargs = rec["kwargs"]
     t_call_kwargs = dict(t_kwargs, **{d["argument"]: _template_v2(raw_kwargs[d["argument"]], tensors, "")
                                       for d in dropped})
+    if not tensors:
+        # a factory call (arange, zeros, ...) receives no tensor; the measurement needs one declared input, so the
+        # call receives one unused tensor, listed in the plan's unused_inputs with this basis
+        dummy = "z0"
+        tensors[dummy] = ("", torch.zeros(1, device="cuda"))
     rule = f"rule {RULE_V2}"
     input_map = [{"target": "/op", "literal": base, "basis": f"recorded overload {op} ({rule})"}]
     for tname, (path, t) in tensors.items():
+        if tname == dummy:
+            continue
         input_map.append({"target": path, "source": f"/tensor_arguments/{tname}/before", "conversion": "tensor_record"})
     for i, v in enumerate(t_args):
         _literals(v, f"/args/{i}", input_map)
@@ -369,7 +447,7 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
     call_src = CALL_TEMPLATE_V2.format(op=op, rule=RULE_V2, data=data.name, exclude=tuple(exclude),
                                        returned=repr(returned))
     (calls / f"{name}.py").write_text(call_src)
-    (calls / f"{name}_inputs.py").write_text(INPUTS_TEMPLATE.format(data=data.name) + "".join(
+    (calls / f"{name}_inputs.py").write_text(INPUTS_TEMPLATE_V2.format(data=data.name) + "".join(
         f"\n\ndef {t}(seed, shape, dtype):\n    return _get({t!r})\n" for t in tensors))
     plan = {"schema": "triton-call-binding-v1", "id": plan_id, "status": "reviewed", "unresolved": [],
             "generated_by": RULE_V2,
@@ -391,6 +469,10 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
         plan["unobserved_returns"] = unobserved
     if conditioned:
         plan["conditioned_on_returns"] = conditioned
+    if dummy:
+        plan["unused_inputs"] = [{"source": f"/tensor_arguments/{dummy}/before",
+                                  "basis": "the recorded factory call takes no tensor; this unused input exists only "
+                                           "because the measurement needs one declared input"}]
     text = json.dumps(plan, indent=2) + "\n"
     (binds / f"{name}.json").write_text(text)
     (spec / "validated/bindings" / f"{plan_id}.json").write_text(text)
@@ -423,7 +505,7 @@ import flag_gems
 # the ATen dispatcher, so the copy operators themselves are not excluded.
 EXCLUDE = {exclude!r}
 _OP = torch.ops.{op}
-_REC = torch.load(Path(__file__).with_name({data!r}), map_location="cuda", weights_only=False)
+_REC = torch.load(Path(__file__).with_name({data!r}), weights_only=False)   # tensors on their recorded devices
 _RETURNED = {returned}
 
 

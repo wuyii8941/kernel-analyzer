@@ -236,6 +236,9 @@ class ContractReference:
             declared = self.backend.profile_outputs(contract.data, profile)
             for item in task.get("output_map") or []:
                 target, name = item.get("target"), item.get("measure_output")
+                if name is None and "literal" in item and item["literal"] is None and \
+                        isinstance(item.get("basis"), str) and item["basis"].strip():
+                    continue      # a declared unmeasured position (path A2 rule v2): not defined or not returned
                 if not isinstance(target, str) or not isinstance(name, str) or not name:
                     raise ContractBindingError("every bound contract output needs a measure_output in the reviewed plan")
                 top = self.backend._tokens(target)[0]

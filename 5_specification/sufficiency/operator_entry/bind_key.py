@@ -124,8 +124,13 @@ def probe_failure(spec, name, tensors, timeout=900):
         return True, f"timeout after {timeout} s"
     if p.returncode == 0 and "probe ok" in p.stdout:
         return False, ""
-    lines = [l for l in p.stderr.strip().splitlines() if l.strip()]
-    errs = [l for l in lines if "Error" in l or "error" in l]
+    noise = ("Warning", "Overriding", "operator:", "registered at", "dispatch key", "previous kernel", "new kernel",
+             "self.m.impl", "warnings.warn")
+    lines = [l for l in p.stderr.strip().splitlines() if l.strip() and not any(n in l for n in noise)]
+    if p.returncode < 0:
+        import signal
+        lines.append(f"terminated by signal {-p.returncode} ({signal.Signals(-p.returncode).name})")
+    errs = [l for l in lines if "Error" in l or "error" in l or "terminated by signal" in l]
     return True, (errs[-1] if errs else (lines[-1] if lines else f"rc={p.returncode}"))[:400]
 
 
@@ -191,7 +196,10 @@ def reference_outcome(spec, decl_path, values, budget=300):
                      weights_only=False)
     obs = {"tensor_arguments": {k: {"before": _tensor_record(t)} for k, t in rec["tensors"].items()}}
     task = plan["tasks"][0]
-    inputs, _, _ = call_binding._mapped(task["input_map"], obs)
+    conditioned = {c["source"] for c in plan.get("conditioned_on_returns", [])}
+    # inputs conditioned on a returned value are not available before the call; a profile that does not cover the
+    # operation refuses on the operation itself, so the probe runs without them
+    inputs, _, _ = call_binding._mapped([m for m in task["input_map"] if m.get("source") not in conditioned], obs)
     def alarm(*_):
         raise TimeoutError
     old = signal.signal(signal.SIGALRM, alarm)
@@ -283,12 +291,18 @@ def main():
         except I.Refuse as e:
             refusals.append({"contract": c["id"], "profile": p, "stage": e.stage, "why": e.why})
             continue
+        except I.RunFailure as e:
+            what = f"FlagGems {a.enable}" if a.enable else "the FlagGems call"
+            return done(RUNFAIL, f"{what} on the recorded call: {e}", verdict="run_failure")
         if t2 is None:
             tensors = sorted(json.loads(d.read_text())["inputs"])
-            if a.enable:
+            if a.enable or PROTOCOL[0] == "A2":
+                # A2: the first execution runs in its own process, so a crash (segfault, illegal access) is recorded
+                # as the implementation's run failure instead of ending this process
                 failed, message = probe_failure(a.spec, name, tensors)
                 if failed:
-                    return done(RUNFAIL, f"FlagGems {a.enable} on the recorded call: {message}", verdict="run_failure")
+                    what = f"FlagGems {a.enable}" if a.enable else "the FlagGems call"
+                    return done(RUNFAIL, f"{what} on the recorded call: {message}", verdict="run_failure")
             try:
                 got = replay_names(a.spec, name, tensors)
             except Exception as err:  # noqa: BLE001 -- recorded

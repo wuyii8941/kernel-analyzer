@@ -83,3 +83,17 @@
   修复前已完成的受影响键移到 `failed_harness_A2/`，在本次运行结束后重绑。
   另：bert-tiny bf16 key 53（`native_layer_norm_backward`）在并行运行中报告输入 a3「被改变」，
   单独重测和直接调用都没有复现。按「观察到但未复现」报告，不当作已证实的缺陷。
+- 偏差 D-A2-2（重放改变了参数所在设备）：
+  - 记录器把数值复制到主机保存，没有记下原设备；生成的调用一律用 `map_location="cuda"` 读取。
+  - 后果：memory-efficient attention 反向的 philox seed/offset（原本在 CPU）被搬到 CUDA，FlagGems 把设备指针当主机内存读，导致段错误（bert-tiny fp32 key 73）。这是工具造成的，不是 FlagGems 的缺陷。
+  - 处理：
+    - `scan_devices.py` 无数值地重跑每个工作负载，从结构键取得各参数的设备，写出 `rec/<w>/devices.jsonl`（键编号与算子都与记录一致才写）。11 个工作负载中只有 2 个键含 CPU 张量：bert-tiny fp32 和 gpt2 fp32 的 efficient attention 反向。
+    - 生成规则 v2 按记录的设备放置张量。
+    - 今后的记录在 keys.jsonl 中直接写设备。
+- 偏差 D-A2-3（运行中发现的工具与生成问题）：
+  1. `check._within_input_mean_total` 调用了不存在的 `iv.sum_bounds`，只有重复启动结果不同时才会走到（FlagGems 用原子加的 embedding_backward）。修复前测试失败：`2_tool/tests/test_within_input_mean_total.py`。
+  2. `contract_binding` 要求每个输出映射都被测量，没有表示「声明不测量的位置」的写法，导致元组返回无法评价（flash 前向）。现在 `literal: null` 加非空 basis 的条目可以不测量。修复前测试失败：`test_contract_binding.py::test_declared_unmeasured_position_*`。
+  3. 没有张量输入的工厂调用（arange、zeros 等），测量要求至少一个声明输入：改为给调用一个不使用的输入，在 `unused_inputs` 中写明 basis。
+  4. 适用性探针在条件输入（来自返回值）存在时无法求值：探针改为跳过这些输入，profile 是否覆盖该算子仍由算子本身判定。
+  5. A2 下，第一次执行（含规则 v2 探测返回位置是否为 None 的那次）都放在独立进程中，崩溃记为运行失败，不会使绑定进程退出。
+  修复前已完成的受影响键，在本次两遍运行结束后移到 `failed_harness_A2/` 并重绑。

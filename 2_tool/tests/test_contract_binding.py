@@ -1215,3 +1215,33 @@ def call(inputs):
     assert level["outputs"]["gradient"]["total"]["elements_per_seed"] == 2
     assert "semantic" not in level["outputs"]["gradient"]
     assert level["outputs"]["gradient"]["total"]["scale"]["mean_abs_residual"] == pytest.approx(3., abs=1e-12)
+
+
+def _unmeasured_position_plan(plan_path, reviewed, basis):
+    plan = json.loads(plan_path.read_text())
+    entry = {"target": "/gradient", "literal": None}
+    if basis is not None:
+        entry["basis"] = basis
+    plan["tasks"][0]["output_map"][1] = entry
+    plan_path.write_text(json.dumps(plan, indent=2) + "\n")
+    (reviewed / "bindings" / f"{plan['id']}.json").write_bytes(plan_path.read_bytes())
+
+
+def test_declared_unmeasured_position_is_admitted_without_measure_output(tmp_path, monkeypatch):
+    """Path A2 rule v2: a return position the task does not define (or the call does not return) is mapped as
+    literal null with a basis; it is not measured, and every other output still needs its measure_output."""
+    _, call_ref, plan_path, reviewed = _fixture(tmp_path, monkeypatch)
+    _unmeasured_position_plan(plan_path, reviewed, "return 1 is not defined by the task (test)")
+    reference = ContractReference(plan_path=plan_path, specification_root=SPEC, call_ref=call_ref,
+                                  base_dir=tmp_path, measure_names=["loss"],
+                                  backend=binding_backend, reviewed_root=reviewed)
+    assert list(reference._measure) == ["loss"]
+
+
+def test_unmeasured_position_needs_a_basis(tmp_path, monkeypatch):
+    _, call_ref, plan_path, reviewed = _fixture(tmp_path, monkeypatch)
+    _unmeasured_position_plan(plan_path, reviewed, None)
+    with pytest.raises(ContractBindingError, match="measure_output"):
+        ContractReference(plan_path=plan_path, specification_root=SPEC, call_ref=call_ref,
+                          base_dir=tmp_path, measure_names=["loss"],
+                          backend=binding_backend, reviewed_root=reviewed)
