@@ -1,6 +1,6 @@
 {
   "schema": "kernel-analyzer-current-index-v2",
-  "updated": "2026-10-19",
+  "updated": "2026-10-22",
   "note": "The single current index. The repository has five parts; each keeps only the latest, most complete version. Everything removed in the 2026-10-09 reorganization is recoverable from tag pre-reorg-20261009 (git show pre-reorg-20261009:<old path>).",
   "parts": {
     "experiments": "1_experiments/README.md",
@@ -10,6 +10,21 @@
     "specification": "5_specification/README.md"
   },
   "history_tag": "pre-reorg-20261009",
+  "research_focus": {
+    "status": "The specification method and its correctness chain are sufficiently established for the current research stage. Unsupported tasks still remain unsupported, but specification construction is no longer the main blocker.",
+    "primary_goal": "Close one decisive end-to-end case: either show that a naturally occurring bias propagates through a real training or inference path, or show and repair a consequential defect in a mainstream operator implementation.",
+    "first_candidate": "PyTorch Inductor avg_pool2d with ceil_mode in backward is the first mainstream-operator candidate. Its public task, complete forward/VJP binding and output difference are already established; the remaining work is practical source localization, a real repair, and an unchanged-input before/after evaluation.",
+    "localization_goal": "Replace the current expensive per-IR-node exactification workflow with repair-oriented localization over the actual operator call and dataflow. The result must identify the affected output/state, source region, mechanism and a source-level repair candidate, then validate the compiled repair.",
+    "acceptance": [
+      "Use a natural, unplanted difference in a released mainstream implementation and a common supported configuration.",
+      "Keep K-G, G-f and K-f separate so numerical execution bias, task-formula error and state/provenance error are not conflated.",
+      "Localize without using the known fix as analyzer input; score whether the reported source region and mechanism contain the actual cause.",
+      "Apply a real source-level repair, recompile it, and show that the target difference disappears without breaking the other declared outputs or state.",
+      "For the propagation route, hold inputs fixed and show the local correction changes the declared downstream quantity in the predicted direction; a micro-kernel-only effect is insufficient.",
+      "Report cannot-decide cases instead of filling missing localization or downstream evidence by assumption."
+    ],
+    "specification_role": "Maintain and extend specifications only when the selected real case exposes a concrete missing formula, parameter, state, output or evaluator capability. Contract counts are not a current success metric."
+  },
   "release": {
     "tag": "general-v3.1",
     "commit": "d6e177e2b6a4216035912c1ae86f41a2fba4e69c",
@@ -29,7 +44,7 @@
     "batch1": "3_audits/batch1_semantic_core/README.md (baseline dsl-v2@3532066: memory-effect composition rules M1-M5 fixing the cross-input digest, unchanged-bytes in-place arithmetic and overlapping partial-write provenance classes; producer trace non-interference T1 (finding D12); precision controller P1-P3 (three-level summation reaches level 3 from the unified entry; stop categories); packaging K1 (no repository path at run time, console entry points); bias query Q1-Q3; acceptance frozen before the run at da4b64e: 24 of 24 hold-out items hold (1_experiments/batch1_acceptance), public v1.1 regression 28/28 unchanged (1_experiments/dsl_v2/regression_v11/reg20261010T1241); one execution deviation recorded: the 4 race programs were launched on the GPU by mistake, results not in the record, runner now skips them by default)",
     "round2": "3_audits/round2_measurement/README.md (baseline dsl-v2@fb87929: cross-launch write evidence, .data writes, provenance / carry-over consistency, fixed captures across precision levels, precision switches recorded and never set (T2), trace non-interference with output snapshots (T1); increment observation layer O1 and black-box mode in the unified entry); study: 1_experiments/tolerance_study/README.md (common-configuration numerical error, tolerance blind spots and bias: A low-precision storage drops increments, B RAdam rectification at default beta2, C TF32; ledger results/ledger.json); tool limits found in the study, unfixed: 3_audits/round2_measurement/README.md (ATen kernels black box only, k = 4864 matmul over the 1 h budget, in-call precision switches recorded as at entry, Inductor provenance not aligned); the study's paired inference and projections call analysis.unit_axes, analysis.holm_adjusted and observation.output_unit (protocol deviation D-11)",
     "composition_study": "1_experiments/composition_study/README.md (revised after two reviews: strict cell status -- 12,074 of 17,687 cells bit identical, 1,591 partial (lanes without a declared value), 0 mismatching elements; corrected library corpus of 231 kernels, 213 bit identical; full-signature K1 / K2; emulator gaps from two-primitive interactions fixed test-first (PTX dataflow product choice, flattening-reshape reductions). Compositional bias prediction (a prototype with ex-ante evidence; not yet a theoretical standard, see the external review of c415b62): reference_eval/bias_predict.py with the contract table data/bias_contracts.json.gz; protocols predictor_protocol.md (v1, frozen bd84c02) and predictor_protocol_v2.md (v2, frozen 0f1e465); predictions committed before measurement. Held-out sets of 60 programs each: 51 / 44 hold, 2 / 2 fail (sub-ulp biases of f32 approximate-function chains), the rest declared 'cannot be decided'; real TF32 modification (activations rounded to nearest) predicted ex ante and confirmed on the device; finding B024)",
-    "audit_status": "2_tool/docs/audit_status.md (stage status of the audit entry, 2026-10-13: what it does and the evidence; decisions from the discussion -- ex-ante prediction optional for audits, attribution cost acceptable but not reusable, spec layers (DSL defines G, the spec library f); gaps: 1 hidden premises of the reference (spec library coverage and unverified entries, the audit does not use its input contracts, G bound to the locked build), 2 attribution not reusable / costly / precision only, 3 self-run evidence, 4 one version and architecture; next: gaps 1 and 2 with registered acceptance)",
+    "audit_status": "2_tool/docs/audit_status.md (updated 2026-10-22: specification is sufficient for the current stage and is no longer the main blocker; the primary gap is repair-oriented localization across the real call/dataflow. The first flagship candidate is PyTorch Inductor avg_pool2d ceil-mode backward, followed by a natural-bias propagation case.)",
     "flash_attention_case": "1_experiments/flash_attention_case/README.md (first tool case: the Triton 3.6.0 tutorial flash attention forward and four planted defects audited with reference_eval/audit.py -- tf32 truncation, a semantic constant, a bf16 loop accumulator found, located to source lines, predicted ex ante consistently with the measurement; an fp16 accumulator and strong stagnation reported as 'cannot be decided'. Tool defects fixed test-first: reductions over dot outputs (MMA layout), underflowing approximate functions, localization candidates missing tensor-core dots, dot reason text, fma-chain state propagation, the audit entry and report. Second round after a developer-perspective review: plain-language summary per output, tolerance checks split into passes / fails because of the bias / fails on the random error alone (none of three common checks resolves the 0.1-0.3% biases), fix costs, the effect of fixing every site from one emulation, sampling incl. the boundary block and the spread between programs; defect fixed: attribution and measurement on different programs)"
   },
   "versions": {
@@ -57,7 +72,7 @@
     "installed": "kernel-analyzer-measure --declaration D.json --out R.json; kernel-analyzer-analyze (pip install of the repository wheel)",
     "composition_rules": "kernel_analyzer.composition_rules (registry; checked by 2_tool/tests/test_composition_rules.py)"
   },
-  "pending_user_decisions": "push of 32efd84, e57625a and the stage consolidation commit to dsl-v2; whether the audit entry skips the ex-ante prediction by default (2_tool/docs/audit_status.md section 6)",
+  "pending_user_decisions": "whether the audit entry skips the ex-ante prediction by default; this is not on the current critical path. Submission of any upstream issue remains a user action.",
   "external_materials_pending": "3_audits/README.md section 3 (M01-M12)",
   "test_policy": "tests must not modify or rewrite tracked files (2_tool/tests/conftest.py guard); outputs go to tmp_path",
   "specification": {

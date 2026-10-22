@@ -2,6 +2,9 @@
 
 工具 4.0（`dsl-v2` 分支，未发布、未冻结；冻结版本仍是 `general-v3.1` / 工具 3.1，见 [CURRENT.json](../CURRENT.json)）。
 
+当前开发重点是把 bias 定位从“逐个 IR 节点做精确化反事实”推进到“能指向源码区域、机制和真实修复”，并闭合一个 bias 传递或主流算子缺陷的真实案例。
+Specification 已能支撑当前案例，只在真实调用暴露具体缺口时扩充。定位要求、首选 `avg_pool2d` 案例和验收边界见 [audit_status.md](docs/audit_status.md)。
+
 ## 做什么
 
 对一个 Triton kernel 的每次启动，从捕获的 IR 自动构造实数语义 G 的严格包围（参照 K_R），与实际输出 K 比较，
