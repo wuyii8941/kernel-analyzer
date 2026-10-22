@@ -330,7 +330,7 @@ INPUTS_TEMPLATE_V2 = INPUTS_TEMPLATE.replace('map_location="cuda", ', "")
 
 
 def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict, profile: str, runtime: dict,
-                adapter, exclude=(), budget=1800, task_statement=None):
+                adapter, exclude=(), budget=1800, task_statement=None, single_unit=False):
     """Rule v2: rule v1 plus (a) tuple returns mapped position by position under the adapter's ATEN_RETURNS
     declaration, (b) the single written argument of a mutable overload mapped as the output post-state,
     (c) non-semantic keyword arguments replayed but not passed to the contract, (d) a reference input conditioned on
@@ -490,9 +490,12 @@ def generate_v2(spec: Path, name: str, op: str, values_pt: Path, contract: dict,
                            "dtype": tdt.get(x.dtype, str(x.dtype).replace("torch.", ""))} for t, (_, x) in tensors.items()},
             "compare": {"mode": "contract", "measure": measured, "binding_plan": f"../call_bindings/{name}.json",
                         "specification_root": "../.."},
-            "units": {"development": 1, "confirmation": 2, "seed_offset": 0},
+            # D-A2-9: every unit replays the same recorded values; vocabulary-sized calls measure one unit
+            "units": ({"development": 1, "confirmation": 0, "seed_offset": 0} if single_unit else
+                      {"development": 1, "confirmation": 2, "seed_offset": 0}),
             "alpha": 0.05,
-            "budget": {"cpu_seconds": budget, "gpu_seconds": budget, "case_timeout": budget, "max_units": 3},
+            "budget": {"cpu_seconds": budget, "gpu_seconds": budget, "case_timeout": budget,
+                       "max_units": 1 if single_unit else 3},
             "rule_classes": {"fixed_mean": ["R1", "R5"], "aligned": ["R2", "R3"]},
             "multiplicity": "Holm within each rule class",
             "reference_classes_allowed": ["complete_composed"],

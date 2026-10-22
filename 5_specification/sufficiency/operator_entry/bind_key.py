@@ -354,6 +354,7 @@ def main():
                 pick = chosen.get((c["id"], p))
                 d = I.generate_v2(a.spec, name, k["op"], values, c, p, rt, registry.load(c["id"]).adapter,
                                   exclude=exclude, budget=a2_budget(k),
+                                  single_unit=key_elements(k) >= 5e7 or key_work(k) >= 1e10,
                                   task_statement=pick["statement"] if pick else None)
             else:
                 d = I.generate(a.spec, name, k["op"], values, c, p, rt,
@@ -412,6 +413,9 @@ def main():
             except Exception as err:  # noqa: BLE001 -- recorded
                 bad, total = None, f"{type(err).__name__}: {err}"[:200]
             entry["blackbox_exact"] = {"mismatches": bad, "compared": total}
+            if bad is None and isinstance(total, str) and total.startswith(("reference outcome unsupported",
+                                                                            "reference outcome invalid_input")):
+                entry["applies"] = False          # the profile refuses the call itself (e.g. dtype outside it)
             if isinstance(bad, int):
                 entry["applies"] = True
                 entry["verdict"] = (("detected", f"black-box exact comparison: {bad} of {total} coordinates differ from f "
