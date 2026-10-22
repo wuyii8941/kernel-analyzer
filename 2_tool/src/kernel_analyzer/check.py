@@ -424,6 +424,12 @@ def _trace_conflicts(launches, seq, prods) -> set:
     return out
 
 
+def _seed_span(seeds):
+    """First and last seed of a unit set for the report; empty when the set is (a run with no confirmation units)."""
+    seeds = list(seeds)
+    return [seeds[0], seeds[-1]] if seeds else []
+
+
 def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_rel=None, repeats=None,
         magnitude_bound=None, alpha=0.05, producer_records=True, precision_level=1, captures=None, observe=None):
     """One case through mode A or B.  ``keep``: a dict that receives, per output and seed, the reference interval
@@ -859,7 +865,7 @@ def run(case, dev=DEV, conf=CONF, zero_fill_mode="auto", keep=None, equivalence_
               "ttir_coverage_complete": [c if li["ir_kind"] == "ttir" else None
                                          for c, li in zip(coverage or [], launch_info or [])],
               "versions": {k: _version(k) for k in ("liger-kernel", "transformers", "torch", "triton")},
-              "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
+              "seeds": {"development": _seed_span(dev), "confirmation": _seed_span(conf)},
               "seconds": round(seconds, 1), "outputs": {},
               "tool_version": TOOL_VERSION, "launches_per_input": r_exec, "precision_level": precision_level,
               "capture": "reused" if replay else "captured",
@@ -1276,7 +1282,7 @@ def run_black_box(case, dev=DEV, conf=CONF, equivalence_rel=None, observe=None, 
               "comparison": ("K - admitted task specification only (no TTIR: no K_R decomposition)"
                              if admitted_contract else
                              "K - supplied reference only (no TTIR: no K_R, no decomposition)"),
-              "seeds": {"development": [list(dev)[0], list(dev)[-1]], "confirmation": [list(conf)[0], list(conf)[-1]]},
+              "seeds": {"development": _seed_span(dev), "confirmation": _seed_span(conf)},
               "seconds": round(time.time() - t0, 1), "outputs": {}}
     for name, r in rows.items():
         lo, hi, fm, ok = (np.stack([x[i] for x in r]) for i in range(4))

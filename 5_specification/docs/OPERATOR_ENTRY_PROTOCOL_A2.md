@@ -123,3 +123,12 @@
   - 依据：数据搬运不涉及舍入，正确实现必须逐位复现 f。
   - 来由：FlagGems `slice_backward` 把非连续的 grad_output 按线性存储读取（核内 `grad_output_ptr + offsets`），工具因此判定输出依赖视图之外的存储，拒绝绑定。
   - 直接与原生 PyTorch 对照：三个记录的调用都不一致（最大差 0.0077），连续输入的对照一致。证据：`evidence/flaggems_slice_backward_strides.md`。
+- 偏差 D-A2-9（2026-10-22，词表规模调用的单测量单元）：
+  - 条件：键的元素数 ≥ 5e7，或乘加数 ≥ 1e10。
+  - 做法：只测 1 个单元（development 1，confirmation 0）。每个单元重放的都是同一组记录值，多测的单元不增加信息，只成倍增加内存和时间。
+  - 代价：统计规则（R1–R5）只有 1 个单元，记为无法判断；A2 的结论来自逐坐标的语义规则，不受影响。
+  - 同时：黑盒对照中，profile 本身拒绝该调用（reference outcome unsupported / invalid_input）时，记该 profile 不适用。
+- 偏差 D-A2-10（2026-10-22，工具修复）：
+  - 问题：`check.run` 与 `check.run_black_box` 在报告中写确认单元的首尾种子时直接取下标，确认单元为空（D-A2-9）时抛 IndexError，测量全部作废。第 4 轮的 qwen bf16 152、151 和重放 qwen bf16 83 因此失败。
+  - 修复：空集合时写空列表。修复前失败的测试 `2_tool/tests/test_single_unit_runs.py`。
+  - 受影响的键在修复后重绑；qwen fp32 86 的测量以旧代码启动，按 PID 停止后重绑。
