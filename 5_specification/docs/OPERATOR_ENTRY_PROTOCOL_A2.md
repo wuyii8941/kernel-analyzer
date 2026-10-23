@@ -132,3 +132,8 @@
   - 问题：`check.run` 与 `check.run_black_box` 在报告中写确认单元的首尾种子时直接取下标，确认单元为空（D-A2-9）时抛 IndexError，测量全部作废。第 4 轮的 qwen bf16 152、151 和重放 qwen bf16 83 因此失败。
   - 修复：空集合时写空列表。修复前失败的测试 `2_tool/tests/test_single_unit_runs.py`。
   - 受影响的键在修复后重绑；qwen fp32 86 的测量以旧代码启动，按 PID 停止后重绑。
+
+## 8 结果
+
+- 2026-10-23 运行完毕：333 个模型候选键中 323 个给出语义结论（97.0%，Wilson 94.6–98.4%），其中相容 287、检出 36；按调用加权 98.6%。
+- 报告：`sufficiency/results/PATH_A2_20261022/SUMMARY.md`；逐键结果 `keys.jsonl`，检出键的报告在 `reports/`。

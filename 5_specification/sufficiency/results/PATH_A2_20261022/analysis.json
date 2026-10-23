@@ -1,0 +1,921 @@
+{
+ "candidate_keys": 333,
+ "candidate_calls": 946,
+ "classes": {
+  "usable as is": {
+   "k": 310,
+   "wilson": [
+    0.9309,
+    0.8985,
+    0.9535
+   ]
+  },
+  "usable with recorded task choice (step 2)": {
+   "k": 13,
+   "wilson": [
+    0.039,
+    0.023,
+    0.0656
+   ]
+  },
+  "reference incomplete": {
+   "k": 7,
+   "wilson": [
+    0.021,
+    0.0102,
+    0.0427
+   ]
+  },
+  "outside contract scope": {
+   "k": 2,
+   "wilson": [
+    0.006,
+    0.0016,
+    0.0216
+   ]
+  },
+  "run or evidence insufficient": {
+   "k": 1,
+   "wilson": [
+    0.003,
+    0.0005,
+    0.0168
+   ]
+  }
+ },
+ "classes_call_weighted": {
+  "usable as is": {
+   "k": 903,
+   "share": 0.9545
+  },
+  "usable with recorded task choice (step 2)": {
+   "k": 30,
+   "share": 0.0317
+  },
+  "reference incomplete": {
+   "k": 7,
+   "share": 0.0074
+  },
+  "outside contract scope": {
+   "k": 4,
+   "share": 0.0042
+  },
+  "run or evidence insufficient": {
+   "k": 2,
+   "share": 0.0021
+  }
+ },
+ "diagnosed": {
+  "k": 323,
+  "wilson": [
+   0.97,
+   0.9456,
+   0.9836
+  ],
+  "calls": 933
+ },
+ "verdicts": {
+  "consistent": 287,
+  "detected": 36
+ },
+ "not_diagnosed": [
+  {
+   "key": "bert_tiny_bf16__39.json",
+   "op": "aten.nll_loss_forward.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under NLL/aten_real: out0: evaluated reference complete_rate=0.0"
+  },
+  {
+   "key": "bert_tiny_fp32__38.json",
+   "op": "aten.nll_loss_forward.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under NLL/aten_real: out0: evaluated reference complete_rate=0.0"
+  },
+  {
+   "key": "bert_tiny_fp32__73.json",
+   "op": "aten._scaled_dot_product_efficient_attention_backward.default",
+   "class": "outside contract scope",
+   "reason": "no candidate profile applies: ATTN/torch210_sdpa_defined_real: invalid_input: ATTN: missing required fields ['attn_mask', 'attn_mask_dtype', 'dropout_p', 'dtype', 'enable_gqa', ' | ATTN/torch210_aten_sdpa_fused_dropout0: unsupported: dropou"
+  },
+  {
+   "key": "gpt2_bf16__49.json",
+   "op": "aten.nll_loss_forward.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under NLL/aten_real: out0: evaluated reference complete_rate=0.0"
+  },
+  {
+   "key": "gpt2_bf16__59.json",
+   "op": "aten.mm.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under MATMUL/real: out: evaluated reference complete_rate=None"
+  },
+  {
+   "key": "gpt2_fp32__48.json",
+   "op": "aten.nll_loss_forward.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under NLL/aten_real: out0: evaluated reference complete_rate=0.0"
+  },
+  {
+   "key": "gpt2_fp32__87.json",
+   "op": "aten._scaled_dot_product_efficient_attention_backward.default",
+   "class": "outside contract scope",
+   "reason": "no candidate profile applies: ATTN/torch210_sdpa_defined_real: invalid_input: ATTN: missing required fields ['attn_mask', 'attn_mask_dtype', 'dropout_p', 'dtype', 'enable_gqa', ' | ATTN/torch210_aten_sdpa_fused_dropout0: unsupported: dropou"
+  },
+  {
+   "key": "qwen25_05b_bf16__119.json",
+   "op": "aten._scaled_dot_product_flash_attention_backward.default",
+   "class": "run or evidence insufficient",
+   "reason": "applicability not decided (ATTN/torch210_sdpa_defined_real): binding: ContractBindingError: public output depends on tensor state not accounted for by the binding plan: out1: L0:sum_dim_kernel_non_inner:input_ptr; out2: L1:sum_dim_kernel_no"
+  },
+  {
+   "key": "qwen25_05b_bf16__75.json",
+   "op": "aten.nll_loss_forward.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under NLL/aten_real: out0: evaluated reference complete_rate=0.0"
+  },
+  {
+   "key": "qwen25_05b_fp32__94.json",
+   "op": "aten.nll_loss_forward.default",
+   "class": "reference incomplete",
+   "reason": "reference not complete under NLL/aten_real: out0: evaluated reference complete_rate=0.0"
+  }
+ ],
+ "detections": [
+  {
+   "key": "bert_tiny_bf16__23.json",
+   "op": "aten.gelu.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 196413 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 4.536103130530901e-09
+  },
+  {
+   "key": "bert_tiny_bf16__28.json",
+   "op": "aten.gelu.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 49152 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.324000105978042e-09
+  },
+  {
+   "key": "bert_tiny_bf16__53.json",
+   "op": "aten.native_layer_norm_backward.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: 768 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 0.12458311301405557
+  },
+  {
+   "key": "bert_tiny_bf16__55.json",
+   "op": "aten.gelu_backward.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 49152 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.5996883620819753e-10
+  },
+  {
+   "key": "bert_tiny_bf16__62.json",
+   "op": "aten.native_dropout_backward.default",
+   "selected": "RANDOM/finite_backward",
+   "reason": "RANDOM/finite_backward: 44316 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 5.782128907490556e-10
+  },
+  {
+   "key": "bert_tiny_bf16__68.json",
+   "op": "aten.gelu_backward.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 196497 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.2872672422604626e-10
+  },
+  {
+   "key": "bert_tiny_bf16__8.json",
+   "op": "aten.native_layer_norm.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: returned shape differs from the specification: observed tensor out[1] has shape (128,), the specification (1, 128, 1)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "bert_tiny_bf16__9.json",
+   "op": "aten.native_dropout.default",
+   "selected": "RANDOM/native_forward_given_mask",
+   "reason": "RANDOM/native_forward_given_mask: 44212 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.5022617692931435e-09
+  },
+  {
+   "key": "bert_tiny_fp32__23.json",
+   "op": "aten.gelu.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 196404 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 4.536144368827623e-09
+  },
+  {
+   "key": "bert_tiny_fp32__28.json",
+   "op": "aten.gelu.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 49152 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.324005560941664e-09
+  },
+  {
+   "key": "bert_tiny_fp32__50__enable_layer_norm_backward.json",
+   "op": "aten.native_layer_norm_backward.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: 768 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 0.12276594702142266
+  },
+  {
+   "key": "bert_tiny_fp32__52.json",
+   "op": "aten.gelu_backward.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 48768 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 3.431056372309162e-10
+  },
+  {
+   "key": "bert_tiny_fp32__59.json",
+   "op": "aten.native_dropout_backward.default",
+   "selected": "RANDOM/finite_backward",
+   "reason": "RANDOM/finite_backward: 43719 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 6.222567413653947e-10
+  },
+  {
+   "key": "bert_tiny_fp32__65.json",
+   "op": "aten.gelu_backward.default",
+   "selected": "ACT/torch",
+   "reason": "ACT/torch: 194949 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 3.5198717994677335e-10
+  },
+  {
+   "key": "bert_tiny_fp32__8.json",
+   "op": "aten.native_layer_norm.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: returned shape differs from the specification: observed tensor out[1] has shape (128,), the specification (1, 128, 1)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "bert_tiny_fp32__9.json",
+   "op": "aten.native_dropout.default",
+   "selected": "RANDOM/native_forward_given_mask",
+   "reason": "RANDOM/native_forward_given_mask: 44180 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.5027020227010362e-09
+  },
+  {
+   "key": "gpt2_bf16__27.json",
+   "op": "aten.mul.Tensor",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 1179648 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 3.4108061606490625e-08
+  },
+  {
+   "key": "gpt2_bf16__29.json",
+   "op": "aten.mul.Tensor",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 1179648 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.7995355560055866e-08
+  },
+  {
+   "key": "gpt2_bf16__61__enable_layer_norm_backward.json",
+   "op": "aten.native_layer_norm_backward.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: read-only input a3 changed during the measured call (the ATen schema has no write annotation for it)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "gpt2_bf16__63.json",
+   "op": "aten.native_dropout_backward.default",
+   "selected": "RANDOM/finite_backward",
+   "reason": "RANDOM/finite_backward: 263202 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.557052160989357e-10
+  },
+  {
+   "key": "gpt2_bf16__7.json",
+   "op": "aten.native_dropout.default",
+   "selected": "RANDOM/native_forward_given_mask",
+   "reason": "RANDOM/native_forward_given_mask: 265171 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.3765056541910194e-09
+  },
+  {
+   "key": "gpt2_bf16__8__enable_layer_norm.json",
+   "op": "aten.native_layer_norm.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: returned shape differs from the specification: observed tensor out[1] has shape (128,), the specification (1, 128, 1)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "gpt2_fp32__27.json",
+   "op": "aten.mul.Tensor",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 1179648 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 3.437852125029463e-08
+  },
+  {
+   "key": "gpt2_fp32__29.json",
+   "op": "aten.mul.Tensor",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 1179648 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.822512856323695e-08
+  },
+  {
+   "key": "gpt2_fp32__59__enable_layer_norm_backward.json",
+   "op": "aten.native_layer_norm_backward.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: read-only input a3 changed during the measured call (the ATen schema has no write annotation for it)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "gpt2_fp32__61.json",
+   "op": "aten.native_dropout_backward.default",
+   "selected": "RANDOM/finite_backward",
+   "reason": "RANDOM/finite_backward: 263232 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.4481332935482265e-10
+  },
+  {
+   "key": "gpt2_fp32__7.json",
+   "op": "aten.native_dropout.default",
+   "selected": "RANDOM/native_forward_given_mask",
+   "reason": "RANDOM/native_forward_given_mask: 265370 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.3772752529537955e-09
+  },
+  {
+   "key": "gpt2_fp32__8.json",
+   "op": "aten.native_layer_norm.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: returned shape differs from the specification: observed tensor out[1] has shape (128,), the specification (1, 128, 1)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "qwen25_05b_bf16__123.json",
+   "op": "aten.slice_backward.default",
+   "selected": "LAYOUT/real",
+   "reason": "LAYOUT/real: 24378 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 0.008836128602567208
+  },
+  {
+   "key": "qwen25_05b_bf16__124.json",
+   "op": "aten.slice_backward.default",
+   "selected": "LAYOUT/real",
+   "reason": "LAYOUT/real: black-box exact comparison: 8123 of 16384 coordinates differ from f (data movement; program reference refused: unaccounted state)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "qwen25_05b_bf16__128.json",
+   "op": "aten.slice_backward.default",
+   "selected": "LAYOUT/real",
+   "reason": "LAYOUT/real: 171744 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 0.0028966934977907705
+  },
+  {
+   "key": "qwen25_05b_bf16__129.json",
+   "op": "aten.slice_backward.default",
+   "selected": "LAYOUT/real",
+   "reason": "LAYOUT/real: black-box exact comparison: 57160 of 114688 coordinates differ from f (data movement; program reference refused: unaccounted state)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "qwen25_05b_bf16__15.json",
+   "op": "aten.add.Tensor",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 384 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.5243688610586315e-15
+  },
+  {
+   "key": "qwen25_05b_bf16__49.json",
+   "op": "aten._scaled_dot_product_flash_attention.default",
+   "selected": "ATTN/torch210_aten_sdpa_fused_dropout0",
+   "reason": "ATTN/torch210_aten_sdpa_fused_dropout0: 345561 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.55118522658518e-09
+  },
+  {
+   "key": "qwen25_05b_fp32__13.json",
+   "op": "aten.add.Tensor",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 384 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.5243688610586315e-15
+  },
+  {
+   "key": "qwen25_05b_fp32__143.json",
+   "op": "aten.mul.Scalar",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 341376 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 5.529058955311812e-10
+  },
+  {
+   "key": "qwen25_05b_fp32__145.json",
+   "op": "aten.mul.Scalar",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 338688 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 5.7981311262039325e-11
+  },
+  {
+   "key": "qwen25_05b_fp32__150.json",
+   "op": "aten.slice_backward.default",
+   "selected": "LAYOUT/real",
+   "reason": "LAYOUT/real: black-box exact comparison: 56896 of 114688 coordinates differ from f (data movement; program reference refused: unaccounted state)",
+   "max_gap_relative": null
+  },
+  {
+   "key": "qwen25_05b_fp32__46.json",
+   "op": "aten.mul.Scalar",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 344064 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.6530451561353696e-08
+  },
+  {
+   "key": "qwen25_05b_fp32__54.json",
+   "op": "aten.mul.Scalar",
+   "selected": "ARITH/real",
+   "reason": "ARITH/real: 344064 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 1.6751105219570858e-08
+  },
+  {
+   "key": "trigger_D18__0.json",
+   "op": "aten.upsample_nearest2d.default",
+   "selected": "INTERP/torch210_aten_upsample_nearest2d",
+   "reason": "INTERP/torch210_aten_upsample_nearest2d: 5616 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 2.449660843598875
+  },
+  {
+   "key": "trigger_D20__0.json",
+   "op": "aten.argmax.default",
+   "selected": "REDUCE/real",
+   "reason": "REDUCE/real: 3 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 9.428571428571429
+  },
+  {
+   "key": "trigger_D3__0.json",
+   "op": "aten.addmm.default",
+   "selected": "MATMUL/real",
+   "reason": "MATMUL/real: 3 coordinates where K and f differ in special-value class",
+   "max_gap_relative": 0.0
+  },
+  {
+   "key": "trigger_D5__0.json",
+   "op": "aten.rms_norm.default",
+   "selected": "NORM/aten_native",
+   "reason": "NORM/aten_native: 768 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 6.591689297085417e-06
+  },
+  {
+   "key": "trigger_D8__1.json",
+   "op": "aten.avg_pool2d.default",
+   "selected": "POOL/torch210_aten_avg2d",
+   "reason": "POOL/torch210_aten_avg2d: 9 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 0.20921402438094028
+  },
+  {
+   "key": "trigger_D8__3.json",
+   "op": "aten.avg_pool2d_backward.default",
+   "selected": "POOL/torch210_aten_avg2d",
+   "reason": "POOL/torch210_aten_avg2d: 36 coordinates with G_pi - f excluding zero",
+   "max_gap_relative": 0.14754098360655732
+  }
+ ],
+ "replays": [
+  {
+   "key": "bert_tiny_bf16__16__enable_flash_attention_forward.json",
+   "function": "flash_attention_forward",
+   "op": "aten._scaled_dot_product_flash_attention.default",
+   "class": "run or evidence insufficient",
+   "verdict": null,
+   "reason": "applicability not decided (ATTN/torch210_sdpa_defined_real): binding: ContractBindingError: public output depends on tensor state not accounted for by the binding plan: out0: L0:flash_fwd_kernel:philox_args; out1: L0:flash_fwd_kernel:philox"
+  },
+  {
+   "key": "bert_tiny_fp32__50__enable_layer_norm_backward.json",
+   "function": "layer_norm_backward",
+   "op": "aten.native_layer_norm_backward.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "NORM/aten_native: 768 coordinates with G_pi - f excluding zero"
+  },
+  {
+   "key": "gpt2_bf16__17__enable_flash_attention_forward.json",
+   "function": "flash_attention_forward",
+   "op": "aten._scaled_dot_product_flash_attention.default",
+   "class": "run or evidence insufficient",
+   "verdict": null,
+   "reason": "applicability not decided (ATTN/torch210_sdpa_defined_real): binding: ContractBindingError: public output depends on tensor state not accounted for by the binding plan: out0: L0:flash_fwd_kernel:philox_args; out1: L0:flash_fwd_kernel:philox"
+  },
+  {
+   "key": "gpt2_bf16__61__enable_layer_norm_backward.json",
+   "function": "layer_norm_backward",
+   "op": "aten.native_layer_norm_backward.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "NORM/aten_native: read-only input a3 changed during the measured call (the ATen schema has no write annotation for it)"
+  },
+  {
+   "key": "gpt2_bf16__8__enable_layer_norm.json",
+   "function": "layer_norm",
+   "op": "aten.native_layer_norm.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "NORM/aten_native: returned shape differs from the specification: observed tensor out[1] has shape (128,), the specification (1, 128, 1)"
+  },
+  {
+   "key": "gpt2_fp32__59__enable_layer_norm_backward.json",
+   "function": "layer_norm_backward",
+   "op": "aten.native_layer_norm_backward.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "NORM/aten_native: read-only input a3 changed during the measured call (the ATen schema has no write annotation for it)"
+  },
+  {
+   "key": "qwen25_05b_bf16__103__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__105__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__109__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__111__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "run failure of the implementation (replayed)",
+   "verdict": "run_failure",
+   "reason": "FlagGems mm on the recorded call: triton.runtime.errors.OutOfResources: out of resource: shared memory, Required: 131072, Hardware limit: 101376. Reducing block sizes or `num_stages` may help."
+  },
+  {
+   "key": "qwen25_05b_bf16__114__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__116__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__136__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__138__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__53__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__57__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__63__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__66__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__83__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "MATMUL/real: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "qwen25_05b_bf16__85__enable_mm.json",
+   "function": "mm",
+   "op": "aten.mm.default",
+   "class": "run failure of the implementation (replayed)",
+   "verdict": "run_failure",
+   "reason": "FlagGems mm on the recorded call: triton.runtime.errors.OutOfResources: out of resource: shared memory, Required: 131072, Hardware limit: 101376. Reducing block sizes or `num_stages` may help."
+  }
+ ],
+ "triggers": [
+  {
+   "key": "trigger_D18__0.json",
+   "op": "aten.upsample_nearest2d.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "INTERP/torch210_aten_upsample_nearest2d: 5616 coordinates with G_pi - f excluding zero"
+  },
+  {
+   "key": "trigger_D20__0.json",
+   "op": "aten.argmax.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "REDUCE/real: 3 coordinates with G_pi - f excluding zero"
+  },
+  {
+   "key": "trigger_D3__0.json",
+   "op": "aten.addmm.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "MATMUL/real: 3 coordinates where K and f differ in special-value class"
+  },
+  {
+   "key": "trigger_D5__0.json",
+   "op": "aten.rms_norm.default",
+   "class": "usable as is",
+   "verdict": "detected",
+   "reason": "NORM/aten_native: 768 coordinates with G_pi - f excluding zero"
+  },
+  {
+   "key": "trigger_D8__1.json",
+   "op": "aten.avg_pool2d.default",
+   "class": "usable with recorded task choice (step 2)",
+   "verdict": "detected",
+   "reason": "POOL/torch210_aten_avg2d: 9 coordinates with G_pi - f excluding zero"
+  },
+  {
+   "key": "trigger_D8__2.json",
+   "op": "aten.ones_like.default",
+   "class": "usable as is",
+   "verdict": "consistent",
+   "reason": "CREATE/explicit: all outputs complete, no coordinate excludes zero"
+  },
+  {
+   "key": "trigger_D8__3.json",
+   "op": "aten.avg_pool2d_backward.default",
+   "class": "usable with recorded task choice (step 2)",
+   "verdict": "detected",
+   "reason": "POOL/torch210_aten_avg2d: 36 coordinates with G_pi - f excluding zero"
+  }
+ ],
+ "by_op": {
+  "aten._log_softmax.default": {
+   "usable as is": 6
+  },
+  "aten._log_softmax_backward_data.default": {
+   "usable as is": 6
+  },
+  "aten._safe_softmax.default": {
+   "usable as is": 1
+  },
+  "aten._scaled_dot_product_efficient_attention_backward.default": {
+   "outside contract scope": 2
+  },
+  "aten._scaled_dot_product_flash_attention.default": {
+   "usable as is": 1
+  },
+  "aten._scaled_dot_product_flash_attention_backward.default": {
+   "run or evidence insufficient": 1
+  },
+  "aten._softmax_backward_data.default": {
+   "usable as is": 1
+  },
+  "aten._to_copy.default": {
+   "usable with recorded task choice (step 2)": 13
+  },
+  "aten.add.Tensor": {
+   "usable as is": 33
+  },
+  "aten.addmm.default": {
+   "usable as is": 20
+  },
+  "aten.arange.default": {
+   "usable as is": 4
+  },
+  "aten.bmm.default": {
+   "usable as is": 4
+  },
+  "aten.cat.default": {
+   "usable as is": 8
+  },
+  "aten.clone.default": {
+   "usable as is": 3
+  },
+  "aten.cos.default": {
+   "usable as is": 2
+  },
+  "aten.div.Scalar": {
+   "usable as is": 2
+  },
+  "aten.embedding.default": {
+   "usable as is": 12
+  },
+  "aten.embedding_backward.default": {
+   "usable as is": 12
+  },
+  "aten.gather.default": {
+   "usable as is": 2
+  },
+  "aten.gelu.default": {
+   "usable as is": 4
+  },
+  "aten.gelu_backward.default": {
+   "usable as is": 4
+  },
+  "aten.mean.dim": {
+   "usable as is": 2
+  },
+  "aten.mm.default": {
+   "usable as is": 49,
+   "reference incomplete": 1
+  },
+  "aten.mul.Scalar": {
+   "usable as is": 10
+  },
+  "aten.mul.Tensor": {
+   "usable as is": 33
+  },
+  "aten.native_dropout.default": {
+   "usable as is": 4
+  },
+  "aten.native_dropout_backward.default": {
+   "usable as is": 4
+  },
+  "aten.native_layer_norm.default": {
+   "usable as is": 3
+  },
+  "aten.native_layer_norm_backward.default": {
+   "usable as is": 1
+  },
+  "aten.neg.default": {
+   "usable as is": 5
+  },
+  "aten.nll_loss_backward.default": {
+   "usable as is": 6
+  },
+  "aten.nll_loss_forward.default": {
+   "reference incomplete": 6
+  },
+  "aten.ones.default": {
+   "usable as is": 1
+  },
+  "aten.ones_like.default": {
+   "usable as is": 6
+  },
+  "aten.pad.default": {
+   "usable as is": 6
+  },
+  "aten.pow.Tensor_Scalar": {
+   "usable as is": 10
+  },
+  "aten.repeat_interleave.self_int": {
+   "usable as is": 1
+  },
+  "aten.rsqrt.default": {
+   "usable as is": 2
+  },
+  "aten.scalar_tensor.default": {
+   "usable as is": 2
+  },
+  "aten.silu.default": {
+   "usable as is": 2
+  },
+  "aten.silu_backward.default": {
+   "usable as is": 2
+  },
+  "aten.sin.default": {
+   "usable as is": 2
+  },
+  "aten.slice_backward.default": {
+   "usable as is": 6
+  },
+  "aten.sum.dim_IntList": {
+   "usable as is": 19
+  },
+  "aten.tanh.default": {
+   "usable as is": 2
+  },
+  "aten.tanh_backward.default": {
+   "usable as is": 2
+  },
+  "aten.tril.default": {
+   "usable as is": 1
+  },
+  "aten.where.self": {
+   "usable as is": 1
+  },
+  "aten.zeros.default": {
+   "usable as is": 3
+  }
+ },
+ "by_workload": {
+  "bert_tiny_bf16": {
+   "usable as is": 37,
+   "reference incomplete": 1,
+   "usable with recorded task choice (step 2)": 2
+  },
+  "bert_tiny_fp32": {
+   "usable as is": 36,
+   "reference incomplete": 1,
+   "outside contract scope": 1
+  },
+  "gpt2_bf16": {
+   "usable as is": 45,
+   "usable with recorded task choice (step 2)": 2,
+   "reference incomplete": 2
+  },
+  "gpt2_fp32": {
+   "usable as is": 47,
+   "reference incomplete": 1,
+   "outside contract scope": 1
+  },
+  "qwen25_05b_bf16": {
+   "usable as is": 63,
+   "usable with recorded task choice (step 2)": 8,
+   "run or evidence insufficient": 1,
+   "reference incomplete": 1
+  },
+  "qwen25_05b_fp32": {
+   "usable as is": 82,
+   "reference incomplete": 1,
+   "usable with recorded task choice (step 2)": 1
+  }
+ },
+ "missing_reports": [],
+ "a_to_a2": [
+  {
+   "A": "usable as is",
+   "A2": "usable as is",
+   "keys": 126
+  },
+  {
+   "A": "run or evidence insufficient",
+   "A2": "usable as is",
+   "keys": 84
+  },
+  {
+   "A": "new contract needed",
+   "A2": "usable as is",
+   "keys": 56
+  },
+  {
+   "A": "outside contract scope",
+   "A2": "usable as is",
+   "keys": 30
+  },
+  {
+   "A": "new in A2",
+   "A2": "usable with recorded task choice (step 2)",
+   "keys": 13
+  },
+  {
+   "A": "new in A2",
+   "A2": "usable as is",
+   "keys": 10
+  },
+  {
+   "A": "new contract needed",
+   "A2": "reference incomplete",
+   "keys": 6
+  },
+  {
+   "A": "specification matching needed (step 2)",
+   "A2": "usable as is",
+   "keys": 4
+  },
+  {
+   "A": "new contract needed",
+   "A2": "outside contract scope",
+   "keys": 2
+  },
+  {
+   "A": "new contract needed",
+   "A2": "run or evidence insufficient",
+   "keys": 1
+  },
+  {
+   "A": "run or evidence insufficient",
+   "A2": "reference incomplete",
+   "keys": 1
+  }
+ ]
+}

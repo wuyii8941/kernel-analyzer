@@ -1,0 +1,971 @@
+{
+ "tool_version": "4.0",
+ "expanded_declaration": {
+  "call": "../calls/pa_bert_tiny_fp32_52_ACT_torch.py:call",
+  "inputs": {
+   "a0": {
+    "state": "../calls/pa_bert_tiny_fp32_52_ACT_torch_inputs.py:a0",
+    "shape": [
+     1,
+     128,
+     128
+    ],
+    "dtype": "float32"
+   },
+   "a1": {
+    "state": "../calls/pa_bert_tiny_fp32_52_ACT_torch_inputs.py:a1",
+    "shape": [
+     1,
+     128,
+     128
+    ],
+    "dtype": "float32"
+   }
+  },
+  "compare": {
+   "mode": "contract",
+   "measure": [
+    "out"
+   ],
+   "binding_plan": "../call_bindings/pa_bert_tiny_fp32_52_ACT_torch.json",
+   "specification_root": "../.."
+  },
+  "budget": {
+   "cpu_seconds": 1800,
+   "gpu_seconds": 1800,
+   "case_timeout": 1800,
+   "max_units": 3
+  },
+  "rule_classes": {
+   "fixed_mean": [
+    "R1",
+    "R5"
+   ],
+   "aligned": [
+    "R2",
+    "R3"
+   ]
+  },
+  "multiplicity": "Holm within each rule class",
+  "units": {
+   "development": 1,
+   "confirmation": 2,
+   "seed_offset": 0
+  },
+  "alpha": 0.05,
+  "reference_classes_allowed": [
+   "complete_composed"
+  ],
+  "resolution": {
+   "ulp_fraction": 0.125,
+   "max_level": 3
+  },
+  "factors": {},
+  "factor_levels": [
+   {}
+  ],
+  "versions": {
+   "torch": "2.10.0+cu128",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX A6000",
+   "tool": "4.0",
+   "python": "3.11.16"
+  },
+  "error_budget": null,
+  "magnitude_bound": null,
+  "equivalence": null,
+  "repeats": null,
+  "repeats_policy": "launches per input: the declared repeats, else 2, or 8 when a launch has float atomics",
+  "bounded_route": "magnitude_bound (a declared population bound M on |K - G| per element, not proven by the tool) is passed to check.run: every rule reports the bounded route (Hoeffding on the per-unit projections, per rule at alpha) next to the approximate route (endpoint-conservative t); without M no distribution-free statement.  A declared magnitude_bound.width_elementwise W (before the data) gives the pre-data detectable effect 2 r_n + W; without it the detectable effect is conditional on the observed widths. error_budget is recorded only (not applied)",
+  "equivalence_policy": "equivalence.rel (delta relative to the reference scale q_R) is passed to check.run: every fixed-direction rule reports the equivalence axis (TOST); without delta no equivalence statement",
+  "resolution_policy": "resolved_fraction is measured against resolution.ulp_fraction over the numerical enclosures (set targets counted apart); while some output's target is not met and can be, the level is measured again at a higher working precision (levels 1-3: SumK / DotK K = 3, 5, 8, compensated prefix sums from level 2; up to resolution.max_level). Stops with a category: met; budget exhausted; backend limit (float64 endpoints, the highest level, or no precision-dependent rule on the reference path); intrinsic set width; no numerical enclosure; pass failed.  An unchanged pass fraction is not a stop reason.  Every level is reported, an unmet target is 'enclosure too wide' with resolution_met = false, never written as met",
+  "mixed_sources": "outputs reading a non-Triton intermediate: numerical difference only, no semantic verdict",
+  "statistics": "frozen endpoint-conservative t per rule (analysis._summarize) at alpha + contract_v3 cannot-judge rules (S0 = 2, N0 = 64, n_min = 16)",
+  "reference_scope": "call-level complete only when every float buffer the kernels read is a declared input's own storage (unchanged), written by a recorded launch, or produced (by an unmeasured traced run of the call, aligned launch for launch) only by copies of the declared inputs or exact constants; otherwise kernel-level (upstream values captured) and not counted as complete for the call.  Equal values (every element found among the inputs, an all-zero buffer) are not provenance",
+  "proof_status": "complete_rate counts proved references only; elements that hold only under an unproven premise (CAS serializations without the lock commutativity certificate, scan bracketings without the associativity certificate) are reported as complete_under_premise_rate and are not used by the statistics; certificates are listed under proof_status",
+  "source_hashes": {
+   "call": {
+    "ref": "../calls/pa_bert_tiny_fp32_52_ACT_torch.py:call",
+    "sha256": "2d4d871514c8fe0d4188ae1605f64305f25eae62634163ef134afc791d3d41ef"
+   },
+   "inputs.a0.state": {
+    "ref": "../calls/pa_bert_tiny_fp32_52_ACT_torch_inputs.py:a0",
+    "sha256": "30ca1019ac897e6929cf6f94e8b2fc3e99f745fe3b90b9faa392adc58232712a"
+   },
+   "inputs.a1.state": {
+    "ref": "../calls/pa_bert_tiny_fp32_52_ACT_torch_inputs.py:a1",
+    "sha256": "30ca1019ac897e6929cf6f94e8b2fc3e99f745fe3b90b9faa392adc58232712a"
+   }
+  },
+  "sampling_seed_sha256": "03134d9b00812626f8e167108d95af3dd64f12ec2bc85b6488b818c88e0d185d",
+  "query": {
+   "comparison_target": {
+    "mode": "contract",
+    "quantity": "e_num = K - G_pi and e_task = G_pi - f, where f is obtained from the admitted contract and reviewed call binding",
+    "K": "the call's outputs on the inputs it actually received",
+    "G_pi": "the reference generated from the captured program under the numerical-difference policy pi (real arithmetic, rc3 02 1); call-level only when every float buffer read is a declared input, a recorded launch's output or a recorded copy / exact constant (composition rules M1-M5)"
+   },
+   "input_distribution": {
+    "inputs": {
+     "a0": {
+      "state": "../calls/pa_bert_tiny_fp32_52_ACT_torch_inputs.py:a0",
+      "shape": [
+       1,
+       128,
+       128
+      ],
+      "dtype": "float32"
+     },
+     "a1": {
+      "state": "../calls/pa_bert_tiny_fp32_52_ACT_torch_inputs.py:a1",
+      "shape": [
+       1,
+       128,
+       128
+      ],
+      "dtype": "float32"
+     }
+    },
+    "factors": {},
+    "sampling_seed_sha256": "03134d9b00812626f8e167108d95af3dd64f12ec2bc85b6488b818c88e0d185d",
+    "meaning": "each unit draws every input from its declared source with the unit's seed (numpy SeedSequence of the seed and the sampling digest); state sources are called with the seed"
+   },
+   "observable": {
+    "outputs": [
+     "out"
+    ],
+    "layers": {
+     "out": {
+      "layer": "output"
+     }
+    },
+    "projections": {
+     "R1": "w = -1 / sqrt(n)",
+     "R2": "w = -sign(reference) / sqrt(n), per unit",
+     "R3": "w = -reference / |reference|, per unit",
+     "R5": "w = normalized mean of the development midpoints (saved)"
+    },
+    "coordinate_set": "fixed on the development units: the elements whose reference is complete composed (proved, finite, not conditional) in every development unit"
+   },
+   "sampling_unit": {
+    "unit": "one input draw (one seed); the call is launched repeats times per unit and K is compared launch by launch; residuals are averaged within a unit only for admitted float-atomic orders",
+    "development_seeds": [
+     0,
+     0
+    ],
+    "confirmation_seeds": [
+     1,
+     2
+    ],
+    "development": 1,
+    "confirmation": 2,
+    "independence": "units are independent draws; launches within a unit are not units"
+   },
+   "axes": [
+    "nonzero"
+   ],
+   "families": {
+    "fixed_mean": [
+     "R1",
+     "R5"
+    ],
+    "aligned": [
+     "R2",
+     "R3"
+    ]
+   },
+   "family_guarantee": "per declared rule class and per route: Holm over the class's rules, FWER <= alpha; the approximate route (endpoint-conservative t, contract_v3 cannot-judge rules) and the bounded route (Hoeffding, only with a declared magnitude_bound M) are separate families",
+   "equivalence_tolerance": null
+  },
+  "composition_rules": {
+   "rules": {
+    "M1": "storage identity and lifetime",
+    "M2": "exact coverage",
+    "M3": "content is not provenance (declared-input read)",
+    "M4": "cross-launch carry-over",
+    "M5": "producer lattice",
+    "T1": "the traced run does not change the measured runs",
+    "T2": "the analysis does not change the candidate's precision",
+    "P1": "precision dependence is observed, not inferred",
+    "P2": "refinement stop categories",
+    "P3": "resolution counts numerical enclosures only",
+    "O1": "increment layer",
+    "Q1": "the query is fixed before the data",
+    "Q2": "strict bounded route with a family guarantee",
+    "Q3": "two decision axes",
+    "K1": "no repository path at run time"
+   },
+   "registry_sha256": "1f574be1eff68c2c4e9321f8c3de5694fba1fdc7d88ee2c9c03ed529d229d7d4",
+   "module": "kernel_analyzer.composition_rules"
+  },
+  "digest_scope": "declaration_sha256: SHA-256 of the canonical JSON of every other field of this expanded declaration",
+  "declaration_sha256": "fd6957e6ace14e6c7cd0792e18a15bfdc1d6c4bc7ebb8a56f1178df81ee2a8f2"
+ },
+ "levels": [
+  {
+   "level": {},
+   "status": "ok",
+   "precision_level": 1,
+   "reference_kind": "admitted_task_specification",
+   "semantic_verdict": "not_established",
+   "semantic_reason": "admitted task specification and reviewed call binding; bias decisions are in the per-output statistical queries",
+   "contract_bindings": [
+    {
+     "seed": 0,
+     "binding_id": "path_a.pa_bert_tiny_fp32_52_ACT_torch",
+     "binding_status": "reviewed",
+     "reference_status": "value",
+     "reference_usable_for_bias_measurement": true,
+     "program_reference_mode": "numerical_difference",
+     "output_kinds": {
+      "out": "numeric"
+     },
+     "tasks": [
+      {
+       "id": "op",
+       "contract": "ACT",
+       "profile": "torch"
+      }
+     ]
+    },
+    {
+     "seed": 1,
+     "binding_id": "path_a.pa_bert_tiny_fp32_52_ACT_torch",
+     "binding_status": "reviewed",
+     "reference_status": "value",
+     "reference_usable_for_bias_measurement": true,
+     "program_reference_mode": "numerical_difference",
+     "output_kinds": {
+      "out": "numeric"
+     },
+     "tasks": [
+      {
+       "id": "op",
+       "contract": "ACT",
+       "profile": "torch"
+      }
+     ]
+    },
+    {
+     "seed": 2,
+     "binding_id": "path_a.pa_bert_tiny_fp32_52_ACT_torch",
+     "binding_status": "reviewed",
+     "reference_status": "value",
+     "reference_usable_for_bias_measurement": true,
+     "program_reference_mode": "numerical_difference",
+     "output_kinds": {
+      "out": "numeric"
+     },
+     "tasks": [
+      {
+       "id": "op",
+       "contract": "ACT",
+       "profile": "torch"
+      }
+     ]
+    }
+   ],
+   "program_reference_mode": "numerical_difference",
+   "capture": "captured",
+   "precision_environment": {
+    "torch.backends.cuda.matmul.allow_tf32": false,
+    "float32_matmul_precision": "highest",
+    "torch.backends.cudnn.allow_tf32": true,
+    "allow_fp16_reduced_precision_reduction": true,
+    "allow_bf16_reduced_precision_reduction": true,
+    "TRITON_F32_DEFAULT": null
+   },
+   "analysis_interventions": [
+    "torch._inductor.config.use_static_cuda_launcher = False: Inductor launches its compiled kernels through the Python launcher, where the recorder's hook sits (same kernel binaries, same arguments)",
+    "torch._dynamo.reset() before the case setup (each case starts from an empty Dynamo cache)",
+    "the producer trace: one unmeasured call per seed under an ATen dispatch mode and force_eager stance, from the measured run's random state; the random state is restored afterwards",
+    "no precision switch (TF32, float32 matmul precision, reduced-precision reductions) is set by the analysis"
+   ],
+   "precision_dependent_calls": 0,
+   "producer_trace_per_seed": {
+    "aligned": 3
+   },
+   "provenance_seed0": {
+    "reads": [
+     {
+      "launch": 0,
+      "argument": "in0_ptr",
+      "outcome": "declared input",
+      "evidence": "identity, coverage, own bytes, version counters"
+     },
+     {
+      "launch": 0,
+      "argument": "in1_ptr",
+      "outcome": "declared input",
+      "evidence": "identity, coverage, own bytes, version counters"
+     }
+    ],
+    "carry_overs": [],
+    "external_reentries": [],
+    "carry_overs_withdrawn_by_trace": [],
+    "dispatch_calls_with_untraced_internals": [
+     {
+      "operator": "aten.gelu_backward.default",
+      "first_launch": 0,
+      "stop_launch": 1
+     }
+    ]
+   },
+   "units": {
+    "development": 1,
+    "confirmation": 2
+   },
+   "notes": {
+    "outputs_not_written_by_triton": [],
+    "outputs_binding_not_established": [],
+    "outputs_modified_after_last_triton_write": [],
+    "outputs_whose_writing_programs_aborted": {},
+    "outputs_at_address_of_another_recorded_storage": [],
+    "ttir_coverage_complete": [
+     true
+    ],
+    "ir_coverage_complete": [
+     true
+    ],
+    "ir_kinds": [
+     "ttir"
+    ]
+   },
+   "outputs": {
+    "out": {
+     "status": "evaluated",
+     "dtype": "float32",
+     "reference": {
+      "elements": 49152,
+      "complete_finite": 49152,
+      "complete_rate": 1.0,
+      "complete_under_premise": 0,
+      "complete_under_premise_rate": 0.0,
+      "width_over_ulp": {
+       "median": 5.587935447692871e-09,
+       "p90": 7.450580596923828e-09,
+       "max": 9.313225746154785e-09
+      },
+      "resolution_target_ulp_fraction": 0.125,
+      "resolved_fraction": 1.0,
+      "unresolved_elements": 0,
+      "resolution_met": true,
+      "set_target_elements": 0,
+      "set_target_max_width": null,
+      "reference_scope": "call-level",
+      "complete_rate_call_level": 1.0
+     },
+     "statistics": {
+      "fixed_mean": {
+       "rules": {
+        "R1": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+         "holm_adjusted_p": null,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": null,
+         "n": 2,
+         "mde_approximate": 4.1245167339667445e-16
+        },
+        "R5": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+         "holm_adjusted_p": null,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": null,
+         "n": 2,
+         "mde_approximate": 4.3807442227416493e-16
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)",
+       "axes": {
+        "nonzero": {
+         "approximate": {
+          "family": "Holm within class 'fixed_mean' at alpha = 0.05 (FWER <= alpha for the class)",
+          "rules": {
+           "R1": "cannot judge (degenerate)",
+           "R5": "cannot judge (degenerate)"
+          },
+          "summary": "cannot judge / not established (no statement about bias)"
+         },
+         "bounded": {
+          "available": false,
+          "reason": "no magnitude_bound declared"
+         }
+        },
+        "equivalence": {
+         "requested": false,
+         "statement": "not requested: no equivalence statement"
+        }
+       }
+      },
+      "aligned": {
+       "rules": {
+        "R2": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+         "holm_adjusted_p": null,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": null,
+         "n": 2,
+         "mde_approximate": 4.1245167437895142e-16
+        },
+        "R3": {
+         "judgment": "cannot judge (degenerate)",
+         "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+         "holm_adjusted_p": null,
+         "alpha": 0.05,
+         "equivalence": "no equivalence bound declared: no equivalence statement",
+         "mean_projection": null,
+         "n": 2,
+         "mde_approximate": 5.314096461309676e-16
+        }
+       },
+       "summary": "cannot judge / not established (no statement about bias)",
+       "axes": {
+        "nonzero": {
+         "approximate": {
+          "family": "Holm within class 'aligned' at alpha = 0.05 (FWER <= alpha for the class)",
+          "rules": {
+           "R2": "cannot judge (degenerate)",
+           "R3": "cannot judge (degenerate)"
+          },
+          "summary": "cannot judge / not established (no statement about bias)"
+         },
+         "bounded": {
+          "available": false,
+          "reason": "no magnitude_bound declared"
+         }
+        },
+        "equivalence": {
+         "requested": false,
+         "statement": "not requested: no equivalence statement"
+        }
+       }
+      }
+     },
+     "guarantee": {
+      "fragment": "point (L_Q / L_C)",
+      "set_targets": []
+     },
+     "comparison_kind": "numeric",
+     "boolean_task_comparison": null,
+     "scale": {
+      "mean_abs_residual": 2.651603946012373e-10,
+      "max_abs_residual": 4.489437960275566e-09,
+      "rms_reference": 0.008914145350278988,
+      "relative_rms": 4.714247653188214e-08,
+      "max_reference_width": 2.7755575615628914e-17,
+      "max_K_R_width": 2.7755575615628914e-17
+     },
+     "proof_status": {
+      "unproven_premises": [],
+      "proved_by_certificate": [],
+      "meaning": "complete_fraction counts proved references only; elements that hold only under an unproven premise are counted apart and are not used by the statistics"
+     },
+     "execution": {
+      "launches_per_input": 2,
+      "units_with_different_repeats": 0,
+      "units": 3,
+      "repeat_inputs_not_reproducible": false,
+      "race_findings": [],
+      "unknown_validity_findings": [],
+      "float_atomics": false,
+      "differences_outside_float_atomic_elements": false,
+      "validity": "no finding",
+      "status": "repeated launches bitwise identical",
+      "statistics": "per launch"
+     },
+     "upstream_with_producer_record": [],
+     "observation": null,
+     "mixed_non_triton_sources": [],
+     "not_established_reasons_seed0": {},
+     "special_values": {
+      "elements_with_special_f": 0,
+      "kr_vs_f_class_mismatch": 0,
+      "k_vs_f_class_mismatch": 0,
+      "examples": []
+     },
+     "task_special_values": {
+      "elements_with_special_f": 0,
+      "k_vs_f_class_mismatch": 0,
+      "unbounded_reference_elements": 0,
+      "scope": "complete public output against admitted task specification"
+     },
+     "task_special_value_verdict": {
+      "judgment": "consistent",
+      "mismatched_coordinates": 0,
+      "basis": "all compared coordinates have the same finite/NaN/+inf/-inf class",
+      "scope": "special-value classes only; numerical equality is reported separately"
+     },
+     "failure_classes": [
+      "statistics insufficient"
+     ],
+     "semantic": {
+      "ok_elements": 49152,
+      "reference_difference_excludes_zero": 48768,
+      "max_gap_relative": 3.431056372309162e-10,
+      "statistics": {
+       "fixed_mean": {
+        "rules": {
+         "R1": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 5.5456065097328945e-16
+         },
+         "R5": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 7.098999608376093e-16
+         }
+        },
+        "summary": "cannot judge / not established (no statement about bias)",
+        "axes": {
+         "nonzero": {
+          "approximate": {
+           "family": "Holm within class 'fixed_mean' at alpha = 0.05 (FWER <= alpha for the class)",
+           "rules": {
+            "R1": "cannot judge (degenerate)",
+            "R5": "cannot judge (degenerate)"
+           },
+           "summary": "cannot judge / not established (no statement about bias)"
+          },
+          "bounded": {
+           "available": false,
+           "reason": "no magnitude_bound declared"
+          }
+         },
+         "equivalence": {
+          "requested": false,
+          "statement": "not requested: no equivalence statement"
+         }
+        }
+       },
+       "aligned": {
+        "rules": {
+         "R2": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 5.545606530380098e-16
+         },
+         "R3": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 7.142298096298773e-16
+         }
+        },
+        "summary": "cannot judge / not established (no statement about bias)",
+        "axes": {
+         "nonzero": {
+          "approximate": {
+           "family": "Holm within class 'aligned' at alpha = 0.05 (FWER <= alpha for the class)",
+           "rules": {
+            "R2": "cannot judge (degenerate)",
+            "R3": "cannot judge (degenerate)"
+           },
+           "summary": "cannot judge / not established (no statement about bias)"
+          },
+          "bounded": {
+           "available": false,
+           "reason": "no magnitude_bound declared"
+          }
+         },
+         "equivalence": {
+          "requested": false,
+          "statement": "not requested: no equivalence statement"
+         }
+        }
+       }
+      },
+      "scale": {
+       "mean_abs_residual": 5.511940011153408e-11,
+       "max_abs_residual": 3.5751291163621524e-10,
+       "rms_reference": 0.008914145350278988,
+       "relative_rms": 8.026613867749372e-09,
+       "max_reference_width": 2.7755575615628914e-17,
+       "max_K_R_width": 2.7755575615628914e-17
+      },
+      "verdict_scope": "G_pi_minus_admitted_task_specification"
+     },
+     "total": {
+      "statistics": {
+       "fixed_mean": {
+        "rules": {
+         "R1": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 1.421089776767814e-16
+         },
+         "R5": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 1.5077326750958435e-16
+         }
+        },
+        "summary": "cannot judge / not established (no statement about bias)",
+        "axes": {
+         "nonzero": {
+          "approximate": {
+           "family": "Holm within class 'fixed_mean' at alpha = 0.05 (FWER <= alpha for the class)",
+           "rules": {
+            "R1": "cannot judge (degenerate)",
+            "R5": "cannot judge (degenerate)"
+           },
+           "summary": "cannot judge / not established (no statement about bias)"
+          },
+          "bounded": {
+           "available": false,
+           "reason": "no magnitude_bound declared"
+          }
+         },
+         "equivalence": {
+          "requested": false,
+          "statement": "not requested: no equivalence statement"
+         }
+        }
+       },
+       "aligned": {
+        "rules": {
+         "R2": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 1.4210898072700991e-16
+         },
+         "R3": {
+          "judgment": "cannot judge (degenerate)",
+          "basis": "zero sample variance of the endpoint that carries the test: an all-equal sample does not establish the population mean",
+          "holm_adjusted_p": null,
+          "alpha": 0.05,
+          "equivalence": "no equivalence bound declared: no equivalence statement",
+          "mean_projection": null,
+          "n": 2,
+          "mde_approximate": 1.8282017673379957e-16
+         }
+        },
+        "summary": "cannot judge / not established (no statement about bias)",
+        "axes": {
+         "nonzero": {
+          "approximate": {
+           "family": "Holm within class 'aligned' at alpha = 0.05 (FWER <= alpha for the class)",
+           "rules": {
+            "R2": "cannot judge (degenerate)",
+            "R3": "cannot judge (degenerate)"
+           },
+           "summary": "cannot judge / not established (no statement about bias)"
+          },
+          "bounded": {
+           "available": false,
+           "reason": "no magnitude_bound declared"
+          }
+         },
+         "equivalence": {
+          "requested": false,
+          "statement": "not requested: no equivalence statement"
+         }
+        }
+       }
+      },
+      "scale": {
+       "mean_abs_residual": 2.722166413014428e-10,
+       "max_abs_residual": 4.206811881485306e-09,
+       "rms_reference": 0.008914145279267984,
+       "relative_rms": 4.8474850238399846e-08,
+       "max_reference_width": 6.938893903907228e-18
+      },
+      "verdict_scope": "candidate_minus_admitted_task_specification",
+      "comparison": "out: K - admitted task specification",
+      "elements_per_seed": 16384,
+      "covers_complete_public_output": true
+     }
+    }
+   },
+   "timing_seconds": {
+    "setup_compile_warmup": 1.998,
+    "inputs": 0.019,
+    "capture_first_seed": 1.669,
+    "capture": 0.027,
+    "reference": 5.489,
+    "specification": 77.193,
+    "statistics": 2.217,
+    "repeat_launches": 0.084
+   },
+   "seconds": 88.9,
+   "failure_classes": [
+    "statistics insufficient"
+   ],
+   "over_budget": false,
+   "refinement": {
+    "levels": [
+     {
+      "level": 1,
+      "resolution_met": true,
+      "capture": "captured",
+      "per_output": {
+       "out": "met"
+      },
+      "resolved_fraction": {
+       "out": 1.0
+      },
+      "unresolved_elements": {
+       "out": 0
+      },
+      "width_over_ulp": {
+       "out": {
+        "median": 5.587935447692871e-09,
+        "p90": 7.450580596923828e-09,
+        "max": 9.313225746154785e-09
+       }
+      },
+      "precision_dependent_calls": 0,
+      "seconds": 88.9
+     }
+    ],
+    "outcome": "met at level 1",
+    "category": "met",
+    "category_meaning": "every numerical enclosure meets the requested resolution",
+    "per_output": {
+     "out": "met"
+    },
+    "final_level": 1,
+    "target_ulp_fraction": 0.125,
+    "max_level": 3,
+    "levels_meaning": {
+     "1": {
+      "sum_k": 3,
+      "cumsum": "gamma"
+     },
+     "2": {
+      "sum_k": 5,
+      "cumsum": "sum2"
+     },
+     "3": {
+      "sum_k": 8,
+      "cumsum": "sum2"
+     }
+    }
+   }
+  }
+ ],
+ "failure_counts": {
+  "semantics missing": 0,
+  "binding": 0,
+  "enclosure too wide": 0,
+  "over budget": 0,
+  "statistics insufficient": 1,
+  "set target width (L_E)": 0,
+  "unproven premise (conditional diagnosis)": 0
+ },
+ "failure_table": [
+  [
+   "call rejected the declared inputs",
+   "binding"
+  ],
+  [
+   "address outside every captured storage",
+   "binding"
+  ],
+  [
+   "invalid address",
+   "binding"
+  ],
+  [
+   "unrecognized",
+   "semantics missing"
+  ],
+  [
+   "no declared semantics",
+   "semantics missing"
+  ],
+  [
+   "unknown callee",
+   "semantics missing"
+  ],
+  [
+   "no reference rule",
+   "semantics missing"
+  ],
+  [
+   "libdevice",
+   "semantics missing"
+  ],
+  [
+   "loop bound",
+   "over budget"
+  ],
+  [
+   "unknown buffer",
+   "semantics missing"
+  ],
+  [
+   "domain of",
+   "enclosure too wide"
+  ],
+  [
+   "non-point",
+   "enclosure too wide"
+  ],
+  [
+   "float-to-int",
+   "enclosure too wide"
+  ],
+  [
+   "reinterpret",
+   "enclosure too wide"
+  ],
+  [
+   "not supported",
+   "semantics missing"
+  ],
+  [
+   "unsupported",
+   "semantics missing"
+  ],
+  [
+   "unknown op",
+   "semantics missing"
+  ],
+  [
+   "no derivative rule",
+   "semantics missing"
+  ],
+  [
+   "store through a not-established address",
+   "semantics missing"
+  ],
+  [
+   "atomic",
+   "semantics missing"
+  ],
+  [
+   "order is not declared",
+   "semantics missing"
+  ],
+  [
+   "cross-program race",
+   "semantics missing"
+  ],
+  [
+   "inline_asm",
+   "semantics missing"
+  ],
+  [
+   "binding",
+   "binding"
+  ],
+  [
+   "not written by triton",
+   "binding"
+  ],
+  [
+   "modified after",
+   "binding"
+  ],
+  [
+   "another recorded storage",
+   "binding"
+  ],
+  [
+   "out-of-bounds",
+   "binding"
+  ],
+  [
+   "outside the captured windows",
+   "binding"
+  ],
+  [
+   "non-triton intermediate",
+   "binding"
+  ],
+  [
+   "shape varies across units",
+   "binding"
+  ],
+  [
+   "pinned_load",
+   "enclosure too wide"
+  ],
+  [
+   "undecided",
+   "enclosure too wide"
+  ],
+  [
+   "overlap",
+   "enclosure too wide"
+  ],
+  [
+   "straddl",
+   "enclosure too wide"
+  ],
+  [
+   "may be zero",
+   "enclosure too wide"
+  ],
+  [
+   "may be negative",
+   "enclosure too wide"
+  ],
+  [
+   "too wide",
+   "enclosure too wide"
+  ],
+  [
+   "interval width",
+   "enclosure too wide"
+  ],
+  [
+   "timeout",
+   "over budget"
+  ],
+  [
+   "budget",
+   "over budget"
+  ],
+  [
+   "cannot judge",
+   "statistics insufficient"
+  ],
+  [
+   "unresolved_sample",
+   "statistics insufficient"
+  ]
+ ],
+ "seconds": 93.3
+}
