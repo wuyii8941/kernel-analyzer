@@ -26,7 +26,8 @@ class GraphChoices(unittest.TestCase):
 
     def test_permutation_sum_is_invariant(self):
         graph = self.graph()
-        graph["nodes"].append({"name": "sum", "op": "aten.sum", "args": [{"ref": "i"}]})
+        graph["nodes"].append({"name": "fi", "op": "prims.convert_element_type", "args": [{"ref": "i"}, "f32"]})
+        graph["nodes"].append({"name": "sum", "op": "aten.sum", "args": [{"ref": "fi"}]})
         graph["outputs"] = ["sum"]
         self.assertEqual(G.evaluate(graph), [1])
 

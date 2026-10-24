@@ -7,38 +7,22 @@ node that is undefined in the reals poisons only the nodes that use it.
 """
 from __future__ import annotations
 
-from pathlib import Path
 import itertools
 import inspect
 
 import numpy as np
-import yaml
 
 from . import aten as A
 from . import sorting
 from .aten_adapter import decode, encode, bind_reference_call
+from .graph_semantics import bind_node_call, covered_ops, execute_node, validate_graph_inputs
 from .num import Invalid, NotEstablished, Undefined, Unsupported
 
-BASE_CONTRACTS = ("ARITH", "MATHFN", "LOGIC", "CAST", "LAYOUT", "INDEX", "REDUCE", "SOFTMAX", "MATMUL", "CONV", "RANDOM", "ACT",
-                  "SORT")
-CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
 MUTATING_OPS = {"aten.index_put_"}
 # These operations are admitted only by rules in the drafted GRAPH contract:
 # GR.EFFECTS covers a fresh full allocation and its functional index_put
 # replacement, while GR.JOINT_CHOICES covers a complete scatter result.  They
 # are deliberately not put back into the reviewed INDEX contract.
-GRAPH_LOCAL_VALUE_OPS = {"aten.full", "aten.index_put", "aten.scatter"}
-
-
-def covered_ops():
-    ops = {"operator.getitem"}
-    for cid in BASE_CONTRACTS:
-        p = CONTRACTS / f"{cid}.yaml"
-        if p.is_file():
-            ops |= set(yaml.safe_load(p.read_text()).get("covers", []))
-    return (ops | GRAPH_LOCAL_VALUE_OPS) - MUTATING_OPS
-
-
 class _Poison:
     def __init__(self, why):
         self.why = why
@@ -90,6 +74,7 @@ def evaluate(graph: dict, elide_intermediate_casts=False, max_choices=256):
     if isinstance(max_choices, bool) or not isinstance(max_choices, int) or max_choices < 1:
         raise Invalid("max_choices must be a positive integer")
     graph, _ = functional_value_graph(graph)
+    validate_graph_inputs(graph.get("inputs", {}))
     pending, results = [{}], []
     ops = covered_ops()
     attempts = 0
@@ -119,7 +104,7 @@ def evaluate(graph: dict, elide_intermediate_casts=False, max_choices=256):
     return results[0] if len(complete) == 1 else frozenset(complete)
 
 
-def require_value_graph(graph, input_names=None, *, _defer_mutation_check=False):
+def require_value_graph(graph, input_names=None, *, _defer_mutation_check=False, _allow_helper_ops=False):
     """The base contracts do not yet compose storage aliases and mutation.
 
     Raw updates are rejected here. functional_value_graph can first establish
@@ -156,6 +141,8 @@ def require_value_graph(graph, input_names=None, *, _defer_mutation_check=False)
             raise Invalid(f"duplicate graph value name {node['name']!r}")
         if not isinstance(node.get("op"), str):
             raise Invalid("graph node operation must be a string")
+        if not _allow_helper_ops and node["op"] not in covered_ops() | MUTATING_OPS:
+            raise Unsupported(f"{node['op']} has no admitted base-contract or GRAPH-local node semantics")
         args, kwargs = node.get("args", []), node.get("kwargs", {})
         if kwargs is None:
             kwargs = {}
@@ -164,7 +151,9 @@ def require_value_graph(graph, input_names=None, *, _defer_mutation_check=False)
         if any(not isinstance(key, str) for key in kwargs):
             raise Invalid("graph keyword names must be strings")
         fn = A.OPS.get(node["op"]) or sorting.OPS.get(node["op"])
-        if fn is not None:
+        if node["op"] in covered_ops() and node["op"] != "operator.getitem":
+            bind_node_call(node["op"], args, kwargs)
+        elif fn is not None:
             bind_reference_call(node["op"], inspect.signature(fn), args, kwargs)
         if node["op"] == "operator.getitem" and (len(args) != 2 or kwargs):
             raise Invalid("operator.getitem requires exactly two positional arguments")
@@ -178,7 +167,7 @@ def require_value_graph(graph, input_names=None, *, _defer_mutation_check=False)
         check_ref(_reference_name(output) if isinstance(output, dict) else output)
 
 
-def functional_value_graph(graph, input_names=None):
+def functional_value_graph(graph, input_names=None, *, allow_helper_ops=False):
     """Remove only updates to fresh allocations with exactly one use.
 
     The allocation cannot be an input, returned, aliased, read elsewhere, or used
@@ -186,7 +175,7 @@ def functional_value_graph(graph, input_names=None):
     post-value returned by index_put represents every observable effect. Any
     additional use requires real alias/state composition and is refused.
     """
-    require_value_graph(graph, input_names, _defer_mutation_check=True)
+    require_value_graph(graph, input_names, _defer_mutation_check=True, _allow_helper_ops=allow_helper_ops)
     nodes = {n["name"]: n for n in graph["nodes"]}
     uses = {}
     for node in graph["nodes"]:
@@ -223,8 +212,38 @@ def functional_value_graph(graph, input_names=None):
                          "scope": "logical task graph; captured memory effects require separate checks"})
     normalized = dict(graph, nodes=[dict(n, op="aten.index_put") if n["name"] in replacements else n
                                     for n in graph["nodes"]])
-    require_value_graph(normalized, input_names)
+    require_value_graph(normalized, input_names, _allow_helper_ops=allow_helper_ops)
     return normalized, evidence
+
+
+def output_value_graph(graph, input_names=None):
+    """Construct the explicit pure subgraph needed for the declared outputs.
+
+    This is not a claim about the original whole graph.  It exists so callers
+    that intentionally validate only an output slice cannot silently ignore an
+    unrelated invalid/unsupported node and then label the result complete.
+    Mutation has already been rejected or functionalised by
+    :func:`functional_value_graph`.
+    """
+    require_value_graph(graph, input_names)
+    by_name = {node["name"]: node for node in graph["nodes"]}
+    needed = {out["ref"] if isinstance(out, dict) else out for out in graph["outputs"]}
+    stack = list(needed)
+    while stack:
+        name = stack.pop()
+        node = by_name.get(name)
+        if node is None:
+            continue
+        for ref in _walk_refs(node.get("args", [])) + _walk_refs(list((node.get("kwargs") or {}).values())):
+            if ref not in needed:
+                needed.add(ref)
+                stack.append(ref)
+    kept = [node for node in graph["nodes"] if node["name"] in needed]
+    omitted = [node["name"] for node in graph["nodes"] if node["name"] not in needed]
+    sliced = dict(graph, nodes=kept)
+    require_value_graph(sliced, input_names)
+    return sliced, {"scope": "declared output dependency slice", "omitted_pure_nodes": omitted,
+                    "whole_graph_certified": False}
 
 
 def scatter_outputs(result, budget):
@@ -283,16 +302,15 @@ def _evaluate(graph, elide_intermediate_casts, choices, max_choices, ops):
             if op == "operator.getitem":
                 env[n["name"]] = select_result(args[0], args[1])
                 continue
-            fn = A.OPS.get(op) or sorting.OPS[op]
-            bound = bind_reference_call(op, inspect.signature(fn), args, kwargs)
-            args, kwargs = bound.args, bound.kwargs
+            result, _rule = execute_node(op, args, kwargs)
+            cast_source = args[0] if args else kwargs.get("a")
             if (elide_intermediate_casts and op in ("prims.convert_element_type", "aten._to_copy")
-                    and n["name"] not in outputs and isinstance(args[0], A.Ten) and args[0].dtype in A.FLOAT):
+                    and n["name"] not in outputs and isinstance(cast_source, A.Ten) and cast_source.dtype in A.FLOAT):
                 target = A.dt(args[1] if len(args) > 1 else kwargs.get("dtype"))
                 if target in A.FLOAT:                       # the reading: no rounding at an intermediate float cast
-                    env[n["name"]] = A.Ten(args[0].a, target)
+                    env[n["name"]] = A.Ten(cast_source.a, target)
                     continue
-            env[n["name"]] = (A.OPS.get(op) or sorting.OPS[op])(*args, **kwargs)
+            env[n["name"]] = result
             if op in sorting.OPS or op == "aten.scatter":
                 if n["name"] in choices:
                     env[n["name"]] = choices[n["name"]]

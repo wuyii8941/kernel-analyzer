@@ -3,11 +3,13 @@ id: GRAPH
 role: PROGRAM
 title: A functional ATen value graph as the composition of the base contracts
 review:
-  status: drafted
+  status: reviewed_for_implementation
   author: Claude (spec v3 author), 2026-10-16
-  date: '2026-10-16'
-  scope: Composition semantics of FX / ATen graphs whose operations are covered by the base contracts; awaiting a review
-    by someone who did not write it
+  reviewer: ChatGPT independent semantic and source-code review of d36cdee, 2026-10-24
+  date: '2026-10-24'
+  scope: The limited composition semantics, joint-choice and local-update decisions are accepted after the changes
+    recorded below. Implementation validation remains pending until the common node gate and independent structure
+    checks are reviewed; graph capture stage, real-call binding and coverage statistics are outside this review.
 activation:
   implementation_status: pending
   runtime_binding_status: pending
@@ -16,32 +18,42 @@ activation:
 covers: [graph]
 profiles:
   eager:
-    meaning: Nodes are evaluated in topological order, each operation by the base contract that covers it (ARITH MATHFN
-      LOGIC CAST LAYOUT INDEX REDUCE SOFTMAX MATMUL CONV RANDOM ACT SORT), plus the restricted aten.full allocation
-      described by GR.EFFECTS; every conversion in the graph rounds as CAST says, as the program is written. General
-      storage mutation and alias effects are outside this profile; only local updates satisfying GR.EFFECTS may be
-      replaced by their post-value.
+    meaning: The given graph is evaluated in topological order under an explicit operation/overload to
+      contract/profile binding. Base operations use the selected ARITH MATHFN LOGIC CAST LAYOUT INDEX REDUCE SOFTMAX
+      MATMUL CONV RANDOM ACT or SORT meaning; GRAPH-local full, index_put and scatter use the reviewed rules below.
+      Physical inputs satisfy their selected contracts. Internal exact-real and enclosure values use only the
+      explicitly admitted mathematical extension of those node meanings. Every written conversion rounds according
+      to CAST. General storage mutation and alias effects are outside this profile; only local updates satisfying
+      GR.EFFECTS may be replaced by their returned post-value.
     task_choice_required: false
 outputs:
   out:
-    shape: the list of the graph's output values, or an exact set of complete output lists for ambiguous sorting or scatter choices
+    shape: the ordered list of all declared graph outputs
     kind: discrete
     guarantee: rigorous_enclosure
+    relation: exact point or numerical enclosure when unique; otherwise a finite set of complete joint output lists
+    member_guarantee: Every numerical member contains the corresponding task value and every finite set preserves
+      complete legal joint results. Consumers must not take set midpoints or form a Cartesian product of coordinates.
+      A partial slice or an unestablished choice is not a complete out value.
 readings:
   inductor_default:
     meaning: Diagnostic reading of Inductor's default emulate_precision_casts = False, under which a floating-point
-      conversion between fused operations is elided (no rounding at intermediate float casts; casts of outputs still
-      round). It explains compiled-versus-eager differences; it is not the program's own semantics.
+      conversion between assumed fused operations is elided (no rounding at intermediate float casts; casts of outputs
+      still round). This is a counterfactual diagnostic, not the program's semantics and not evidence that a particular
+      compiled run eliminated a conversion. Actual use requires compiler configuration and materialisation evidence;
+      the reading cannot be selected because it happens to be closer to an observation.
     basis: [TS_INDUCTOR_CONFIG.EMULATE_CASTS]
 comparison:
   input_binding: Input tensors are the exact values received.
   quality: As the base contracts (no tolerance).
   test_evidence: Exact equality or containment of exact expected values in the reference enclosures.
-  error_handling: An undefined value makes only the nodes that use it undefined; an output that depends on it is
-    domain_undefined. An operation outside the base contracts is unsupported.
+  error_handling: A contract-defined mathematical undefined value locally poisons its consumers. Invalid input,
+    unsupported semantics, a budget limit, an implementation failure or an execution/memory error is not a poison
+    value and cannot be ignored merely because the node is unused. A declared output slice is reported as that smaller
+    task and cannot certify the original complete graph.
 decisions:
 - id: GR.EFFECTS
-  status: drafted
+  status: reviewed
   statement: 'T_INDEX_PUT.DEF says index_put_ modifies self and returns self. The INDEX standalone post-value and the
     LAYOUT value-only operations do not specify how all aliases change in an enclosing graph. Until that state mapping
     is implemented, updates to inputs or shared allocations are unsupported. A restricted exception is a fresh
@@ -52,38 +64,56 @@ decisions:
     All other cases remain unsupported; blanket renaming is not valid functionalisation.'
   basis: [T_INDEX_PUT.DEF, T_FULL.DEF, T_FX.NODES]
 - id: GR.JOINT_CHOICES
-  status: drafted
+  status: reviewed
   statement: 'Each sorting node chooses one complete legal index tensor: indices within a row are distinct, and every
     use of that node observes the same choice. Separate nodes may choose separately. Small finite choices are evaluated
     jointly and returned as complete output alternatives, never a product of marginal index sets. Enumeration beyond
     the implementation budget or alternatives that cannot be represented as an exact finite set are not_established.
     For scatter, each duplicated target may select one of its source values (T_SCATTER.DUP); the complete tensor
-    is selected once per node and every consumer observes that same selection. Lazy point queries do not enumerate
-    such shared choices and return not_established at ambiguous coordinates.'
+    is selected once per node and every consumer observes that same selection. Different nodes may select different
+    legal results unless another contract couples them; this does not mean probabilistic independence and assigns no
+    probability distribution. Lazy point queries do not enumerate such shared choices and return not_established at
+    ambiguous coordinates.'
   basis: [T_FX.NODES, T_SORT.STABLE, T_TOPK.TIES, T_SCATTER.DUP]
 - id: GR.IDENTITY
-  status: drafted
-  statement: The f of a graph is the program's own computation as written (identity of the source - reference program);
-    comparing a compiled kernel with it checks the lowering, not the intent of the model's author. The task-level
-    contracts (NORM, ATTN, CE, ...) check intent where a role contract exists.
+  status: reviewed
+  statement: 'The task is the given graph interpreted under the explicitly selected base-contract and GRAPH-local
+    meanings. This needs no separate claim that the graph expresses an author''s intent. What transformation can be
+    checked depends on where this task graph was captured and whether it is bound to the current call: a later graph
+    cannot reveal an error already written into it, while an earlier task graph may. A complete role contract may be
+    compared directly; GRAPH is required only when several base tasks must be composed. Capture and call binding are
+    separate evidence and are not inferred from an operation-name match.'
   basis: [T_FX.NODES]
 - id: GR.POISON
-  status: drafted
-  statement: A node whose real value is undefined poisons only the nodes that read it; outputs that do not depend on it
-    keep their values. Alternative (one undefined node makes the whole graph undefined) rejected because FX evaluation is
-    per node.
+  status: reviewed
+  statement: 'In this pure mathematical value graph, a node that is undefined under its selected contract poisons only
+    consumers that read it; an independent output retains its value, while strict arithmetic such as 0*log(-1) stays
+    undefined. This is a selected partial-value composition rule, not a consequence that arbitrary FX exceptions or
+    effects may be ignored. Invalid input, unsupported semantics, not_established, implementation failures and
+    execution/memory errors are not local poison. Full and lazy evaluation use the same node-level rule. A future
+    coordinate-level rule would be a separate profile; a queried output slice remains partial until explicitly formed
+    and reported as the smaller task.'
   basis: [T_FX.NODES]
 clauses:
 - {id: GR.C5, basis: [GR.EFFECTS], statement: 'graphs containing index_put_ require explicit mutation and alias semantics
-    unless the local allocation and sole-use conditions of GR.EFFECTS establish equivalence to its returned post-value', observes: [out], evidence_kind: derived}
-- {id: GR.C1, basis: [T_FX.NODES, GR.IDENTITY, GR.JOINT_CHOICES], statement: 'nodes are evaluated in order: placeholders are inputs, each
-    call_function applies its operation (base-contract semantics) to its arguments, the outputs are returned',
+    unless the local allocation and sole-use conditions of GR.EFFECTS establish equivalence to its returned post-value;
+    the allocation initial value, every contribution, returned post-value and operation error condition remain observable', observes: [out], evidence_kind: derived}
+- {id: GR.C1, basis: [T_FX.NODES, GR.IDENTITY, GR.JOINT_CHOICES], statement: 'nodes are evaluated once in order: placeholders are inputs, and each
+    call_function uses an explicit operation/overload, contract, profile, domain and guarantee binding. A helper name or
+    covers entry alone is not admission. Internal exact/interval values use an explicit reviewed extension or are refused;
+    all declared outputs and shared value identities are returned',
   observes: [out], evidence_kind: definition}
-- {id: GR.C2, basis: [T_FX.NODES, GR.POISON], statement: undefined values poison only their consumers, observes: [out],
+- {id: GR.C2, basis: [T_FX.NODES, GR.POISON], statement: 'only mathematical undefined values locally poison their consumers;
+    invalid, unsupported, unestablished and execution failures remain graph obligations. A partial output slice cannot
+    be upgraded to complete graph certification', observes: [out],
   evidence_kind: definition}
-- {id: GR.C3, basis: [T_FX.NODES], statement: 'operator.getitem selects one result of a multi-result operation', observes: [out],
+- {id: GR.C3, basis: [T_FX.NODES, GR.JOINT_CHOICES], statement: 'operator.getitem preserves the identity, order, legal
+    positive/negative index and explicit None positions of a multi-result operation; every reuse of one node observes
+    the same complete selected result', observes: [out],
   evidence_kind: definition}
-- {id: GR.C4, basis: [T_FX.NODES, GR.IDENTITY], statement: 'conversions inside the graph round as written (profile eager)',
+- {id: GR.C4, basis: [T_FX.NODES, GR.IDENTITY], statement: 'conversions inside the graph round as written in eager;
+    idealised arithmetic is given by the selected node contracts. The diagnostic conversion-elision reading is never
+    automatically treated as an actual compiled execution',
   observes: [out], evidence_kind: definition}
 examples:
 - {id: GR.E1, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [1, 2]}}, nodes: [{name: a, op: aten.mul,
@@ -94,19 +124,20 @@ examples:
             0]}, {name: r, op: aten.rsqrt, args: [{ref: e}]}, {name: y, op: aten.mul, args: [{ref: x}, {ref: r}]}], outputs: [y]}},
   expected: {outcome: value, fields: {out: [[[3*sqrt(2)/5, 4*sqrt(2)/5]]]}}, note: An RMSNorm fragment without weight; mean
     of squares 25/2, rsqrt sqrt(2)/5.}
-- {id: GR.E3, profile: eager, clauses: [GR.C4], input: {graph: {inputs: {x: {t: f32, v: ['1/3']}}, nodes: [{name: c1, op: prims.convert_element_type,
+- {id: GR.E3, profile: eager, clauses: [GR.C4], input: {graph: {inputs: {x: {t: f32, v: ['11184811/33554432']}}, nodes: [{name: c1, op: prims.convert_element_type,
           args: [{ref: x}, bf16]}, {name: c2, op: prims.convert_element_type, args: [{ref: c1}, f32]}, {name: y, op: aten.mul,
           args: [{ref: c2}, 3]}], outputs: [y]}}, expected: {outcome: value, fields: {out: [['513/512']]}}, readings: {inductor_default: {
-      outcome: value, fields: {out: [[1]]}}}, note: 'bf16(1/3) = 171/512; times 3 = 513/512. With the casts elided: 1/3 * 3 = 1.'}
+      outcome: value, fields: {out: [['33554433/33554432']]}}}, note: 'The actual f32 value nearest 1/3 is 11184811/33554432. Its bf16 value is 171/512, so the eager product is 513/512. Under the diagnostic cast-elision reading the exact product is 33554433/33554432. This reading is not evidence that a particular compiled execution elided either conversion.'}
 - {id: GR.E4, profile: eager, clauses: [GR.C2], input: {graph: {inputs: {x: {t: f32, v: [-1]}, y: {t: f32, v: [3]}}, nodes: [{name: l,
           op: aten.log, args: [{ref: x}]}, {name: z, op: aten.mul, args: [{ref: y}, 2]}], outputs: [z]}}, expected: {outcome: value,
     fields: {out: [[6]]}}}
 - {id: GR.E5, profile: eager, clauses: [GR.C2], input: {graph: {inputs: {x: {t: f32, v: [-1]}}, nodes: [{name: l, op: aten.log,
           args: [{ref: x}]}, {name: z, op: aten.mul, args: [{ref: l}, 0]}], outputs: [z]}}, expected: {outcome: domain_undefined}}
-- {id: GR.E6, profile: eager, clauses: [GR.C3], input: {graph: {inputs: {x: {t: f32, v: [[1, 3]]}}, nodes: [{name: mx, op: aten.max,
+- {id: GR.E6, profile: eager, clauses: [GR.C3], input: {graph: {inputs: {x: {t: f32, v: [[1, 3]]}, y: {t: f32, v: [[1]]}}, nodes: [{name: mx, op: aten.max,
           args: [{ref: x}, 1, true]}, {name: v, op: operator.getitem, args: [{ref: mx}, 0]},
-        {name: i, op: operator.getitem, args: [{ref: mx}, 1]}, {name: s, op: aten.sub, args: [{ref: i}, {ref: v}]}], outputs: [s]}},
-  expected: {outcome: value, fields: {out: [[[-2]]]}}, note: 'maximum 3 at index 1; index - value = -2.'}
+        {name: i, op: operator.getitem, args: [{ref: mx}, 1]}, {name: fv, op: prims.convert_element_type, args: [{ref: v}, f32]},
+        {name: s, op: aten.sub, args: [{ref: fv}, {ref: y}]}], outputs: [s, i]}},
+  expected: {outcome: value, fields: {out: [[[2]], [[1]]]}}, note: 'maximum 3 at index 1; the value branch gives 3 - 1 = 2 and the index branch gives 1.'}
 - {id: GR.E7, profile: eager, clauses: [GR.C1], input: {graph: {inputs: {x: {t: f32, v: [1]}}, nodes: [{name: a, op: aten.mul, args: [
             {ref: w}, 2]}], outputs: [a]}}, expected: {outcome: invalid_input}, note: A reference to a value that is not defined
     earlier.}
@@ -139,13 +170,16 @@ signature:
   post_state: []
   observation_unit: the graph's output values
 domain:
-  valid: [functional value graphs in topological order whose operations are covered by the base contracts]
+  valid: [functional value graphs in topological order whose every node has an admitted operation/overload,
+    contract/profile, domain and guarantee binding; or the explicit GR.EFFECTS local-update form]
   domain_undefined: [an output that depends on an undefined real value]
   invalid_input: [references to unknown or later values including unused nodes and graph outputs,
     duplicate node names or node names that overwrite inputs, malformed node and output sequences,
-    noninteger reference indices, operator.getitem calls without exactly two positional arguments]
+    noninteger reference indices, operator.getitem calls without exactly two positional arguments,
+    physical input records that are not values of their declared dtype]
   unsupported: [operations not covered by a base contract, in-place index_put_ without mutation and alias semantics,
-    extra graph or node fields or reference metadata not represented by the functional value contract]
+    a covered operation outside the selected profile or domain of reliable evaluation, extra graph or node fields or
+    reference metadata not represented by the functional value contract]
 mutation_requirements:
 - {id: GR.M1, misreading: conversions in the graph ignored under the eager profile, witnesses: [GR.E3]}
 - {id: GR.M2, misreading: any undefined node makes every output undefined, witnesses: [GR.E4]}
@@ -153,8 +187,17 @@ mutation_requirements:
 - {id: GR.M4, misreading: node arguments evaluated in reverse order (operands swapped for binary operations), witnesses: [
     GR.E6]}
 nonclaims:
-- A graph's f checks lowering fidelity of a compiled kernel, not the model author's intent (GR.IDENTITY).
+- The graph alone does not establish an author's intended task, the graph capture stage, correspondence to a real call,
+  actual compiler conversion elimination, memory effects, or statistical independence of legal choices.
 changes:
+- date: '2026-10-24'
+  change: >-
+    Accept the limited composition direction after independent review. Define identity relative to the supplied graph
+    and its capture stage; distinguish local mathematical undefinedness from invalid/unsupported/unestablished states;
+    state joint choices without probabilistic independence; retain only the narrow fresh local-update rule; make
+    inductor_default counterfactual. Require a common node semantic gate for full and lazy execution. Correct GR.E3 to
+    use the actual f32 value nearest 1/3 and GR.E6 to remain inside the selected same-dtype arithmetic profile.
+  trigger: GRAPH_REVIEW.md review of d36cdee, 2026-10-24
 - date: '2026-10-18'
   change: >-
     Support the GR.EFFECTS single-use fresh-full allocation case through an explicit

@@ -77,6 +77,33 @@ def semantic_classes(ops):
     return sorted(k for k, names in SEMANTIC.items() if ops & set(names)) or ["elementwise_layout"]
 
 
+def graph_admission(dyn):
+    """Return (admitted, reason) from per-call evidence, never from a global contract status.
+
+    Historical ``reference_status=complete`` records predate the common GRAPH
+    node gate and remain development results.  A future runner must record the
+    actual scope, implementation version and all admission checks for this call.
+    """
+    if not dyn:
+        return False, "no dynamic record"
+    admission = dyn.get("graph_admission")
+    if not isinstance(admission, dict):
+        return False, "per-call GRAPH admission not recorded"
+    if admission.get("status") != "admitted":
+        return False, str(admission.get("reason") or admission.get("status") or "GRAPH admission not established")
+    if admission.get("scope") != "complete_graph":
+        return False, f"reference scope is {admission.get('scope')!r}, not complete_graph"
+    if admission.get("implementation_status") != "validated":
+        return False, "the recorded GRAPH implementation was not validated"
+    if not isinstance(admission.get("implementation_version"), str) or not admission["implementation_version"].strip():
+        return False, "GRAPH implementation version is missing"
+    checks = admission.get("checks")
+    required = {"node_semantics", "input_domain", "all_outputs", "call_binding"}
+    if not isinstance(checks, dict) or any(checks.get(name) != "passed" for name in required):
+        return False, "one or more per-call GRAPH admission checks did not pass"
+    return True, "per-call complete GRAPH admission recorded"
+
+
 def classify(cand, verify, dyn):
     """(class, sub-reason) for one unit; first blocking stage in pipeline order."""
     v = (verify or "").lower()
@@ -108,7 +135,8 @@ def classify(cand, verify, dyn):
         return MANUAL, s[:120]
     if s == "full reference comparison":
         if dyn.get("reference_status") == "complete":
-            return EXTEND, "only the composition contract GRAPH is not admitted (complete reference evaluated)"
+            admitted, reason = graph_admission(dyn)
+            return (USABLE, reason) if admitted else (EXTEND, f"complete development reference; {reason}")
         return EXTEND, f"reference {dyn.get('reference_status')}"
     return EXTEND, s[:120]
 
@@ -146,7 +174,7 @@ def main():
     classes, reasons = collections.Counter(), collections.Counter()
     groups = {"model": collections.defaultdict(collections.Counter), "structure": collections.defaultdict(collections.Counter),
               "semantic": collections.defaultdict(collections.Counter)}
-    complete_dev = 0
+    complete_dev = strict = bias_available = 0
     rows = []
     for u in dyn_units:
         c = cands.get(u, {})
@@ -158,6 +186,10 @@ def main():
         reasons[f"{cls} | {why[:90]}"] += 1
         dev = bool(d and d.get("status") == "full reference comparison" and d.get("reference_status") == "complete")
         complete_dev += dev
+        admitted, admission_reason = graph_admission(d)
+        strict += admitted
+        bias = bool(admitted and d.get("bias_query_status") == "available")
+        bias_available += bias
         model = u.split("/")[0] + "/" + u.split("/")[1]
         for g, keys in (("model", [model]), ("structure", [structure(c.get("kernel"))]),
                         ("semantic", semantic_classes(c.get("graph_ops")))):
@@ -165,13 +197,17 @@ def main():
                 groups[g][k][cls] += 1
                 groups[g][k]["_n"] += 1
                 groups[g][k]["_complete_dev"] += dev
-        rows.append({"unit": u, "class": cls, "reason": why, "complete_reference_dev": dev})
+                groups[g][k]["_strict_admitted"] += admitted
+        rows.append({"unit": u, "class": cls, "reason": why, "complete_reference_dev": dev,
+                     "strict_admitted": admitted, "admission_reason": admission_reason,
+                     "bias_query_available": bias})
     n = len(dyn_units)
     out["dynamic_set"] = {"n": n, "of": len(cands), "seed": 20261019}
-    out["complete_reference"] = {"admitted_strict": {"k": 0, "n": n, "wilson": wilson(0, n),
-                                                     "reason": "GRAPH (composition) is drafted, not validated"},
+    out["complete_reference"] = {"admitted_strict": {"k": strict, "n": n, "wilson": wilson(strict, n),
+                                                     "reason": "counted from per-call admission records"},
                                  "development_drafted_GRAPH": {"k": complete_dev, "n": n, "wilson": wilson(complete_dev, n)}}
-    out["bias_query_available"] = {"k": 0, "n": n, "reason": "no automatic route from compiled units to the contract measurement mode"}
+    out["bias_query_available"] = {"k": bias_available, "n": n, "wilson": wilson(bias_available, n),
+                                   "reason": "counted only after strict per-call admission"}
     out["classes"] = {k: {"k": v, "wilson": wilson(v, n)} for k, v in classes.most_common()}
     out["reasons"] = dict(reasons.most_common())
     out["groups"] = {g: {k: dict(v) for k, v in sorted(d.items())} for g, d in groups.items()}

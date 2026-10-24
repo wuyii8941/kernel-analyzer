@@ -947,7 +947,7 @@ def run_unit(rec, rng, binding_only=False, capture_root=None, provenance_root=No
         arg = input_args[name]
         if arg.before is None or arg.window is not None:
             return {"status": f"complete pre-state not captured: {arg.name}"}
-        inputs[name] = lazy.from_array(logical(arg, "before"), TORCH_DT[arg.dtype])
+        inputs[name] = lazy.from_array(logical(arg, "before"), TORCH_DT[arg.dtype], physical_input=True)
     frag = cut_fragment(oc.frag[frag_kernel], prov["params"], outs)
     graph = fx_text.to_graph(frag)
     defined = set(inputs) | {n["name"] for n in graph["nodes"]}
@@ -962,7 +962,7 @@ def run_unit(rec, rng, binding_only=False, capture_root=None, provenance_root=No
         arg = byname[buf_param[pick]]
         if arg.before is None or arg.window is not None:
             return {"status": f"complete pre-state not captured: {arg.name}"}
-        inputs[name] = lazy.from_array(logical(arg, "before"), TORCH_DT[arg.dtype])
+        inputs[name] = lazy.from_array(logical(arg, "before"), TORCH_DT[arg.dtype], physical_input=True)
         ph[name] = pick
         input_args[name] = arg
         free.remove(pick)
@@ -985,7 +985,17 @@ def run_unit(rec, rng, binding_only=False, capture_root=None, provenance_root=No
               "candidate": "fragment matched", "semantic_verdict": "not_established",
               "storage_changes": "all captured bytes checked against declared outputs",
               "reference_write_scope": writes,
-              "reference_status": "not_evaluated"}
+              "reference_status": "not_evaluated",
+              "reference_scope": "declared output dependency slice",
+              "graph_admission": {
+                  "status": "not_admitted",
+                  "scope": "output_slice",
+                  "implementation_status": "pending",
+                  "implementation_version": "graph-common-node-gate-2026-10-24",
+                  "reason": "development lazy reference uses an explicit output slice; whole-graph admission was not run",
+              },
+              "readings": {"eager": "selected GRAPH task reading",
+                           "inductor_default": "counterfactual diagnostic only; not actual compiler semantics"}}
     result["binding"]["input_layouts"] = {name: {"shape": list(arg.shape), "stride": list(arg.stride),
                                                 "storage_offset_bytes": arg.data_ptr - arg.storage_ptr}
                                          for name, arg in input_args.items()}
@@ -999,7 +1009,7 @@ def run_unit(rec, rng, binding_only=False, capture_root=None, provenance_root=No
                   reference_status="not_evaluated")
     for reading, elide in (("eager", False), ("inductor_default", True)):
         try:
-            env = lazy.evaluate_lazy(graph, inputs, elide_intermediate_casts=elide)
+            env = lazy.evaluate_lazy(graph, inputs, elide_intermediate_casts=elide, scope="output_slice")
         except (Undefined, NotEstablished, Unsupported, Invalid) as error:
             env = {node: error for node in outs.values()}
         for p, node in outs.items():

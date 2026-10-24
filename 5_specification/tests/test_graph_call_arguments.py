@@ -40,7 +40,9 @@ class GraphCallArguments(unittest.TestCase):
             task=self.fixture('aten.copy',[{'ref':'x'},{'ref':'x'}],{'non_blocking':flag})
             with self.assertRaises(Unsupported):
                 G.evaluate(task)
-            env=L.evaluate_lazy(task,{'x':A.tensor([1,2],'i64')})
+            with self.assertRaises(Unsupported):
+                L.evaluate_lazy(task,{'x':A.tensor([1,2],'i64')})
+            env=L.evaluate_lazy(task,{'x':A.tensor([1,2],'i64')},admission='development_helper')
             self.assertEqual([env['y'].get((i,)) for i in range(2)],[1,2])
             self.assertEqual(A.plain(A.copy(A.tensor([1,2],'i64'),A.tensor([3,4],'i64'),flag)),[3,4])
             lazy_copy=L.l_copy(A.tensor([1,2],'i64'),A.tensor([3,4],'i64'),flag)

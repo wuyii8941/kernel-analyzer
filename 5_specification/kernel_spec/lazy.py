@@ -18,6 +18,7 @@ import numpy as np
 from . import aten as A
 from . import ieee
 from . import real as rl
+from . import graph_semantics as GS
 from .num import Invalid, NotEstablished, Undefined, Unsupported
 from .real import R
 
@@ -55,15 +56,16 @@ def evaluation_budget(limit):
 
 
 class Lazy:
-    __slots__ = ("shape", "dtype", "_get", "_memo")
+    __slots__ = ("shape", "dtype", "_get", "_memo", "physical_input")
 
-    def __init__(self, shape, dtype, get):
+    def __init__(self, shape, dtype, get, *, physical_input=False):
         self.shape = tuple(A._layout_sizes(shape, "lazy tensor shape"))
         if any(size < 0 for size in self.shape):
             raise Invalid("lazy tensor shape must be nonnegative")
         self.dtype = A.dt(dtype)
         self._get = get
         self._memo = {}
+        self.physical_input = bool(physical_input)
 
     def get(self, idx):
         idx = tuple(A._layout_sizes(idx, "lazy coordinate"))
@@ -91,14 +93,19 @@ def const(value, dtype):
     return Lazy((), dtype, lambda idx: v)
 
 
-def from_array(arr, dtype):
-    """A placeholder backed by a numpy array (float64 holding the exact values of the dtype, or ints / bools)."""
+def from_array(arr, dtype, *, physical_input=False):
+    """A placeholder backed by an array.
+
+    ``physical_input=True`` is an explicit assertion by a validated capture
+    binding that the float64 array holds exact values of the declared storage
+    dtype.  Other callers are checked element by element at GRAPH admission.
+    """
     d = A.dt(dtype)
     if d in A.FLOAT:
-        return Lazy(arr.shape, d, lambda idx: R(float(arr[idx])))
+        return Lazy(arr.shape, d, lambda idx: R(float(arr[idx])), physical_input=physical_input)
     if d in A.BOOL:
-        return Lazy(arr.shape, d, lambda idx: bool(arr[idx]))
-    return Lazy(arr.shape, d, lambda idx: int(arr[idx]))
+        return Lazy(arr.shape, d, lambda idx: bool(arr[idx]), physical_input=physical_input)
+    return Lazy(arr.shape, d, lambda idx: int(arr[idx]), physical_input=physical_input)
 
 
 def as_lazy(x, like=None):
@@ -163,11 +170,10 @@ def _fl1(fn):
     return lambda a: _map(fn, _float(a))
 
 
-UNARY = {
-    "aten.exp": rl.exp, "aten.log": rl.log, "aten.log1p": rl.log1p, "aten.sqrt": rl.sqrt, "aten.rsqrt": rl.rsqrt,
-    "aten.sin": rl.sin, "aten.cos": rl.cos, "aten.tanh": rl.tanh, "aten.sigmoid": rl.sigmoid, "aten.erf": rl.erf,
-    "aten.reciprocal": lambda x: R(1) / x,
-}
+UNARY = {name: (lambda x, operation=name: GS.mathfn_scalar(operation, x)) for name in (
+    "aten.exp", "aten.log", "aten.log1p", "aten.sqrt", "aten.rsqrt", "aten.sin", "aten.cos", "aten.tanh",
+    "aten.sigmoid", "aten.erf")}
+UNARY["aten.reciprocal"] = lambda x: R(1) / x
 
 
 def l_pow(a, b):
@@ -821,15 +827,23 @@ OPS = {
 OPS.update({k: _fl1(v) for k, v in UNARY.items()})
 
 
-def evaluate_lazy(graph, inputs, elide_intermediate_casts=False):
-    """Evaluate available lazy helpers for a GRAPH-shaped record.
+def evaluate_lazy(graph, inputs, elide_intermediate_casts=False, *, scope="complete_graph", admission="contract"):
+    """Evaluate a GRAPH record through the same admitted node gate as full evaluation.
 
-    This function is also used for development references whose operations are
-    outside the admitted base contracts. Semantic GRAPH callers must first use
-    graph.covered_ops(); helper availability alone is not contract admission.
+    ``complete_graph`` validates every coordinate of every node, so an invalid,
+    unsupported or unestablished unused node cannot disappear.  The explicit
+    ``output_slice`` mode first constructs a pure dependency slice and is only a
+    partial conclusion about that smaller task; callers must preserve that scope
+    in their report.
     """
-    from .graph import functional_value_graph, select_result
-    graph, _ = functional_value_graph(graph, input_names=inputs)
+    from .graph import functional_value_graph, output_value_graph, select_result
+    if scope not in {"complete_graph", "output_slice"}:
+        raise Invalid("lazy GRAPH scope must be 'complete_graph' or 'output_slice'")
+    if admission not in {"contract", "development_helper"}:
+        raise Invalid("lazy admission must be 'contract' or 'development_helper'")
+    graph, _ = functional_value_graph(graph, input_names=inputs, allow_helper_ops=admission == "development_helper")
+    if scope == "output_slice":
+        graph, _ = output_value_graph(graph, input_names=inputs)
     env = dict(inputs)
     outputs = {o["ref"] if isinstance(o, dict) else o for o in graph.get("outputs", [])}
     from .aten_adapter import decode, bind_reference_call
@@ -844,6 +858,44 @@ def evaluate_lazy(graph, inputs, elide_intermediate_casts=False):
         if isinstance(x, list):
             return [res(v) for v in x]
         return decode(x)
+
+    def force(value):
+        if isinstance(value, Lazy):
+            for index in np.ndindex(*value.shape):
+                value.get(index)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                force(item)
+
+    def validate_boundary(name, value):
+        if not isinstance(value, (Lazy, A.Ten)):
+            return
+        tensor = as_lazy(value)
+        if tensor.physical_input:
+            return
+        for index in np.ndindex(*tensor.shape):
+            item = tensor.get(index)
+            if tensor.dtype in A.FLOAT:
+                if not isinstance(item, R) or not item.exact:
+                    raise Invalid(f"graph input {name!r} must contain exact physical floating values")
+                if item.finite:
+                    stored = ieee.round_to(item, tensor.dtype)
+                    if not stored.exact or stored.v != item.v:
+                        raise Invalid(f"graph input {name!r} contains {item!r}, not representable as {tensor.dtype}")
+            elif tensor.dtype in A.INT:
+                low, high = A.INT_RANGE[tensor.dtype]
+                if isinstance(item, (bool, np.bool_)) or not isinstance(item, (int, np.integer)) or not low <= int(item) <= high:
+                    raise Invalid(f"graph input {name!r} is not a physical {tensor.dtype} value")
+            elif tensor.dtype == "b8":
+                if not isinstance(item, (bool, np.bool_)):
+                    raise Invalid(f"graph input {name!r} is not boolean")
+            else:
+                raise Unsupported(f"graph input {name!r} dtype {tensor.dtype!r} has no GRAPH boundary rule")
+
+    if admission == "contract":
+        for name, value in inputs.items():
+            validate_boundary(name, value)
+
     for n in graph["nodes"]:
         op = n["op"]
         try:
@@ -851,21 +903,42 @@ def evaluate_lazy(graph, inputs, elide_intermediate_casts=False):
             kwargs = {k: res(v) for k, v in (n.get("kwargs") or {}).items()}
             if op == "operator.getitem":
                 env[n["name"]] = select_result(args[0], args[1])
+                if scope == "complete_graph":
+                    force(env[n["name"]])
                 continue
-            if op in A.OPS:
+            if admission == "contract":
+                rule, args, kwargs = GS.validate_lazy_metadata(op, args, kwargs)
+            elif op in A.OPS:
                 bound = bind_reference_call(op, inspect.signature(A.OPS[op]), args, kwargs)
                 args, kwargs = bound.args, bound.kwargs
+            cast_source = args[0] if args else kwargs.get("a")
             if (elide_intermediate_casts and op in ("prims.convert_element_type", "aten._to_copy")
-                    and n["name"] not in outputs and isinstance(args[0], Lazy) and args[0].dtype in A.FLOAT):
+                    and n["name"] not in outputs and isinstance(cast_source, Lazy) and cast_source.dtype in A.FLOAT):
                 target = A.dt(args[1] if len(args) > 1 else kwargs.get("dtype"))
                 if target in A.FLOAT:
-                    src = args[0]
+                    src = cast_source
                     env[n["name"]] = Lazy(src.shape, target, src.get)
+                    if scope == "complete_graph":
+                        force(env[n["name"]])
+                        if admission == "contract":
+                            GS.validate_lazy_result(rule, env[n["name"]])
                     continue
             if op not in OPS:
-                raise Unsupported(f"{op} has no lazy evaluation")
+                if admission == "contract":
+                    raise NotEstablished(f"{op} is admitted by {GS.rule_for(op, args).contract} but has no lazy evaluation")
+                raise Unsupported(f"{op} has no lazy development helper")
+            bound = bind_reference_call(op, inspect.signature(OPS[op]), args, kwargs)
+            args, kwargs = bound.args, bound.kwargs
             env[n["name"]] = OPS[op](*args, **kwargs)
-        except (Undefined, Invalid, Unsupported, NotEstablished) as e:
+            if scope == "complete_graph":
+                force(env[n["name"]])
+                if admission == "contract":
+                    GS.validate_lazy_result(rule, env[n["name"]])
+        except Undefined as e:
+            env[n["name"]] = e
+        except (Invalid, Unsupported, NotEstablished) as e:
+            if admission != "development_helper":
+                raise
             env[n["name"]] = e
     for output in graph.get("outputs", []):
         if isinstance(output, dict) and "index" in output:

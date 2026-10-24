@@ -16,17 +16,14 @@ class GraphResultSelection(unittest.TestCase):
             for reference in (False,True):
                 task=self.task(index,reference)
                 with self.subTest(index=index,reference=reference),self.assertRaises(Invalid):G.evaluate(task)
-                # Node failures remain typed in the lazy environment; output
-                # reference bounds can be checked without evaluating coordinates.
-                try:env=L.evaluate_lazy(task,{'x':L.as_lazy(A.tensor([1,3],'f64'))})
-                except Invalid:continue
-                self.assertIsInstance(env.get('y'),Invalid)
+                with self.assertRaises(Invalid):
+                    L.evaluate_lazy(task,{'x':L.as_lazy(A.tensor([1,3],'f64'))})
 
     def test_tensor_indexing_is_not_multi_result_projection(self):
         task={'inputs':{'x':{'t':'i64','v':[1,2]}},'nodes':[{'name':'y','op':'operator.getitem','args':[{'ref':'x'},0]}],'outputs':['y']}
         with self.assertRaises(Unsupported):G.evaluate(task)
-        env=L.evaluate_lazy(task,{'x':L.as_lazy(A.tensor([1,2],'i64'))})
-        self.assertIsInstance(env['y'],Unsupported)
+        with self.assertRaises(Unsupported):
+            L.evaluate_lazy(task,{'x':L.as_lazy(A.tensor([1,2],'i64'))})
 
     def test_positive_and_negative_indices_select_same_complete_result(self):
         for index in (1,-1):
