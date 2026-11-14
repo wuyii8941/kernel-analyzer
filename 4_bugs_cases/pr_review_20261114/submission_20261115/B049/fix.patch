@@ -1,0 +1,83 @@
+From a4addeb6580b105c4d29601bca7d2c95ba21831a Mon Sep 17 00:00:00 2001
+From: wuyii8941 <wuyii8941@gmail.com>
+Date: Sun, 15 Nov 2026 00:54:40 +0800
+Subject: [PATCH] fix(kl_div): preserve mixed-precision input gradients
+
+---
+ src/liger_kernel/ops/kl_div.py   |  6 ++++--
+ test/transformers/test_kl_div.py | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+), 2 deletions(-)
+
+diff --git a/src/liger_kernel/ops/kl_div.py b/src/liger_kernel/ops/kl_div.py
+index 7bed028..d2ca3dd 100644
+--- a/src/liger_kernel/ops/kl_div.py
++++ b/src/liger_kernel/ops/kl_div.py
+@@ -229,6 +229,7 @@ class LigerKLDivLossFunction(torch.autograd.Function):
+             torch.Tensor: The computed KL Divergence Loss, with shape (BT, V) if `reduction` is "none", else a scalar.
+         """
+         ctx.save_for_backward(y_true)
++        ctx.input_dtype = y_pred.dtype
+         ctx.reduction = reduction
+         ctx.log_target = log_target
+         return kldiv_forward_triton(y_pred, y_true, log_target=log_target, reduction=reduction, eps=eps)
+@@ -247,7 +248,8 @@ class LigerKLDivLossFunction(torch.autograd.Function):
+         """
+         (y_true,) = ctx.saved_tensors
+ 
+-        new_grads = torch.empty_like(y_true)
++        grad_dtype = torch.promote_types(torch.float32, torch.promote_types(ctx.input_dtype, y_true.dtype))
++        new_grads = torch.empty_like(y_true, dtype=grad_dtype)
+ 
+         derivative = kldiv_backward_triton(y_true, grad_output, new_grads, ctx.log_target)
+ 
+@@ -259,7 +261,7 @@ class LigerKLDivLossFunction(torch.autograd.Function):
+             derivative = derivative / (y_true.shape[0] * y_true.shape[1])
+ 
+         return (
+-            derivative,
++            derivative.to(ctx.input_dtype),
+             None,
+             None,
+             None,
+diff --git a/test/transformers/test_kl_div.py b/test/transformers/test_kl_div.py
+index 491923c..2f015b0 100644
+--- a/test/transformers/test_kl_div.py
++++ b/test/transformers/test_kl_div.py
+@@ -9,6 +9,34 @@ from liger_kernel.utils import infer_device
+ 
+ device = infer_device()
+ 
++
++@pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
++@pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
++@pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
++@pytest.mark.parametrize("log_target", [False, True])
++@pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
++def test_mixed_dtype_backward_preserves_small_gradients(
++    student_dtype, target_dtype, reduction, log_target, upstream_scale
++):
++    if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
++        pytest.skip("bfloat16 not supported on this GPU")
++    shape = (2, 32768)
++    x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
++    ref_x = x.detach().double().requires_grad_()
++    target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
++    if log_target:
++        target = target.log()
++    actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
++    expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
++    upstream = torch.full_like(actual, upstream_scale)
++    actual.backward(upstream)
++    expected.backward(upstream.to(expected.dtype))
++    assert x.grad.dtype == student_dtype
++    # Avoid an absolute tolerance that would accept complete gradient loss.
++    rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
++    torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
++
++
+ _SHAPE_PARAMS = (
+     "B, T, V",
+     [
+-- 
+2.25.1
+
