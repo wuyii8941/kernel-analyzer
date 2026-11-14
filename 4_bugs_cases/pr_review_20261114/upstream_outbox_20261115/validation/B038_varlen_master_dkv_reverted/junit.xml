@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="8" time="18.571" timestamp="2026-11-15T01:09:49.360341+08:00" hostname="amax"><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_identical_keys[0.0-dtype0]" time="8.792" /><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_identical_keys[0.0-dtype1]" time="7.477" /><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_identical_keys[0.5-dtype0]" time="0.841" /><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_identical_keys[0.5-dtype1]" time="0.804" /><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_nonzero_qkv[0.0-dtype0]" time="0.423" /><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_nonzero_qkv[0.0-dtype1]" time="0.007" /><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_nonzero_qkv[0.5-dtype0]" time="0.006"><failure message="AssertionError: dK: Tensor-likes are not close!&#10;&#10;Mismatched elements: 16205 / 16384 (98.9%)&#10;Greatest absolute difference: 0.04423422728306064 at index (0, 71, 0, 11) (up to 0.0001 allowed)&#10;Greatest relative difference: 3078.5437172966826 at index (0, 192, 1, 13) (up to 0.001 allowed)">dtype = torch.float16, dropout_p = 0.5
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(
+        flag_gems.vendor_name != "nvidia", reason="direct generic NVIDIA core regression"
+    )
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("dropout_p", [0.0, 0.5])
+    def test_varlen_dropout_derivative_nonzero_qkv(dtype, dropout_p):
+        torch.manual_seed(197)
+        m, n, heads, width, seed = 128, 256, 2, 32, 7331
+        q = 0.5 * torch.randn((1, m, heads, width), dtype=dtype, device=flag_gems.device)
+        k = 0.5 * torch.randn((1, n, heads, width), dtype=dtype, device=flag_gems.device)
+        v = 0.5 * torch.randn_like(k)
+        # An unscaled cotangent directly constrains the nonzero dK computation.
+        grad = 0.5 * torch.randn_like(q)
+        keep = torch.ones((1, heads, m, n), dtype=torch.bool, device=flag_gems.device)
+        if dropout_p:
+            _backward_mask[(triton.cdiv(keep.numel(), 256),)](keep, seed, m, n, heads, 256)
+        q_ref, k_ref, v_ref = [x.double().requires_grad_() for x in (q, k, v)]
+        scores = (
+            q_ref.transpose(1, 2) @ k_ref.transpose(1, 2).transpose(-1, -2)
+        ) * width**-0.5
+        probability = scores.softmax(-1)
+        dropped = probability * keep.double() / (1 - dropout_p)
+        reference = (dropped @ v_ref.transpose(1, 2)).transpose(1, 2)
+        expected = torch.autograd.grad(reference, (q_ref, k_ref, v_ref), grad.double())
+        out = reference.detach().to(dtype).contiguous()
+        lse = scores.detach().logsumexp(-1).float()
+        options = dict(
+            max_seqlen_q=m,
+            max_seqlen_k=n,
+            is_dropout=bool(dropout_p),
+            dropout_p=dropout_p,
+            rng_state=(seed, 0),
+            softmax_scale=width**-0.5,
+        )
+        args = (grad, q, k, v, out, lse)
+        args = tuple(t.squeeze(0) for t in args[:5]) + (lse.squeeze(0).T.contiguous(),)
+        options.update(
+            cu_seq_q=torch.tensor([0, m], dtype=torch.int32, device=flag_gems.device),
+            cu_seq_k=torch.tensor([0, n], dtype=torch.int32, device=flag_gems.device),
+        )
+        actual = flash_attn_backward(*args, **options)[:3]
+        for name, result, target in zip(("dQ", "dK"), actual[:2], expected[:2]):
+            result = result.unsqueeze(0)
+&gt;           torch.testing.assert_close(
+                result.double(),
+                target,
+                rtol=0.016 if dtype == torch.bfloat16 else 0.001,
+                atol=1e-4,
+                msg=lambda message: name + ": " + message,
+            )
+E           AssertionError: dK: Tensor-likes are not close!
+E           
+E           Mismatched elements: 16205 / 16384 (98.9%)
+E           Greatest absolute difference: 0.04423422728306064 at index (0, 71, 0, 11) (up to 0.0001 allowed)
+E           Greatest relative difference: 3078.5437172966826 at index (0, 192, 1, 13) (up to 0.001 allowed)
+
+tests/test_flash_attention_varlen_dropout_derivative.py:142: AssertionError</failure></testcase><testcase classname="tests.test_flash_attention_varlen_dropout_derivative" name="test_varlen_dropout_derivative_nonzero_qkv[0.5-dtype1]" time="0.007"><failure message="AssertionError: dK: Tensor-likes are not close!&#10;&#10;Mismatched elements: 16188 / 16384 (98.8%)&#10;Greatest absolute difference: 0.044253542528696004 at index (0, 71, 0, 11) (up to 0.0001 allowed)&#10;Greatest relative difference: 1388.2802038362063 at index (0, 14, 1, 21) (up to 0.016 allowed)">dtype = torch.bfloat16, dropout_p = 0.5
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(
+        flag_gems.vendor_name != "nvidia", reason="direct generic NVIDIA core regression"
+    )
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("dropout_p", [0.0, 0.5])
+    def test_varlen_dropout_derivative_nonzero_qkv(dtype, dropout_p):
+        torch.manual_seed(197)
+        m, n, heads, width, seed = 128, 256, 2, 32, 7331
+        q = 0.5 * torch.randn((1, m, heads, width), dtype=dtype, device=flag_gems.device)
+        k = 0.5 * torch.randn((1, n, heads, width), dtype=dtype, device=flag_gems.device)
+        v = 0.5 * torch.randn_like(k)
+        # An unscaled cotangent directly constrains the nonzero dK computation.
+        grad = 0.5 * torch.randn_like(q)
+        keep = torch.ones((1, heads, m, n), dtype=torch.bool, device=flag_gems.device)
+        if dropout_p:
+            _backward_mask[(triton.cdiv(keep.numel(), 256),)](keep, seed, m, n, heads, 256)
+        q_ref, k_ref, v_ref = [x.double().requires_grad_() for x in (q, k, v)]
+        scores = (
+            q_ref.transpose(1, 2) @ k_ref.transpose(1, 2).transpose(-1, -2)
+        ) * width**-0.5
+        probability = scores.softmax(-1)
+        dropped = probability * keep.double() / (1 - dropout_p)
+        reference = (dropped @ v_ref.transpose(1, 2)).transpose(1, 2)
+        expected = torch.autograd.grad(reference, (q_ref, k_ref, v_ref), grad.double())
+        out = reference.detach().to(dtype).contiguous()
+        lse = scores.detach().logsumexp(-1).float()
+        options = dict(
+            max_seqlen_q=m,
+            max_seqlen_k=n,
+            is_dropout=bool(dropout_p),
+            dropout_p=dropout_p,
+            rng_state=(seed, 0),
+            softmax_scale=width**-0.5,
+        )
+        args = (grad, q, k, v, out, lse)
+        args = tuple(t.squeeze(0) for t in args[:5]) + (lse.squeeze(0).T.contiguous(),)
+        options.update(
+            cu_seq_q=torch.tensor([0, m], dtype=torch.int32, device=flag_gems.device),
+            cu_seq_k=torch.tensor([0, n], dtype=torch.int32, device=flag_gems.device),
+        )
+        actual = flash_attn_backward(*args, **options)[:3]
+        for name, result, target in zip(("dQ", "dK"), actual[:2], expected[:2]):
+            result = result.unsqueeze(0)
+&gt;           torch.testing.assert_close(
+                result.double(),
+                target,
+                rtol=0.016 if dtype == torch.bfloat16 else 0.001,
+                atol=1e-4,
+                msg=lambda message: name + ": " + message,
+            )
+E           AssertionError: dK: Tensor-likes are not close!
+E           
+E           Mismatched elements: 16188 / 16384 (98.8%)
+E           Greatest absolute difference: 0.044253542528696004 at index (0, 71, 0, 11) (up to 0.0001 allowed)
+E           Greatest relative difference: 1388.2802038362063 at index (0, 14, 1, 21) (up to 0.016 allowed)
+
+tests/test_flash_attention_varlen_dropout_derivative.py:142: AssertionError</failure></testcase></testsuite></testsuites>

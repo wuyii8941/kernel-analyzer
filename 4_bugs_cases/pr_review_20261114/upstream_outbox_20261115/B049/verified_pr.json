@@ -1,0 +1,37 @@
+{
+  "case": "B049",
+  "repository": "linkedin/Liger-Kernel",
+  "number": 1625,
+  "url": "https://github.com/linkedin/Liger-Kernel/pull/1625",
+  "title": "fix(kl_div): preserve mixed-precision input gradients",
+  "body": "## Summary\n\nPrevent mean KL loss from erasing FP32 student gradients when the target is FP16. For a uniform target with shape `(32, 32768)`, the current backward returns zero instead of `-2**-35` per input coordinate.\n\nKeep the backward temporary in at least FP32, apply upstream scaling and reduction, then cast to the student dtype. Forward behavior and public signatures are unchanged. The existing FP32 kernel arithmetic is unchanged; this does not add FP64 kernel accuracy.\n\n## Testing Done\n\n- Complete `test/transformers/test_kl_div.py`: **248 passed** on base `83746f4007d18a8ecc16786e9848cc1e5fc4eae0`.\n- The 144 new parameterizations cover student/target dtypes, reductions, log targets and upstream scales. On the original implementation, 22 fail and 122 pass; all pass with the fix. References use the same physical targets in FP64 and gradient `atol=0`.\n- `make checkstyle`: passed with Ruff 0.14.11.\n\n```bash\npython -m pytest test/transformers/test_kl_div.py\nmake checkstyle\n```\n\nFor the FP16-target `(32, 32768)` workload, measured incremental temporary allocation increases from 2,098,176 to 4,195,328 bytes. This is a correctness/memory trade-off.\n\n- Hardware Type: NVIDIA RTX A6000; PyTorch 2.10.0+cu128; Triton 3.6.0\n- [ ] run `make test` to ensure correctness\n- [x] run `make checkstyle` to ensure code style\n- [ ] run `make test-convergence` to ensure convergence\n",
+  "state": "open",
+  "draft": false,
+  "author": "wuyii8941",
+  "head_sha": "a4addeb6580b105c4d29601bca7d2c95ba21831a",
+  "head_repo": "wuyii8941/Liger-Kernel",
+  "base_branch": "main",
+  "base_sha": "83746f4007d18a8ecc16786e9848cc1e5fc4eae0",
+  "files": [
+    {
+      "path": "src/liger_kernel/ops/kl_div.py",
+      "additions": 4,
+      "deletions": 2
+    },
+    {
+      "path": "test/transformers/test_kl_div.py",
+      "additions": 28,
+      "deletions": 0
+    }
+  ],
+  "commits": [
+    {
+      "sha": "a4addeb6580b105c4d29601bca7d2c95ba21831a",
+      "message": "fix(kl_div): preserve mixed-precision input gradients"
+    }
+  ],
+  "created_at": "2026-11-14T17:18:50Z",
+  "body_matches": true,
+  "no_internal_links": true,
+  "scope_verified": true
+}

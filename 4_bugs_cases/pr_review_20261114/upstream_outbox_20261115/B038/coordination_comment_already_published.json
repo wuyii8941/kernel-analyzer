@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/flagos-ai/FlagGems/pull/8969#issuecomment-6880991318",
+  "body": "I reproduced the same outer-probability issue in the two varlen backward kernels, which this PR currently leaves unchanged.\n\nIn `_flash_attn_bwd_varlen_dq_fused` and `_flash_attn_bwd_varlen_dkv`, the softmax derivative needs the undropped outer `P`:\n\n```python\ndS = P * (dropout_backward(dP) - D)\ndV = P_drop.T @ dO\n```\n\nKeeping a separate `P_drop` for dV fixes the varlen case without changing your dense correction. On current master (`714859074`), my eight FP16/BF16 same-mask varlen tests give four failures before the change and all eight pass afterward. They include nonzero Q/K/V and compare dQ/dK against FP64 autograd; they do not check cross-implementation RNG compatibility.\n\nI am preparing a varlen-only follow-up so the changes do not overlap this PR.",
+  "updated_at": "2026-11-14T17:11:34Z",
+  "id": 6880991318
+}

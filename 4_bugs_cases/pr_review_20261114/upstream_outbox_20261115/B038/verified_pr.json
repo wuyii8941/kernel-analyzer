@@ -1,0 +1,37 @@
+{
+  "case": "B038",
+  "repository": "flagos-ai/FlagGems",
+  "number": 9116,
+  "url": "https://github.com/flagos-ai/FlagGems/pull/9116",
+  "title": "Fix dropout gradients in variable-length attention backward",
+  "body": "### PR Category\n\nOperator, OP Test\n\n### Type of Change\n\nBug Fix\n\n### Description\n\nUse the undropped probability as the outer factor in variable-length attention's softmax derivative. Dropout scales/masks dP; dS must still use `P * (dP_drop - D)`. Keep a separate dropped probability for dV.\n\nOnly `_flash_attn_bwd_varlen_dq_fused` and `_flash_attn_bwd_varlen_dkv` change. Dense corrections are already proposed in #8969 and are not included here.\n\nThis draft targets current master `714859074155592820cac77d08a006f2c48eb4fc`. The added tests exercise only the changed varlen path: **4 fail / 4 pass before, all 8 pass after**. They cover FP16/BF16, dropout 0/0.5, identical-key invariants and nonzero Q/K/V with an independent FP64 autograd reference. dV has a separate allowance for its existing probability-format conversion; this is not a bound for the entire kernel.\n\n```bash\npython -m pytest tests/test_flash_attention_varlen_dropout_derivative.py\n```\n\nReverting only varlen DKV fails the two nonzero-Q/K/V dropout cases specifically at dK; the old Q=0 controls still pass. dBias and cross-implementation forward/backward RNG compatibility are outside this test's coverage.\n\nNVIDIA RTX A6000, PyTorch 2.10.0+cu128, Triton 3.6.0. Black/isort/Flake8 with repository options, whitespace and operator-marker checks pass.\n\n### Issue\n\nRelated: #8969 (dense formula correction) and #8748 (separate forward/backward RNG-routing report). This PR does not close #8748. It can be reviewed as a varlen-only follow-up while the dense PR is in progress.\n\n### Progress\n\n- [ ] Change is properly reviewed (1 reviewer required, 2 recommended).\n- [ ] Change is responded to an issue.\n- [x] Change is fully covered by a UT.\n\n### Performance\n\nSame-mask varlen backward, Q=(128,2,32), K/V=(256,2,32), FP16, dropout=0.5; same RTX A6000, three warm samples:\n\n| | Before | After |\n| --- | ---: | ---: |\n| Median ms | 0.026110 | 0.026330 |\n| Incremental temporary bytes | 82,944 | 82,944 |\n\nMask construction is excluded. These limited samples do not establish a speedup or a statistically significant regression.\n",
+  "state": "open",
+  "draft": true,
+  "author": "wuyii8941",
+  "head_sha": "d96e6b1f310408c24fd69639c9d6a872e5a46a40",
+  "head_repo": "wuyii8941/FlagGems",
+  "base_branch": "master",
+  "base_sha": "714859074155592820cac77d08a006f2c48eb4fc",
+  "files": [
+    {
+      "path": "src/flag_gems/ops/flash_attention_backward.py",
+      "additions": 3,
+      "deletions": 3
+    },
+    {
+      "path": "tests/test_flash_attention_varlen_dropout_derivative.py",
+      "additions": 164,
+      "deletions": 0
+    }
+  ],
+  "commits": [
+    {
+      "sha": "d96e6b1f310408c24fd69639c9d6a872e5a46a40",
+      "message": "fix: use undropped probabilities for varlen dropout gradients"
+    }
+  ],
+  "created_at": "2026-11-14T17:18:29Z",
+  "body_matches": true,
+  "no_internal_links": true,
+  "scope_verified": true
+}
