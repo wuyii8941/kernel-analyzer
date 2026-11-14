@@ -1,0 +1,151 @@
+[
+  {
+    "name": "B007_ruff",
+    "case": "B007",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "<workspace>/.cache/pr_review_20261114/tools/ruff/__main__.py",
+      "check",
+      "fla/ops/linear_attn/utils.py",
+      "tests/ops/test_linear_attn.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B038_flake8",
+    "case": "B038",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "flake8",
+      "--ignore=F405,E731,W503,E203,E701,E704",
+      "--max-line-length=120",
+      "src/flag_gems/ops/flash_attention_backward.py",
+      "tests/test_flash_attention_dropout_derivative.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B038_black",
+    "case": "B038",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "black",
+      "--check",
+      "src/flag_gems/ops/flash_attention_backward.py",
+      "tests/test_flash_attention_dropout_derivative.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B038_isort",
+    "case": "B038",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "isort",
+      "--check-only",
+      "--profile",
+      "black",
+      "-o",
+      "packaging",
+      "src/flag_gems/ops/flash_attention_backward.py",
+      "tests/test_flash_attention_dropout_derivative.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B047_basic",
+    "case": "B047",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "<workspace>/.cache/pr_review_20261114/tools/ruff/__main__.py",
+      "check",
+      "--select",
+      "F,E9",
+      "attorch/p_loss_kernels.py",
+      "tests/test_p_loss_layers.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B049_repo_ruff",
+    "case": "B049",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "<workspace>/.cache/pr_review_20261114/ruff014/ruff/__main__.py",
+      "check",
+      "."
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B049_repo_format",
+    "case": "B049",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "<workspace>/.cache/pr_review_20261114/ruff014/ruff/__main__.py",
+      "format",
+      "--check",
+      "--diff",
+      "."
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B054_black",
+    "case": "B054",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "black",
+      "--check",
+      "trident/operation/masked_softmax.py",
+      "tests/test_masked_softmax.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "B049_latest_lint",
+    "case": "B049",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "."
+    ],
+    "returncode": 0,
+    "base": "8fbf19f47e391b6e7f5d60eb09fb2b0a49ddcf81"
+  },
+  {
+    "name": "B049_latest_format",
+    "case": "B049",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "ruff",
+      "format",
+      "--check",
+      "--diff",
+      "."
+    ],
+    "returncode": 0,
+    "base": "8fbf19f47e391b6e7f5d60eb09fb2b0a49ddcf81"
+  },
+  {
+    "name": "B007_latest_ruff",
+    "case": "B007",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "fla/ops/linear_attn/utils.py",
+      "tests/ops/test_linear_attn.py"
+    ],
+    "returncode": 0,
+    "base": "2705ab8ee9a9086bcfa6d079858e4281e01215a1"
+  }
+]

@@ -1,0 +1,66 @@
+{
+  "case": "B007",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "gpu": "NVIDIA RTX A6000",
+  "runs": [
+    {
+      "name": "normalization_T1_packedFalse",
+      "shape": [
+        1,
+        1,
+        2,
+        64
+      ],
+      "mode": "forward",
+      "milliseconds": [
+        0.017664000377177247,
+        0.016851301689351363,
+        0.016908190612282072
+      ],
+      "median_ms": 0.016908190612282072,
+      "resident_bytes": 1536,
+      "peak_allocated_bytes": 3072,
+      "incremental_peak_bytes": 1536
+    },
+    {
+      "name": "normalization_T128_packedFalse",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "mode": "forward",
+      "milliseconds": [
+        0.02532638036287748,
+        0.025212877975186197,
+        0.025305651663708302
+      ],
+      "median_ms": 0.025305651663708302,
+      "resident_bytes": 66048,
+      "peak_allocated_bytes": 164352,
+      "incremental_peak_bytes": 98304
+    },
+    {
+      "name": "normalization_T128_packedTrue",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "mode": "forward",
+      "milliseconds": [
+        0.3659093335822777,
+        0.3640542604785035,
+        0.3651972162550774
+      ],
+      "median_ms": 0.3651972162550774,
+      "resident_bytes": 66560,
+      "peak_allocated_bytes": 198144,
+      "incremental_peak_bytes": 131584
+    }
+  ],
+  "scope": "Three warm timing samples per workload in each isolated process; no statistical speedup claim. Incremental peak measured separately from timer allocation. No model or training quality benchmark."
+}

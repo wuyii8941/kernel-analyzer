@@ -1,0 +1,705 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="22" skipped="0" tests="144" time="22.003" timestamp="2026-11-14T22:57:41.511807+08:00" hostname="amax"><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype0-student_dtype0]" time="2.710" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype0-student_dtype1]" time="0.344" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype0-student_dtype2]" time="0.348" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype1-student_dtype0]" time="0.461" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype1-student_dtype1]" time="0.408" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype1-student_dtype2]" time="0.343" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype2-student_dtype0]" time="0.593" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype2-student_dtype1]" time="0.374" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-none-target_dtype2-student_dtype2]" time="0.339" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype0-student_dtype0]" time="0.629" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype0-student_dtype1]" time="0.304" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype0-student_dtype2]" time="0.335" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype1-student_dtype0]" time="0.307" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype1-student_dtype1]" time="0.307" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype1-student_dtype2]" time="0.304" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype2-student_dtype0]" time="0.356" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype2-student_dtype1]" time="0.339" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-sum-target_dtype2-student_dtype2]" time="0.325" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype0-student_dtype0]" time="0.592"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.656612873077393e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'mean'
+log_target = False, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.656612873077393e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype0-student_dtype1]" time="0.314" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype0-student_dtype2]" time="0.313"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.656612873077393e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)">student_dtype = torch.bfloat16, target_dtype = torch.float16, reduction = 'mean'
+log_target = False, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.656612873077393e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype1-student_dtype0]" time="0.305" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype1-student_dtype1]" time="0.301" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype1-student_dtype2]" time="0.306" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype2-student_dtype0]" time="0.310" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype2-student_dtype1]" time="0.312" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-mean-target_dtype2-student_dtype2]" time="0.307" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype0-student_dtype0]" time="0.307" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype0-student_dtype1]" time="0.302" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype0-student_dtype2]" time="0.303" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype1-student_dtype0]" time="0.316" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype1-student_dtype1]" time="0.311" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype1-student_dtype2]" time="0.327" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype2-student_dtype0]" time="0.306" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype2-student_dtype1]" time="0.324" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-False-batchmean-target_dtype2-student_dtype2]" time="0.314" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype0-student_dtype0]" time="0.366"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 2.2097083274275064e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'none'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 2.2097083274275064e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype0-student_dtype1]" time="0.148" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype0-student_dtype2]" time="0.147" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype1-student_dtype0]" time="0.260"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 2.994784153997898e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16, reduction = 'none'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 2.994784153997898e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype1-student_dtype1]" time="0.146" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype1-student_dtype2]" time="0.180" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype2-student_dtype0]" time="0.259" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype2-student_dtype1]" time="0.173" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-none-target_dtype2-student_dtype2]" time="0.167" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype0-student_dtype0]" time="0.149"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 2.2097083274275064e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'sum'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 2.2097083274275064e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype0-student_dtype1]" time="0.142" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype0-student_dtype2]" time="0.157" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype1-student_dtype0]" time="0.155"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 2.994784153997898e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16, reduction = 'sum'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 2.994784153997898e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype1-student_dtype1]" time="0.150" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype1-student_dtype2]" time="0.145" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype2-student_dtype0]" time="0.159" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype2-student_dtype1]" time="0.171" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-sum-target_dtype2-student_dtype2]" time="0.156" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype0-student_dtype0]" time="0.147"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.65088967338545e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'mean'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.65088967338545e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype0-student_dtype1]" time="0.147" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype0-student_dtype2]" time="0.149"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.656612873077393e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)">student_dtype = torch.bfloat16, target_dtype = torch.float16, reduction = 'mean'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.656612873077393e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype1-student_dtype0]" time="0.152"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.569677969357144e-13 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16, reduction = 'mean'
+log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.569677969357144e-13 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype1-student_dtype1]" time="0.178" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype1-student_dtype2]" time="0.148" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype2-student_dtype0]" time="0.159" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype2-student_dtype1]" time="0.154" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-mean-target_dtype2-student_dtype2]" time="0.150" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype0-student_dtype0]" time="0.153"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 1.875378075055778e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0012305602431297302 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16
+reduction = 'batchmean', log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 1.875378075055778e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0012305602431297302 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype0-student_dtype1]" time="0.177" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype0-student_dtype2]" time="0.194" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype1-student_dtype0]" time="0.160"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 1.497392076998949e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16
+reduction = 'batchmean', log_target = True, upstream_scale = 1.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 1.497392076998949e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype1-student_dtype1]" time="0.153" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype1-student_dtype2]" time="0.148" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype2-student_dtype0]" time="0.145" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype2-student_dtype1]" time="0.156" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[1.0-True-batchmean-target_dtype2-student_dtype2]" time="0.156" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype0-student_dtype0]" time="0.006" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype0-student_dtype1]" time="0.006" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype0-student_dtype2]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype1-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype1-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype1-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype2-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype2-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-none-target_dtype2-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype0-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype0-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype0-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype1-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype1-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype1-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype2-student_dtype0]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype2-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-sum-target_dtype2-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype0-student_dtype0]" time="0.005"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 9.313225746154785e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'mean'
+log_target = False, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 9.313225746154785e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype0-student_dtype1]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype0-student_dtype2]" time="0.005"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 9.313225746154785e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)">student_dtype = torch.bfloat16, target_dtype = torch.float16, reduction = 'mean'
+log_target = False, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 9.313225746154785e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype1-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype1-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype1-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype2-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype2-student_dtype1]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-mean-target_dtype2-student_dtype2]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype0-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype0-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype0-student_dtype2]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype1-student_dtype0]" time="0.006" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype1-student_dtype1]" time="0.008" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype1-student_dtype2]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype2-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype2-student_dtype1]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-False-batchmean-target_dtype2-student_dtype2]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype0-student_dtype0]" time="0.005"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.419416654855013e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'none'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.419416654855013e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype0-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype0-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype1-student_dtype0]" time="0.005"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 5.989568307995796e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16, reduction = 'none'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 5.989568307995796e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype1-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype1-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype2-student_dtype0]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype2-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-none-target_dtype2-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype0-student_dtype0]" time="0.004"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 4.419416654855013e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'sum'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 4.419416654855013e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype0-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype0-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype1-student_dtype0]" time="0.004"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 5.989568307995796e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16, reduction = 'sum'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 5.989568307995796e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype1-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype1-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype2-student_dtype0]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype2-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-sum-target_dtype2-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype0-student_dtype0]" time="0.005"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 9.3017793467709e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16, reduction = 'mean'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 9.3017793467709e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype0-student_dtype1]" time="0.005" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype0-student_dtype2]" time="0.005"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 9.313225746154785e-10 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)">student_dtype = torch.bfloat16, target_dtype = torch.float16, reduction = 'mean'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 9.313225746154785e-10 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 1.0 at index (0, 0) (up to 0.015625 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype1-student_dtype0]" time="0.004"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 9.139355938714289e-13 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16, reduction = 'mean'
+log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 9.139355938714289e-13 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype1-student_dtype1]" time="0.003" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype1-student_dtype2]" time="0.003" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype2-student_dtype0]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype2-student_dtype1]" time="0.003" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-mean-target_dtype2-student_dtype2]" time="0.003" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype0-student_dtype0]" time="0.004"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 2.2097083274275064e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.float16
+reduction = 'batchmean', log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 2.2097083274275064e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0007249682676047087 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype0-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype0-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype1-student_dtype0]" time="0.004"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 65536 / 65536 (100.0%)&#10;Greatest absolute difference: 2.994784153997898e-08 at index (0, 0) (up to 0 allowed)&#10;Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)">student_dtype = torch.float32, target_dtype = torch.bfloat16
+reduction = 'batchmean', log_target = True, upstream_scale = 2.0
+
+    @pytest.mark.parametrize("student_dtype", [torch.float32, torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("target_dtype", [torch.float16, torch.bfloat16, torch.float32])
+    @pytest.mark.parametrize("reduction", ["none", "sum", "mean", "batchmean"])
+    @pytest.mark.parametrize("log_target", [False, True])
+    @pytest.mark.parametrize("upstream_scale", [1.0, 2.0])
+    def test_mixed_dtype_backward_preserves_small_gradients(student_dtype, target_dtype, reduction, log_target, upstream_scale):
+        if torch.bfloat16 in (student_dtype, target_dtype) and not supports_bfloat16():
+            pytest.skip("bfloat16 not supported on this GPU")
+        shape = (2, 32768)
+        x = torch.zeros(shape, dtype=student_dtype, device=device, requires_grad=True)
+        ref_x = x.detach().double().requires_grad_()
+        target = torch.full(shape, 1 / shape[1], dtype=target_dtype, device=device)
+        if log_target:
+            target = target.log()
+        actual = LigerKLDIVLoss(reduction=reduction, log_target=log_target)(x, target)
+        expected = KLDivLoss(reduction=reduction, log_target=log_target)(ref_x, target.double())
+        upstream = torch.full_like(actual, upstream_scale)
+        actual.backward(upstream)
+        expected.backward(upstream.to(expected.dtype))
+        assert x.grad.dtype == student_dtype
+        # Avoid an absolute tolerance that would accept complete gradient loss.
+        rtol = max(1e-5, 2 * torch.finfo(student_dtype).eps)
+&gt;       torch.testing.assert_close(x.grad, ref_x.grad.to(student_dtype), rtol=rtol, atol=0)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 65536 / 65536 (100.0%)
+E       Greatest absolute difference: 2.994784153997898e-08 at index (0, 0) (up to 0 allowed)
+E       Greatest relative difference: 0.0009597779135219753 at index (0, 0) (up to 1e-05 allowed)
+
+test/transformers/test_kl_div.py:35: AssertionError</failure></testcase><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype1-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype1-student_dtype2]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype2-student_dtype0]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype2-student_dtype1]" time="0.004" /><testcase classname="test.transformers.test_kl_div" name="test_mixed_dtype_backward_preserves_small_gradients[2.0-True-batchmean-target_dtype2-student_dtype2]" time="0.004" /></testsuite></testsuites>

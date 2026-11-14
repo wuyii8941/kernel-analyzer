@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="4" time="15.771" timestamp="2026-11-14T23:42:06.051669+08:00" hostname="amax"><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[False-dtype0-256]" time="7.383"><failure message="AssertionError: Tensor-likes are not equal!&#10;&#10;Mismatched elements: 64 / 64 (100.0%)&#10;Greatest absolute difference: 0.03125 at index (0, 0, 0, 0)&#10;Greatest relative difference: 0.03125 at index (0, 0, 0, 0)">dtype = torch.bfloat16, boundary = 256, fp32_initial_state = False
+
+    @pytest.mark.parametrize('dtype, boundary', [(torch.bfloat16, 256), (torch.float16, 2048)])
+    @pytest.mark.parametrize('fp32_initial_state', [False, True])
+    def test_normalized_decode_preserves_key_sum(dtype, boundary, fp32_initial_state):
+        q = torch.ones((1, 1, 1, 64), device=device, dtype=dtype)
+        state = None
+        if fp32_initial_state:
+            state = (
+                torch.zeros((1, 1, 64, 64), device=device, dtype=torch.float32),
+                torch.zeros_like(q, dtype=torch.float32),
+            )
+        with torch.no_grad():
+            for _ in range(boundary + 8):
+                output, state = fused_recurrent_linear_attn(
+                    q, q, q, initial_state=state, output_final_state=True, normalize=True,
+                )
+        if not fp32_initial_state:
+            assert output.dtype == dtype
+&gt;       torch.testing.assert_close(output, torch.ones_like(output), rtol=0, atol=0)
+E       AssertionError: Tensor-likes are not equal!
+E       
+E       Mismatched elements: 64 / 64 (100.0%)
+E       Greatest absolute difference: 0.03125 at index (0, 0, 0, 0)
+E       Greatest relative difference: 0.03125 at index (0, 0, 0, 0)
+
+tests/ops/test_linear_attn.py:35: AssertionError</failure></testcase><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[False-dtype1-2048]" time="6.669"><failure message="AssertionError: Tensor-likes are not equal!&#10;&#10;Mismatched elements: 64 / 64 (100.0%)&#10;Greatest absolute difference: 0.00390625 at index (0, 0, 0, 0)&#10;Greatest relative difference: 0.00390625 at index (0, 0, 0, 0)">dtype = torch.float16, boundary = 2048, fp32_initial_state = False
+
+    @pytest.mark.parametrize('dtype, boundary', [(torch.bfloat16, 256), (torch.float16, 2048)])
+    @pytest.mark.parametrize('fp32_initial_state', [False, True])
+    def test_normalized_decode_preserves_key_sum(dtype, boundary, fp32_initial_state):
+        q = torch.ones((1, 1, 1, 64), device=device, dtype=dtype)
+        state = None
+        if fp32_initial_state:
+            state = (
+                torch.zeros((1, 1, 64, 64), device=device, dtype=torch.float32),
+                torch.zeros_like(q, dtype=torch.float32),
+            )
+        with torch.no_grad():
+            for _ in range(boundary + 8):
+                output, state = fused_recurrent_linear_attn(
+                    q, q, q, initial_state=state, output_final_state=True, normalize=True,
+                )
+        if not fp32_initial_state:
+            assert output.dtype == dtype
+&gt;       torch.testing.assert_close(output, torch.ones_like(output), rtol=0, atol=0)
+E       AssertionError: Tensor-likes are not equal!
+E       
+E       Mismatched elements: 64 / 64 (100.0%)
+E       Greatest absolute difference: 0.00390625 at index (0, 0, 0, 0)
+E       Greatest relative difference: 0.00390625 at index (0, 0, 0, 0)
+
+tests/ops/test_linear_attn.py:35: AssertionError</failure></testcase><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[True-dtype0-256]" time="0.151" /><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[True-dtype1-2048]" time="1.220" /></testsuite></testsuites>

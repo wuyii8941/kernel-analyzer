@@ -1,0 +1,57 @@
+diff --git a/fla/ops/linear_attn/utils.py b/fla/ops/linear_attn/utils.py
+index 9aa395c3..cb4f96f0 100644
+--- a/fla/ops/linear_attn/utils.py
++++ b/fla/ops/linear_attn/utils.py
+@@ -19,7 +19,7 @@ class StatefulNormalizeFunction(torch.autograd.Function):
+ 
+     @staticmethod
+     def forward(ctx, o, q, k, scale, z_init, reverse, cu_seqlens):
+-        k_cum = chunk_global_cumsum(k, reverse=reverse, cu_seqlens=cu_seqlens, output_dtype=k.dtype)
++        k_cum = chunk_global_cumsum(k, reverse=reverse, cu_seqlens=cu_seqlens, output_dtype=torch.float32)
+         if z_init is not None:
+             if cu_seqlens is not None:
+                 seq_lens = (cu_seqlens[1:] - cu_seqlens[:-1]).to(torch.long)
+@@ -27,8 +27,8 @@ class StatefulNormalizeFunction(torch.autograd.Function):
+             else:
+                 z_init_b = z_init
+             k_cum = k_cum + z_init_b
+-        denom = (q * scale * k_cum).sum(-1, keepdim=True) + 1e-10
+-        o_out = o / denom
++        denom = (q.float() * scale * k_cum).sum(-1, keepdim=True) + 1e-10
++        o_out = (o.float() / denom).to(o.dtype)
+         if cu_seqlens is not None:
+             idx = (cu_seqlens[:-1] if reverse else cu_seqlens[1:] - 1).to(torch.long)
+             nonempty = (cu_seqlens[1:] > cu_seqlens[:-1])[:, None, None, None]
+diff --git a/tests/ops/test_linear_attn.py b/tests/ops/test_linear_attn.py
+index 1236d5cc..5ca524ff 100644
+--- a/tests/ops/test_linear_attn.py
++++ b/tests/ops/test_linear_attn.py
+@@ -15,6 +15,28 @@ from fla.ops.linear_attn.naive import naive_chunk_linear_attn, naive_recurrent_l
+ from fla.utils import assert_close, device
+ 
+ 
++@pytest.mark.parametrize('dtype, boundary', [(torch.bfloat16, 256), (torch.float16, 2048)])
++@pytest.mark.parametrize('fp32_initial_state', [False, True])
++def test_normalized_decode_preserves_key_sum(dtype, boundary, fp32_initial_state):
++    q = torch.ones((1, 1, 1, 64), device=device, dtype=dtype)
++    state = None
++    if fp32_initial_state:
++        state = (
++            torch.zeros((1, 1, 64, 64), device=device, dtype=torch.float32),
++            torch.zeros_like(q, dtype=torch.float32),
++        )
++    with torch.no_grad():
++        for _ in range(boundary + 8):
++            output, state = fused_recurrent_linear_attn(
++                q, q, q, initial_state=state, output_final_state=True, normalize=True,
++            )
++    if not fp32_initial_state:
++        assert output.dtype == dtype
++    torch.testing.assert_close(output, torch.ones_like(output), rtol=0, atol=0)
++    torch.testing.assert_close(state[1], torch.full_like(state[1], boundary + 8), rtol=0, atol=0)
++    assert state[1].dtype == torch.float32
++
++
+ @pytest.mark.parametrize(
+     ('B', 'T', 'H', 'D', 'scale', 'dtype'),
+     [
