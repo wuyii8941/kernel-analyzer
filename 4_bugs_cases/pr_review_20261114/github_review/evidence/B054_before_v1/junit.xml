@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="8" time="4.932" timestamp="2026-11-14T22:58:15.499113+08:00" hostname="amax"><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[0-contiguous-contiguous-contiguous]" time="3.356" /><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[0-contiguous-contiguous-transpose]" time="0.564"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 20 / 32 (62.5%)&#10;Greatest absolute difference: 0.34595420956611633 at index (2, 1) (up to 1e-07 allowed)&#10;Greatest relative difference: inf at index (1, 1) (up to 1e-06 allowed)">input_layout = 'transpose', mask_layout = 'contiguous'
+grad_layout = 'contiguous', dim = 0, device = 'cuda'
+
+    @pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
+    @pytest.mark.parametrize("dim", [0, 1])
+    def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
+        values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
+        mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
+        input = _with_layout(values, input_layout).detach().requires_grad_()
+        mask = _with_layout(mask_values, mask_layout)
+        upstream = _with_layout(values.flip(1), grad_layout)
+        ref_input = values.clone().requires_grad_()
+        snapshots = [t.detach().clone() for t in (input, mask, upstream)]
+        actual = trident.function.masked_softmax(input, mask, dim)
+        expected = masked_softmax(ref_input, mask_values, dim)
+        actual.backward(upstream)
+        expected.backward(upstream)
+&gt;       torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 20 / 32 (62.5%)
+E       Greatest absolute difference: 0.34595420956611633 at index (2, 1) (up to 1e-07 allowed)
+E       Greatest relative difference: inf at index (1, 1) (up to 1e-06 allowed)
+
+tests/test_masked_softmax.py:107: AssertionError</failure></testcase><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[0-contiguous-contiguous-strided]" time="0.127"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 22 / 32 (68.8%)&#10;Greatest absolute difference: nan at index (0, 0) (up to 1e-07 allowed)&#10;Greatest relative difference: nan at index (0, 0) (up to 1e-06 allowed)">input_layout = 'strided', mask_layout = 'contiguous', grad_layout = 'contiguous'
+dim = 0, device = 'cuda'
+
+    @pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
+    @pytest.mark.parametrize("dim", [0, 1])
+    def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
+        values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
+        mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
+        input = _with_layout(values, input_layout).detach().requires_grad_()
+        mask = _with_layout(mask_values, mask_layout)
+        upstream = _with_layout(values.flip(1), grad_layout)
+        ref_input = values.clone().requires_grad_()
+        snapshots = [t.detach().clone() for t in (input, mask, upstream)]
+        actual = trident.function.masked_softmax(input, mask, dim)
+        expected = masked_softmax(ref_input, mask_values, dim)
+        actual.backward(upstream)
+        expected.backward(upstream)
+&gt;       torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 22 / 32 (68.8%)
+E       Greatest absolute difference: nan at index (0, 0) (up to 1e-07 allowed)
+E       Greatest relative difference: nan at index (0, 0) (up to 1e-06 allowed)
+
+tests/test_masked_softmax.py:107: AssertionError</failure></testcase><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[0-strided-contiguous-contiguous]" time="0.004"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 21 / 32 (65.6%)&#10;Greatest absolute difference: 0.09784190356731415 at index (3, 5) (up to 1e-07 allowed)&#10;Greatest relative difference: 5.715803146362305 at index (2, 1) (up to 1e-06 allowed)">input_layout = 'contiguous', mask_layout = 'contiguous', grad_layout = 'strided'
+dim = 0, device = 'cuda'
+
+    @pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
+    @pytest.mark.parametrize("dim", [0, 1])
+    def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
+        values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
+        mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
+        input = _with_layout(values, input_layout).detach().requires_grad_()
+        mask = _with_layout(mask_values, mask_layout)
+        upstream = _with_layout(values.flip(1), grad_layout)
+        ref_input = values.clone().requires_grad_()
+        snapshots = [t.detach().clone() for t in (input, mask, upstream)]
+        actual = trident.function.masked_softmax(input, mask, dim)
+        expected = masked_softmax(ref_input, mask_values, dim)
+        actual.backward(upstream)
+        expected.backward(upstream)
+        torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
+&gt;       torch.testing.assert_close(input.grad, ref_input.grad, rtol=1e-6, atol=1e-7)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 21 / 32 (65.6%)
+E       Greatest absolute difference: 0.09784190356731415 at index (3, 5) (up to 1e-07 allowed)
+E       Greatest relative difference: 5.715803146362305 at index (2, 1) (up to 1e-06 allowed)
+
+tests/test_masked_softmax.py:108: AssertionError</failure></testcase><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[1-contiguous-contiguous-contiguous]" time="0.272" /><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[1-contiguous-contiguous-transpose]" time="0.335"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 16 / 32 (50.0%)&#10;Greatest absolute difference: 0.21110352873802185 at index (1, 5) (up to 1e-07 allowed)&#10;Greatest relative difference: inf at index (1, 1) (up to 1e-06 allowed)">input_layout = 'transpose', mask_layout = 'contiguous'
+grad_layout = 'contiguous', dim = 1, device = 'cuda'
+
+    @pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
+    @pytest.mark.parametrize("dim", [0, 1])
+    def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
+        values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
+        mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
+        input = _with_layout(values, input_layout).detach().requires_grad_()
+        mask = _with_layout(mask_values, mask_layout)
+        upstream = _with_layout(values.flip(1), grad_layout)
+        ref_input = values.clone().requires_grad_()
+        snapshots = [t.detach().clone() for t in (input, mask, upstream)]
+        actual = trident.function.masked_softmax(input, mask, dim)
+        expected = masked_softmax(ref_input, mask_values, dim)
+        actual.backward(upstream)
+        expected.backward(upstream)
+&gt;       torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 16 / 32 (50.0%)
+E       Greatest absolute difference: 0.21110352873802185 at index (1, 5) (up to 1e-07 allowed)
+E       Greatest relative difference: inf at index (1, 1) (up to 1e-06 allowed)
+
+tests/test_masked_softmax.py:107: AssertionError</failure></testcase><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[1-contiguous-contiguous-strided]" time="0.137"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 21 / 32 (65.6%)&#10;Greatest absolute difference: 0.220541313290596 at index (0, 7) (up to 1e-07 allowed)&#10;Greatest relative difference: 1.0 at index (0, 1) (up to 1e-06 allowed)">input_layout = 'strided', mask_layout = 'contiguous', grad_layout = 'contiguous'
+dim = 1, device = 'cuda'
+
+    @pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
+    @pytest.mark.parametrize("dim", [0, 1])
+    def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
+        values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
+        mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
+        input = _with_layout(values, input_layout).detach().requires_grad_()
+        mask = _with_layout(mask_values, mask_layout)
+        upstream = _with_layout(values.flip(1), grad_layout)
+        ref_input = values.clone().requires_grad_()
+        snapshots = [t.detach().clone() for t in (input, mask, upstream)]
+        actual = trident.function.masked_softmax(input, mask, dim)
+        expected = masked_softmax(ref_input, mask_values, dim)
+        actual.backward(upstream)
+        expected.backward(upstream)
+&gt;       torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 21 / 32 (65.6%)
+E       Greatest absolute difference: 0.220541313290596 at index (0, 7) (up to 1e-07 allowed)
+E       Greatest relative difference: 1.0 at index (0, 1) (up to 1e-06 allowed)
+
+tests/test_masked_softmax.py:107: AssertionError</failure></testcase><testcase classname=".cache.pr_review_20261114.B054.tests.test_masked_softmax" name="test_independent_tensor_strides[1-strided-contiguous-contiguous]" time="0.003"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 21 / 32 (65.6%)&#10;Greatest absolute difference: 0.04575939476490021 at index (0, 1) (up to 1e-07 allowed)&#10;Greatest relative difference: 7.00485897064209 at index (1, 3) (up to 1e-06 allowed)">input_layout = 'contiguous', mask_layout = 'contiguous', grad_layout = 'strided'
+dim = 1, device = 'cuda'
+
+    @pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
+    @pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
+    @pytest.mark.parametrize("dim", [0, 1])
+    def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
+        values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
+        mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
+        input = _with_layout(values, input_layout).detach().requires_grad_()
+        mask = _with_layout(mask_values, mask_layout)
+        upstream = _with_layout(values.flip(1), grad_layout)
+        ref_input = values.clone().requires_grad_()
+        snapshots = [t.detach().clone() for t in (input, mask, upstream)]
+        actual = trident.function.masked_softmax(input, mask, dim)
+        expected = masked_softmax(ref_input, mask_values, dim)
+        actual.backward(upstream)
+        expected.backward(upstream)
+        torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
+&gt;       torch.testing.assert_close(input.grad, ref_input.grad, rtol=1e-6, atol=1e-7)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 21 / 32 (65.6%)
+E       Greatest absolute difference: 0.04575939476490021 at index (0, 1) (up to 1e-07 allowed)
+E       Greatest relative difference: 7.00485897064209 at index (1, 3) (up to 1e-06 allowed)
+
+tests/test_masked_softmax.py:108: AssertionError</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="19.335" timestamp="2026-11-14T23:10:25.796535+08:00" hostname="amax"><testcase classname="tests.test_flash_attention_backward" name="test_flash_attention_backward[dtype11-False-64-64-64-2-4-512-512]" time="19.000"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 1 / 262144 (0.0%)&#10;Greatest absolute difference: 0.0001678466796875 at index (1, 502, 3, 42) (up to 0.0001 allowed)&#10;Greatest relative difference: 0.0693359375 at index (1, 502, 3, 42) (up to 0.016 allowed)">batch = 2, num_head = 4, q_seq_len = 512, kv_seq_len = 512
+dtype = torch.bfloat16, is_causal = False, window_size_left = 64
+window_size_right = 64, head_size = 64
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(
+        flag_gems.vendor_name == "cambricon", reason="Issue #5254: Not supported"
+    )
+    @pytest.mark.parametrize(
+        "batch, num_head, q_seq_len, kv_seq_len",
+        [
+            (2, 4, 512, 512),
+            (1, 2, 1024, 1024),
+            (1, 1, 64, 64),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "dtype, is_causal, window_size_left, window_size_right, head_size",
+        [
+            (torch.float16, False, None, None, 64),
+            (torch.float16, False, None, None, 128),
+            (torch.float16, True, None, None, 64),
+            (torch.float16, True, None, None, 128),
+            (torch.float16, False, 128, 0, 64),
+            (torch.float16, False, 128, 0, 128),
+            (torch.float16, False, 64, 64, 64),
+            (torch.float16, False, 64, 64, 128),
+            (torch.bfloat16, False, None, None, 64),
+            (torch.bfloat16, True, None, None, 64),
+            (torch.bfloat16, False, 128, 0, 64),
+            (torch.bfloat16, False, 64, 64, 64),
+            (torch.bfloat16, False, None, None, 128),
+        ],
+    )
+    def test_flash_attention_backward(
+        batch,
+        num_head,
+        q_seq_len,
+        kv_seq_len,
+        dtype,
+        is_causal,
+        window_size_left,
+        window_size_right,
+        head_size,
+    ):
+        if flag_gems.vendor_name == "amd" and (
+            window_size_left is not None or window_size_right is not None
+        ):
+            # ROCm's native (AOTriton) sliding-window flash attention is wrong
+            # (e.g. window_size_right=0 is treated as unbounded), so it cannot
+            # serve as the reference here.
+            pytest.skip(
+                "ROCm native sliding-window flash attention is not a valid reference"
+            )
+        scale = float(1.0 / math.sqrt(head_size))
+    
+        Q, K, V = make_qkv(
+            batch, num_head, q_seq_len, kv_seq_len, head_size, dtype, flag_gems.device
+        )
+        dOut = torch.randn(
+            batch, q_seq_len, num_head, head_size, dtype=dtype, device=flag_gems.device
+        )
+    
+        wl = -1 if window_size_left is None else window_size_left
+        wr = -1 if window_size_right is None else window_size_right
+    
+        out, lse, philox_seed, philox_offset = flash_attn_forward_native(
+            Q,
+            K,
+            V,
+            is_causal=is_causal,
+            softmax_scale=scale,
+            window_size_left=wl,
+            window_size_right=wr,
+        )
+    
+        extra_bwd = {}
+        if window_size_left is not None:
+            extra_bwd["window_size_left"] = window_size_left
+        if window_size_right is not None:
+            extra_bwd["window_size_right"] = window_size_right
+        # aten._flash_attention_backward has no CPU kernel, so the reference runs
+        # on device even with --ref cpu; only its outputs move to the ref device.
+        ref_grads = torch.ops.aten._flash_attention_backward(
+            dOut,
+            Q,
+            K,
+            V,
+            out,
+            lse,
+            None,
+            None,
+            q_seq_len,
+            kv_seq_len,
+            0.0,
+            is_causal,
+            philox_seed,
+            philox_offset,
+            scale=scale,
+            **extra_bwd,
+        )
+        ref_dQ, ref_dK, ref_dV = (utils.to_reference(g) for g in ref_grads)
+    
+        dQ, dK, dV = flag_gems.flash_attention_backward(
+            dOut,
+            Q,
+            K,
+            V,
+            out,
+            lse,
+            None,
+            None,
+            q_seq_len,
+            kv_seq_len,
+            0.0,
+            is_causal,
+            philox_seed,
+            philox_offset,
+            scale=scale,
+            **extra_bwd,
+        )
+    
+        utils.gems_assert_close(dQ, ref_dQ, dtype, equal_nan=True)
+        utils.gems_assert_close(dK, ref_dK, dtype, equal_nan=True)
+&gt;       utils.gems_assert_close(dV, ref_dV, dtype, equal_nan=True)
+
+tests/test_flash_attention_backward.py:316: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/accuracy_utils.py:433: in gems_assert_close
+    flag_gems.testing.assert_close(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+res = tensor([[[[ 6.1279e-02,  2.4048e-02,  9.7656e-02,  ..., -5.6885e-02,
+            4.7607e-02, -1.5527e-01],
+          [...83e-02,  5.4932e-02,  ...,  8.1055e-02,
+           -1.0059e-01, -6.4941e-02]]]], device='cuda:0', dtype=torch.bfloat16)
+ref = tensor([[[[ 6.1279e-02,  2.4048e-02,  9.7656e-02,  ..., -5.6885e-02,
+            4.7607e-02, -1.5527e-01],
+          [...83e-02,  5.4932e-02,  ...,  8.1055e-02,
+           -1.0059e-01, -6.4941e-02]]]], device='cuda:0', dtype=torch.bfloat16)
+dtype = torch.bfloat16, equal_nan = True, reduce_dim = 1, atol = 0.0001
+
+    def assert_close(res, ref, dtype, equal_nan=False, reduce_dim=1, atol=1e-4):
+        if dtype is None:
+            dtype = torch.float32
+        assert res.dtype == dtype
+        ref = ref.to(dtype)
+        res, ref = _maybe_move_to_cpu(res, ref)
+        rtol = RESOLUTION[dtype]
+&gt;       torch.testing.assert_close(
+            res, ref, atol=atol * reduce_dim, rtol=rtol, equal_nan=equal_nan
+        )
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 1 / 262144 (0.0%)
+E       Greatest absolute difference: 0.0001678466796875 at index (1, 502, 3, 42) (up to 0.0001 allowed)
+E       Greatest relative difference: 0.0693359375 at index (1, 502, 3, 42) (up to 0.016 allowed)
+
+src/flag_gems/testing/__init__.py:87: AssertionError</failure></testcase></testsuite></testsuites>

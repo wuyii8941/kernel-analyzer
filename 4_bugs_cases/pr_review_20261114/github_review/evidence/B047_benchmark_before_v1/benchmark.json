@@ -1,0 +1,28 @@
+{
+  "case": "B047",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "gpu": "NVIDIA RTX A6000",
+  "runs": [
+    {
+      "name": "mean_l1",
+      "shape": [
+        256,
+        1,
+        28,
+        28
+      ],
+      "mode": "forward_backward",
+      "milliseconds": [
+        0.14134824790258324,
+        0.14498217780106137,
+        0.13981845858620434
+      ],
+      "median_ms": 0.14134824790258324,
+      "resident_bytes": 2408448,
+      "peak_allocated_bytes": 3212288,
+      "incremental_peak_bytes": 803840
+    }
+  ],
+  "scope": "Three warm timing samples per workload in each isolated process; no statistical speedup claim. Incremental peak measured separately from timer allocation. No model or training quality benchmark."
+}

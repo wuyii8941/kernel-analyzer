@@ -1,0 +1,62 @@
+diff --git a/tests/test_masked_softmax.py b/tests/test_masked_softmax.py
+index 5a0a34a..5790344 100644
+--- a/tests/test_masked_softmax.py
++++ b/tests/test_masked_softmax.py
+@@ -75,3 +75,36 @@ def test_masked_softmax(y_size, x_size, dim, device, dtype):
+ 
+     assert input.grad is not None
+     assert input.grad.dtype == dtype
++
++
++def _with_layout(values, layout):
++    if layout == "transpose":
++        return values.T.contiguous().T
++    if layout == "strided":
++        storage = torch.empty((values.shape[0] * 2, values.shape[1] * 2), device=values.device, dtype=values.dtype)
++        view = storage[::2, ::2]
++        view.copy_(values)
++        return view
++    return values.contiguous()
++
++
++@pytest.mark.parametrize("input_layout", ["contiguous", "transpose", "strided"])
++@pytest.mark.parametrize("mask_layout", ["contiguous", "transpose", "strided"])
++@pytest.mark.parametrize("grad_layout", ["contiguous", "strided"])
++@pytest.mark.parametrize("dim", [0, 1])
++def test_independent_tensor_strides(input_layout, mask_layout, grad_layout, dim, device):
++    values = torch.arange(32, device=device, dtype=torch.float32).reshape(4, 8) / 32
++    mask_values = torch.arange(32, device=device).reshape(4, 8) % 3 == 0
++    input = _with_layout(values, input_layout).detach().requires_grad_()
++    mask = _with_layout(mask_values, mask_layout)
++    upstream = _with_layout(values.flip(1), grad_layout)
++    ref_input = values.clone().requires_grad_()
++    snapshots = [t.detach().clone() for t in (input, mask, upstream)]
++    actual = trident.function.masked_softmax(input, mask, dim)
++    expected = masked_softmax(ref_input, mask_values, dim)
++    actual.backward(upstream)
++    expected.backward(upstream)
++    torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
++    torch.testing.assert_close(input.grad, ref_input.grad, rtol=1e-6, atol=1e-7)
++    for tensor, before in zip((input, mask, upstream), snapshots):
++        torch.testing.assert_close(tensor, before, rtol=0, atol=0)
+diff --git a/trident/operation/masked_softmax.py b/trident/operation/masked_softmax.py
+index 52c7ed9..393b975 100644
+--- a/trident/operation/masked_softmax.py
++++ b/trident/operation/masked_softmax.py
+@@ -47,6 +47,8 @@ class MaskedSoftmax(torch.autograd.Function):
+ 
+     @staticmethod
+     def __forward(input: torch.Tensor, mask: torch.Tensor, dim: torch.int32):
++        input = input.contiguous()
++        mask = mask.contiguous()
+         y_size, x_size, y_stride, x_stride = util.size_and_stride(input, dim)
+         output = torch.empty_like(input)
+ 
+@@ -71,6 +73,7 @@ class MaskedSoftmax(torch.autograd.Function):
+ 
+     @staticmethod
+     def __backward(grad_output: torch.Tensor, output: torch.Tensor, dim: torch.int32):
++        grad_output = grad_output.contiguous()
+         factory_kwargs = {"device": output.device, "dtype": output.dtype}
+         y_size, x_size, y_stride, x_stride = util.size_and_stride(output, dim)
+         delta = torch.empty(y_size, **factory_kwargs)
