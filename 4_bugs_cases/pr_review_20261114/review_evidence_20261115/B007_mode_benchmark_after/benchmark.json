@@ -1,0 +1,189 @@
+{
+  "case": "B007",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "gpu": "NVIDIA RTX A6000",
+  "runs": [
+    {
+      "name": "normalization_T1_packedFalse_forward",
+      "shape": [
+        1,
+        1,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "forward",
+      "milliseconds": [
+        0.023920972307442653,
+        0.024051613549912167,
+        0.023967358092945742
+      ],
+      "median_ms": 0.023967358092945742,
+      "resident_bytes": 4608,
+      "peak_allocated_bytes": 6656,
+      "incremental_peak_bytes": 2048
+    },
+    {
+      "name": "normalization_T1_packedFalse_backward",
+      "shape": [
+        1,
+        1,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "backward",
+      "milliseconds": [
+        0.20971908920173404,
+        0.2571628480139425,
+        0.2710895079111903
+      ],
+      "median_ms": 0.2571628480139425,
+      "resident_bytes": 4608,
+      "peak_allocated_bytes": 7680,
+      "incremental_peak_bytes": 3072
+    },
+    {
+      "name": "normalization_T1_packedFalse_full",
+      "shape": [
+        1,
+        1,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "full",
+      "milliseconds": [
+        0.7617535993456841,
+        0.7539722989964229,
+        0.7580075611124982
+      ],
+      "median_ms": 0.7580075611124982,
+      "resident_bytes": 4608,
+      "peak_allocated_bytes": 9216,
+      "incremental_peak_bytes": 4608
+    },
+    {
+      "name": "normalization_T128_packedFalse_forward",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "forward",
+      "milliseconds": [
+        0.04546221533466962,
+        0.040591868210183686,
+        0.054872859992887366
+      ],
+      "median_ms": 0.04546221533466962,
+      "resident_bytes": 231424,
+      "peak_allocated_bytes": 429056,
+      "incremental_peak_bytes": 197632
+    },
+    {
+      "name": "normalization_T128_packedFalse_backward",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "backward",
+      "milliseconds": [
+        0.2749390299748449,
+        0.28469652767309883,
+        0.3199967789762425
+      ],
+      "median_ms": 0.28469652767309883,
+      "resident_bytes": 231424,
+      "peak_allocated_bytes": 462336,
+      "incremental_peak_bytes": 230912
+    },
+    {
+      "name": "normalization_T128_packedFalse_full",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "full",
+      "milliseconds": [
+        0.9188894152641296,
+        0.8761986993079962,
+        0.7854080006133678
+      ],
+      "median_ms": 0.8761986993079962,
+      "resident_bytes": 231424,
+      "peak_allocated_bytes": 561664,
+      "incremental_peak_bytes": 330240
+    },
+    {
+      "name": "normalization_T128_packedTrue_forward",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "forward",
+      "milliseconds": [
+        0.4403118078708649,
+        0.4343280002940446,
+        0.44975032547647636
+      ],
+      "median_ms": 0.4403118078708649,
+      "resident_bytes": 233472,
+      "peak_allocated_bytes": 464384,
+      "incremental_peak_bytes": 230912
+    },
+    {
+      "name": "normalization_T128_packedTrue_backward",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "backward",
+      "milliseconds": [
+        0.661538134680854,
+        0.6621899830484853,
+        0.8262283612381328
+      ],
+      "median_ms": 0.6621899830484853,
+      "resident_bytes": 233472,
+      "peak_allocated_bytes": 468480,
+      "incremental_peak_bytes": 235008
+    },
+    {
+      "name": "normalization_T128_packedTrue_full",
+      "shape": [
+        1,
+        128,
+        2,
+        64
+      ],
+      "dtype": "torch.bfloat16",
+      "mode": "full",
+      "milliseconds": [
+        2.2567211738446864,
+        2.0762723829688094,
+        2.104027427378155
+      ],
+      "median_ms": 2.104027427378155,
+      "resident_bytes": 233472,
+      "peak_allocated_bytes": 568832,
+      "incremental_peak_bytes": 335360
+    }
+  ],
+  "scope": "Three warm timing samples per workload in each isolated process; no statistical speedup claim. Incremental peak measured separately from timer allocation. No model or training quality benchmark."
+}

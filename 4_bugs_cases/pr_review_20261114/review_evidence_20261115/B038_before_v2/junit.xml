@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="8" time="63.330" timestamp="2026-11-14T22:58:42.840027+08:00" hostname="amax"><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.0-False-dtype0]" time="13.752" /><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.0-False-dtype1]" time="12.021" /><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.0-True-dtype0]" time="13.303" /><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.0-True-dtype1]" time="12.585" /><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.5-False-dtype0]" time="3.929"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 8192 / 8192 (100.0%)&#10;Greatest absolute difference: 8.678436279296875e-05 at index (0, 9, 0, 0) (up to 1e-06 allowed)&#10;Greatest relative difference: inf at index (0, 0, 0, 0) (up to 0 allowed)">dtype = torch.float16, varlen = False, dropout_p = 0.5
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(flag_gems.vendor_name != "nvidia", reason="direct generic NVIDIA core regression")
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("varlen", [False, True])
+    @pytest.mark.parametrize("dropout_p", [0.0, 0.5])
+    def test_dropout_derivative_identical_keys(dtype, varlen, dropout_p):
+        m, n, heads, width, seed = 128, 256, 2, 32, 7331
+        q = torch.zeros((1, m, heads, width), dtype=dtype, device=flag_gems.device)
+        k = torch.full((1, n, heads, width), 0.125, dtype=dtype, device=flag_gems.device)
+        v = torch.ones_like(k)
+        grad = torch.full_like(q, 1 / q.numel())
+        keep = torch.ones((1, heads, m, n), dtype=torch.bool, device=flag_gems.device)
+        if dropout_p:
+            _backward_mask[(triton.cdiv(keep.numel(), 256),)](keep, seed, m, n, heads, varlen, 256)
+        weights = keep.double() / (n * (1 - dropout_p))
+        out = weights.sum(-1).permute(0, 2, 1).unsqueeze(-1).expand_as(q).to(dtype).contiguous()
+        lse = torch.full((1, heads, m), math.log(n), dtype=torch.float32, device=flag_gems.device)
+        expected_dv = weights.sum(-2).permute(0, 2, 1).unsqueeze(-1).expand_as(v) / q.numel()
+        options = dict(max_seqlen_q=m, max_seqlen_k=n, is_dropout=bool(dropout_p),
+                       dropout_p=dropout_p, rng_state=(seed, 0), softmax_scale=width ** -0.5)
+        args = (grad, q, k, v, out, lse)
+        if varlen:
+            args = tuple(t.squeeze(0) for t in args[:5]) + (lse.squeeze(0).T.contiguous(),)
+            options.update(cu_seq_q=torch.tensor([0, m], dtype=torch.int32, device=flag_gems.device),
+                           cu_seq_k=torch.tensor([0, n], dtype=torch.int32, device=flag_gems.device))
+        dq, dk, dv, _ = flash_attn_backward(*args, **options)
+        if varlen:
+            dv = dv.unsqueeze(0)
+        # Identical keys make Q irrelevant for a fixed mask; Q=0 also makes dK zero.
+&gt;       torch.testing.assert_close(dq, torch.zeros_like(dq), rtol=0, atol=1e-6)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 8192 / 8192 (100.0%)
+E       Greatest absolute difference: 8.678436279296875e-05 at index (0, 9, 0, 0) (up to 1e-06 allowed)
+E       Greatest relative difference: inf at index (0, 0, 0, 0) (up to 0 allowed)
+
+tests/test_flash_attention_dropout_derivative.py:67: AssertionError</failure></testcase><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.5-False-dtype1]" time="3.031"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 8192 / 8192 (100.0%)&#10;Greatest absolute difference: 8.630752563476562e-05 at index (0, 0, 0, 0) (up to 1e-06 allowed)&#10;Greatest relative difference: inf at index (0, 0, 0, 0) (up to 0 allowed)">dtype = torch.bfloat16, varlen = False, dropout_p = 0.5
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(flag_gems.vendor_name != "nvidia", reason="direct generic NVIDIA core regression")
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("varlen", [False, True])
+    @pytest.mark.parametrize("dropout_p", [0.0, 0.5])
+    def test_dropout_derivative_identical_keys(dtype, varlen, dropout_p):
+        m, n, heads, width, seed = 128, 256, 2, 32, 7331
+        q = torch.zeros((1, m, heads, width), dtype=dtype, device=flag_gems.device)
+        k = torch.full((1, n, heads, width), 0.125, dtype=dtype, device=flag_gems.device)
+        v = torch.ones_like(k)
+        grad = torch.full_like(q, 1 / q.numel())
+        keep = torch.ones((1, heads, m, n), dtype=torch.bool, device=flag_gems.device)
+        if dropout_p:
+            _backward_mask[(triton.cdiv(keep.numel(), 256),)](keep, seed, m, n, heads, varlen, 256)
+        weights = keep.double() / (n * (1 - dropout_p))
+        out = weights.sum(-1).permute(0, 2, 1).unsqueeze(-1).expand_as(q).to(dtype).contiguous()
+        lse = torch.full((1, heads, m), math.log(n), dtype=torch.float32, device=flag_gems.device)
+        expected_dv = weights.sum(-2).permute(0, 2, 1).unsqueeze(-1).expand_as(v) / q.numel()
+        options = dict(max_seqlen_q=m, max_seqlen_k=n, is_dropout=bool(dropout_p),
+                       dropout_p=dropout_p, rng_state=(seed, 0), softmax_scale=width ** -0.5)
+        args = (grad, q, k, v, out, lse)
+        if varlen:
+            args = tuple(t.squeeze(0) for t in args[:5]) + (lse.squeeze(0).T.contiguous(),)
+            options.update(cu_seq_q=torch.tensor([0, m], dtype=torch.int32, device=flag_gems.device),
+                           cu_seq_k=torch.tensor([0, n], dtype=torch.int32, device=flag_gems.device))
+        dq, dk, dv, _ = flash_attn_backward(*args, **options)
+        if varlen:
+            dv = dv.unsqueeze(0)
+        # Identical keys make Q irrelevant for a fixed mask; Q=0 also makes dK zero.
+&gt;       torch.testing.assert_close(dq, torch.zeros_like(dq), rtol=0, atol=1e-6)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 8192 / 8192 (100.0%)
+E       Greatest absolute difference: 8.630752563476562e-05 at index (0, 0, 0, 0) (up to 1e-06 allowed)
+E       Greatest relative difference: inf at index (0, 0, 0, 0) (up to 0 allowed)
+
+tests/test_flash_attention_dropout_derivative.py:67: AssertionError</failure></testcase><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.5-True-dtype0]" time="2.043"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 8192 / 8192 (100.0%)&#10;Greatest absolute difference: 8.678436279296875e-05 at index (8, 1, 0) (up to 1e-06 allowed)&#10;Greatest relative difference: inf at index (0, 0, 0) (up to 0 allowed)">dtype = torch.float16, varlen = True, dropout_p = 0.5
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(flag_gems.vendor_name != "nvidia", reason="direct generic NVIDIA core regression")
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("varlen", [False, True])
+    @pytest.mark.parametrize("dropout_p", [0.0, 0.5])
+    def test_dropout_derivative_identical_keys(dtype, varlen, dropout_p):
+        m, n, heads, width, seed = 128, 256, 2, 32, 7331
+        q = torch.zeros((1, m, heads, width), dtype=dtype, device=flag_gems.device)
+        k = torch.full((1, n, heads, width), 0.125, dtype=dtype, device=flag_gems.device)
+        v = torch.ones_like(k)
+        grad = torch.full_like(q, 1 / q.numel())
+        keep = torch.ones((1, heads, m, n), dtype=torch.bool, device=flag_gems.device)
+        if dropout_p:
+            _backward_mask[(triton.cdiv(keep.numel(), 256),)](keep, seed, m, n, heads, varlen, 256)
+        weights = keep.double() / (n * (1 - dropout_p))
+        out = weights.sum(-1).permute(0, 2, 1).unsqueeze(-1).expand_as(q).to(dtype).contiguous()
+        lse = torch.full((1, heads, m), math.log(n), dtype=torch.float32, device=flag_gems.device)
+        expected_dv = weights.sum(-2).permute(0, 2, 1).unsqueeze(-1).expand_as(v) / q.numel()
+        options = dict(max_seqlen_q=m, max_seqlen_k=n, is_dropout=bool(dropout_p),
+                       dropout_p=dropout_p, rng_state=(seed, 0), softmax_scale=width ** -0.5)
+        args = (grad, q, k, v, out, lse)
+        if varlen:
+            args = tuple(t.squeeze(0) for t in args[:5]) + (lse.squeeze(0).T.contiguous(),)
+            options.update(cu_seq_q=torch.tensor([0, m], dtype=torch.int32, device=flag_gems.device),
+                           cu_seq_k=torch.tensor([0, n], dtype=torch.int32, device=flag_gems.device))
+        dq, dk, dv, _ = flash_attn_backward(*args, **options)
+        if varlen:
+            dv = dv.unsqueeze(0)
+        # Identical keys make Q irrelevant for a fixed mask; Q=0 also makes dK zero.
+&gt;       torch.testing.assert_close(dq, torch.zeros_like(dq), rtol=0, atol=1e-6)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 8192 / 8192 (100.0%)
+E       Greatest absolute difference: 8.678436279296875e-05 at index (8, 1, 0) (up to 1e-06 allowed)
+E       Greatest relative difference: inf at index (0, 0, 0) (up to 0 allowed)
+
+tests/test_flash_attention_dropout_derivative.py:67: AssertionError</failure></testcase><testcase classname="tests.test_flash_attention_dropout_derivative" name="test_dropout_derivative_identical_keys[0.5-True-dtype1]" time="2.442"><failure message="AssertionError: Tensor-likes are not close!&#10;&#10;Mismatched elements: 8192 / 8192 (100.0%)&#10;Greatest absolute difference: 8.630752563476562e-05 at index (0, 0, 0) (up to 1e-06 allowed)&#10;Greatest relative difference: inf at index (0, 0, 0) (up to 0 allowed)">dtype = torch.bfloat16, varlen = True, dropout_p = 0.5
+
+    @pytest.mark.flash_attention_backward
+    @pytest.mark.skipif(flag_gems.vendor_name != "nvidia", reason="direct generic NVIDIA core regression")
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("varlen", [False, True])
+    @pytest.mark.parametrize("dropout_p", [0.0, 0.5])
+    def test_dropout_derivative_identical_keys(dtype, varlen, dropout_p):
+        m, n, heads, width, seed = 128, 256, 2, 32, 7331
+        q = torch.zeros((1, m, heads, width), dtype=dtype, device=flag_gems.device)
+        k = torch.full((1, n, heads, width), 0.125, dtype=dtype, device=flag_gems.device)
+        v = torch.ones_like(k)
+        grad = torch.full_like(q, 1 / q.numel())
+        keep = torch.ones((1, heads, m, n), dtype=torch.bool, device=flag_gems.device)
+        if dropout_p:
+            _backward_mask[(triton.cdiv(keep.numel(), 256),)](keep, seed, m, n, heads, varlen, 256)
+        weights = keep.double() / (n * (1 - dropout_p))
+        out = weights.sum(-1).permute(0, 2, 1).unsqueeze(-1).expand_as(q).to(dtype).contiguous()
+        lse = torch.full((1, heads, m), math.log(n), dtype=torch.float32, device=flag_gems.device)
+        expected_dv = weights.sum(-2).permute(0, 2, 1).unsqueeze(-1).expand_as(v) / q.numel()
+        options = dict(max_seqlen_q=m, max_seqlen_k=n, is_dropout=bool(dropout_p),
+                       dropout_p=dropout_p, rng_state=(seed, 0), softmax_scale=width ** -0.5)
+        args = (grad, q, k, v, out, lse)
+        if varlen:
+            args = tuple(t.squeeze(0) for t in args[:5]) + (lse.squeeze(0).T.contiguous(),)
+            options.update(cu_seq_q=torch.tensor([0, m], dtype=torch.int32, device=flag_gems.device),
+                           cu_seq_k=torch.tensor([0, n], dtype=torch.int32, device=flag_gems.device))
+        dq, dk, dv, _ = flash_attn_backward(*args, **options)
+        if varlen:
+            dv = dv.unsqueeze(0)
+        # Identical keys make Q irrelevant for a fixed mask; Q=0 also makes dK zero.
+&gt;       torch.testing.assert_close(dq, torch.zeros_like(dq), rtol=0, atol=1e-6)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 8192 / 8192 (100.0%)
+E       Greatest absolute difference: 8.630752563476562e-05 at index (0, 0, 0) (up to 1e-06 allowed)
+E       Greatest relative difference: inf at index (0, 0, 0) (up to 0 allowed)
+
+tests/test_flash_attention_dropout_derivative.py:67: AssertionError</failure></testcase></testsuite></testsuites>

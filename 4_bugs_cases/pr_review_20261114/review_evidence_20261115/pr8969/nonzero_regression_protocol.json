@@ -1,0 +1,37 @@
+{
+  "seed": 197,
+  "mask_seed": 7331,
+  "shape_q": [
+    1,
+    128,
+    2,
+    32
+  ],
+  "shape_kv": [
+    1,
+    256,
+    2,
+    32
+  ],
+  "input_and_cotangent_scale": 0.5,
+  "dropout_p": [
+    0.0,
+    0.5
+  ],
+  "dtype": [
+    "float16",
+    "bfloat16"
+  ],
+  "layouts": [
+    "dense",
+    "varlen"
+  ],
+  "reference": "independent PyTorch FP64 autograd from the same physical low-precision inputs and exact backward-core mask",
+  "rtol": {
+    "float16": 0.001,
+    "bfloat16": 0.016
+  },
+  "atol": 0.0001,
+  "control": "Restore only varlen DKV to PR8969 source while keeping varlen DQ fixed; dK must fail in new nonzero dropout cases",
+  "dbias_validation": false
+}

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="26" time="496.514" timestamp="2026-11-14T23:04:57.341576+08:00" hostname="amax"><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[False-dtype0-256]" time="20.130" /><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[False-dtype1-2048]" time="19.633" /><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[True-dtype0-256]" time="0.157" /><testcase classname="tests.ops.test_linear_attn" name="test_normalized_decode_preserves_key_sum[True-dtype1-2048]" time="1.220" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B1-T64-H1-D64-scaleNone-torch.float32]" time="1.834" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B2-T512-H4-D60-scaleNone-torch.float32]" time="0.913" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B3-T1024-H8-D128-scale1.0-torch.float32]" time="1.284" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B3-T1024-H8-D128-scale0.1-torch.float32]" time="0.630" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B3-T1024-H8-D128-scaleNone-torch.float32]" time="0.638" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B2-T2048-H8-D256-scaleNone-torch.float16]" time="0.546"><failure message="torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.60 GiB is allocated by PyTorch, and 4.34 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)">B = 2, T = 2048, H = 8, D = 256, scale = None, dtype = torch.float16
+
+&gt;   ???
+
+tests/ops/test_linear_attn.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+q = tensor([[[[ 0.1940,  2.1621, -0.1720,  ..., -0.9224,  0.7891, -1.8008],
+          [-1.9355,  1.1006,  0.0251,  ...,  0...    [ 0.8408,  0.8105, -0.1912,  ..., -0.4927, -0.6196, -0.8994]]]],
+       device='cuda:0', grad_fn=&lt;ToCopyBackward0&gt;)
+k = tensor([[[[ 4.1357e-01,  3.1592e-01, -2.4597e-01,  ...,  8.9502e-01,
+            5.0977e-01,  1.2021e+00],
+          [...561e-01,  ...,  3.1470e-01,
+           -1.5796e-01,  6.2354e-01]]]], device='cuda:0',
+       grad_fn=&lt;ToCopyBackward0&gt;)
+v = tensor([[[[ 3.0200e-01,  2.5391e-01, -1.6738e+00,  ...,  1.2705e+00,
+           -1.5264e+00,  1.6125e-01],
+          [...375e+00,  ..., -1.2373e+00,
+            1.1143e+00, -3.9526e-01]]]], device='cuda:0',
+       grad_fn=&lt;ToCopyBackward0&gt;)
+scale = 0.0625
+initial_state = tensor([[[[-9.6552e-02, -9.8368e-01,  8.0601e-01,  ...,  1.2249e+00,
+           -2.4837e-01, -6.7719e-01],
+          [...6028e-01,  1.0472e+00,  ...,  1.9377e+00,
+           -2.6035e+00, -3.8181e-01]]]], device='cuda:0', requires_grad=True)
+output_final_state = True, normalize = False
+
+    def naive_recurrent_linear_attn(
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        scale: float | None = None,
+        initial_state: torch.Tensor | tuple | None = None,
+        output_final_state: bool = False,
+        normalize: bool = False,
+    ) -&gt; tuple[torch.Tensor, torch.Tensor]:
+        dtype = q.dtype
+        if scale is None:
+            scale = q.shape[-1] ** -0.5
+        B, T, H, K, V = *q.shape, v.shape[-1]
+        if normalize and isinstance(initial_state, tuple):
+            kv_init, z_init = initial_state
+        else:
+            kv_init, z_init = initial_state, None
+        q, k, v = map(lambda x: x.to(torch.float32), (q, k, v))
+        o = torch.empty_like(v)
+    
+        S = torch.zeros((B, H, K, V), device=q.device, dtype=torch.float32)
+        if kv_init is not None:
+            S = S + kv_init
+        for t in range(T):
+&gt;           S = S + torch.einsum('b h k, b h v -&gt; b h k v', k[:, t], v[:, t])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.60 GiB is allocated by PyTorch, and 4.34 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+fla/ops/linear_attn/naive.py:36: OutOfMemoryError</failure></testcase><testcase classname="tests.ops.test_linear_attn" name="test_fused_recurrent[B2-T2048-H4-D256-scaleNone-torch.float16]" time="0.050"><failure message="torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.59 GiB is allocated by PyTorch, and 8.34 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)">B = 2, T = 2048, H = 4, D = 256, scale = None, dtype = torch.float16
+
+    
+    @pytest.mark.parametrize(
+        ('B', 'T', 'H', 'D', 'scale', 'dtype'),
+        [
+            pytest.param(*test, id="B{}-T{}-H{}-D{}-scale{}-{}".format(*test))
+            for test in [
+                (1, 64, 1, 64, None, torch.float),
+                (2, 512, 4, 60, None, torch.float),
+                (3, 1024, 8, 128, 1., torch.float),
+                (3, 1024, 8, 128, 0.1, torch.float),
+                (3, 1024, 8, 128, None, torch.float),
+                (2, 2048, 8, 256, None, torch.float16),
+                (2, 2048, 4, 256, None, torch.float16),
+            ]
+        ],
+    )
+    def test_fused_recurrent(
+        B: int,
+        T: int,
+        H: int,
+        D: int,
+        scale: float | None,
+        dtype: torch.dtype,
+    ):
+&gt;       torch.manual_seed(42)
+            ^^^^^^^^^^^^^^^^^^
+E       torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.59 GiB is allocated by PyTorch, and 8.34 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+tests/ops/test_linear_attn.py:63: OutOfMemoryError</failure></testcase><testcase classname="tests.ops.test_linear_attn" name="test_naive_chunk[B1-T128-H2-D64-normFalse-torch.float32]" time="0.435" /><testcase classname="tests.ops.test_linear_attn" name="test_naive_chunk[B2-T256-H4-D60-normFalse-torch.float32]" time="0.040" /><testcase classname="tests.ops.test_linear_attn" name="test_naive_chunk[B1-T128-H2-D64-normTrue-torch.float32]" time="0.021" /><testcase classname="tests.ops.test_linear_attn" name="test_naive_chunk[B2-T256-H4-D60-normTrue-torch.float32]" time="0.038" /><testcase classname="tests.ops.test_linear_attn" name="test_chunk[B1-T63-H1-D64-torch.float16]" time="0.581"><failure message="torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.59 GiB is allocated by PyTorch, and 8.19 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)">B = 1, T = 63, H = 1, D = 64, dtype = torch.float16
+
+&gt;   ???
+
+tests/ops/test_linear_attn.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/python-env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1181: in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+fla/ops/linear_attn/chunk.py:73: in chunk_linear_attn
+    o, final_state = chunk_simple_gla(
+/python-env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1181: in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+fla/ops/simple_gla/chunk.py:341: in chunk_simple_gla
+    o, final_state = ChunkSimpleGLAFunction.apply(
+/python-env/lib/python3.11/site-packages/torch/autograd/function.py:583: in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+fla/utils/decorators.py:152: in wrapper
+    return fn(*processed_args, **processed_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/torch/amp/autocast_mode.py:477: in decorate_fwd
+    return fwd(*args, **kwargs)  # pyrefly: ignore [not-callable]
+           ^^^^^^^^^^^^^^^^^^^^
+fla/ops/simple_gla/chunk.py:182: in forward
+    o, ht = chunk_simple_gla_fwd(
+fla/ops/simple_gla/chunk.py:31: in chunk_simple_gla_fwd
+    h, ht = chunk_fwd_h(
+/python-env/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1181: in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+fla/backends.py:202: in wrapper
+    return default_function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+fla/ops/common/chunk_h.py:342: in chunk_fwd_h
+    chunk_fwd_kernel_h[grid](
+/python-env/lib/python3.11/site-packages/triton/runtime/jit.py:370: in &lt;lambda&gt;
+    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/triton/runtime/autotuner.py:459: in run
+    return self.fn.run(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/triton/runtime/autotuner.py:240: in run
+    benchmark()
+/python-env/lib/python3.11/site-packages/triton/runtime/autotuner.py:229: in benchmark
+    timings = {config: self._bench(*args, config=config, **kwargs) for config in pruned_configs}
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/triton/runtime/autotuner.py:229: in &lt;dictcomp&gt;
+    timings = {config: self._bench(*args, config=config, **kwargs) for config in pruned_configs}
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/triton/runtime/autotuner.py:164: in _bench
+    return self.do_bench(kernel_call, quantiles=(0.5, 0.2, 0.8))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/triton/testing.py:152: in do_bench
+    cache = runtime.driver.active.get_empty_cache_for_benchmark()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/triton/backends/nvidia/driver.py:761: in get_empty_cache_for_benchmark
+    return torch.empty(int(cache_size // 4), dtype=torch.int, device='cuda')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (67108864,), kwargs = {'dtype': torch.int32, 'device': 'cuda'}
+
+    def _guarded_empty(*args, **kwargs):
+        """Create a tensor filled with NaN instead of uninitialized values."""
+        dtype = kwargs.get('dtype') or torch.get_default_dtype()
+    
+        if not (dtype.is_floating_point or dtype.is_complex):
+&gt;           return _ORIGINAL_EMPTY(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.59 GiB is allocated by PyTorch, and 8.19 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+tests/conftest.py:104: OutOfMemoryError</failure></testcase><testcase classname="tests.ops.test_linear_attn" name="test_chunk[B2-T500-H3-D60-torch.float16]" time="0.310"><failure message="torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.60 GiB is allocated by PyTorch, and 9.05 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)">B = 2, T = 500, H = 3, D = 60, dtype = torch.float16
+
+    
+    @pytest.mark.parametrize(
+        ('B', 'T', 'H', 'D', 'dtype'),
+        [
+            pytest.param(*test, id="B{}-T{}-H{}-D{}-{}".format(*test))
+            for test in [
+                (1, 63, 1, 64, torch.float16),
+                (2, 500, 3, 60, torch.float16),
+                (2, 1000, 3, 128, torch.float16),
+                (3, 1000, 4, 64, torch.float16),
+                (2, 2048, 4, 256, torch.float16),
+            ]
+        ],
+    )
+    @pytest.mark.smoke
+    def test_chunk(
+        B: int,
+        T: int,
+        H: int,
+        D: int,
+        dtype: torch.dtype,
+    ):
+        torch.manual_seed(42)
+        q = torch.randn((B, T, H, D), dtype=dtype, device=device).requires_grad_()
+        k = torch.randn((B, T, H, D), dtype=dtype, device=device).requires_grad_()
+        v = torch.randn((B, T, H, D), dtype=dtype, device=device).requires_grad_()
+        h0 = torch.randn((B, H, D, D), dtype=torch.float, device=device).requires_grad_()
+        do = torch.randn_like(v)
+        dht = torch.randn_like(h0)
+    
+        ref, ref_ht = fused_recurrent_linear_attn(
+            q.to(torch.float32),
+            k.to(torch.float32),
+            v.to(torch.float32),
+            initial_state=h0,
+            output_final_state=True,
+            normalize=False,
+&gt;       )
+
+tests/ops/test_linear_attn.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/python-env/lib/python3.11/site-packages/torch/_tensor.py:630: in backward
+    torch.autograd.backward(
+/python-env/lib/python3.11/site-packages/torch/autograd/__init__.py:364: in backward
+    _engine_run_backward(
+/python-env/lib/python3.11/site-packages/torch/autograd/graph.py:865: in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/python-env/lib/python3.11/site-packages/torch/autograd/function.py:317: in apply
+    return user_fn(self, *args)
+           ^^^^^^^^^^^^^^^^^^^^
+fla/utils/decorators.py:152: in wrapper
+    return fn(*processed_args, **processed_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/python-env/lib/python3.11/site-packages/torch/amp/autocast_mode.py:523: in decorate_bwd
+    return bwd(*args, **kwargs)  # pyrefly: ignore [not-callable]
+           ^^^^^^^^^^^^^^^^^^^^
+fla/ops/common/fused_recurrent.py:622: in backward
+    dq, dk, dv, dg, dgk, dgv, dh0 = fused_recurrent_bwd(
+fla/ops/common/fused_recurrent.py:502: in fused_recurrent_bwd
+    dq = q.new_empty((NV, *q.shape) if NV &gt; 1 else q.shape, dtype=torch.float32)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = tensor([[[[ 1.9397e-01,  2.1621e+00, -1.7200e-01,  ..., -6.4404e-01,
+            4.4678e-01, -5.3711e-01],
+          [...389e-01,  ...,  7.2412e-01,
+           -6.6797e-01,  7.6807e-01]]]], device='cuda:0',
+       grad_fn=&lt;ToCopyBackward0&gt;)
+args = (torch.Size([2, 500, 3, 60]),), kwargs = {'dtype': torch.float32}
+
+    def _guarded_new_empty(self, *args, **kwargs):
+        """Create a tensor filled with NaN instead of uninitialized values."""
+        if is_compiling() or kwargs.get('requires_grad', False) or not _is_called_from_fla():
+            return _ORIGINAL_NEW_EMPTY(self, *args, **kwargs)
+    
+        if kwargs.get('dtype') is None:
+            kwargs['dtype'] = self.dtype
+    
+        dtype = kwargs['dtype']
+        if not (dtype.is_floating_point or dtype.is_complex):
+            return _ORIGINAL_NEW_EMPTY(self, *args, **kwargs)
+    
+&gt;       result = _ORIGINAL_NEW_EMPTY(self, *args, **kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 0 has a total capacity of 47.54 GiB of which 39.61 GiB is free. Including non-PyTorch memory, this process has 7.92 GiB memory in use. 7.61 GiB allowed; Of the allocated memory 7.60 GiB is allocated by PyTorch, and 9.05 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+tests/conftest.py:155: OutOfMemoryError</failure></testcase><testcase classname="tests.ops.test_linear_attn" name="test_chunk[B2-T1000-H3-D128-torch.float16]" time="79.442" /><testcase classname="tests.ops.test_linear_attn" name="test_chunk[B3-T1000-H4-D64-torch.float16]" time="79.292" /><testcase classname="tests.ops.test_linear_attn" name="test_chunk[B2-T2048-H4-D256-torch.float16]" time="82.335" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_chunk[B1-T63-H1-D64-torch.float16]" time="35.264" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_chunk[B2-T500-H3-D60-torch.float16]" time="41.314" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_chunk[B2-T1000-H3-D128-torch.float16]" time="37.095" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_chunk[B3-T1000-H4-D64-torch.float16]" time="35.469" /><testcase classname="tests.ops.test_linear_attn" name="test_fused_chunk[B2-T2048-H4-D256-torch.float16]" time="37.897" /><testcase classname="tests.ops.test_linear_attn" name="test_normalize_split_resume[fused_recurrent-split128]" time="17.212" /><testcase time="0.002" /></testsuite></testsuites>

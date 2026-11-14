@@ -1,0 +1,21 @@
+{
+  "base": "69caccc0f8ca58c58a213be4fc8b0193333c87b8",
+  "changed_functions": [
+    "_flash_attn_bwd_varlen_dq_fused",
+    "_flash_attn_bwd_varlen_dkv"
+  ],
+  "dense_functions_unchanged": true,
+  "patch_sha256": "38eb0d2f73f2e64bb95a822ba92db0040f2c8ff3af158e0544a8aa539eb8a540",
+  "patch_applies_to_base": true,
+  "formatted_test_ast_matches_passing_run": true,
+  "dkv_control_failures": [
+    {
+      "test": "test_dropout_derivative_nonzero_qkv[0.5-varlen-dtype0]",
+      "message": "AssertionError: dK: Tensor-likes are not close!\n\nMismatched elements: 16205 / 16384 (98.9%)\nGreatest absolute difference: 0.04423422728306064 at index (0, 71, 0, 11) (up to 0.0001 allowed)\nGreatest relative difference: 3078.5437172966826 at index (0, 192, 1, 13) (up to 0.001 allowed)"
+    },
+    {
+      "test": "test_dropout_derivative_nonzero_qkv[0.5-varlen-dtype1]",
+      "message": "AssertionError: dK: Tensor-likes are not close!\n\nMismatched elements: 16188 / 16384 (98.8%)\nGreatest absolute difference: 0.044253542528696004 at index (0, 71, 0, 11) (up to 0.0001 allowed)\nGreatest relative difference: 1388.2802038362063 at index (0, 14, 1, 21) (up to 0.016 allowed)"
+    }
+  ]
+}

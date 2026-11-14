@@ -1,0 +1,7 @@
+# Bounded measurement procedures
+
+These scripts are the actual local procedures, not standalone package installers. In an isolated checkout of the selected upstream base or patched source, install its normal dependencies and add this directory to PYTHONPATH. Isolate one GPU. Create a fresh output directory, then call `microbench.measure(case, output)` for the original profile, `microbench_modes.measure(case, output)` for the added forward/backward/full profiles, or `microbench_dropout.measure("B038", output)` for the same-mask attention core.
+
+Run original and patched sources in separate processes on the same physical GPU. All profiles warm the workload, then record three samples with triton.testing.do_bench. Values are descriptive rather than a speedup test. CUDA-event timing covers the Python operator call and can include host dispatch gaps. Incremental PyTorch allocation is measured separately; it excludes driver/compiler allocations. The mode profile retains a prepared autograd graph for backward-only measurement, so its resident/extra allocation convention must not be confused with a complete-model peak.
+
+The added Liger mode profile uses random normalized student log-probabilities and uniform targets; the first full-call profile used zero student entries. The added normalization mode profile measures the helper and its supported gradients, not an attention layer or a training run. The sample groups are different workloads and must not be pooled as independent repetitions of one benchmark.

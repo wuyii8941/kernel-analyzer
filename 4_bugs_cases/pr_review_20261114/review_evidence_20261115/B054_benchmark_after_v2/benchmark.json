@@ -1,0 +1,45 @@
+{
+  "case": "B054",
+  "torch": "2.10.0+cu128",
+  "triton": "3.6.0",
+  "gpu": "NVIDIA RTX A6000",
+  "runs": [
+    {
+      "name": "masked_softmax_contiguous",
+      "shape": [
+        2,
+        32768
+      ],
+      "mode": "forward_backward",
+      "before_strided_result_is_incorrect": false,
+      "milliseconds": [
+        0.2738615824472184,
+        0.2739367311686472,
+        0.2619365266725129
+      ],
+      "median_ms": 0.2738615824472184,
+      "resident_bytes": 589824,
+      "peak_allocated_bytes": 1114624,
+      "incremental_peak_bytes": 524800
+    },
+    {
+      "name": "masked_softmax_strided_mask",
+      "shape": [
+        2,
+        32768
+      ],
+      "mode": "forward_backward",
+      "before_strided_result_is_incorrect": true,
+      "milliseconds": [
+        0.25100236503208206,
+        0.24999768694616714,
+        0.3998752198879074
+      ],
+      "median_ms": 0.25100236503208206,
+      "resident_bytes": 655360,
+      "peak_allocated_bytes": 1180160,
+      "incremental_peak_bytes": 524800
+    }
+  ],
+  "scope": "Three warm timing samples per workload in each isolated process; no statistical speedup claim. Incremental peak measured separately from timer allocation. No model or training quality benchmark."
+}

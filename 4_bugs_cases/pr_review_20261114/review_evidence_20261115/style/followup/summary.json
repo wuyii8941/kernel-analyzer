@@ -1,0 +1,43 @@
+[
+  {
+    "name": "black",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "black",
+      "--check",
+      "src/flag_gems/ops/flash_attention_backward.py",
+      "tests/test_flash_attention_dropout_derivative.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "isort",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "isort",
+      "--check-only",
+      "--profile",
+      "black",
+      "-o",
+      "packaging",
+      "src/flag_gems/ops/flash_attention_backward.py",
+      "tests/test_flash_attention_dropout_derivative.py"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "flake8",
+    "command": [
+      "/data1/tzh/envs/ka_main/bin/python",
+      "-m",
+      "flake8",
+      "--ignore=F405,E731,W503,E203,E701,E704",
+      "--max-line-length=120",
+      "src/flag_gems/ops/flash_attention_backward.py",
+      "tests/test_flash_attention_dropout_derivative.py"
+    ],
+    "returncode": 0
+  }
+]
